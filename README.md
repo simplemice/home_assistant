@@ -4,7 +4,7 @@
   <br>
   Casa de Ratón
   <br>
-  Simplemice Smart Home Assistant Configuration
+  Simplemice Home Assistant Configuration
 </h1>
 
 This repo contains the working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Ratón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config. All of the code is free to use.
