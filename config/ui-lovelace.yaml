@@ -1,5 +1,27 @@
+kiosk_mode:
+  mobile_settings:
+    custom_width: 768
+    hide_header: false
+    ignore_entity_settings: true
+  user_settings:
+  - hide_sidebar: true
+    users:
+    - bedroom
+    - monitor
+    - kitchen
+  - ignore_entity_settings: true
+    kiosk: true
+    users:
+    - monitor
+swipe_nav:
+  animate: fade
+  enable_mouse_swipe: true
+  prevent_default: true
+  swipe_amount: 30
+  wrap: true
 views:
-- sections:
+- background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  sections:
   - cards:
     - alignment: center
       chips:
@@ -62,66 +84,10 @@ views:
         \ elif (time >= 7) %}\n  Good Morning, Simplemice!\n{% elif (time <= 7) %}\n\
         \  Good Night, Simplemice!\n{% else %}\n  Dude! Go Sleep!\n{% endif %}"
       type: custom:mushroom-title-card
-    type: grid
-  - cards:
-    - alignment: center
-      chips:
-      - content: '{{expand(state_attr(''light.all_lights'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
-
-          '
-        icon: mdi:lightbulb
-        icon_color: yellow
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: template
-      - content: '{{expand(state_attr(''light.all_ambient'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
-
-          '
-        icon: mdi:led-strip-variant
-        icon_color: yellow
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: template
-      - content: '{{expand(state_attr(''cover.livingroom_curtains'', ''entity_id''))|
-          selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
-
-          '
-        icon: mdi:curtains
-        icon_color: purple
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: template
-      - content: '{{expand(state_attr(''group.external_doors'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
-
-          '
-        icon: mdi:door
-        icon_color: purple
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: template
-      - content: '{{expand(state_attr(''binary_sensor.all_windows'', ''entity_id''))|
-          selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
-
-          '
-        icon: mdi:window-closed
-        icon_color: purple
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: template
-      - content: '{{expand(state_attr(''fan.all_fans'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
-
-          '
-        icon: mdi:fan
-        icon_color: green
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: template
-      style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
-      type: custom:mushroom-chips-card
     - cards:
       - cards:
         - entity: person.simplemice
-          hide_name: true
+          hide_name: false
           layout: vertical
           tap_action:
             action: fire-dom-event
@@ -213,89 +179,21 @@ views:
 
               '
             type: template
-          type: custom:mushroom-chips-card
-        mode: vertical
-        type: custom:stack-in-card
-      - cards:
-        - entity: person.simplemice
-          hide_name: true
-          layout: vertical
-          tap_action:
-            action: fire-dom-event
-            browser_mod:
-              data:
-                content:
-                  card:
-                    cards:
-                    - entity: sensor.micemob_geocoded_location
-                      icon: mdi:map-marker
-                      icon_color: yellow
-                      primary_info: none
-                      type: custom:mushroom-entity-card
-                    - auto_fit: true
-                      dark_mode: false
-                      default_zoom: 16
-                      entities:
-                      - entity: person.simplemice
-                      type: map
-                    type: vertical-stack
-                  style: "ha-card {\n   --padding-right: 15px;\n   --padding-left:\
-                    \ 15px;\n   --padding-bottom: 15px;\n   --box-shadow: 0px 0px;\n\
-                    \   --ha-card-border-width: 0px;\n}\n"
-                  type: custom:mod-card
-                title: Simplemice
-              service: browser_mod.popup
-          type: custom:mushroom-person-card
-          use_entity_picture: true
-        - alignment: center
-          chips:
-          - entity: sensor.micemob_battery_state
-            icon: mdi:power-plug
-            icon_color: "          {% set state=states('sensor.micemob_battery_state')\
-              \ %}\n          {% if state=='charging' %}\n          green\n      \
-              \    {% elif state=='discharging' %}\n          #6f6f6f\n         {%\
-              \ endif %}"
-            tap_action:
-              action: more-info
-            type: template
-          - entity: sensor.micemob_battery_level
-            icon: "          {% set bl = states('sensor.micemob_battery_level') |\
-              \ int %}\n          {% if bl < 10 %} mdi:battery-outline\n         \
-              \ {% elif bl < 20 %} mdi:battery-10\n          {% elif bl < 30 %} mdi:battery-20\n\
-              \          {% elif bl < 40 %} mdi:battery-30\n          {% elif bl <\
-              \ 50 %} mdi:battery-40\n          {% elif bl < 60 %} mdi:battery-50\n\
-              \          {% elif bl < 70 %} mdi:battery-60\n          {% elif bl <\
-              \ 80 %} mdi:battery-70\n          {% elif bl < 90 %} mdi:battery-80\n\
-              \          {% elif bl < 100 %} mdi:battery-90\n          {% elif bl\
-              \ == 100 %} mdi:battery\n          {% else %} mdi:battery-unknown\n\
-              \          {% endif %}\n"
-            icon_color: "          {% set bl = states('sensor.micemob_battery_level')\
-              \ | int %}\n          {% if bl < 10 %} red\n          {% elif bl < 20\
-              \ %} red\n          {% elif bl < 30 %} red\n          {% elif bl < 40\
-              \ %} orange\n          {% elif bl < 50 %} orange\n          {% elif\
-              \ bl < 60 %} green\n          {% elif bl < 70 %} green\n          {%\
-              \ elif bl < 80 %} green\n          {% elif bl < 90 %} green\n      \
-              \    {% elif bl < 100 %} green\n          {% elif bl == 100 %} green\n\
-              \          {% else %} grey\n          {% endif %}"
-            tap_action:
-              action: more-info
-            type: template
-          - entity: binary_sensor.micemob_bluetooth_state
-            icon: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
-              %}
+          - entity: binary_sensor.micemob_wifi_state
+            icon: '{% set state=states(''binary_sensor.micemob_wifi_state'') %}
 
               {% if state==''on'' %}
 
-              mdi:bluetooth
+              mdi:wifi
 
               {% elif state==''off'' %}
 
-              mdi:bluetooth-off
+              mdi:wifi-off
 
               {% endif %}
 
               '
-            icon_color: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
+            icon_color: '{% set state=states(''binary_sensor.micemob_wifi_state'')
               %}
 
               {% if state==''on'' %}
@@ -313,151 +211,4233 @@ views:
           type: custom:mushroom-chips-card
         mode: vertical
         type: custom:stack-in-card
+      - cards:
+        - entity: person.simplemice
+          fill_container: true
+          icon: "{% if is_state('person.simplemice', 'home') %}\n  mdi:rodent\n{%\
+            \ else %}\n  mdi:motorbike\n{% endif %}"
+          icon_color: "{% if states ('sensor.micewatch_room', 'livingroom') %}\n \
+            \  green\n{% elif states ('sensor.micewatch_room', 'kitchen') %}\n   yellow\n\
+            {% elif states ('sensor.micewatch_room', 'bedroom') %}\n   blue\n{% else\
+            \ %}\n   red\n{% endif %}"
+          layout: vertical
+          multiline_secondary: true
+          primary: "{% if is_state('person.simplemice', 'home') %}\n  Now in the\n\
+            {% else %}\n  Now at location\n{% endif %}"
+          secondary: "{% if is_state('person.simplemice', 'home') %}\n  Room: {{ states('sensor.micewatch_room')\
+            \ }}\n  Distance: {{ state_attr('sensor.micewatch_room', 'distance') }}\
+            \ m\n{% else %}\n  Geo: {{ states('sensor.micemob_geocoded_location')\
+            \ }}\n{% endif %}"
+          type: custom:mushroom-template-card
+        - entity: sensor.micemob_room
+          fill_container: true
+          icon: "{% if is_state('person.simplemice', 'home') %}\n  mdi:cellphone\n\
+            {% else %}\n  mdi:motorbike\n{% endif %}"
+          icon_color: "{% if states ('sensor.micemob_room', 'livingroom') %}\n   green\n\
+            {% elif states ('sensor.micemob_room', 'kitchen') %}\n   yellow\n{% elif\
+            \ states ('sensor.micemob_room', 'bedroom') %}\n   blue\n{% else %}\n\
+            \   red\n{% endif %}"
+          layout: vertical
+          multiline_secondary: true
+          primary: "{% if is_state('person.simplemice', 'home') %}\n  Mob in the\n\
+            {% else %}\n  Now at location\n{% endif %}"
+          secondary: "{% if is_state('person.simplemice', 'home') %}\n  {{ states('sensor.micemob_room')\
+            \ }}\n  Distance: {{ state_attr('sensor.micemob_room', 'distance') }}\
+            \ m\n{% else %}\n  Geo: {{ states('sensor.micemob_geocoded_location')\
+            \ }}\n{% endif %}"
+          type: custom:mushroom-template-card
+        type: custom:swipe-card
       type: horizontal-stack
+    - elements:
+      - entity: sensor.outside_temp
+        style:
+          color: white
+          left: 15%
+          top: 15%
+        type: state-label
+      - entity: sensor.house_temp
+        style:
+          color: white
+          left: 50%
+          top: 30%
+        type: state-label
+      - entity: alarm_control_panel.house
+        style:
+          left: 35%
+          top: 30%
+        type: state-icon
+      - entity: binary_sensor.garage_door_motion_occupancy
+        style:
+          left: 52%
+          top: 75%
+        type: state-icon
+      - entity: fan.all_fans
+        style:
+          left: 75%
+          top: 10%
+        type: state-icon
+      - entity: light.all_ambient
+        style:
+          left: 85%
+          top: 10%
+        type: state-icon
+      - entity: light.all_lights
+        style:
+          left: 95%
+          top: 10%
+        type: state-icon
+      - entity: light.garage_bulb
+        icon: mdi:light-recessed
+        style:
+          left: 55%
+          top: 37%
+        type: state-icon
+      - entity: cover.livingroom_curtains
+        icon: mdi:curtains-closed
+        style:
+          left: 69%
+          top: 60%
+        type: state-icon
+      - entity: binary_sensor.external_doors
+        style:
+          left: 69%
+          top: 50%
+        type: state-icon
+      image: /local/media/images/house.jpg
+      type: picture-elements
     type: grid
   - cards:
-    - cards:
-      - badge_color: "{% if is_state('binary_sensor.garage_motion_group', 'clear')\
-          \ %}\n  red\n{% else %}\n  blue\n{% endif %}"
-        badge_icon: "{% if is_state('binary_sensor.garage_motion_group', 'clear')\
-          \ %}\n  mdi:motion-sensor\n{% else %}\n  mdi:motion-sensor-off\n{% endif\
-          \ %}"
-        entity: light.garage_bulb
-        fill_container: true
-        hold_action:
-          action: toggle
-        icon: mdi:light-recessed
-        icon_color: "{% if is_state('light.garage_bulb', 'off') %}\n  white\n{% else\
-          \ %}\n  yellow\n{% endif %}"
-        multiline_secondary: false
-        primary: Garage
-        secondary: '{{ states(''sensor.outside_temp'') }} °C'
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        tap_action:
-          action: navigate
-          navigation_path: garage
-        type: custom:mushroom-template-card
-      - badge_color: "{% if is_state('binary_sensor.livingroom_door_contact', 'off')\
-          \ %}\n  blue\n{% else %}\n  red\n{% endif %}"
-        badge_icon: "{% if is_state('binary_sensor.livingroom_door_contact', 'off')\
-          \ %}\n  mdi:door-sliding\n{% else %}\n  mdi:door-sliding-open\n{% endif\
-          \ %}"
-        double_tap_action:
-          action: call-service
-          data: {}
-          service: automation.toggle
-          target:
-            entity_id: automation.ivingroom_ambient_after_door_closed
-        entity: light.lightstrip
-        fill_container: true
-        hold_action:
-          action: toggle
-        icon: mdi:led-strip-variant
-        icon_color: "{% if is_state('light.lightstrip', 'off') %}\n  white\n{% else\
-          \ %}\n  yellow\n{% endif %}"
-        primary: Livingroom
-        secondary: "{{ states('sensor.livingroom_temp_temperature') }} °C / {{\n \
-          \ states('sensor.livingroom_temp_humidity') }} %"
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        tap_action:
-          action: navigate
-          navigation_path: livingroom
-        type: custom:mushroom-template-card
-      type: horizontal-stack
-    - cards:
-      - badge_color: "{% if is_state('switch.uvfive_slmap2_2e5e_switch_status', 'off')\
-          \ %}\n  green\n{% else %}\n  red\n{% endif %}"
-        badge_icon: "{% if is_state('switch.uvfive_slmap2_2e5e_switch_status', 'off')\
-          \ %}\n  mdi:bacteria\n{% else %}\n  mdi:bacteria\n{% endif %}"
-        double_tap_action:
-          action: more-info
-        entity: light.bedside_lamp
-        fill_container: true
-        hold_action:
-          action: toggle
-        icon: "{% if states('sensor.bedroom_temp_temperature') < \"27\" %}\n mdi:bed\n\
-          {% else %}\n  mdi:ceiling-light-multiple\n{% endif %}"
-        icon_color: "{% if is_state('light.bedside_lamp', 'off') %}\n  white\n{% else\
-          \ %}\n  yellow\n{% endif %}"
-        multiline_secondary: true
-        primary: Bedroom
-        secondary: "{{ states('sensor.bedroom_temp_temperature') }} °C / {{ states('sensor.bedroom_temp_humidity')\
-          \ }} % \n{{ states('sensor.bedroom_temp_pressure') }} mmHg"
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        tap_action:
-          action: navigate
-          navigation_path: bedroom
-        type: custom:mushroom-template-card
-      - badge_color: "{% if is_state('binary_sensor.backyard_door_contact', 'off')\
-          \ %}\n  blue\n{% else %}\n  red\n{% endif %}"
-        badge_icon: "{% if is_state('binary_sensor.backyard_door_contact', 'off')\
-          \ %}\n  mdi:door-closed\n{% else %}\n  mdi:door-open\n{% endif %}"
-        double_tap_action:
-          action: toggle
-        entity: switch.kitchen_light
-        fill_container: true
-        hold_action:
-          action: toggle
-        icon: mdi:ceiling-light-multiple
-        icon_color: "{% if is_state('switch.kitchen_light', 'off') %}\n  white\n{%\
-          \ else %}\n  yellow\n{% endif %}"
-        primary: Kitchen
-        secondary: '{{ states(''sensor.kitchen_temp_temperature'') }} °C'
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        tap_action:
-          action: navigate
-          navigation_path: kitchen
-        type: custom:mushroom-template-card
-      type: horizontal-stack
-    - cards:
-      - badge_color: "{% if is_state('binary_sensor.bathroom_presense', 'on') %}\n\
-          \          red\n        {% else %}\n          green\n        {% endif %}"
-        badge_icon: "{% if is_state('binary_sensor.bathroom_presense', 'on') %}\n\
-          \  mdi:toilet\n{% else %}\n  mdi:toilet\n{% endif %}"
-        entity: switch.bathroom_light
-        fill_container: true
-        hold_action:
-          action: toggle
-        icon: mdi:light-recessed
-        icon_color: "{% if is_state('switch.bathroom_light', 'off') %}\n         \
-          \ white\n        {% else %}\n          yellow\n        {% endif %}"
-        multiline_secondary: false
-        primary: Bathroom
-        secondary: '{{ state_attr(''sensor.bathroom_temp_temperature'', ''median'')
-          }} °C'
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        tap_action:
-          action: navigate
-          navigation_path: bathroom
-        type: custom:mushroom-template-card
-      - badge_color: "{% if is_state('binary_sensor.backyard_window_motion_occupancy',\
-          \ 'on') %}\n          red\n        {% else %}\n          blue\n        {%\
-          \ endif %}"
-        badge_icon: "{% if is_state('binary_sensor.backyard_window_motion_occupancy',\
-          \ 'on') %}\n  mdi:motion-sensor\n{% else %}\n  mdi:motion-sensor-off\n{%\
-          \ endif %}"
-        entity: switch.backyard_light
-        fill_container: true
-        hold_action:
-          action: toggle
-        icon: mdi:lightbulb-fluorescent-tube
-        icon_color: "{% if is_state('switch.backyard_light', 'off') %}\n  white\n\
-          {% else %}\n  yellow\n{% endif %}"
-        primary: Backyard
-        secondary: '{{ states(''sensor.backyard_temp_temperature'') }} °C'
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        tap_action:
-          action: navigate
-          navigation_path: backyard
-        type: custom:mushroom-template-card
-      type: horizontal-stack
-    title: Rooms
+    - alignment_style: left
+      color_mode: icon
+      day_style: counter
+      drop_todayevents_from: '10:00:00'
+      entities:
+      - calendar.garbage
+      - calendar.laundry
+      - calendar.house
+      event_grouping: true
+      filter_events: false
+      full_size: true
+      hide_time_range: false
+      items_per_row: 2
+      next_days: 7
+      pattern:
+      - color: lime
+        icon: mdi:flower
+        pattern: Organic
+        type: organic
+      - color: light-grey
+        icon: mdi:newspaper
+        pattern: Paper
+        type: paper
+      - color: accent
+        icon: mdi:bottle-soda-classic-outline
+        label: Plastic
+        pattern: Plastic
+        type: recycle
+      - color: lime
+        icon: mdi:trash-can-outline
+        pattern: Waste
+        type: waste
+      - color: light-blue
+        icon: mdi:washing-machine
+        type: others
+      - color: cyan
+        icon: mdi:food
+        label: Mealie
+        pattern: Mealie
+        type: custom
+      - color: indigo
+        icon: mdi:vacuum
+        label: Clean Day
+        pattern: Clean Day
+        type: custom
+      refresh_rate: 30
+      type: custom:trash-card
+      use_summary: true
+      with_label: true
+    type: grid
+  - cards: []
     type: grid
   title: Home
+  type: sections
+- background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  icon: mdi:ceiling-light-multiple
+  path: light
+  sections:
+  - cards:
+    - cards:
+      - entity: light.all_ambient
+        fill_container: true
+        show_brightness_control: true
+        show_color_control: true
+        show_color_temp_control: true
+        type: custom:mushroom-light-card
+        use_light_color: true
+      - cards:
+        - entity: light.lumi_gateway_v3_light
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        - entity: light.tv_table_ambient
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        type: horizontal-stack
+      - cards:
+        - entity: light.wled_matrix
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        - entity: light.sofa_ambient
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        type: horizontal-stack
+      - cards:
+        - entity: light.kitchen_bottom_ambient
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        - entity: light.kitchen_upstair_ambient
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        type: horizontal-stack
+      - entity: select.wled_matrix_preset
+        fill_container: true
+        type: custom:mushroom-select-card
+      type: vertical-stack
+    title: Ambient Lights
+    type: grid
+  - cards:
+    - cards:
+      - entity: light.all_lights
+        fill_container: true
+        show_brightness_control: true
+        show_color_control: true
+        show_color_temp_control: true
+        type: custom:mushroom-light-card
+        use_light_color: true
+      - cards:
+        - entity: light.garage_bulb
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        - entity: light.lightstrip
+          fill_container: true
+          show_brightness_control: true
+          show_color_control: true
+          show_color_temp_control: true
+          type: custom:mushroom-light-card
+          use_light_color: true
+        type: horizontal-stack
+      type: vertical-stack
+    - entity: light.bathroom_bulb
+      fill_container: true
+      show_brightness_control: true
+      show_color_control: true
+      show_color_temp_control: true
+      type: custom:mushroom-light-card
+      use_light_color: true
+    - entity: light.bedside_lamp
+      fill_container: true
+      show_brightness_control: true
+      show_color_control: true
+      show_color_temp_control: true
+      type: custom:mushroom-light-card
+      use_light_color: true
+    title: Main Lights
+    type: grid
+  - cards:
+    - card:
+        type: entities
+      filter:
+        exclude: []
+        include:
+        - domain: '*scene*'
+      sort:
+        method: none
+        reverse: false
+      type: custom:auto-entities
+    title: Light Scenes
+    type: grid
+  - cards:
+    - cards:
+      - card:
+          type: entities
+        filter:
+          exclude:
+          - entity_id: update.adaptive_lighting_update
+          include:
+          - entity_id: '*adaptive*'
+        type: custom:auto-entities
+      type: vertical-stack
+    title: Adaptive Light Mode
+    type: grid
+  title: Light
+  type: sections
+- background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  cards: []
+  icon: mdi:home-thermometer
+  path: climate
+  sections:
+  - cards:
+    - cards:
+      - color: light-green
+        entity: climate.bedroom_aircon
+        features:
+        - hvac_modes:
+          - 'off'
+          - cool
+          - dry
+          type: climate-hvac-modes
+        - fan_modes:
+          - auto
+          - high
+          - low
+          style: icons
+          type: climate-fan-modes
+        icon: phu:lg-aircon
+        show_entity_picture: true
+        state_content:
+        - state
+        - current_temperature
+        - temperature
+        type: tile
+      type: horizontal-stack
+    type: grid
+  - cards:
+    - cards:
+      - cards:
+        - entity: sensor.temperature
+          hide_icon: true
+          name: Livingroom Temp
+          tap_action:
+            action: navigate
+            navigation_path: livingroom
+          type: custom:mushroom-entity-card
+        - entity: sensor.humidity
+          hide_icon: true
+          name: Humidity
+          tap_action:
+            action: navigate
+            navigation_path: garage
+          type: custom:mushroom-entity-card
+        mode: horizontal
+        style: "ha-card { \n  background-color: rgba(0,0,0,0);\n  box-shadow: none;\n\
+          }\n"
+        type: custom:stack-in-card
+      - color_thresholds:
+        - color: '#800080'
+          value: 10
+        - color: '#0000FF'
+          value: 20
+        - color: '#008000'
+          value: 30
+        - color: '#FFFF00'
+          value: 40
+        - color: '#FF6600'
+          value: 50
+        - color: '#FF0000'
+          value: 60
+        - color: '#FF69B4'
+          value: 70
+        entities:
+        - sensor.temperature
+        - sensor.humidity
+        graph: line
+        hours_to_show: 48
+        points_per_hour: 1
+        show:
+          icon: false
+          name: false
+          state: false
+        type: custom:mini-graph-card
+      mode: vertical
+      style: "ha-card { \n  border-radius: 20px;\n\nbackground-color: rgba(0,0,0,0);\n\
+        box-shadow: none;\n}\n"
+      type: custom:stack-in-card
+    - cards:
+      - cards:
+        - entity: sensor.temperature
+          hide_icon: true
+          name: Bedroom Temp
+          tap_action:
+            action: navigate
+            navigation_path: livingroom
+          type: custom:mushroom-entity-card
+        - entity: sensor.humidity
+          hide_icon: true
+          name: Humidity
+          tap_action:
+            action: navigate
+            navigation_path: garage
+          type: custom:mushroom-entity-card
+        mode: horizontal
+        style: "ha-card { \n  background-color: rgba(0,0,0,0);\n  box-shadow: none;\n\
+          }\n"
+        type: custom:stack-in-card
+      - color_thresholds:
+        - color: '#800080'
+          value: 10
+        - color: '#0000FF'
+          value: 20
+        - color: '#008000'
+          value: 30
+        - color: '#FFFF00'
+          value: 40
+        - color: '#FF6600'
+          value: 50
+        - color: '#FF0000'
+          value: 60
+        - color: '#FF69B4'
+          value: 70
+        entities:
+        - sensor.temperature
+        - sensor.humidity
+        graph: line
+        hours_to_show: 48
+        points_per_hour: 1
+        show:
+          icon: false
+          name: false
+          state: false
+        type: custom:mini-graph-card
+      mode: vertical
+      style: "ha-card { \n  border-radius: 20px;\n\nbackground-color: rgba(0,0,0,0);\n\
+        box-shadow: none;\n}\n"
+      type: custom:stack-in-card
+    type: grid
+  - cards:
+    - cards:
+      - cards:
+        - entity: sensor.temperature
+          hide_icon: true
+          name: Kitchen Temp
+          tap_action:
+            action: navigate
+            navigation_path: livingroom
+          type: custom:mushroom-entity-card
+        - entity: sensor.humidity
+          hide_icon: true
+          name: Humidity
+          tap_action:
+            action: navigate
+            navigation_path: garage
+          type: custom:mushroom-entity-card
+        mode: horizontal
+        style: "ha-card { \n  background-color: rgba(0,0,0,0);\n  box-shadow: none;\n\
+          }\n"
+        type: custom:stack-in-card
+      - color_thresholds:
+        - color: '#800080'
+          value: 10
+        - color: '#0000FF'
+          value: 20
+        - color: '#008000'
+          value: 30
+        - color: '#FFFF00'
+          value: 40
+        - color: '#FF6600'
+          value: 50
+        - color: '#FF0000'
+          value: 60
+        - color: '#FF69B4'
+          value: 70
+        entities:
+        - sensor.temperature
+        - sensor.humidity
+        graph: line
+        hours_to_show: 48
+        points_per_hour: 1
+        show:
+          icon: false
+          name: false
+          state: false
+        type: custom:mini-graph-card
+      mode: vertical
+      style: "ha-card { \n  border-radius: 20px;\n\nbackground-color: rgba(0,0,0,0);\n\
+        box-shadow: none;\n}\n"
+      type: custom:stack-in-card
+    - cards:
+      - cards:
+        - entity: sensor.temperature
+          hide_icon: true
+          name: Bathroom Temp
+          tap_action:
+            action: navigate
+            navigation_path: livingroom
+          type: custom:mushroom-entity-card
+        - entity: sensor.humidity
+          hide_icon: true
+          name: Humidity
+          tap_action:
+            action: navigate
+            navigation_path: garage
+          type: custom:mushroom-entity-card
+        mode: horizontal
+        style: "ha-card { \n  background-color: rgba(0,0,0,0);\n  box-shadow: none;\n\
+          }\n"
+        type: custom:stack-in-card
+      - color_thresholds:
+        - color: '#800080'
+          value: 10
+        - color: '#0000FF'
+          value: 20
+        - color: '#008000'
+          value: 30
+        - color: '#FFFF00'
+          value: 40
+        - color: '#FF6600'
+          value: 50
+        - color: '#FF0000'
+          value: 60
+        - color: '#FF69B4'
+          value: 70
+        entities:
+        - sensor.temperature
+        - sensor.humidity
+        graph: line
+        hours_to_show: 48
+        points_per_hour: 1
+        show:
+          icon: false
+          name: false
+          state: false
+        type: custom:mini-graph-card
+      mode: vertical
+      style: "ha-card { \n  border-radius: 20px;\n\nbackground-color: rgba(0,0,0,0);\n\
+        box-shadow: none;\n}\n"
+      type: custom:stack-in-card
+    type: grid
+  - cards:
+    - cards:
+      - entities:
+        - entity: input_datetime.climate_on_time
+        - entity: input_datetime.climate_off_time
+        - entity: input_boolean.climate_automation
+        - entity: input_boolean.fan_automation
+        - entity: group.house_climate_control
+        state_color: true
+        type: entities
+      type: vertical-stack
+    type: grid
+  title: Climate
+  type: sections
+- icon: mdi:shield-home
+  path: security
+  sections:
+  - cards:
+    - entity: alarm_control_panel.house
+      name: House Alarm
+      states:
+      - arm_home
+      - arm_away
+      - arm_night
+      type: alarm-panel
+    title: Alarm Panel
+    type: grid
+  - cards:
+    - cards:
+      - cameras:
+        - camera_entity: camera.garage
+        type: custom:frigate-card
+      type: vertical-stack
+    - cameras:
+      - camera_entity: camera.backyard
+      type: custom:frigate-card
+    title: Camera View
+    type: grid
+  - cards: []
+    type: grid
+  - cards: []
+    type: grid
+  title: Security
+  type: sections
+- icon: mdi:music
+  path: music
+  sections:
+  - cards:
+    - cards:
+      - alignment: center
+        subtitle: Simplemice Spotify Player
+        title: ''
+        type: custom:mushroom-title-card
+      - artwork: full-cover
+        entity: media_player.spotify_simplemice
+        group: true
+        info: scroll
+        replace_mute: play_stop
+        sound_mode: full
+        source: full
+        type: custom:mini-media-player
+        volume_stateless: false
+      - cards:
+        - entities:
+          - entity: input_select.media_speakers
+          - entity: input_select.spotify_playlist
+          - entity: script.spotify_start_playback
+          state_color: false
+          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+            }\n"
+          title: Spotify Music Menu
+          type: entities
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: vertical-stack
+      type: vertical-stack
+    type: grid
+  - cards:
+    - cards:
+      - alignment: center
+        subtitle: Simplemice Multiroom Audio
+        title: ''
+        type: custom:mushroom-title-card
+      - card:
+          cards:
+          - entity: media_player.multiroom_music_player_snapcast_client
+            type: media-control
+          - entity: media_player.multiroom_music_player_snapcast_client
+            type: media-control
+          - entity: media_player.bedroom_speaker
+            type: media-control
+          type: vertical-stack
+        conditions:
+        - condition: state
+          entity: media_player.multiroom_music_player
+          state: playing
+        type: conditional
+      type: vertical-stack
+    - artwork: cover
+      entity: media_player.bedroom_speaker
+      icon: mdi:radio
+      info: short
+      name: Simplemice Laptop
+      shortcuts:
+        buttons:
+        - id: script.radio_1_fm_deep_house
+          name: 1fm House
+          type: script
+        - id: script.radio_1_fm_deep_house_ch
+          name: 1fm House CN
+          type: script
+        - id: script.radio_1_fm_chillout
+          name: 1fm Ambient
+          type: script
+        - id: script.radio_1_fm_trance
+          name: 1fm Trance
+          type: script
+        columns: 3
+      sound_mode: full
+      source: full
+      type: custom:mini-media-player
+    type: grid
+  title: Music
+  type: sections
+- cards: []
+  icon: mdi:youtube
+  max_columns: 4
+  path: video
+  sections:
+  - cards:
+    - entities:
+      - sensor.plex_home_theater
+      title: Plex Home Theater
+      type: entities
+    type: grid
+  - cards:
+    - cards:
+      - alignment: center
+        subtitle: Simplemice Youtube Player
+        title: ''
+        type: custom:mushroom-title-card
+      - artwork: cover
+        entity: media_player.simplemice_youtube
+        hide:
+          icon_state: false
+          shuffle: false
+        shortcuts:
+          buttons:
+          - id: micebook
+            name: Micebook
+            type: source
+          - id: micemob
+            name: Micemob
+            type: source
+          - id: PLcv3KSj3yK0a1R0vLv6Cg2HpQQpYltiKj
+            name: My Likes
+            type: channel
+          - id: PLcv3KSj3yK0a1R0vLv6Cg2HpQQpYltiKj
+            name: Test
+            type: playlist
+          columns: 6
+        type: custom:mini-media-player
+      - entities:
+        - entity: input_select.youtube_playlist
+        - entity: input_select.youtube_source
+        - entity: input_select.ytube_music_player_speakers
+        - entity: input_select.youtube_playmode
+        state_color: true
+        title: Youtube Control
+        type: entities
+      type: vertical-stack
+    type: grid
+  - cards:
+    - entities:
+      - sensor.alex_kvazis_tekhnologii_umnogo_doma
+      - sensor.everything_smart_home
+      - sensor.fixtse
+      - sensor.home_automation_guy
+      - sensor.let_s_automate
+      - sensor.kpeyanski
+      - sensor.mark_watt_tech
+      - sensor.paul_hibbert_hibbert_home_tech
+      - sensor.resinchem_tech
+      - sensor.slackerlabs
+      - sensor.smart_home_junkie
+      - sensor.smart_home_solver
+      - sensor.the_hook_up
+      hours_to_show: 168
+      title: New Video Posted on Youtube
+      type: logbook
+    type: grid
+  - cards:
+    - card:
+        cards:
+        - content: "{% if is_state('media_player.simplemice_youtube','playing')%}\
+            \ **Playback started via:** (Arguments for play_media)\n*_media_type*:\
+            \ {{state_attr(\"media_player.simplemice_youtube\",\"_media_type\")}}\
+            \ \n*_media_id*: {{state_attr(\"media_player.simplemice_youtube\", \"\
+            _media_id\")}}\n\n**Current Track Infos:** \n**Artist:** {{state_attr(\"\
+            media_player.simplemice_youtube\",\"media_artist\")}} \n**Track:** {{state_attr(\"\
+            media_player.simplemice_youtube\",\"media_title\")}}\n**videoId:** {{state_attr(\"\
+            media_player.simplemice_youtube\", \"videoId\")}}\n**Rating:** {{state_attr(\"\
+            media_player.simplemice_youtube\",\"likeStatus\")}}\n**Playing on:** {{state_attr(\"\
+            media_player.simplemice_youtube\",\"_player_id\")}}\n{% else %}Player\
+            \ off{% endif %}"
+          type: markdown
+        - content: "{% if is_state('media_player.simplemice_youtube','playing') %}{%\
+            \ for i in range(0,state_attr(\"sensor.ytube_music_player_extra\", \"\
+            total_tracks\")) %}\n {% if i == state_attr(\"media_player.simplemice_youtube\"\
+            ,\n\"current_track\") %}**{% endif %}\\[{{i+1}}] {{ state_attr(\"sensor.ytube_music_player_extra\"\
+            , \"tracks\")[i] }}{% if i == state_attr(\"media_player.simplemice_youtube\"\
+            , \"current_track\") %}**{% endif %}\n{%- endfor %}{% else %}Player off{%\
+            \ endif %}\n    "
+          type: markdown
+        - content: '{% if is_state(''media_player.simplemice_youtube'',''playing'')
+            %}{{ state_attr("sensor.simplemice_youtube_extra", "lyrics") }}{% else
+            %}Player off{% endif %}'
+          type: markdown
+        - cards:
+          - state:
+            - icon: mdi:thumb-up
+              operator: template
+              value: '[[[ return states[''media_player.simplemice_youtube''].attributes.likeStatus
+                == "LIKE"]]]
+
+                '
+            - icon: mdi:thumb-up-outline
+              operator: template
+              value: '[[[ return states[''media_player.simplemice_youtube''].attributes.likeStatus
+                == "INDIFFERENT"]]]
+
+                '
+            - icon: mdi:power-off
+              operator: default
+              value: false
+            tap_action:
+              action: call-service
+              service: ytube_music_player.call_method
+              service_data:
+                command: rate_track
+                entity_id: media_player.simplemice_youtube
+                parameters: thumb_toggle_up_middle
+            type: custom:button-card
+          type: horizontal-stack
+        type: vertical-stack
+      conditions:
+      - condition: state
+        entity: media_player.simplemice_youtube
+        state: playing
+      type: conditional
+    type: grid
+  title: Video
+  type: sections
+- icon: mdi:home-lightning-bolt-outline
+  path: energy
+  sections:
+  - cards:
+    - clickable_entities: true
+      entities:
+        battery:
+          entity:
+            consumption: sensor.battery_consumption
+            production: sensor.battery_production
+          icon: mdi:bat
+          name: Bateria
+        fossil_fuel_percentage:
+          color_icon: true
+          display_zero: true
+          entity: sensor.fossil_fuel_percentage
+          icon: mdi:pine-tree
+          name: Non Fossil
+          state_type: power
+        grid:
+          entity:
+            consumption: sensor.grid_consumption
+            production: sensor.grid_production
+          icon: mdi:ab-testing
+          name: Provider
+        home:
+          color_icon: solar
+          entity: sensor.home_consumption
+        individual:
+        - color: '#80b8ff'
+          color_icon: false
+          entity: sensor.car_power
+          icon: mdi:car-electric
+          name: Denim Flash
+        - color: '#ff8080'
+          color_icon: true
+          display_zero: true
+          entity: sensor.motorbike_power
+          icon: mdi:motorbike-electric
+          name: Qivi
+        solar:
+          entity: sensor.solar_production
+          icon: mdi:solar-panel-large
+      kw_decimals: 2
+      max_flow_rate: 6
+      min_flow_rate: 0.9
+      title: Power Flow Card Plus
+      type: custom:power-flow-card-plus
+      w_decimals: 0
+      watt_threshold: 10000
+    type: grid
+  - cards:
+    - cards:
+      - cards:
+        - badge_color: ''
+          badge_icon: ''
+          double_tap_action:
+            action: more-info
+          entity: sensor.energy_meter_voltage
+          fill_container: true
+          hold_action:
+            action: toggle
+          icon: "{% if states('sensor.energy_meter_voltage') < \"210\" %}\n mdi:home-lightning-bolt\n\
+            {% else %}\n  mdi:home-lightning-bolt\n{% endif %}"
+          icon_color: "{% if states('sensor.energy_meter_voltage') < \"210\" %}\n\
+            \ red\n{% else %}\n  green\n{% endif %}"
+          multiline_secondary: true
+          primary: Voltage
+          secondary: '{% if states(''sensor.energy_meter_voltage'') < "210" %} Low
+            Voltage {% else %} Normal Voltage {% endif %} |  {{ states(''sensor.energy_meter_voltage'')
+            }} V'
+          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+            }\n"
+          tap_action:
+            action: more-info
+          type: custom:mushroom-template-card
+        - entity: sensor.monthly_energy
+          fill_container: true
+          icon: "{% if is_state('sensor.current_energy_tariff_name', 'peak') %}\n\
+            \   mdi:transmission-tower-import\n{% else %}\n   mdi:transmission-tower-export\n\
+            {% endif %}"
+          icon_color: "{% if is_state('sensor.current_energy_tariff_name', 'peak')\
+            \ %}\n   red\n{% else %}\n   green\n{% endif %}"
+          primary: "{% if is_state('sensor.current_energy_tariff_name', 'peak') %}\n\
+            \   Monthly Energy Peak\n{% else %}\n   Monthly Energy OffPeak\n{% endif\
+            \ %}"
+          secondary: "{% if is_state('sensor.current_energy_tariff_name', 'peak')\
+            \ %}\n  Current: {{ states('sensor.monthly_energy') }} kWh\n{% else %}\n\
+            \  Current: {{ states('sensor.monthly_energy') }} kWh\n{% endif %}"
+          type: custom:mushroom-template-card
+        - entity: sensor.current_energy_tariff
+          icon: mdi:currency-thb
+          icon_color: green
+          multiline_secondary: true
+          primary: 'Current Tariff: {{states (''sensor.current_energy_tariff_name'')}}'
+          secondary: 'Price: {{states (''sensor.current_energy_tariff'')}} THB'
+          tap_action:
+            action: more-info
+          type: custom:mushroom-template-card
+        type: vertical-stack
+      type: horizontal-stack
+    type: grid
+  - cards: []
+    type: grid
+  - cards: []
+    type: grid
+  title: Energy
+  type: sections
+- icon: mdi:weather-partly-cloudy
+  path: weather
+  sections:
+  - cards:
+    - current: true
+      details: true
+      entity: weather.openweathermap
+      forecast: true
+      hourly_forecast: true
+      type: custom:weather-card
+    - entity: sensor.gdacs_alerts
+      name: GDACS Alerts
+      state_color: true
+      type: entity
+    - debug_level: 0
+      fields:
+        azimuth: true
+        dawn: true
+        dusk: true
+        elevation: true
+        moon_azimuth: true
+        moon_elevation: true
+        moon_phase: true
+        moonrise: true
+        moonset: true
+        noon: true
+        sun_azimuth: true
+        sun_elevation: true
+        sunrise: true
+        sunset: true
+      language: en
+      moon: true
+      moon_phase_rotation: -10
+      number_format: language
+      refresh_period: 60
+      southern_flip: false
+      time_format: 24h
+      time_zone: Asia/Bangkok
+      title: Sunrise & Sunset & Moon
+      type: custom:horizon-card
+    type: grid
+  - cards:
+    - aspect_ratio: 56%
+      title: Temperature & Humidity
+      type: iframe
+      url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=m/s&zoom=10&overlay=radar&product=radar&level=surface&lat=7.908&lon=98.341&message=true"
+        frameborder="0"
+    - apex_config:
+        chart:
+          height: auto
+        dataLabels:
+          enabled: false
+        fill:
+          gradient:
+            inverseColors: false
+            opacityFrom: 0.5
+            opacityTo: 0
+            shadeIntensity: 0.8
+            stops:
+            - - 0
+              - 50
+              - 100
+            type: vertical
+          type: gradient
+        grid:
+          show: false
+        legend:
+          fontFamily: Raleway
+          fontSize: 12px
+          height: 40
+        stroke:
+          curve: smooth
+          width: 3
+        tooltip:
+          enabled: true
+        xaxis:
+          axisBorder:
+            show: false
+          labels:
+            style:
+              fontFamily: Raleway
+              fontSize: 14px
+        yaxis:
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#FFB62E'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          show: true
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#2eb9ff'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          opposite: true
+          show: true
+      graph_span: 7d
+      header:
+        colorize_states: true
+        show: true
+        show_states: true
+        title: Temp & Hum Graph
+      series:
+      - color: '#FFB62E'
+        entity: sensor.openweathermap_forecast_temperature
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: Temperature
+        show:
+          extremas: true
+        type: area
+      - color: '#2eb9ff'
+        entity: sensor.openweathermap_humidity
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: Humidity
+        type: area
+      type: custom:apexcharts-card
+      update_interval: 1min
+    type: grid
+  - cards:
+    - aspect_ratio: 56%
+      title: Rain
+      type: iframe
+      url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=m/s&zoom=10&overlay=rain&product=ecmwf&level=surface&lat=7.908&lon=98.341&message=true"
+        frameborder="0"
+    - apex_config:
+        chart:
+          height: auto
+        dataLabels:
+          enabled: false
+        fill:
+          gradient:
+            inverseColors: false
+            opacityFrom: 0.5
+            opacityTo: 0
+            shadeIntensity: 0.8
+            stops:
+            - - 0
+              - 50
+              - 100
+            type: vertical
+          type: gradient
+        grid:
+          show: false
+        legend:
+          fontFamily: Raleway
+          fontSize: 12px
+          height: 40
+        stroke:
+          curve: smooth
+          width: 3
+        tooltip:
+          enabled: true
+        xaxis:
+          axisBorder:
+            show: false
+          labels:
+            style:
+              fontFamily: Raleway
+              fontSize: 14px
+        yaxis:
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#FFB62E'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          show: true
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#2eb9ff'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          opposite: true
+          show: true
+      graph_span: 7d
+      header:
+        colorize_states: true
+        show: true
+        show_states: true
+        title: Rain Graph
+      series:
+      - color: '#FFB62E'
+        entity: sensor.openweathermap_forecast_precipitation_probability
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: Precipitation
+        show:
+          extremas: true
+        type: area
+      - color: '#2eb9ff'
+        entity: sensor.openweathermap_rain
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: Rain
+        type: area
+      type: custom:apexcharts-card
+      update_interval: 1min
+    type: grid
+  - cards:
+    - aspect_ratio: 60%
+      title: Lighting
+      type: iframe
+      url: https://map.blitzortung.org/#8.76/7.9113/98.2944
+    - apex_config:
+        chart:
+          height: auto
+        dataLabels:
+          enabled: false
+        fill:
+          gradient:
+            inverseColors: false
+            opacityFrom: 0.5
+            opacityTo: 0
+            shadeIntensity: 0.8
+            stops:
+            - - 0
+              - 50
+              - 100
+            type: vertical
+          type: gradient
+        grid:
+          show: false
+        legend:
+          fontFamily: Raleway
+          fontSize: 12px
+          height: 40
+        stroke:
+          curve: smooth
+          width: 3
+        tooltip:
+          enabled: true
+        xaxis:
+          axisBorder:
+            show: false
+          labels:
+            style:
+              fontFamily: Raleway
+              fontSize: 14px
+        yaxis:
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#FFB62E'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          show: true
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#2eb9ff'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          opposite: true
+          show: true
+      graph_span: 7d
+      header:
+        colorize_states: true
+        show: true
+        show_states: true
+        title: Lighting Graph
+      series:
+      - color: '#FFB62E'
+        entity: sensor.lighting_detector_lightning_distance
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: Distance
+        show:
+          extremas: true
+        type: area
+      - color: '#2eb9ff'
+        entity: sensor.lighting_detector_lightning_counter
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: Counter
+        type: area
+      type: custom:apexcharts-card
+      update_interval: 1min
+    type: grid
+  - cards:
+    - aspect_ratio: 56%
+      title: PM & Osone Index
+      type: iframe
+      url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=no2&product=cams&level=surface&lat=7.908&lon=98.341&message=true
+    type: grid
+  - cards:
+    - apex_config:
+        plotOptions:
+          radialBar:
+            dataLabels:
+              name:
+                show: false
+              value:
+                show: false
+            endAngle: 270
+            hollow:
+              background: transparent
+              image: false
+              margin: 5
+              size: 30%
+            offsetY: 0
+            startAngle: 0
+      chart_type: radialBar
+      experimental:
+        color_threshold: true
+      header:
+        colorize_states: true
+        show: true
+        show_states: true
+        title: Outside PM/Ozone
+      series:
+      - color_threshold:
+        - color: green
+          opacity: 1
+          value: 30
+        - color: yellow
+          value: 45
+        - color: red
+          value: 75
+        entity: sensor.owm_pollution_ozone_o3
+        float_precision: 0
+        name: 'Ozone '
+        show:
+          extremas: true
+          in_header: true
+        type: column
+      - color_threshold:
+        - color: green
+          opacity: 1
+          value: 4
+        - color: yellow
+          value: 5
+        - color: red
+          value: 10
+        entity: sensor.owm_pollution_fine_particles_pm2_5
+        name: PM2.5
+        type: column
+      - color_threshold:
+        - color: green
+          opacity: 1
+          value: 4
+        - color: yellow
+          value: 5
+        - color: red
+          value: 10
+        entity: sensor.owm_pollution_coarse_particles_pm10
+        name: PM10
+        type: column
+      type: custom:apexcharts-card
+    type: grid
+  - cards:
+    - card:
+        content: "{% for state in states.geo_location %}\n  {% if state.attributes.source==\"\
+          gdacs\" %}\n<ha-icon icon=\"{{ state.attributes.icon }}\"></ha-icon> **<font\
+          \ color=\"{{ state.attributes.alert_level }}\">{{ state.name }}</font>**\n\
+          {{ state.attributes.description }}\n*Issued: {{ state.attributes.from_date.strftime(\"\
+          %d.%m.%Y %H:%M\") }}*\n  {% endif %}\n{% endfor %}"
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        title: Alerts List
+        type: markdown
+      dismissable: true
+      entity: sensor.gdacs_alerts
+      size: ''
+      timeout: 40000
+      title: GDACS
+      type: custom:popup-card
+    type: grid
+  title: Weather
+  type: sections
+- icon: mdi:chef-hat
+  path: cooking
+  sections:
+  - cards:
+    - entities:
+      - cards:
+        - cards:
+          - image: https://shostka.info/wp-content/uploads/2020/12/dostavka_vody-980x490.jpg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: sensor.water_sensor_water_volume
+            icon: mdi:water
+            layout: icon_name_state2nd
+            name: Volume
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - cards:
+          - color_thresholds:
+            - color: '#e74c3c'
+              value: 25
+            - color: '#1db954'
+              value: 50
+            - color: '#3498db'
+              value: 75
+            entities:
+            - entity: sensor.water_sensor_water_level
+            font_size: 80
+            height: 50
+            hours_to_show: 4
+            line_width: 2
+            name: Water Level
+            points_per_hour: 90
+            show:
+              extrema: true
+              icon: false
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: custom:mini-graph-card
+          - color_thresholds:
+            - color: '#3498db'
+              value: 25
+            - color: '#f39c12'
+              value: 29
+            - color: '#E45E65'
+              value: 32
+            entities:
+            - sensor.pve_cpu_temperature
+            font_size: 70
+            height: 20
+            hours_to_show: 168
+            icon: mdi:water-thermometer
+            line_width: 2
+            name: Water Temp
+            points_per_hour: 1
+            show:
+              extrema: true
+              fill: true
+            style: "ha-card { \n  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n\
+              \  --ha-card-box-shadow: 'none';\n  border-radius: 5px;\n}\n"
+            type: custom:mini-graph-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.water_sensor_water_volume
+          max: 19
+          name: 'Tank Level: 18.9L'
+          severity:
+          - color: '#3498db'
+            value: 25
+          - color: '#f39c12'
+            value: 50
+          - color: '#e45e65'
+            value: 75
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: L
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.water_sensor_water_distance_from_sensor
+            max: 100
+            name: Water Distance
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: m
+          - align: split
+            columns: 1
+            entity: sensor.node_node_cpu_used
+            max: 100
+            name: TDS Level
+            severity:
+            - color: '#3498db'
+              value: 35
+            - color: '#f39c12'
+              value: 70
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          type: vertical-stack
+        style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+          \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+          \ 'none';\n}\n"
+        type: custom:hui-vertical-stack-card
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Kitchen Water Tank
+      type: custom:hui-entities-card
+    type: grid
+  title: Cooking
+  type: sections
+- icon: mdi:home-analytics
+  path: status
+  sections:
+  - cards:
+    - cards:
+      - entity: input_boolean.guest_mode
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: custom:mushroom-entity-card
+      - entity: input_boolean.cleaning_day
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: custom:mushroom-entity-card
+      type: horizontal-stack
+    - cards:
+      - entities:
+        - entities:
+          - sensor.seventeentrack_packages_ready_to_be_picked_up
+          - sensor.seventeentrack_packages_delivered
+          - sensor.seventeentrack_packages_not_found
+          - sensor.seventeentrack_packages_undelivered
+          head:
+            entity: sensor.seventeentrack_packages_in_transit
+            icon: mdi:package
+          type: custom:fold-entity-row
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        title: Shipping Overview
+        type: entities
+      - card:
+          state_color: true
+          title: Packages
+          type: entities
+        filter:
+          include:
+          - entity_id: sensor.*track_package_*
+            options:
+              icon: mdi:package-variant
+              secondary_info: last-changed
+            state: In Transit
+          - entity_id: sensor.*track_package_*
+            options:
+              icon: mdi:alert-circle-outline
+              secondary_info: last-changed
+            state: Not Found
+          - entity_id: sensor.*track_package_*
+            options:
+              icon: mdi:keyboard-return
+              secondary_info: last-changed
+            state: Returned
+          - entity_id: sensor.*track_package_*
+            options:
+              icon: mdi:alert-outline
+              secondary_info: last-changed
+            state: Undelivered
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: custom:auto-entities
+      type: vertical-stack
+    - cards:
+      - entities:
+        - entity: sensor.tracker_count
+        - entity: sensor.sensor_count
+        - entity: sensor.automation_count
+        - entity: sensor.script_count
+        show_icon: true
+        show_name: true
+        show_state: true
+        state_color: true
+        type: glance
+      type: horizontal-stack
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 3
+      - color: '#e5fa05'
+        value: 5
+      - color: '#f20714'
+        value: 7
+      color_thresholds_transition: soft
+      entities:
+      - sensor.ac_runtime_today
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:air-conditioner
+      lower_bound: 0
+      name: AirCon Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 3
+      - color: '#e5fa05'
+        value: 5
+      - color: '#f20714'
+        value: 7
+      color_thresholds_transition: soft
+      entities:
+      - sensor.fan_runtime_today
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:fan
+      lower_bound: 0
+      name: Fans Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#e45e65'
+        value: 5
+      - color: '#039BE5'
+        value: 7
+      - color: '#e0b400'
+        value: 9
+      color_thresholds_transition: soft
+      entities:
+      - sensor.sleep_time_duration
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:bed
+      lower_bound: 0
+      name: Sleep Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 3
+      - color: '#e5fa05'
+        value: 5
+      - color: '#f20714'
+        value: 7
+      color_thresholds_transition: soft
+      entities:
+      - sensor.lights_runtime
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:lightbulb-cfl
+      lower_bound: 0
+      name: Light Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    type: grid
+  - cards:
+    - cards:
+      - cards:
+        - entity: sensor.jarvis_last_msg
+          type: tile
+        - entity: sensor.jarvis_last_location
+          type: tile
+        - entity: sensor.jarvis_last_msg_time
+          type: tile
+        - entity: script.play_last_message
+          fill_container: true
+          type: custom:mushroom-entity-card
+        - entity: input_select.polly_voice
+          fill_container: true
+          type: custom:mushroom-select-card
+        type: vertical-stack
+      type: horizontal-stack
+    type: grid
+  - cards: []
+    type: grid
+  title: Status
+  type: sections
+- cards: []
+  icon: mdi:router-network-wireless
+  path: network
+  sections:
+  - cards:
+    - entities:
+      - cards:
+        - cards:
+          - image: https://www.batna24.com/products/DNXGFNJOLRMMNN/3.webp
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: sensor.mikrotik_rb4011igs_5hacq2hnd_temperature
+            icon: mdi:fire
+            layout: icon_name_state2nd
+            name: CPU Temp
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - color_thresholds:
+          - color: '#e74c3c'
+            value: 28
+          - color: '#1db954'
+            value: 15
+          - color: '#3498db'
+            value: 0
+          entities:
+          - entity: sensor.mikrotik_rb4011igs_5hacq2hnd_cpu_load
+          font_size: 80
+          height: 50
+          hours_to_show: 4
+          line_width: 2
+          name: CPU Usage
+          points_per_hour: 90
+          show:
+            extrema: true
+            icon: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: custom:mini-graph-card
+        - align: split
+          columns: 1
+          entity: sensor.mikrotik_rb4011igs_5hacq2hnd_hdd_usage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.mikrotik_rb4011igs_5hacq2hnd_memory_usage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          type: vertical-stack
+        - color_thresholds:
+          - color: '#3498db'
+            value: 90
+          - color: '#f39c12'
+            value: 120
+          - color: '#E45E65'
+            value: 150
+          entities:
+          - sensor.mikrotik_rb4011igs_5hacq2hnd_temperature
+          font_size: 70
+          height: 20
+          hours_to_show: 168
+          line_width: 2
+          name: Temperature
+          points_per_hour: 1
+          show:
+            extrema: true
+            fill: true
+          style: "ha-card { \n  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n  border-radius: 5px;\n}\n"
+          type: custom:mini-graph-card
+        - entities:
+          - entity: sensor.mikrotik_rb4011igs_5hacq2hnd_voltage
+            name: Voltage
+          - entity: sensor.mikrotik_rb4011igs_5hacq2hnd_uptime
+            name: Uptime
+          - entity: update.mikrotik_rb4011igs_5hacq2hnd_routeros_update
+            name: Updates
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: custom:hui-vertical-stack-card
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Mikrotik --- RB4011iGS+5HacQ2HnD-IN
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - cards:
+        - cards:
+          - image: https://en.cdr.pl/galerie/m/mikrotik-routerboard-hap_14434.jpg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: sensor.wifi_gateway_hap_ac_temperature
+            icon: mdi:fire
+            layout: icon_name_state2nd
+            name: CPU Temp
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - color_thresholds:
+          - color: '#e74c3c'
+            value: 28
+          - color: '#1db954'
+            value: 15
+          - color: '#3498db'
+            value: 0
+          entities:
+          - entity: sensor.wifi_gateway_hap_ac_cpu_load
+          font_size: 80
+          height: 50
+          hours_to_show: 4
+          line_width: 2
+          name: CPU Usage
+          points_per_hour: 90
+          show:
+            extrema: true
+            icon: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: custom:mini-graph-card
+        - align: split
+          columns: 1
+          entity: sensor.wifi_gateway_hap_ac_hdd_usage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.wifi_gateway_hap_ac_memory_usage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          type: vertical-stack
+        - color_thresholds:
+          - color: '#3498db'
+            value: 90
+          - color: '#f39c12'
+            value: 120
+          - color: '#E45E65'
+            value: 150
+          entities:
+          - sensor.wifi_gateway_hap_ac_temperature
+          font_size: 70
+          height: 20
+          hours_to_show: 168
+          line_width: 2
+          name: Temperature
+          points_per_hour: 1
+          show:
+            extrema: true
+            fill: true
+          style: "ha-card { \n  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n  border-radius: 5px;\n}\n"
+          type: custom:mini-graph-card
+        - entities:
+          - entity: sensor.wifi_gateway_hap_ac_voltage
+            name: Voltage
+          - entity: sensor.wifi_gateway_hap_ac_uptime
+            name: Uptime
+          - entity: update.wifi_gateway_hap_ac_routeros_update
+            name: Updates
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: custom:hui-vertical-stack-card
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Mikrotik --- RB962UiGS-5HacT2HnT
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - cards:
+      - color_thresholds:
+        - color: '#e74c3c'
+          value: 28
+        - color: '#1db954'
+          value: 15
+        - color: '#3498db'
+          value: 0
+        entities:
+        - entity: sensor.mikrotik_rb4011igs_5hacq2hnd_wireless_clients
+        font_size: 80
+        height: 50
+        hours_to_show: 4
+        line_width: 2
+        name: Wireles Clients
+        points_per_hour: 90
+        show:
+          extrema: true
+          icon: false
+        style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+          \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+          \ 'none';\n}\n"
+        type: custom:mini-graph-card
+      - color_thresholds:
+        - color: '#e74c3c'
+          value: 28
+        - color: '#1db954'
+          value: 15
+        - color: '#3498db'
+          value: 0
+        entities:
+        - entity: sensor.mikrotik_rb4011igs_5hacq2hnd_wired_clients
+        font_size: 80
+        height: 50
+        hours_to_show: 4
+        line_width: 2
+        name: Wired Clients
+        points_per_hour: 90
+        show:
+          extrema: true
+          icon: false
+        style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+          \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+          \ 'none';\n}\n"
+        type: custom:mini-graph-card
+      type: horizontal-stack
+    - cards:
+      - color_thresholds:
+        - color: '#e74c3c'
+          value: 28
+        - color: '#1db954'
+          value: 15
+        - color: '#3498db'
+          value: 0
+        entities:
+        - entity: sensor.captive_portal_clients
+        font_size: 80
+        height: 50
+        hours_to_show: 4
+        line_width: 2
+        name: Guest Clients
+        points_per_hour: 90
+        show:
+          extrema: true
+          icon: false
+        style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+          \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+          \ 'none';\n}\n"
+        type: custom:mini-graph-card
+      type: horizontal-stack
+    - entity: binary_sensor.pi_hole_status
+      type: tile
+    - entity: sensor.pi_hole_seen_clients
+      type: tile
+    - cards:
+      - card_mod:
+          style: "ha-card {\n  --ha-card-background: #005c32;\n}\n:host {\n  --card-mod-icon-color:\
+            \ white;\n}\n"
+        entity: sensor.pi_hole_dns_queries_today
+        icon: mdi:earth
+        name: Total Today
+        type: entity
+      - card_mod:
+          style: "ha-card {\n  --ha-card-background: #007997;\n}\n:host {\n  --card-mod-icon-color:\
+            \ white;\n}\n"
+        entity: sensor.pi_hole_ads_blocked_today
+        icon: mdi:close-octagon-outline
+        name: Blocked Today
+        type: entity
+      - card_mod:
+          style: "ha-card {\n  --ha-card-background: #b1720c;\n}\n:host {\n  --card-mod-icon-color:\
+            \ white;\n}\n"
+        entity: sensor.pi_hole_ads_percentage_blocked_today
+        icon: mdi:percent
+        name: Percent Blocked
+        type: entity
+      - card_mod:
+          style: "ha-card {\n  --ha-card-background: #913225;\n}\n:host {\n  --card-mod-icon-color:\
+            \ white;\n}\n"
+        entity: sensor.pi_hole_domains_blocked
+        icon: mdi:list-status
+        name: Blocklist
+        type: entity
+      type: vertical-stack
+    type: grid
+  - cards:
+    - cards:
+      - align_icon: state
+        align_state: center
+        card_mod:
+          style: "ha-card > div:nth-child(-n+2) {\n  padding: 0 14px 0 14px !important\n\
+            }\nha-card > .info {\n  padding: 0 14px 0px 14px !important\n}\nha-card\
+            \ { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+        color_thresholds:
+        - color: '#00ffbf'
+          value: 300
+        - color: '#ff00b7'
+          value: 200
+        - color: '#ff0000'
+          value: 100
+        decimals: 0
+        entities:
+        - entity: sensor.speedtest_download
+          state_adaptive_color: true
+        font_size: 88
+        hours_to_show: 6
+        line_width: 6
+        points_per_hour: 2
+        show:
+          fill: false
+          icon_adaptive_color: true
+          labels: false
+          name: false
+          points: false
+        type: custom:mini-graph-card
+      - align_icon: state
+        align_state: center
+        card_mod:
+          style: "ha-card > div:nth-child(-n+2) {\n  padding: 0 14px 0 14px !important\n\
+            }\nha-card > .info {\n  padding: 0 14px 0px 14px !important\n}\nha-card\
+            \ { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+        color_thresholds:
+        - color: '#00ffbf'
+          value: 300
+        - color: '#ff00b7'
+          value: 200
+        - color: '#ff0000'
+          value: 100
+        decimals: 0
+        entities:
+        - entity: sensor.speedtest_upload
+          state_adaptive_color: true
+        font_size: 88
+        hours_to_show: 6
+        line_width: 6
+        points_per_hour: 2
+        show:
+          fill: false
+          icon_adaptive_color: true
+          labels: false
+          name: false
+          points: false
+        type: custom:mini-graph-card
+      - align_icon: state
+        align_state: center
+        card_mod:
+          style: "ha-card > div:nth-child(-n+2) {\n  padding: 0 14px 0 14px !important\n\
+            }\nha-card > .info {\n  padding: 0 14px 0px 14px !important\n}\nha-card\
+            \ { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+        color_thresholds:
+        - color: '#00ffbf'
+          value: 10
+        - color: '#ff00b7'
+          value: 30
+        - color: '#ff0000'
+          value: 35
+        decimals: 0
+        entities:
+        - entity: sensor.speedtest_ping
+          state_adaptive_color: true
+        font_size: 88
+        hours_to_show: 6
+        line_width: 6
+        points_per_hour: 2
+        show:
+          fill: false
+          icon_adaptive_color: true
+          labels: false
+          name: false
+          points: false
+        type: custom:mini-graph-card
+      type: horizontal-stack
+    - cards:
+      - badge_color: ''
+        badge_icon: ''
+        entity: sensor.mikrotik_wlan2_rx
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: '{% if states(''sensor.mikrotik_wlan2_rx'') > "0.50" %} mdi:access-point-network
+          {% else %} mdi:access-point-network-off {% endif %}'
+        icon_color: '{% if states(''sensor.mikrotik_wlan2_rx'') > "0.50" %} green
+          {% else %} red {% endif %}'
+        multiline_secondary: true
+        picture: ''
+        primary: In
+        secondary: '{% if states(''sensor.mikrotik_wlan2_rx'') > "0.50" %} Good {%
+          else %} Problem {% endif %} | {{ states(''sensor.mikrotik_wlan2_rx'') }}
+          Mb/s'
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: more-info
+        type: custom:mushroom-template-card
+      - badge_color: ''
+        badge_icon: ''
+        entity: sensor.mikrotik_wlan2_tx
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: '{% if states(''sensor.mikrotik_wlan2_tx'') > "0.10" %} mdi:access-point-network
+          {% else %} mdi:access-point-network-off {% endif %}'
+        icon_color: '{% if states(''sensor.mikrotik_wlan2_tx'') > "0.10" %} green
+          {% else %} red {% endif %}'
+        multiline_secondary: true
+        picture: ''
+        primary: Out
+        secondary: '{% if states(''sensor.mikrotik_wlan2_tx'') > "0.10" %} Good {%
+          else %} Problem {% endif %} | {{ states(''sensor.mikrotik_wlan2_tx'') }}
+          Mb/s'
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: more-info
+        type: custom:mushroom-template-card
+      type: horizontal-stack
+    - entities:
+      - entity: binary_sensor.mikrotik_ether1_connection
+      - entity: binary_sensor.wifi_gateway_ether2_connection
+      - entity: binary_sensor.mikrotik_ether9_connection
+      - type: divider
+      - entity: binary_sensor.mikrotik_ether2_connection
+      - entity: binary_sensor.mikrotik_ether3_connection
+      - entity: binary_sensor.mikrotik_ether4_connection
+      - entity: binary_sensor.mikrotik_ether5_connection
+      - entity: binary_sensor.mikrotik_ether6_connection
+      - entity: binary_sensor.mikrotik_ether7_connection
+      - entity: binary_sensor.mikrotik_ether8_connection
+      - entity: binary_sensor.mikrotik_ether10_connection
+      type: entities
+    type: grid
+  - cards: []
+    type: grid
+  title: Network
+  type: sections
+- cards: []
+  icon: phu:proxmox
+  max_columns: 8
+  path: proxmox
+  sections:
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://habrastorage.org/r/w780/webt/uh/mx/a6/uhmxa6u7xu_qhrrvqbroy4wezsu.jpeg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: sensor.pve_cpu_temperature
+            icon: mdi:fire
+            layout: icon_name_state2nd
+            name: CPU Temp
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - color_thresholds:
+          - color: '#e74c3c'
+            value: 28
+          - color: '#1db954'
+            value: 15
+          - color: '#3498db'
+            value: 0
+          entities:
+          - entity: sensor.node_node_cpu_used
+          font_size: 80
+          height: 50
+          hours_to_show: 4
+          line_width: 2
+          name: CPU Usage
+          points_per_hour: 90
+          show:
+            extrema: true
+            icon: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: custom:mini-graph-card
+        - align: split
+          columns: 1
+          entity: sensor.node_node_disk_used_percentage
+          max: 100
+          name: 'Disk usage: 256Gb'
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.node_node_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          type: vertical-stack
+        - color_thresholds:
+          - color: '#3498db'
+            value: 90
+          - color: '#f39c12'
+            value: 120
+          - color: '#E45E65'
+            value: 150
+          entities:
+          - sensor.pve_cpu_temperature
+          font_size: 70
+          height: 20
+          hours_to_show: 168
+          line_width: 2
+          name: Temperature
+          points_per_hour: 1
+          show:
+            extrema: true
+            fill: true
+          style: "ha-card { \n  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n  border-radius: 5px;\n}\n"
+          type: custom:mini-graph-card
+        - entities:
+          - entity: binary_sensor.node_node_status
+            name: Proxmox Status
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: NUC N5105 --- Proxmox
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://frenck.dev/wp-content/uploads/2020/01/homeassistant-1920x1080.jpg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.qemu_haos12_0_103_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.qemu_haos12_0_103_disk_used_percentage
+          max: 100
+          name: 'Disk usage: 35Gb'
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.qemu_haos12_0_103_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.qemu_haos12_0_103_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Home Assistant
+      type: custom:hui-entities-card
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - entity: binary_sensor.pi_hole_status
+            image: https://miro.medium.com/v2/resize:fit:1400/1*SZ1I4EZPgJj4BFYVBZRjzw.jpeg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            tap_action:
+              action: more-info
+            type: picture
+          - entity: binary_sensor.lxc_pihole_109_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_pihole_109_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_pihole_109_memory_free_percentage
+            max: 512
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_pihole_109_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Pi-Hole
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfdiXoYkkBK_Z3J5LnmO6dxqQqIZfXIUvX_pRZGoBARg&s
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_frigate_104_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_frigate_104_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_frigate_104_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_frigate_104_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Frigate
+      type: custom:hui-entities-card
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://miro.medium.com/v2/resize:fit:2000/1*C9MGFR7XjDO1MTQJt711Hg.png
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_bitwarden_110_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_bitwarden_110_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_bitwarden_110_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_bitwarden_110_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Bitwargen
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://homeseer.com/wp-content/uploads/2023/05/BFI-Zigbee-Plus.jpg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_zigbee2mqtt_105_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_zigbee2mqtt_105_disk_used_percentage
+            max: 100
+            name: Disk usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_zigbee2mqtt_105_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_zigbee2mqtt_105_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Zigbee2MQTT
+      type: custom:hui-entities-card
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSr5MPh0Ecg8YhE8KVW7cUoeJRt7t8nzwy3vF-U5MNuEhxaQBksSSrpmWBQP0wOPGZjKDE&usqp=CAU
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_mqtt_100_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_mqtt_100_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_mqtt_100_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_mqtt_100_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: MQTT
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://pbs.twimg.com/media/GAyEiKGWEAABcAJ.jpg:large
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_mariadb_101_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_mariadb_101_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_mariadb_101_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.haos_db
+            max: 2000
+            name: DB Size
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: MB
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: MariaDB
+      type: custom:hui-entities-card
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://media.licdn.com/dms/image/D4D12AQGX9Yg6kxNykg/article-cover_image-shrink_600_2000/0/1702399251304?e=2147483647&v=beta&t=Oyy76IirOokYljPucjS7MlRlwFgdUbK_8cCeMSl66wg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_uptimekuma_112_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_uptimekuma_112_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_uptimekuma_112_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_uptimekuma_112_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Uptime-Kuma
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://05t3.github.io/assets/img/Posts/trilium.png
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_trilium_111_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_trilium_111_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_trilium_111_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_trilium_111_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Notes
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://neilshealthymeals.com/wp-content/uploads/2018/01/Meal-Planning-For-The-8020-Food-Rule-1200.jpg
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_mealie_108_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_mealie_108_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_mealie_108_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_mealie_108_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Mealie
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRvOQvoZW8SC4-WdbA1caAZfr3HfLv3aQ3AZcjnY7aijdWf-A_szlSePXGqfJaIzNeOjCc&usqp=CAU
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_esphome_107_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_esphome_107_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_esphome_107_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_esphome_107_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: ESPHome
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://repository-images.githubusercontent.com/12618379/33692d8a-01f5-4144-ab44-eb2bb9f6089c
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_node_red_106_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_node_red_106_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_node_red_106_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_node_red_106_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Node-Red
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - entities:
+      - card_type: vertical-stack
+        cards:
+        - cards:
+          - image: https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGY6rl4LlmgccKmvRet8MQ3QUbKIaUdJ2GYYadGDSmIJ0K0cpcnkbsOe0Da6C1kONX_jI&usqp=CAU
+            style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0,\
+              \ 0.0)';\n    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            type: picture
+          - entity: binary_sensor.lxc_cloudflared_102_status
+            icon: mdi:play
+            layout: icon_name_state2nd
+            name: Status
+            show_icon: true
+            show_state: true
+            styles:
+              card:
+              - --ha-card-background: rgba(0, 0, 0, 0.0)
+              - --ha-card-box-shadow: none
+              grid:
+              - grid-template-columns: 50px auto
+              icon:
+              - padding: 20px 10px
+              - height: 30px
+              - width: 30px
+              name:
+              - padding: 0px 10px
+              - justify-self: start
+              - color: var(--secondary-text-color)
+              state:
+              - padding: 0px 10px
+              - justify-self: start
+              - font-family: Roboto, sans-serif
+              - font-size: 15px
+            type: custom:button-card
+          type: horizontal-stack
+        - align: split
+          columns: 1
+          entity: sensor.lxc_cloudflared_102_disk_used_percentage
+          max: 100
+          name: Disk usage
+          severity:
+          - color: '#3498db'
+            value: 50
+          - color: '#f39c12'
+            value: 75
+          - color: '#e45e65'
+            value: 100
+          show_icon: true
+          style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          title_position: inside
+          type: custom:bar-card
+          unit_of_measurement: '%'
+        - cards:
+          - align: split
+            columns: 1
+            entity: sensor.lxc_cloudflared_102_memory_used_percentage
+            max: 100
+            name: RAM usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          - align: split
+            columns: 1
+            entity: sensor.lxc_cloudflared_102_cpu_used
+            max: 100
+            name: CPU usage
+            severity:
+            - color: '#3498db'
+              value: 50
+            - color: '#f39c12'
+              value: 75
+            - color: '#e45e65'
+              value: 100
+            show_icon: true
+            style: "ha-card { \n  --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+              \  --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n  --ha-card-box-shadow:\
+              \ 'none';\n}\n"
+            title_position: inside
+            type: custom:bar-card
+            unit_of_measurement: '%'
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: vertical-stack
+        type: custom:hui-element
+      show_header_toggle: 'off'
+      style: 'ha-card { border-radius: 20px; }
+
+        '
+      title: Cloudflare
+      type: custom:hui-entities-card
+    type: grid
+  - cards:
+    - card:
+        cards:
+        - entities:
+          - entity: button.qemu_haos12_0_103_reboot
+            name: Reboot
+          - entity: button.qemu_haos12_0_103_stop
+            name: Stop
+          - entity: button.qemu_haos12_0_103_start
+            name: Start
+          - entity: button.qemu_haos12_0_103_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.qemu_haos12_0_103_status
+      size: ''
+      timeout: 40000
+      title: Home Assistant Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_pihole_109_reboot
+            name: Reboot
+          - entity: button.lxc_pihole_109_stop
+            name: Stop
+          - entity: button.lxc_pihole_109_start
+            name: Start
+          - entity: button.lxc_pihole_109_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_pihole_109_status
+      size: ''
+      timeout: 40000
+      title: Pi-Hole Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_frigate_104_reboot
+            name: Reboot
+          - entity: button.lxc_frigate_104_stop
+            name: Stop
+          - entity: button.lxc_frigate_104_start
+            name: Start
+          - entity: button.lxc_frigate_104_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_frigate_104_status
+      size: ''
+      timeout: 40000
+      title: Frigate Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_mealie_108_reboot
+            name: Reboot
+          - entity: button.lxc_mealie_108_stop
+            name: Stop
+          - entity: button.lxc_mealie_108_start
+            name: Start
+          - entity: button.lxc_mealie_108_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_mealie_108_status
+      size: ''
+      timeout: 40000
+      title: Mealie Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_uptimekuma_112_reboot
+            name: Reboot
+          - entity: button.lxc_uptimekuma_112_stop
+            name: Stop
+          - entity: button.lxc_uptimekuma_112_start
+            name: Start
+          - entity: button.lxc_uptimekuma_112_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_uptimekuma_112_status
+      size: ''
+      timeout: 40000
+      title: Uptime-Kuma Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_trilium_111_reboot
+            name: Reboot
+          - entity: button.lxc_trilium_111_stop
+            name: Stop
+          - entity: button.lxc_trilium_111_start
+            name: Start
+          - entity: button.lxc_trilium_111_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_trilium_111_status
+      size: ''
+      timeout: 40000
+      title: Notes Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_zigbee2mqtt_105_shutdown
+            name: Reboot
+          - entity: button.lxc_zigbee2mqtt_105_stop
+            name: Stop
+          - entity: button.lxc_zigbee2mqtt_105_start
+            name: Start
+          - entity: button.lxc_zigbee2mqtt_105_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_zigbee2mqtt_105_status
+      size: ''
+      timeout: 40000
+      title: Zigbee2MQTT Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_mariadb_101_reboot
+            name: Reboot
+          - entity: button.lxc_mariadb_101_stop
+            name: Stop
+          - entity: button.lxc_mariadb_101_stop
+            name: Start
+          - entity: button.lxc_mariadb_101_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_mariadb_101_status
+      size: ''
+      timeout: 40000
+      title: MariaDB Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_esphome_107_reboot
+            name: Reboot
+          - entity: button.lxc_esphome_107_stop
+            name: Stop
+          - entity: button.lxc_esphome_107_start
+            name: Start
+          - entity: button.lxc_esphome_107_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_esphome_107_status
+      size: ''
+      timeout: 40000
+      title: ESPHome Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_node_red_106_reboot
+            name: Reboot
+          - entity: button.lxc_node_red_106_stop
+            name: Stop
+          - entity: button.lxc_node_red_106_start
+            name: Start
+          - entity: button.lxc_node_red_106_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_node_red_106_status
+      size: ''
+      timeout: 40000
+      title: Node-Red Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_cloudflared_102_reboot
+            name: Reboot
+          - entity: button.lxc_cloudflared_102_stop
+            name: Stop
+          - entity: button.lxc_cloudflared_102_start
+            name: Start
+          - entity: button.lxc_cloudflared_102_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_cloudflared_102_status
+      size: ''
+      timeout: 40000
+      title: Cloudflare Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_mqtt_100_reboot
+            name: Reboot
+          - entity: button.lxc_mqtt_100_stop
+            name: Stop
+          - entity: button.lxc_mqtt_100_start
+            name: Start
+          - entity: button.lxc_mqtt_100_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_mqtt_100_status
+      size: ''
+      timeout: 40000
+      title: MQTT Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - entities:
+          - entity: button.lxc_bitwarden_110_reboot
+            name: Reboot
+          - entity: button.lxc_bitwarden_110_stop
+            name: Stop
+          - entity: button.lxc_bitwarden_110_start
+            name: Start
+          - entity: button.lxc_bitwarden_110_shutdown
+            name: Shutdown
+          show_header_toggle: false
+          style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+            \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+            \ 'none';\n}\n"
+          type: entities
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.lxc_bitwarden_110_status
+      size: ''
+      timeout: 40000
+      title: Vaultwargen Control
+      type: custom:popup-card
+    - card:
+        cards:
+        - cards:
+          - card_mod:
+              style: "ha-card {\n  --ha-card-background: #420d29;\n}\n:host {\n  --card-mod-icon-color:\
+                \ white;\n}\n"
+            entity: binary_sensor.pi_hole_status
+            icon: mdi:pi-hole
+            name: Pi-Hole Status
+            type: entity
+          - card_mod:
+              style: "ha-card {\n  --ha-card-background: #2b1130;\n}\n:host {\n  --card-mod-icon-color:\
+                \ white;\n}\n"
+            entity: sensor.pi_hole_seen_clients
+            icon: mdi:account-group
+            name: Total Clients
+            type: entity
+          type: horizontal-stack
+        - card_mod:
+            style: "ha-card {\n  --ha-card-background: #005c32;\n}\n:host {\n  --card-mod-icon-color:\
+              \ white;\n}\n"
+          entity: sensor.pi_hole_dns_queries_today
+          icon: mdi:earth
+          name: Total Today
+          type: entity
+        - card_mod:
+            style: "ha-card {\n  --ha-card-background: #007997;\n}\n:host {\n  --card-mod-icon-color:\
+              \ white;\n}\n"
+          entity: sensor.pi_hole_ads_blocked_today
+          icon: mdi:close-octagon-outline
+          name: Blocked Today
+          type: entity
+        - card_mod:
+            style: "ha-card {\n  --ha-card-background: #b1720c;\n}\n:host {\n  --card-mod-icon-color:\
+              \ white;\n}\n"
+          entity: sensor.pi_hole_ads_percentage_blocked_today
+          icon: mdi:percent
+          name: Percent Blocked
+          type: entity
+        - card_mod:
+            style: "ha-card {\n  --ha-card-background: #913225;\n}\n:host {\n  --card-mod-icon-color:\
+              \ white;\n}\n"
+          entity: sensor.pi_hole_domains_blocked
+          icon: mdi:list-status
+          name: Blocklist
+          type: entity
+        type: vertical-stack
+      dismissable: true
+      entity: binary_sensor.pi_hole_status
+      size: ''
+      timeout: 40000
+      title: Pi-Hole Status
+      type: custom:popup-card
+    type: grid
+  title: proxmox
+  type: sections
+- cards: []
+  icon: mdi:palm-tree
+  max_columns: 4
+  path: other
+  sections:
+  - cards:
+    - cards:
+      - entity: sensor.gas_91_price_ptt
+        name: Gasohol 91
+        show_state: true
+        styles:
+          card:
+          - background: "[[[ \n  if (states[\"sensor.gas_91_price_ptt\"].state ==\
+              \ \"off\") return \"white)\";\n  else if (entity.state < states[\"sensor.gas_91_price_ptt\"\
+              ].state) \n  return \"rgb(199, 252, 212)\";\n  else return \"rgb(252,\
+              \ 199, 203)\" \n]]]"
+          - height: 40px
+          - padding-top: 1px
+          - padding-bottom: 1px
+          - padding-left: 1px
+          - padding-right: 5px
+          grid:
+          - grid-template-areas: '"i n s"'
+          - grid-template-columns: 20% 1fr 40%
+          icon:
+          - width: 70%
+          - color: rgb(70, 130, 180)
+          name:
+          - font-size: 14px
+          - margin-left: -20%
+          - color: rgb(70, 130, 180)
+          state:
+          - font-weight: bold
+          - font-size: 20px
+          - justify-self: center
+          - color: "[[[\n  if (states[\"sensor.gas_91_price_ptt\"].state == \"off\"\
+              ) return \"white\";\n  else return \"rgb(70, 130, 180)\";\n]]]"
+        type: custom:button-card
+      - entity: sensor.gas_95_price_ptt
+        name: Gasohol 95
+        show_state: true
+        styles:
+          card:
+          - background: "[[[ \n  if (states[\"sensor.gas_95_price_ptt\"].state ==\
+              \ \"off\") return \"white)\";\n  else if (entity.state < states[\"sensor.gas_95_price_ptt\"\
+              ].state) \n  return \"rgb(199, 252, 212)\";\n  else return \"rgb(252,\
+              \ 199, 203)\" \n]]]"
+          - height: 40px
+          - padding-top: 1px
+          - padding-bottom: 1px
+          - padding-left: 1px
+          - padding-right: 5px
+          grid:
+          - grid-template-areas: '"i n s"'
+          - grid-template-columns: 20% 1fr 40%
+          icon:
+          - width: 70%
+          - color: rgb(70, 130, 180)
+          name:
+          - font-size: 14px
+          - margin-left: -20%
+          - color: rgb(70, 130, 180)
+          state:
+          - font-weight: bold
+          - font-size: 20px
+          - justify-self: center
+          - color: "[[[\n  if (states[\"sensor.gas_95_price_ptt\"].state == \"off\"\
+              ) return \"white\";\n  else return \"rgb(70, 130, 180)\";\n]]]"
+        type: custom:button-card
+      type: horizontal-stack
+    - aspect_ratio: 50%
+      type: iframe
+      url: https://phuket-smartbus-8950e.web.app/
+    - cards:
+      - image: https://phuketsmartbus.com/wp-content/uploads/2024/01/2427072_0.jpg
+        type: picture
+      - image: https://phuketsmartbus.com/wp-content/uploads/2024/01/2427073_0.jpg
+        type: picture
+      type: custom:swipe-card
+    type: grid
+  - cards:
+    - cards:
+      - entities:
+        - entity: sensor.flightradar24_current_in_area
+          name: In area
+        - entity: sensor.flightradar24_entered_area
+        - entity: sensor.flightradar24_exited_area
+        - entity: sensor.flightradar24_additional_tracked
+        - entity: text.flightradar24_add_to_track
+        - entity: text.flightradar24_remove_from_track
+        type: entities
+      - aspect_ratio: 100%
+        type: iframe
+        url: https://www.flightradar24.com/simple?lat=8.17&lon=98.46&z=9&label1=reg&size=small
+      title: Flights near House
+      type: vertical-stack
+    type: grid
+  - cards:
+    - card:
+        content: "{% set data = state_attr('sensor.flightradar24_current_in_area',\
+          \ 'flights') %} {% for flight in data %}\n  <ha-icon icon=\"mdi:airplane\"\
+          ></ha-icon>{{ flight.flight_number }}({{ flight.aircraft_registration }})\
+          \ - {{ flight.airline_short }} - {{ flight.aircraft_model }}\n  {{ flight.airport_origin_city\
+          \ }}{%if flight.airport_origin_city %}<img src=\"https://flagsapi.com/{{\
+          \ flight.airport_origin_country_code }}/shiny/16.png\" title='{{ flight.airport_origin_country_name\
+          \ }}'/>{% endif %} -> {{ flight.airport_destination_city }}{%\n  if flight.airport_destination_country_code\
+          \ %}<img src=\"https://flagsapi.com/{{ flight.airport_destination_country_code\
+          \ }}/shiny/16.png\" title='{{ flight.airport_destination_country_name }}'/>{%\
+          \ endif %}\n  {%if flight.time_scheduled_departure %}Departure - {{ flight.time_scheduled_departure\
+          \ | timestamp_custom('%H:%M') }}; {% endif %}{%if flight.time_scheduled_arrival%}Arrival\
+          \ - {{ flight.time_scheduled_arrival | timestamp_custom('%H:%M') }}{% endif\
+          \ %}\n  Altitude - {{ flight.altitude }} ft{%if flight.altitude > 0 %} ({{(flight.altitude\
+          \ * 0.3048)| round(0)}} m){% endif%}; Gr. speed - {{ flight.ground_speed\
+          \ }} kts{%if flight.ground_speed > 0 %} ({{(flight.ground_speed * 1.852)|\
+          \ round(0)}} km/h){% endif%}\n  {% endfor %}"
+        type: markdown
+      conditions:
+      - above: 0
+        condition: numeric_state
+        entity: sensor.flightradar24_current_in_area
+      type: conditional
+    type: grid
+  - cards:
+    - cards:
+      - entities:
+        - type: custom:bar-card
+        icon: mdi:space-station
+        type: entities
+      - dark_mode: true
+        default_zoom: 3
+        entities:
+        - entity: device_tracker.iss
+        - zone.home
+        hours_to_show: 2
+        type: map
+      - entities:
+        - attribute: latitude
+          entity: device_tracker.iss
+          icon: mdi:latitude
+          name: Lat
+          type: attribute
+        - attribute: longitude
+          entity: device_tracker.iss
+          icon: mdi:longitude
+          name: Lon
+          type: attribute
+        type: entities
+      - entity: sensor.iss_crew
+        icon: mdi:account-group
+        name: Current Crew
+        type: entity
+        unit: People
+      title: International Space Station
+      type: custom:vertical-stack-in-card
+    type: grid
+  title: Other
+  type: sections
+- icon: mdi:home-assistant
+  path: assistant
+  sections:
+  - cards: []
+    type: grid
+  title: Assistant
   type: sections
