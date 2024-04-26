@@ -1,0 +1,463 @@
+views:
+- sections:
+  - cards:
+    - alignment: center
+      chips:
+      - entity: alarm_control_panel.house
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: alarm-control-panel
+      - entity: weather.openweathermap
+        show_conditions: true
+        show_temperature: true
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: weather
+      - entity: sensor.rain_sensor
+        icon_color: light-green
+        type: entity
+      style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+      type: custom:mushroom-chips-card
+    - alignment: center
+      subtitle: '{% set time = now().weekday() %}
+
+        {% if (time == 0) %}
+
+        Today is Monday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% elif (time == 1) %}
+
+        Today is Tuesday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% elif (time == 2) %}
+
+        Today is Wednesday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% elif (time == 3) %}
+
+        Today is Thursday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% elif (time == 4) %}
+
+        Today is Friday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% elif (time == 5) %}
+
+        Today is Saturday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% elif (time == 6) %}
+
+        Today is Sunday, {{ now().date()}} Time: {{ now().hour}}:{{ now().minute}}
+
+        {% else %}
+
+        Today is fudged....
+
+        {% endif %}'
+      subtitle_tap_action:
+        action: navigate
+        navigation_path: /calendar
+      title: "{% set time = now().hour %}\n{% if (time >= 18) %}\n  Good Evening,\
+        \ Simplemice!\n{% elif (time >= 12) %}\n  Good Afternoon, Simplemice!\n{%\
+        \ elif (time >= 7) %}\n  Good Morning, Simplemice!\n{% elif (time <= 7) %}\n\
+        \  Good Night, Simplemice!\n{% else %}\n  Dude! Go Sleep!\n{% endif %}"
+      type: custom:mushroom-title-card
+    type: grid
+  - cards:
+    - alignment: center
+      chips:
+      - content: '{{expand(state_attr(''light.all_lights'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
+
+          '
+        icon: mdi:lightbulb
+        icon_color: yellow
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: template
+      - content: '{{expand(state_attr(''light.all_ambient'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
+
+          '
+        icon: mdi:led-strip-variant
+        icon_color: yellow
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: template
+      - content: '{{expand(state_attr(''cover.livingroom_curtains'', ''entity_id''))|
+          selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
+
+          '
+        icon: mdi:curtains
+        icon_color: purple
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: template
+      - content: '{{expand(state_attr(''group.external_doors'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
+
+          '
+        icon: mdi:door
+        icon_color: purple
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: template
+      - content: '{{expand(state_attr(''binary_sensor.all_windows'', ''entity_id''))|
+          selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
+
+          '
+        icon: mdi:window-closed
+        icon_color: purple
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: template
+      - content: '{{expand(state_attr(''fan.all_fans'', ''entity_id''))| selectattr(''state'',''eq'',''on'')|map(attribute=''entity_id'')|list|count}}
+
+          '
+        icon: mdi:fan
+        icon_color: green
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: template
+      style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+      type: custom:mushroom-chips-card
+    - cards:
+      - cards:
+        - entity: person.simplemice
+          hide_name: true
+          layout: vertical
+          tap_action:
+            action: fire-dom-event
+            browser_mod:
+              data:
+                content:
+                  card:
+                    cards:
+                    - entity: sensor.micemob_geocoded_location
+                      icon: mdi:map-marker
+                      icon_color: yellow
+                      primary_info: none
+                      type: custom:mushroom-entity-card
+                    - auto_fit: true
+                      dark_mode: false
+                      default_zoom: 16
+                      entities:
+                      - entity: person.simplemice
+                      type: map
+                    type: vertical-stack
+                  style: "ha-card {\n   --padding-right: 15px;\n   --padding-left:\
+                    \ 15px;\n   --padding-bottom: 15px;\n   --box-shadow: 0px 0px;\n\
+                    \   --ha-card-border-width: 0px;\n}\n"
+                  type: custom:mod-card
+                title: Simplemice
+              service: browser_mod.popup
+          type: custom:mushroom-person-card
+          use_entity_picture: true
+        - alignment: center
+          chips:
+          - entity: sensor.micemob_battery_state
+            icon: mdi:power-plug
+            icon_color: "          {% set state=states('sensor.micemob_battery_state')\
+              \ %}\n          {% if state=='charging' %}\n          green\n      \
+              \    {% elif state=='discharging' %}\n          #6f6f6f\n         {%\
+              \ endif %}"
+            tap_action:
+              action: more-info
+            type: template
+          - entity: sensor.micemob_battery_level
+            icon: "          {% set bl = states('sensor.micemob_battery_level') |\
+              \ int %}\n          {% if bl < 10 %} mdi:battery-outline\n         \
+              \ {% elif bl < 20 %} mdi:battery-10\n          {% elif bl < 30 %} mdi:battery-20\n\
+              \          {% elif bl < 40 %} mdi:battery-30\n          {% elif bl <\
+              \ 50 %} mdi:battery-40\n          {% elif bl < 60 %} mdi:battery-50\n\
+              \          {% elif bl < 70 %} mdi:battery-60\n          {% elif bl <\
+              \ 80 %} mdi:battery-70\n          {% elif bl < 90 %} mdi:battery-80\n\
+              \          {% elif bl < 100 %} mdi:battery-90\n          {% elif bl\
+              \ == 100 %} mdi:battery\n          {% else %} mdi:battery-unknown\n\
+              \          {% endif %}\n"
+            icon_color: "          {% set bl = states('sensor.micemob_battery_level')\
+              \ | int %}\n          {% if bl < 10 %} red\n          {% elif bl < 20\
+              \ %} red\n          {% elif bl < 30 %} red\n          {% elif bl < 40\
+              \ %} orange\n          {% elif bl < 50 %} orange\n          {% elif\
+              \ bl < 60 %} green\n          {% elif bl < 70 %} green\n          {%\
+              \ elif bl < 80 %} green\n          {% elif bl < 90 %} green\n      \
+              \    {% elif bl < 100 %} green\n          {% elif bl == 100 %} green\n\
+              \          {% else %} grey\n          {% endif %}"
+            tap_action:
+              action: more-info
+            type: template
+          - entity: binary_sensor.micemob_bluetooth_state
+            icon: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
+              %}
+
+              {% if state==''on'' %}
+
+              mdi:bluetooth
+
+              {% elif state==''off'' %}
+
+              mdi:bluetooth-off
+
+              {% endif %}
+
+              '
+            icon_color: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
+              %}
+
+              {% if state==''on'' %}
+
+              green
+
+              {% elif state==''off'' %}
+
+              red
+
+              {% endif %}
+
+              '
+            type: template
+          type: custom:mushroom-chips-card
+        mode: vertical
+        type: custom:stack-in-card
+      - cards:
+        - entity: person.simplemice
+          hide_name: true
+          layout: vertical
+          tap_action:
+            action: fire-dom-event
+            browser_mod:
+              data:
+                content:
+                  card:
+                    cards:
+                    - entity: sensor.micemob_geocoded_location
+                      icon: mdi:map-marker
+                      icon_color: yellow
+                      primary_info: none
+                      type: custom:mushroom-entity-card
+                    - auto_fit: true
+                      dark_mode: false
+                      default_zoom: 16
+                      entities:
+                      - entity: person.simplemice
+                      type: map
+                    type: vertical-stack
+                  style: "ha-card {\n   --padding-right: 15px;\n   --padding-left:\
+                    \ 15px;\n   --padding-bottom: 15px;\n   --box-shadow: 0px 0px;\n\
+                    \   --ha-card-border-width: 0px;\n}\n"
+                  type: custom:mod-card
+                title: Simplemice
+              service: browser_mod.popup
+          type: custom:mushroom-person-card
+          use_entity_picture: true
+        - alignment: center
+          chips:
+          - entity: sensor.micemob_battery_state
+            icon: mdi:power-plug
+            icon_color: "          {% set state=states('sensor.micemob_battery_state')\
+              \ %}\n          {% if state=='charging' %}\n          green\n      \
+              \    {% elif state=='discharging' %}\n          #6f6f6f\n         {%\
+              \ endif %}"
+            tap_action:
+              action: more-info
+            type: template
+          - entity: sensor.micemob_battery_level
+            icon: "          {% set bl = states('sensor.micemob_battery_level') |\
+              \ int %}\n          {% if bl < 10 %} mdi:battery-outline\n         \
+              \ {% elif bl < 20 %} mdi:battery-10\n          {% elif bl < 30 %} mdi:battery-20\n\
+              \          {% elif bl < 40 %} mdi:battery-30\n          {% elif bl <\
+              \ 50 %} mdi:battery-40\n          {% elif bl < 60 %} mdi:battery-50\n\
+              \          {% elif bl < 70 %} mdi:battery-60\n          {% elif bl <\
+              \ 80 %} mdi:battery-70\n          {% elif bl < 90 %} mdi:battery-80\n\
+              \          {% elif bl < 100 %} mdi:battery-90\n          {% elif bl\
+              \ == 100 %} mdi:battery\n          {% else %} mdi:battery-unknown\n\
+              \          {% endif %}\n"
+            icon_color: "          {% set bl = states('sensor.micemob_battery_level')\
+              \ | int %}\n          {% if bl < 10 %} red\n          {% elif bl < 20\
+              \ %} red\n          {% elif bl < 30 %} red\n          {% elif bl < 40\
+              \ %} orange\n          {% elif bl < 50 %} orange\n          {% elif\
+              \ bl < 60 %} green\n          {% elif bl < 70 %} green\n          {%\
+              \ elif bl < 80 %} green\n          {% elif bl < 90 %} green\n      \
+              \    {% elif bl < 100 %} green\n          {% elif bl == 100 %} green\n\
+              \          {% else %} grey\n          {% endif %}"
+            tap_action:
+              action: more-info
+            type: template
+          - entity: binary_sensor.micemob_bluetooth_state
+            icon: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
+              %}
+
+              {% if state==''on'' %}
+
+              mdi:bluetooth
+
+              {% elif state==''off'' %}
+
+              mdi:bluetooth-off
+
+              {% endif %}
+
+              '
+            icon_color: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
+              %}
+
+              {% if state==''on'' %}
+
+              green
+
+              {% elif state==''off'' %}
+
+              red
+
+              {% endif %}
+
+              '
+            type: template
+          type: custom:mushroom-chips-card
+        mode: vertical
+        type: custom:stack-in-card
+      type: horizontal-stack
+    type: grid
+  - cards:
+    - cards:
+      - badge_color: "{% if is_state('binary_sensor.garage_motion_group', 'clear')\
+          \ %}\n  red\n{% else %}\n  blue\n{% endif %}"
+        badge_icon: "{% if is_state('binary_sensor.garage_motion_group', 'clear')\
+          \ %}\n  mdi:motion-sensor\n{% else %}\n  mdi:motion-sensor-off\n{% endif\
+          \ %}"
+        entity: light.garage_bulb
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: mdi:light-recessed
+        icon_color: "{% if is_state('light.garage_bulb', 'off') %}\n  white\n{% else\
+          \ %}\n  yellow\n{% endif %}"
+        multiline_secondary: false
+        primary: Garage
+        secondary: '{{ states(''sensor.outside_temp'') }} °C'
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: navigate
+          navigation_path: garage
+        type: custom:mushroom-template-card
+      - badge_color: "{% if is_state('binary_sensor.livingroom_door_contact', 'off')\
+          \ %}\n  blue\n{% else %}\n  red\n{% endif %}"
+        badge_icon: "{% if is_state('binary_sensor.livingroom_door_contact', 'off')\
+          \ %}\n  mdi:door-sliding\n{% else %}\n  mdi:door-sliding-open\n{% endif\
+          \ %}"
+        double_tap_action:
+          action: call-service
+          data: {}
+          service: automation.toggle
+          target:
+            entity_id: automation.ivingroom_ambient_after_door_closed
+        entity: light.lightstrip
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: mdi:led-strip-variant
+        icon_color: "{% if is_state('light.lightstrip', 'off') %}\n  white\n{% else\
+          \ %}\n  yellow\n{% endif %}"
+        primary: Livingroom
+        secondary: "{{ states('sensor.livingroom_temp_temperature') }} °C / {{\n \
+          \ states('sensor.livingroom_temp_humidity') }} %"
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: navigate
+          navigation_path: livingroom
+        type: custom:mushroom-template-card
+      type: horizontal-stack
+    - cards:
+      - badge_color: "{% if is_state('switch.uvfive_slmap2_2e5e_switch_status', 'off')\
+          \ %}\n  green\n{% else %}\n  red\n{% endif %}"
+        badge_icon: "{% if is_state('switch.uvfive_slmap2_2e5e_switch_status', 'off')\
+          \ %}\n  mdi:bacteria\n{% else %}\n  mdi:bacteria\n{% endif %}"
+        double_tap_action:
+          action: more-info
+        entity: light.bedside_lamp
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: "{% if states('sensor.bedroom_temp_temperature') < \"27\" %}\n mdi:bed\n\
+          {% else %}\n  mdi:ceiling-light-multiple\n{% endif %}"
+        icon_color: "{% if is_state('light.bedside_lamp', 'off') %}\n  white\n{% else\
+          \ %}\n  yellow\n{% endif %}"
+        multiline_secondary: true
+        primary: Bedroom
+        secondary: "{{ states('sensor.bedroom_temp_temperature') }} °C / {{ states('sensor.bedroom_temp_humidity')\
+          \ }} % \n{{ states('sensor.bedroom_temp_pressure') }} mmHg"
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: navigate
+          navigation_path: bedroom
+        type: custom:mushroom-template-card
+      - badge_color: "{% if is_state('binary_sensor.backyard_door_contact', 'off')\
+          \ %}\n  blue\n{% else %}\n  red\n{% endif %}"
+        badge_icon: "{% if is_state('binary_sensor.backyard_door_contact', 'off')\
+          \ %}\n  mdi:door-closed\n{% else %}\n  mdi:door-open\n{% endif %}"
+        double_tap_action:
+          action: toggle
+        entity: switch.kitchen_light
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: mdi:ceiling-light-multiple
+        icon_color: "{% if is_state('switch.kitchen_light', 'off') %}\n  white\n{%\
+          \ else %}\n  yellow\n{% endif %}"
+        primary: Kitchen
+        secondary: '{{ states(''sensor.kitchen_temp_temperature'') }} °C'
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: navigate
+          navigation_path: kitchen
+        type: custom:mushroom-template-card
+      type: horizontal-stack
+    - cards:
+      - badge_color: "{% if is_state('binary_sensor.bathroom_presense', 'on') %}\n\
+          \          red\n        {% else %}\n          green\n        {% endif %}"
+        badge_icon: "{% if is_state('binary_sensor.bathroom_presense', 'on') %}\n\
+          \  mdi:toilet\n{% else %}\n  mdi:toilet\n{% endif %}"
+        entity: switch.bathroom_light
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: mdi:light-recessed
+        icon_color: "{% if is_state('switch.bathroom_light', 'off') %}\n         \
+          \ white\n        {% else %}\n          yellow\n        {% endif %}"
+        multiline_secondary: false
+        primary: Bathroom
+        secondary: '{{ state_attr(''sensor.bathroom_temp_temperature'', ''median'')
+          }} °C'
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: navigate
+          navigation_path: bathroom
+        type: custom:mushroom-template-card
+      - badge_color: "{% if is_state('binary_sensor.backyard_window_motion_occupancy',\
+          \ 'on') %}\n          red\n        {% else %}\n          blue\n        {%\
+          \ endif %}"
+        badge_icon: "{% if is_state('binary_sensor.backyard_window_motion_occupancy',\
+          \ 'on') %}\n  mdi:motion-sensor\n{% else %}\n  mdi:motion-sensor-off\n{%\
+          \ endif %}"
+        entity: switch.backyard_light
+        fill_container: true
+        hold_action:
+          action: toggle
+        icon: mdi:lightbulb-fluorescent-tube
+        icon_color: "{% if is_state('switch.backyard_light', 'off') %}\n  white\n\
+          {% else %}\n  yellow\n{% endif %}"
+        primary: Backyard
+        secondary: '{{ states(''sensor.backyard_temp_temperature'') }} °C'
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: navigate
+          navigation_path: backyard
+        type: custom:mushroom-template-card
+      type: horizontal-stack
+    title: Rooms
+    type: grid
+  title: Home
+  type: sections

@@ -1,0 +1,82 @@
+{
+  "title": "World Tide Info Custom",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure WorldTidesInfoCustom",
+        "description": "Indicate if standard or expert config definition",
+        "data": {
+           "type": "Type of configuration"
+        }
+      },
+      "config_def_std": {
+        "title": "Configure standard",
+        "description": "Use the WorldTidesInfo cloud API to monitor a latitude/longitude.",
+        "data": {
+          "name": "name",
+          "api_key": "api key of world tides info",
+          "latitude": "location latitude",
+          "longitude": "location longitude"
+        }
+      },
+      "config_def_std_moving": {
+        "title": "Configure standard with moving sensor",
+        "description": "Use the WorldTidesInfo cloud API to monitor a latitude/longitude attached to a sensor tracker.",
+        "data": {
+          "name": "name",
+          "api_key": "api key of world tides info",
+          "latitude": "location latitude for init",
+          "longitude": "location longitude for init",
+          "live_location" : "location is static or dynamic from_sensor",
+          "source" : "source id that contains lat/long",
+          "latitude_attr_name" : "latitude attribute name of sensor id",
+          "longitude_attr_name" : "longitude attribute name of sensor id"
+        }
+      },
+      "config_def_expert": {
+        "title": "Configure expert",
+        "description": "Use the WorldTidesInfo cloud API to monitor a static/live latitude/longitude with additional parameters.",
+        "data": {
+          "name": "name",
+          "api_key": "api key of world tides info",
+          "latitude": "location latitude",
+          "longitude": "location longitude",
+          "vertical_ref" : "vertical reference",
+          "station_distance" : "tidal station distance",
+          "day_tide_prediction" : "tide prediction duration in day",
+          "plot_color": "plot curve color in comma-separated RGB values",
+          "plot_background": "plot curve background color in comma-separated RGB values",
+          "unit" : "metric HA imperial",
+          "mat_plot_transparent_background" : "mat plot transparent background (True/False)",
+          "live_location" : "location is static or dynamic from_sensor",
+          "update_sensor_distance": "distance that sensor shall moved to upate reference tide location",
+          "source" : "source id that contains lat/long",
+          "latitude_attr_name" : "latitude attribute name of sensor id",
+          "longitude_attr_name" : "longitude attribute name of sensor id"
+        }
+      }
+    },
+    "error": {
+      "general_error": "unknown error"
+    },
+    "abort": {
+      "already_configured": "Already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure WorldTidesInfoCustom",
+        "data": {
+          "show_on_map": "Show monitored tides on the map",
+          "station_distance" : "tidal station distance",
+          "day_tide_prediction" : "tide prediction duration in day",
+          "plot_color": "plot curve color in comma-separated RGB values",
+          "plot_background": "plot curve background color in comma-separated RGB values",
+          "mat_plot_transparent_background" : "mat plot transparent background (True/False)",
+          "update_sensor_distance": "distance that sensor shall moved to upate reference tide location"
+        }
+      }
+    }
+  }
+}

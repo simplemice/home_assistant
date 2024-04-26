@@ -1,0 +1,7 @@
+language: "en"
+intents:
+  HassClimateSetTemperature:
+    data:
+      - sentences:
+          - "(<numeric_value_set>|adjust) <temp> [in <area>] to <temperature>"
+          - "(<numeric_value_set>|adjust) <area> <temp> to <temperature>"

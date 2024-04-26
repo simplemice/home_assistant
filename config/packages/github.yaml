@@ -1,0 +1,104 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Database
+#   @description    :   Recorder and Logger Configurations
+###############################################################################
+input_boolean:
+  gitlab_automation:
+    name: "GitLab Push Automation"
+    icon: mdi:gitlab
+
+input_datetime:
+  gitlab_auto_on_time:
+    name: Gitlab Auto Mode Time On
+    has_date: false
+    has_time: true
+  gitlab_auto_off_time:
+    name: Gitlab Auto Mode Off Time
+    has_date: false
+    has_time: true
+
+automation:
+  - id: ac547605-bdb4-44e8-b581-7067d6b96914
+    alias: Turn On Gitlab Auto Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.gitlab_auto_on_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.gitlab_automation
+
+  - id: 7703b39f-4215-4d20-8909-b94c6c5cf247
+    alias: Turn Off Gitlab Auto Mode
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.gitlab_auto_off_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    condition:
+      - condition: state
+        entity_id: input_boolean.gitlab_automation
+        state: "on"
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.gitlab_automation
+
+  - id: 96af6a7f-d497-44c8-a35c-5d207adfffb4
+    alias: Gitlab Auto Exporter
+    description: ""
+    mode: restart
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: state
+        entity_id:
+          - input_boolean.gitlab_automation
+        to: "on"
+        from: "off"
+      - platform: time_pattern
+        hours: "5"
+    condition:
+      - condition: state
+        entity_id: input_boolean.gitlab_automation
+        state: "on"
+    action:
+      - service: readme.generate
+        data: {}
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 5
+          milliseconds: 0
+      - service: hassio.addon_start
+        metadata: {}
+        data:
+          addon: 76fa38ee_git-exporter
+      - delay:
+          hours: 0
+          minutes: 1
+          seconds: 0
+          milliseconds: 0
+      - service: hassio.addon_restart
+        metadata: {}
+        data:
+          addon: 76fa38ee_git-exporter
+      - delay:
+          hours: 0
+          minutes: 1
+          seconds: 0
+          milliseconds: 0
+      - service: script.text_notify
+        data:
+          message: >
+            {{ [  'GitLab Configuration Sync: All nodes have been updated successfully. Your settings are now synchronized across the network',
+                  'Sync Completed: GitLab configuration synchronization is done. Your system configurations are now aligned across all nodes',
+                  'Sync Status: GitLab configuration synchronization has finished. Your settings are now consistent across the network',
+                  'Configuration Sync: GitLab configuration synchronization has been completed without errors. Your settings are now up-to-date',
+                  'Sync Success: GitLab configuration synchronization is successful. All nodes are now running with the latest settings',
+                  'Sync Confirmation: GitLab configuration sync process is complete. Your configurations are now unified across the platform',
+                  'Syncronization Update: GitLab configuration synchronization has been successfully executed. Your system is now harmonized',
+                  'Configuration Alignment: GitLab configuration synchronization is done. All nodes are in harmony with the latest settings',
+                  'Syncronization Complete: The synchronization of GitLab configurations has been successfully executed. Your environment is now in sync',
+                  'Syncronization Successful: GitLab configuration sync is complete. Your settings are consistent across the network'
+                ] | random }}

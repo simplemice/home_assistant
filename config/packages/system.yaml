@@ -1,0 +1,60 @@
+automation:
+  - id: set_theme
+    alias: "Automate Theme"
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: state
+        entity_id: sun.sun
+        to: above_horizon
+      - platform: state
+        entity_id: sun.sun
+        to: below_horizon
+    action:
+      - if: "{{ is_state('sun.sun', 'below_horizon')}}"
+        then:
+          - service: frontend.set_theme
+            data:
+              name: "yourname"
+        else:
+          - service: frontend.set_theme
+            data:
+              name: "google"
+
+  - alias: "Send notification on Home Assistant update available"
+    id: system_update_available_notification
+    description: ""
+    trigger:
+      - platform: state
+        entity_id: sensor.latest_version
+        not_to:
+          - "unknown"
+          - "unavailable"
+          - "none"
+    condition:
+      - condition: template
+        value_template: >
+          {{ states('sensor.latest_version') != states('sensor.current_version') }}
+    action:
+      - service: notify.simplemice
+        data:
+          title: Upgrade time!
+          message: >
+            There is an upgrade for Home Assistant container pending!
+            Version {{ states('sensor.latest_version') }} just got released!
+          data:
+            tag: System
+            channel: System
+            icon_url: "https://raw.githubusercontent.com/home-assistant/assets/master/logo/logo-pretty.png"
+            actions:
+              - action: "URI"
+                title: "Open Changelog"
+                uri: "https://github.com/home-assistant/core/releases/tag/{{states('sensor.latest_version')}}"
+      - service: persistent_notification.create
+        data:
+          notification_id: update_pending
+          title: Upgrade time!
+          message: >
+            There is an upgrade for Home Assistant container pending!
+            Version {{ states('sensor.latest_version') }} just got released!
+            [Changelog](https://github.com/home-assistant/core/releases/tag/{{states('sensor.latest_version')}})

@@ -1,0 +1,52 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Utility
+#   @description    :   Utility Configurations
+###############################################################################
+
+utility_meter:
+  monthly_energy:
+    source: sensor.energy_meter
+    unique_id: monthly_energy
+    name: Monthly Energy
+    cycle: monthly
+
+  yearly_energy:
+    source: sensor.energy_meter
+    unique_id: yearly_energy
+    name: Yearly Energy
+    cycle: yearly
+
+template:
+  - sensor:
+      name: "Current Energy Tariff"
+      unique_id: e3eb0f96-c83a-41d3-8a01-a6df38895301
+      icon: mdi:currency-thb
+#      unit_of_measurement: "THB/kWh"
+      state: >
+        {% if states ('sensor.monthly_energy') | float <= 15 %}
+          2.35
+        {% elif states ('sensor.monthly_energy') | float <= 25 %}
+          2.99
+        {% elif states ('sensor.monthly_energy') | float <= 35 %}
+          3.24
+        {% elif states ('sensor.monthly_energy') | float <= 100 %}
+          3.62
+        {% elif states ('sensor.monthly_energy') | float <= 150 %}
+          3.72
+        {% elif states ('sensor.monthly_energy') | float <= 400 %}
+          4.22
+        {% else %}
+          4.42
+        {% endif %}
+
+  - sensor:
+      name: "Current Energy Tariff Name"
+      unique_id: e2fb0f96-c83a-41d3-8a01-a4df34325301
+      icon: mdi:lightning-bolt-circle
+      state: "{{ 'peak' if today_at('09:00') < now() < today_at('22:00') else 'offpeak' }}"
+
+automation:
+
+script:

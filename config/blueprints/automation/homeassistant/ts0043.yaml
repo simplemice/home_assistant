@@ -1,0 +1,107 @@
+blueprint:
+  name: ZHA - Tuya 3-Button Scene Switch
+  description: Automate your Tuya 3-Button Scene Switch using ZHA events.
+  domain: automation
+  input:
+    tuya_3button_scene_switch:
+      name: Tuya 3-Button Scene Switch
+      description: Tuya 3-Button Scene Switch to use
+      selector:
+        device:
+          integration: zha
+          model: TS0043
+          multiple: false
+    button_one_short_press:
+      name: Single Press
+      description: Action to run on button 1 (left) single press
+      default: []
+      selector:
+        action: {}
+    button_one_double_press:
+      name: Double Press
+      description: Action to run on button 1 (left) double press
+      default: []
+      selector:
+        action: {}
+    button_one_long_press:
+      name: Long Press
+      description: Action to run on button 1 (left) long press
+      default: []
+      selector:
+        action: {}
+    button_two_short_press:
+      name: Single Press
+      description: Action to run on button 2 (center) single press
+      default: []
+      selector:
+        action: {}
+    button_two_double_press:
+      name: Double Press
+      description: Action to run on button 2 (center) double press
+      default: []
+      selector:
+        action: {}
+    button_two_long_press:
+      name: Long Press
+      description: Action to run on button 2 (center) long press
+      default: []
+      selector:
+        action: {}
+    button_three_short_press:
+      name: Single Press
+      description: Action to run on button 3 (right) single press
+      default: []
+      selector:
+        action: {}
+    button_three_double_press:
+      name: Double Press
+      description: Action to run on button 3 (right) double press
+      default: []
+      selector:
+        action: {}
+    button_three_long_press:
+      name: Long Press
+      description: Action to run on button 3 (right) long press
+      default: []
+      selector:
+        action: {}
+  source_url: https://gist.github.com/challs/45292f40a290a3b608c3b71b4037d6f4
+mode: restart
+max_exceeded: silent
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      device_id: !input tuya_3button_scene_switch
+action:
+  - variables:
+      command: "{{ trigger.event.data.command }}"
+      endpoint_id: "{{ trigger.event.data.endpoint_id }}"
+  - choose:
+      - conditions: "{{ command == 'remote_button_short_press' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ endpoint_id == 1 }}"
+                sequence: !input button_one_short_press
+              - conditions: "{{ endpoint_id == 2 }}"
+                sequence: !input button_two_short_press
+              - conditions: "{{ endpoint_id == 3 }}"
+                sequence: !input button_three_short_press
+      - conditions: "{{ command == 'remote_button_double_press' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ endpoint_id == 1 }}"
+                sequence: !input button_one_double_press
+              - conditions: "{{ endpoint_id == 2 }}"
+                sequence: !input button_two_double_press
+              - conditions: "{{ endpoint_id == 3 }}"
+                sequence: !input button_three_double_press
+      - conditions: "{{ command == 'remote_button_long_press' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ endpoint_id == 1 }}"
+                sequence: !input button_one_long_press
+              - conditions: "{{ endpoint_id == 2 }}"
+                sequence: !input button_two_long_press
+              - conditions: "{{ endpoint_id == 3 }}"
+                sequence: !input button_three_long_press

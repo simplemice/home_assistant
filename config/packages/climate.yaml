@@ -1,0 +1,238 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Climate
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+smartir:
+
+group:
+  house_climate_control:
+    name: "House Climate Control"
+    entities:
+      - input_boolean.fan_automation
+      - input_boolean.climate_automation
+  all_climate:
+    name: "All Climate"
+    entities:
+      - climate.bedroom_aircon
+
+fan:
+  - platform: group
+    name: "All Fans"
+    entities:
+      - fan.bedroom_fan
+      - fan.tower_fan
+      - fan.kitchen_fan
+
+input_boolean:
+  climate_automation:
+    name: "House Climate Automation"
+    icon: mdi:air-conditioner
+  fan_automation:
+    name: "House Fan Automation"
+    icon: mdi:fan-auto
+
+input_datetime:
+  climate_on_time:
+    name: Climate Time On
+    has_date: false
+    has_time: true
+  climate_off_time:
+    name: Climate Off Time
+    has_date: false
+    has_time: true
+
+timer:
+  climate_timer:
+    name: Climate Timer
+    duration: "00:15:00"
+    icon: mdi:timer
+    restore: true
+
+climate:
+  - platform: smartir
+    name: Bedroom AirCon
+    unique_id: bedroom_ac
+    device_code: 9991
+    controller_data: remote.bedroom_remote_hub
+    temperature_sensor: sensor.bedroom_temp_temperature
+    humidity_sensor: sensor.bedroom_temp_humidity
+
+sensor:
+  - platform: template
+    sensors:
+      ac_runtime_today:
+        unique_id: ac_runtime
+        friendly_name: "AC Runtime Today"
+        unit_of_measurement: "h"
+        value_template: "{{ (states('sensor.ac_runtime_today_cool') | float + states('sensor.ac_runtime_today_dry') | float) }}"
+        attribute_templates:
+          value: "{{ (60 * (states('sensor.ac_runtime_today_cool') | float + states('sensor.ac_runtime_today_dry') | float)) | int }}"
+
+  - platform: template
+    sensors:
+      fan_runtime:
+        unique_id: fan_runtime
+        friendly_name: "Fan Runtime Today"
+        unit_of_measurement: "h"
+        value_template: "{{ (states('sensor.fan_runtime_today') | float) }}"
+        attribute_templates:
+          value: "{{ (60 * (states('sensor.fan_runtime_today') | float)) | int }}"
+
+  - platform: history_stats
+    name: ac_runtime_today_cool
+    unique_id: ac_runtime_today_cool
+    entity_id: climate.bedroom_aircon
+    state: "cool"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+  - platform: history_stats
+    name: ac_runtime_today_dry
+    unique_id: ac_runtime_today_dry
+    entity_id: climate.bedroom_aircon
+    state: "dry"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+  - platform: history_stats
+    name: fan_runtime_today
+    unique_id: fan_runtime_today
+    entity_id: fan.all_fans
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+utility_meter:
+  monthly_climate:
+    source: sensor.ac_runtime_today
+    unique_id: monthly_climate
+    name: Monthly Climate
+    cycle: monthly
+
+  daily_climate:
+    source: sensor.ac_runtime_today
+    unique_id: daily_climate
+    name: Daily Climate
+    cycle: daily
+
+  daily_fan:
+    source: sensor.fan_runtime_today
+    unique_id: daily_fan
+    name: Daily Fan
+    cycle: daily
+
+  monthly_fan:
+    source: sensor.fan_runtime_today
+    unique_id: monthly_fan
+    name: Monthly Fan
+    cycle: monthly
+
+automation:
+  - id: 34c71e59-cd69-4481-b758-958807cf3537
+    alias: Turn On House Climate Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.climate_on_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: homeassistant.turn_on
+        entity_id: group.house_climate_control
+
+  - id: 04018017-1cb8-45e0-b81c-b4085a48908d
+    alias: Turn Off House Climate Mode
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.climate_off_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    condition:
+      - condition: state
+        entity_id: group.house_climate_control
+        state: "on"
+    action:
+      - service: homeassistant.turn_off
+        entity_id: group.house_climate_control
+
+  - id: 4f4dbbe4-3698-416e-bbf6-17dfcb619395
+    alias: Bedroom Night Climate Automation
+    description: ""
+    trigger:
+      - platform: numeric_state
+        entity_id:
+          - sensor.bedroom_temp_temperature
+        above: 27
+        id: temp_on
+      - platform: numeric_state
+        entity_id:
+          - sensor.bedroom_temp_temperature
+        below: 25
+        id: temp_off
+      - platform: state
+        entity_id:
+          - binary_sensor.bedroom_door_contact
+        to: "off"
+        id: door_closed
+    condition:
+      - condition: and
+        conditions:
+          - condition: time
+            after: "18:00:00"
+            before: "09:00:00"
+          - condition: state
+            entity_id: input_boolean.climate_automation
+            state: "on"
+    action:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id:
+                  - temp_on
+                  - door_closed
+            sequence:
+              - service: climate.turn_on
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: climate.bedroom_aircon
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 2
+                  milliseconds: 0
+              - service: climate.set_hvac_mode
+                metadata: {}
+                data:
+                  hvac_mode: cool
+                target:
+                  entity_id: climate.bedroom_aircon
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 2
+                  milliseconds: 0
+              - service: remote.send_command
+                metadata: {}
+                data:
+                  command: >-
+                    mk0mswlk0mc0mEsms4mEsmM1m0wlk2mICJADkAhABHgRbNJyBDwCHgIQAP4JUTGazMBnwbfAigFXwkPAh8AcwAyAPcCjwEPCp8EHwMPAw8ChgwPDA8PXQAyAQgBnwB0msxGlOaTcaowHyEz8HLwe/GqgGiwrvD48CB4A
+                target:
+                  entity_id: remote.bedroom_remote_hub
+          - conditions:
+              - condition: trigger
+                id:
+                  - temp_off
+            sequence:
+              - service: climate.turn_off
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: climate.bedroom_aircon
+
+script:

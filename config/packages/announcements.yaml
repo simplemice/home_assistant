@@ -1,0 +1,277 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Announcements
+#   @description    :   Daily Announcements.
+###############################################################################
+
+input_number:
+  tts_high_volume:
+    name: "TTS Hight Volume"
+    icon: mdi:volume-high
+    initial: 0.8
+    min: 0
+    max: 1
+    step: 0.1
+  tts_volume:
+    name: "TTS Low Volume"
+    icon: mdi:volume-low
+    initial: 0.2
+    min: 0
+    max: 1
+    step: 0.1
+
+input_boolean:
+  debug_texts:
+    name: "Debug Text"
+    icon: mdi:debug-step-into
+
+automation:
+  - id: ebcc502a-5aeb-4447-a73a-75397d1195fa
+    alias: Assist Ready Notify
+    description: ""
+    trigger:
+      - platform: state
+        entity_id:
+          - binary_sensor.livingroom_atom_echo
+        to: "on"
+    condition: []
+    action:
+      - service: notify.alexa_media_bedroom_speaker
+        data:
+          message: <audio src="soundbank://soundlibrary/alarms/beeps_and_bloops/bell_03"/>
+          data:
+            type: tts
+    mode: single
+
+  - id: guest_mode_feedback
+    alias: Guest Mode Audio Feedback
+    trigger:
+      - platform: state
+        entity_id:
+          - input_boolean.guest_mode
+        from: "off"
+        to: "on"
+    action:
+      - service: script.speech_engine
+        data_template:
+          message:
+            '{{ [ "Guest Mode has been enabled.", "I have turned on guest mode.",
+            "I have enabled guest mode. ", "Guest Mode is on." ] | random }}'
+
+  - id: 9f8e66eb-06d4-4bba-b264-7bc98f78c928
+    alias: Replace Toothbrush Consumable Notification
+    description: ""
+    trigger:
+      - platform: numeric_state
+        entity_id:
+          - sensor.smart_toothbrush_b0cf_consumable
+        below: 15
+    condition:
+      - condition: time
+        after: "07:30:00"
+        before: "22:00:00"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.audible_notifications
+                state: "on"
+            sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                    - service: notify.alexa_media_bedroom_speaker
+                      data:
+                        message: |
+                          {{ [
+                              "Reminder: It's time to replace your toothbrush consumable for optimal dental care.",
+                              "Attention: Your toothbrush consumable needs replacing. Keep your oral hygiene at its best!",
+                              "Replace alert: Your toothbrush consumable is due for a change. Stay on top of your dental routine!",
+                              "Toothbrush maintenance alert: It's time to swap out your toothbrush consumable.",
+                              "Don't forget! Your toothbrush consumable needs replacing for effective cleaning.",
+                              "Maintenance reminder: Toothbrush consumable replacement is needed for continued oral care.",
+                              "Consumable status: It's time to replace your toothbrush head for a fresh start."
+                          ] | random }}
+                    - delay:
+                        hours: 0
+                        minutes: 20
+                        seconds: 0
+                        milliseconds: 0
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                    - service: script.text_notify
+                      data:
+                        message: |
+                          {{ [
+                              "Reminder: It's time to replace your toothbrush consumable for optimal dental care.",
+                              "Attention: Your toothbrush consumable needs replacing. Keep your oral hygiene at its best!",
+                              "Replace alert: Your toothbrush consumable is due for a change. Stay on top of your dental routine!",
+                              "Toothbrush maintenance alert: It's time to swap out your toothbrush consumable.",
+                              "Don't forget! Your toothbrush consumable needs replacing for effective cleaning.",
+                              "Maintenance reminder: Toothbrush consumable replacement is needed for continued oral care.",
+                              "Consumable status: It's time to replace your toothbrush head for a fresh start."
+                          ] | random }}
+                    - delay:
+                        hours: 0
+                        minutes: 20
+                        seconds: 0
+                        milliseconds: 0
+
+  - id: 14437053-49dc-4aa9-bb0c-9b3df4dda8ec
+    alias: Toothbrush Low Battery Notification
+    description: ""
+    trigger:
+      - platform: numeric_state
+        entity_id:
+          - sensor.smart_toothbrush_b0cf_battery
+        below: 15
+    condition:
+      - condition: time
+        after: "07:30:00"
+        before: "22:00:00"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.audible_notifications
+                state: "on"
+            sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                    - service: notify.alexa_media_bedroom_speaker
+                      data:
+                        message: |
+                          {{ [
+                              "Attention: Your toothbrush battery is running low. Please recharge soon.",
+                              "Low battery alert: Your toothbrush needs some charging. Keep it powered!",
+                              "Toothbrush reminder: Battery running low. Charge it up for optimal performance.",
+                              "Alert: Toothbrush battery is low. Time to recharge!",
+                              "Don't forget! Your toothbrush battery is getting low. Keep it charged.",
+                              "Low power warning: Toothbrush battery needs attention. Charge it up!",
+                              "Battery status: Low. Your toothbrush needs charging for continued use."
+                          ] | random }}
+                    - delay:
+                        hours: 0
+                        minutes: 20
+                        seconds: 0
+                        milliseconds: 0
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - repeat:
+                  count: 3
+                  sequence:
+                    - service: script.text_notify
+                      data:
+                        message: |
+                          {{ [
+                              "Attention: Your toothbrush battery is running low. Please recharge soon.",
+                              "Low battery alert: Your toothbrush needs some charging. Keep it powered!",
+                              "Toothbrush reminder: Battery running low. Charge it up for optimal performance.",
+                              "Alert: Toothbrush battery is low. Time to recharge!",
+                              "Don't forget! Your toothbrush battery is getting low. Keep it charged.",
+                              "Low power warning: Toothbrush battery needs attention. Charge it up!",
+                              "Battery status: Low. Your toothbrush needs charging for continued use."
+                          ] | random }}
+                    - delay:
+                        hours: 0
+                        minutes: 20
+                        seconds: 0
+                        milliseconds: 0
+
+  - id: 7af20952-093d-4192-a5a7-3bf97d74b5f6
+    alias: Kitchen Water Tank Low Notification
+    description: ""
+    trigger:
+      - type: value
+        platform: device
+        device_id: 477f9b243ea2f15c2a3ab16cfac10fda
+        entity_id: a4096c28b097c8b66e950a85240f2d0c
+        domain: sensor
+        below: 5
+    condition:
+      - condition: time
+        after: "08:00:00"
+        before: "22:00:00"
+    action:
+      - service: script.water_tank_low_notify
+        metadata: {}
+        data: {}
+    mode: restart
+
+  - id: f1cd3c8c-91e3-4c09-b135-c4116519bfc2
+    alias: Notification - Sleep time go to bed
+    trigger:
+      - platform: time
+        at: "21:35:00"
+    condition:
+      - condition: and
+        conditions:
+          - condition: state
+            entity_id: person.simplemice
+            state: home
+          - condition: state
+            entity_id: binary_sensor.bed_presense
+            state: "off"
+          - condition: state
+            entity_id: input_boolean.evening_briefing
+            state: "on"
+    action:
+      - service: notify.alexa_media_bedroom_speaker
+        data:
+          message: |
+            {{ [
+                "Bedtime routine initiated. It is time to wind down and prepare for sleep.",
+                "Nighttime rituals starting: Turning off the laptop, saving work, and getting ready to wash and sleep.",
+                "Attention: Bedtime has begun. Time to wrap up work, turn off the laptop, and prepare for a good nights sleep.",
+                "Bedtime alert! Save your work, turn off the laptop, and get ready to wash and sleep.",
+                "Nighttime preparations underway: Turning off the laptop, saving work, and getting ready for bedtime.",
+                "Sleep mode activated: Save your work, turn off the laptop, and prepare to wash and sleep.",
+                "Goodnight routine started: Turning off the laptop, saving work, and preparing for a restful night.",
+                "Time to unwind: Bedtime is here. Save your work, turn off the laptop, and get ready to sleep.",
+                "Bedtime sequence initiated. Turn off the laptop, save your work, and prepare to wash and sleep.",
+                "Nighttime rituals in progress: Turning off the laptop, saving work, and preparing to wash before sleep."
+            ] | random }}
+      - delay:
+          hours: 0
+          minutes: 5
+          seconds: 0
+          milliseconds: 0
+      - service: script.nightly_briefing
+        metadata: {}
+        data: {}
+        response_variable: nightly_briefing
+      - delay:
+          hours: 0
+          minutes: 5
+          seconds: 0
+          milliseconds: 0
+      - service: notify.alexa_media_bedroom_speaker
+        data:
+          message: Turning off laptop
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 10
+          milliseconds: 0
+      - service: shell_command.screen_lock_micebook
+        metadata: {}
+        data: {}
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 10
+          milliseconds: 0
+      - service: shell_command.suspend_micebook
+        metadata: {}
+        data: {}

@@ -1,0 +1,128 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Lights
+#   @description    :   Lights automations.
+###############################################################################
+
+sensor:
+  - platform: template
+    sensors:
+      lights_runtime:
+        unique_id: lights_runtime
+        friendly_name: "Lights Runtime Today"
+        unit_of_measurement: "h"
+        value_template: "{{ (states('sensor.lights_runtime_today') | float + states('sensor.ambient_runtime_today') | float) }}"
+        attribute_templates:
+          value: "{{ (60 * (states('sensor.lights_runtime_today') | float + states('sensor.ambient_runtime_today') | float)) | int }}"
+
+  - platform: history_stats
+    name: lights_runtime_today
+    unique_id: lights_runtime_today
+    entity_id: light.all_lights
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+  - platform: history_stats
+    name: ambient_runtime_today
+    unique_id: ambient_runtime_today
+    entity_id: light.all_ambient
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+utility_meter:
+  monthly_light:
+    source: sensor.all_lights
+    unique_id: monthly_light
+    name: Monthly Lights
+    cycle: monthly
+
+  daily_light:
+    source: sensor.all_lights
+    unique_id: daily_lights
+    name: Daily Lights
+    cycle: daily
+
+  weekly_light:
+    source: sensor.all_lights
+    unique_id: weekly_lights
+    name: Weekly Lights
+    cycle: weekly
+
+light:
+  - platform: group
+    name: "All Lights"
+    entities:
+      - light.lightstrip
+      - light.bedside_lamp
+      - light.bathroom_bulb
+      - light.garage_bulb
+  - platform: group
+    name: "Camera Night Light"
+    entities:
+      - light.garage_camera_light
+      - light.kitchen_power_strip_switch
+  - platform: group
+    name: "All Ambient"
+    entities:
+      - light.kitchen_bottom_ambient
+      - light.kitchen_upstair_ambient
+      - light.tv_table_ambient
+      - light.sofa_ambient
+      - light.wled_matrix
+      - light.lumi_gateway_v3_light
+  - platform: group
+    unique_id: kitchen_ambient
+    name: "Kitchen Ambient"
+    entities:
+      - light.kitchen_upstair_ambient
+      - light.kitchen_bottom_ambient
+
+input_datetime:
+  adaptive_night_on_time:
+    name: Adaptive Lights Night On Time
+    has_date: false
+    has_time: true
+  adaptive_night_off_time:
+    name: Adaptive Lights Night Off Time
+    has_date: false
+    has_time: true
+
+input_boolean:
+  lights_automation:
+    name: "Lights Auto Mode"
+    icon: mdi:ceiling-light-multiple
+  adaptive_lights_night:
+    name: "Adaptive Lights Night Mode"
+    icon: hue:scene-natural-light
+
+automation:
+  - id: 68bf8f1c-19db-46ae-8d7e-84657779b35a
+    alias: Adaptive Night Lights Time Mode On
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.adaptive_night_on_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.adaptive_lights_night
+
+  - id: e0e37c49-7c91-4db5-a692-4c2716ae3b68
+    alias: Adaptive Night Lights Time Mode Off
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.adaptive_night_off_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    condition:
+      - condition: state
+        entity_id: input_boolean.adaptive_lights_night
+        state: "on"
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.adaptive_lights_night

@@ -1,0 +1,260 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/01/2024
+#   @package        :   Notify
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+
+tts:
+  - platform: amazon_polly
+    aws_access_key_id: !secret poly_id
+    aws_secret_access_key: !secret poly_key
+    text_type: ssml
+    cache: True
+    engine: neural
+
+input_datetime:
+  morning_report:
+    name: Morning Report
+    has_date: false
+    has_time: true
+  nightly_report:
+    name: Nightly Report
+    has_date: false
+    has_time: true
+  last_time_alexa_called:
+    name: Last Time Alexa Called
+    has_date: true
+    has_time: true
+
+input_number:
+  notify_volume:
+    name: Alexa Notify Volume
+    initial: 0.4
+    min: 0
+    max: 1
+    step: 0.1
+  notify_high_volume:
+    name: Alexa High Notify Volume
+    initial: 0.9
+    min: 0
+    max: 1
+    step: 0.1
+
+input_select:
+  polly_voice:
+    name: Thomas Voice
+    options:
+      - Brian
+      - Anna
+      - Thomas
+    icon: mdi:account-voice
+
+input_boolean:
+  audible_notifications:
+    name: "Audible Notification"
+    icon: mdi:message-bulleted
+  telegram_notifications:
+    name: "Telegram Notification"
+    icon: fab:telegram
+  text_notifications:
+    name: "Text Notification"
+    icon: mdi:clipboard-text-play
+
+input_text:
+  alexa_actionable_notification:
+    name: Alexa Actionable Notification Holder
+    max: 255
+    initial: "{'text': 'This is a test of the alexa actions custom skill. Did it work?', 'event': 'amzn1.ask.skill.3302d350-d683-4e80-bbc6-1446201c1d24'}"
+
+telegram_bot:
+  - platform: polling
+    api_key: !secret tg_api
+    parse_mode: "html"
+    allowed_chat_ids:
+      - !secret tg_group
+      - !secret tg_me
+
+notify:
+  - name: simplemice
+    platform: group
+    services:
+      - service: mobile_app_micemob
+      - service: mobile_app_micebook
+  - name: telegram_group
+    platform: telegram
+    chat_id: !secret tg_group
+  - name: telegram_mice
+    platform: telegram
+    chat_id: !secret tg_me
+  - platform: alexa_media
+    name: alexa_media
+  - name: mastodon_mice
+    platform: mastodon
+    access_token: !secret mastodon_access_token
+    client_id: !secret mastodon_client_id
+    client_secret: !secret mastodon_client_secret
+    base_url: https://mastodon.social
+  - name: mastodon_home
+    platform: mastodon
+    access_token: !secret mastodon_access_token1
+    client_id: !secret mastodon_client_id1
+    client_secret: !secret mastodon_client_secret1
+    base_url: https://mastodon.social
+  - name: twitter
+    platform: twitter
+    consumer_key: !secret tw_consumer_key
+    consumer_secret: !secret tw_consumer_secret
+    access_token: !secret tw_access_token
+    access_token_secret: !secret tw_access_secret
+
+template:
+  - binary_sensor:
+      - name: Notify Mode
+        state: >
+          {% if is_state('input_boolean.audible_notifications', 'on') %}
+            Audio Notify On
+          {% elif is_state ('input_boolean.text_notifications', 'on') %}
+            Text Notify On
+          {% elif is_state ('input_boolean.telegram_notifications', 'on') %}
+            Telegram Notify On
+          {% else %}
+            Mix Notify Mode On
+          {% endif %}
+        icon: >
+          {% if is_state("binary_sensor.notify_modet", "on") %}
+          mdi:bullhorn
+          {% else %}
+          mdi:bullhorn-outline
+          {% endif %}
+
+script:
+  ###############################################################################
+  # Txt Notify
+  ###############################################################################
+
+  telegram_notify:
+    alias: Telegram Notification
+    sequence:
+      - condition: state
+        entity_id: input_boolean.telegram_notifications
+        state: "on"
+      - service: notify.telegram_mice
+        data:
+          message: "{{ message }}"
+          title: "{{ title }}"
+      - service: notify.telegram_group
+        data:
+          message: "{{ message }}"
+          title: "{{ title }}"
+
+  text_notify:
+    alias: "Main Text Notification"
+    fields:
+      who:
+        selector:
+          text:
+        name: who
+        required: true
+      title:
+        selector:
+          text:
+        name: title
+        required: false
+      message:
+        selector:
+          text:
+        name: message
+        required: true
+    sequence:
+      - condition: state
+        entity_id: input_boolean.text_notifications
+        state: "on"
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: '{{ who == "simplemice"}}'
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - service: notify.simplemice
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+          - conditions:
+              - condition: template
+                value_template: '{{ who == "home"}}'
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - service: notify.mastodon_home
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+        default:
+          - service: notify.simplemice
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+
+  text_notify_image:
+    alias: Text Image Notification
+    sequence:
+      - service: >
+          {% if who == 'simplemice' %}
+            notify.simplemice
+          {% elif who == 'home' %}
+            notify.mastodon_home
+          {% else %}
+            notify.telegram_mice
+          {% endif %}
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            attachment:
+              url: "{{ url }}"
+              content-type: "{{ content_type }}"
+              hide-thumbnail: false
+          #  push:
+          #     sound: '{{ ios_sound }}'
+          #    badge: 0
+          #     category: '{{ ios_category }}'
+          #   entity_id: '{{ camera_entity }}'
+
+  mastodon_notify_image:
+    alias: Mastodon Image Notification
+    sequence:
+      - service: >
+          {% if who == 'simplemice' %}
+            notify.mastodon_mice
+          {% else %}
+            notify.mastodon_home
+          {% endif %}
+        data_template:
+          message: >
+            {% set msg = '' %}
+            {% set msg = msg + ' ' + message %}
+            {% set msg = msg + ' #iot #smarthome #homeassistant' %}
+            {{ msg }}
+          data:
+            media: >-
+              {{ image }}
+
+  twitter_notify_image:
+    alias: Twitter Image Notification
+    sequence:
+      - service: >
+          {% if who == 'simplemice' %}
+            notify.twitter
+          {% else %}
+            notify.twitter
+          {% endif %}
+        data_template:
+          message: >-
+            {{ tweet }} #iot #smarthome #homeassistant
+          data:
+            media: >-
+              {{ image }}

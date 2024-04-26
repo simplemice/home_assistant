@@ -1,0 +1,72 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Camera
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+
+image_processing:
+  - platform: platerecognizer
+    api_token: !secret platerecognizer
+    regions:
+      - th
+    save_file_folder: /config/www/plates/
+    save_timestamped_file: True
+    always_save_latest_file: True
+    source:
+      - entity_id: camera.garage
+  - platform: doods
+    url: http://192.168.3.2:8080
+    detector: default
+    scan_interval: 2
+    source:
+      - entity_id: camera.garage
+    file_out: /config/www/doods/doods.jpg
+    confidence: 60
+    labels:
+      - name: person
+      - name: car
+
+input_boolean:
+  backyard_camera_notification:
+    name: "Backyard Camera Notification"
+    icon: mdi:cctv
+  garage_camera_notification:
+    name: "Garage Camera Notification"
+    icon: mdi:cctv
+
+sensor:
+  - platform: template
+    sensors:
+      backcam_sensor:
+        friendly_name: "Backyard Camera"
+        value_template: >-
+          {%- if is_state("device_tracker.backyard_cam", "home" ) %}
+              Online
+          {%- else -%}
+              Offline
+          {%- endif %}
+        icon_template: >
+          {% if is_state("device_tracker.backyard_cam", "home") %}
+            mdi:cctv
+          {% else %}
+            mdi:cctv-off
+          {% endif %}
+
+  - platform: template
+    sensors:
+      garagecam_sensor:
+        friendly_name: "Garage Camera"
+        value_template: >-
+          {%- if is_state("device_tracker.garage_cam", "home" ) %}
+              Online
+          {%- else -%}
+              Offline
+          {%- endif %}
+        icon_template: >
+          {% if is_state("device_tracker.garage_cam", "home") %}
+            mdi:cctv
+          {% else %}
+            mdi:cctv-off
+          {% endif %}
+

@@ -1,0 +1,185 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Sysmon
+#   @description    :   A collection of Home Assistant and Pi Sensors
+###############################################################################
+
+command_line:
+  - sensor:
+      name: coinmarketcap_curl
+      command: !secret coinmarketcap_curl
+      value_template: "{{ value_json.value }}"
+      scan_interval: 600 #10 mins refresh (this rate will use 144 credits per day out of the allocated 333 credits)
+      json_attributes:
+        - data
+  - sensor:
+      name: "Lines of Code"
+      unique_id: lines_of_code
+      command: "find /config -name '*.yaml' | xargs cat | wc -l"
+      scan_interval: 20000
+  - sensor:
+      name: "GitHub Stats"
+      unique_id: github_stats
+      command: "curl https://api.github.com/repos/thejeffreystone/homeassistant-config"
+      scan_interval: 20000
+      value_template: "{{ value_json.name }}"
+      json_attributes:
+        - open_issues
+        - stargazers_count
+
+binary_sensor:
+  - platform: tod
+    name: Night
+    after: sunset
+    before: sunrise
+  - platform: tod
+    name: Day
+    after: sunrise
+    before: sunset
+  - platform: tod
+    name: Quiet time
+    after: "22:00"
+    before: "07:30"
+  - platform: tod
+    name: Morning
+    after: "07:30"
+    before: "09:30"
+  - platform: tod
+    name: Midday
+    after: "09:30"
+    before: "18:00"
+  - platform: tod
+    name: Evening
+    after: "18:00"
+    before: "22:00"
+  - platform: tod
+    name: Overnight
+    after: "22:00"
+    before: "07:30"
+
+sensor:
+  - platform: history_stats
+    name: Sleep Time Duration
+    entity_id: binary_sensor.bed_presense
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+  - platform: time_date
+    display_options:
+      - "time"
+      - "date"
+      - "date_time"
+      - "date_time_utc"
+      - "date_time_iso"
+      - "time_date"
+      - "time_utc"
+
+  - platform: worldclock
+    time_zone: Europe/Moscow
+
+  #=== Home Assistant Component counts
+
+  - platform: template
+    sensors:
+      sensor_count:
+        friendly_name: "Number of Sensors"
+        unique_id: numbers_sensors
+        value_template: >-
+          {{ states.sensor | rejectattr('state', 'eq', 'unavailable') | list | count }}
+      automation_count:
+        friendly_name: "Number of Automations"
+        unique_id: numbers_automations
+        value_template: >-
+          {{ states.automation| rejectattr('state', 'eq', 'unavailable') | list | count }}
+      script_count:
+        friendly_name: "Number of Scripts"
+        unique_id: numbers_scripts
+        value_template: >-
+          {{ states.script | rejectattr('state', 'eq', 'unavailable') | list | count }}
+      binary_sensor_count:
+        friendly_name: "Number of Binary Sensors"
+        unique_id: numbers_bsensors
+        value_template: >-
+          {{ states.binary_sensor | rejectattr('state', 'eq', 'unavailable') | list | count }}
+      tracker_count:
+        friendly_name: "Number of Devices"
+        unique_id: numbers_devices
+        value_template: >-
+          {{ states.device_tracker| rejectattr('state', 'eq', 'unavailable') | list | count }}
+      lights_count:
+        friendly_name: "Number of Lights"
+        unique_id: numbers_lights
+        value_template: >-
+          {{ states.light | rejectattr('state', 'eq', 'unavailable') | list | count }}
+      switches_count:
+        friendly_name: "Number of Switches"
+        unique_id: numbers_switches
+        value_template: >-
+          {{ states.switch | rejectattr('state', 'eq', 'unavailable') | list | count }}
+      camera_count:
+        friendly_name: "Number of online Cameras"
+        unique_id: numbers_cameras
+        value_template: >-
+          {{ states.camera | rejectattr('state', 'eq', 'unavailable') | list | count }}
+      entities_count:
+        friendly_name: "Number of Entities"
+        unique_id: numbers_entities
+        value_template: >-
+          {{ states | rejectattr('state', 'eq', 'unavailable') | list | count}}
+      na_entities:
+        friendly_name: "NA Entities"
+        unique_id: numbers_na_entities
+        value_template: >-
+          {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | truncate(250, False) }}
+      na_entities_count:
+        friendly_name: "Number of NA Entities"
+        unique_id: numbers_naentities
+        value_template: >-
+          {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | count }}
+      hvac_action:
+        friendly_name: "HVAC Action"
+        unique_id: numbers_hvac
+        value_template: "{{states.climate.home.attributes.hvac_action}}"
+      today_is:
+        friendly_name: "Today is"
+        unique_id: today_is
+        value_template: "{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][now().weekday()] }}"
+      month_is:
+        friendly_name: "Month is"
+        unique_id: month_is
+        value_template: "{{ ['January','February','March','April','May','June','August','September','October','November','December'][now().month-1] }}"
+      holiday:
+        friendly_name: "Holiday"
+        unique_id: holiday
+        value_template: >-
+          {% if states.calendar.holidays == 'on' %}
+            {{ states.calendar.holidays.attributes.message }}
+          {% elif states.calendar.anchorage_holidays.state == 'on' %}
+            {{ states.calendar.anchorage_holidays.attributes.message }}
+          {% else %}
+            none
+          {% endif %}
+
+  # ====
+
+  - platform: template
+    sensors:
+      na_entities:
+        friendly_name: "NA Entities"
+        value_template: >-
+          {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | truncate(250, False) }}
+      na_entities_count:
+        friendly_name: "Number of NA Entities"
+        value_template: >-
+          {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | count }}
+
+  - platform: template
+    sensors:
+      del_price:
+        friendly_name: "DEL Price"
+        unit_of_measurement: "USD"
+        value_template: "{{ ((states.sensor.coinmarketcap_curl.attributes.data.DEL.quote.USD.price) | float) | round(2) }}"

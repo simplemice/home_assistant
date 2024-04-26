@@ -1,0 +1,13 @@
+language: en
+responses:
+  intents:
+    HassTurnOn:
+      default: "Turned on the {{ state.domain }}"
+      lights_area: "Turned on the lights"
+      fans_area: "Turned on the fans"
+      cover: "Opened"
+      cover_device_class: "Opened the {{ slots.device_class }}"
+      scene: "Activated"
+      script: "Started"
+      lock: "Locked"
+      valve: "Opened"

@@ -1,0 +1,17 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Google Home
+#   @description    :   Google automations.
+###############################################################################
+
+google_assistant:
+  project_id: homeassistant-65978
+  service_account: !include SERVICE_ACCOUNT.JSON
+  report_state: true
+  exposed_domains:
+    - switch
+    - light
+    - fan
+    - sensor
+    - climate

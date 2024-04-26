@@ -1,0 +1,174 @@
+- id: '1711677483711'
+  alias: Turn Off Laundry Day
+  description: ''
+  trigger:
+  - platform: tag
+    tag_id: 20624072-f14c-4a2d-b2ae-9214dbbb5ecb
+  condition:
+  - condition: state
+    entity_id: calendar.laundry
+    attribute: message
+    state: Laundry Day
+  action:
+  - service: input_boolean.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.laundry_helper
+  - service: input_boolean.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.laundry_pickup
+  - service: script.speech_engine
+    data:
+      message: "{{ [\n    'Welcome home! Do not forget to put away your freshly picked-up
+        laundry in the wardrobe',\n    'Back home with fresh laundry! Time to put
+        it away in the wardrobe and enjoy the freshness',\n    'Welcome back! Your
+        freshly picked-up laundry is waiting for you to put it in the wardrobe',\n
+        \   'Home sweet home! Remember to organize your freshly picked-up laundry
+        in the wardrobe',\n    'Welcome back, laundry hero! Put your freshly picked-up
+        clothes in the wardrobe and enjoy',\n    'Back from the laundry journey! It
+        is time to put away your clean clothes in the wardrobe',\n    'Welcome home,
+        freshness awaits! Do not forget to organize your laundry in the wardrobe',\n
+        \   'Welcome back! Your laundry mission is complete, now remember to put it
+        in the wardrobe',\n    'Home at last! Remember to put your freshly picked-up
+        laundry in the wardrobe for freshness',\n    'Welcome back, laundry conqueror!
+        Time to put away your clean clothes in the wardrobe'\n] | random }}\n"
+  mode: restart
+- id: '1711677500799'
+  alias: Awtrix - Laundry Timer
+  description: ''
+  use_blueprint:
+    path: homeassistant/awtrix_create_sensor_app.yaml
+    input:
+      awtrix_displays:
+      - 878172095c71c90ce783d87cec0ac1af
+      toggle_helper: input_boolean.awtrix_laundry_timer
+      my_sensor: timer.laundry_timer
+      my_template_sensor: Laundry PickUp - {{ (as_timestamp(state_attr('timer.laundry_timer',
+        'finishes_at'))) | timestamp_custom('%X') }}
+      my_icon: '42893'
+      text_color:
+      - 157
+      - 10
+      - 255
+      lifetime: '3600'
+- id: '1713940163943'
+  alias: Mastodon Ad Posting
+  description: ''
+  trigger:
+  - platform: calendar
+    event: start
+    offset: '12:0:0'
+    entity_id: calendar.mastodon
+  condition: []
+  action:
+  - service: script.mastodon_ad
+    metadata: {}
+    data: {}
+  mode: single
+- id: '1713940222818'
+  alias: Mastodon Shark Post
+  description: ''
+  trigger:
+  - platform: time
+    at: 09:00:00
+  condition: []
+  action:
+  - service: script.mastodon_snark
+    metadata: {}
+    data: {}
+  mode: single
+- id: 24d7a430-4993-458c-b829-e1c153a2094f
+  alias: HA Started Notification
+  description: ''
+  trigger:
+  - platform: homeassistant
+    event: start
+  condition:
+  - condition: time
+    after: 08:00:00
+    before: '23:00:00'
+  action:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.audible_notifications
+        state: 'on'
+      sequence:
+      - service: script.speech_engine
+        data:
+          message: "{{ [\n    \"System initialization complete. Mouse House is now
+            under control.\",\n    \"The automation system is up and running. Mouse
+            House is at your service.\",\n    \"House management initiated. The system
+            is online, and everything is under control.\",\n    \"Welcome to the automated
+            era! The system has started, and Mouse House is under control.\",\n    \"Automation
+            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
+            are operational. Mouse House is now managed by the automation system.\",\n
+            \   \"The automation matrix is active. Mouse House is under control for
+            your convenience.\"\n] | random }}\n"
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.text_notifications
+        state: 'on'
+      sequence:
+      - service: script.text_notify
+        metadata: {}
+        data:
+          title: 'Alarm Notification:'
+          message: "{{ [\n    \"System initialization complete. Mouse House is now
+            under control.\",\n    \"The automation system is up and running. Mouse
+            House is at your service.\",\n    \"House management initiated. The system
+            is online, and everything is under control.\",\n    \"Welcome to the automated
+            era! The system has started, and Mouse House is under control.\",\n    \"Automation
+            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
+            are operational. Mouse House is now managed by the automation system.\",\n
+            \   \"The automation matrix is active. Mouse House is under control for
+            your convenience.\"\n] | random }}\n"
+- id: 24d7a430-4993-458c-b829-e1c153a2094f
+  alias: HA Started Notification
+  description: ''
+  trigger:
+  - platform: homeassistant
+    event: start
+  condition:
+  - condition: time
+    after: 08:00:00
+    before: '23:00:00'
+  action:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.audible_notifications
+        state: 'on'
+      sequence:
+      - service: script.speech_engine
+        data:
+          message: "{{ [\n    \"System initialization complete. Mouse House is now
+            under control.\",\n    \"The automation system is up and running. Mouse
+            House is at your service.\",\n    \"House management initiated. The system
+            is online, and everything is under control.\",\n    \"Welcome to the automated
+            era! The system has started, and Mouse House is under control.\",\n    \"Automation
+            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
+            are operational. Mouse House is now managed by the automation system.\",\n
+            \   \"The automation matrix is active. Mouse House is under control for
+            your convenience.\"\n] | random }}\n"
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.text_notifications
+        state: 'on'
+      sequence:
+      - service: script.text_notify
+        metadata: {}
+        data:
+          title: 'Alarm Notification:'
+          message: "{{ [\n    \"System initialization complete. Mouse House is now
+            under control.\",\n    \"The automation system is up and running. Mouse
+            House is at your service.\",\n    \"House management initiated. The system
+            is online, and everything is under control.\",\n    \"Welcome to the automated
+            era! The system has started, and Mouse House is under control.\",\n    \"Automation
+            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
+            are operational. Mouse House is now managed by the automation system.\",\n
+            \   \"The automation matrix is active. Mouse House is under control for
+            your convenience.\"\n] | random }}\n"

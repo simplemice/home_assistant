@@ -1,0 +1,22 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Awtrix
+#   @description    :   Awtrix automation
+###############################################################################
+input_boolean:
+  awtrix_weather:
+    name: "Awtrix Weather"
+    icon: mdi:weather-cloudy
+  awtrix_outside_temp:
+    name: "Awtrix Outside Temp"
+    icon: mdi:thermometer
+  awtrix_rain:
+    name: "Awtrix Rain"
+    icon: mdi:weather-rainy
+  awtrix_home_temp:
+    name: "Awtrix Home Temp"
+    icon: mdi:thermometer
+  wled_automation:
+    name: "Ambient Wled Automation"
+    icon: mdi:led-strip

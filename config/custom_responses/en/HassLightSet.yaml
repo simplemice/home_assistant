@@ -1,0 +1,6 @@
+language: en
+responses:
+  intents:
+    HassLightSet:
+      brightness: "Brightness set"
+      color: "Color set"

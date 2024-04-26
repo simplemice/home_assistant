@@ -1,0 +1,89 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Alexa
+#   @description    :   Alexa automations.
+###############################################################################
+
+emulated_hue:
+  host_ip: 192.168.3.2
+  listen_port: 80
+  expose_by_default: false
+  off_maps_to_on_domains:
+    - script
+    - scene
+  exposed_domains:
+    - scene
+    - automation
+    - script
+    - climate
+  entities:
+    light.bedside_lamp:
+      name: "Bedside Lamp"
+      hidden: false
+    light.lightstrip:
+      name: "Lightstrip"
+      hidden: false
+    light.garage_bulb:
+      name: "Garage Light"
+      hidden: false
+    fan.bedroom_fan:
+      name: "Bedroom Fan"
+      hidden: false
+    fan.tower_fan:
+      name: "Tower Fan"
+      hidden: false
+    fan.door_fan:
+      name: "Door Fan"
+      hidden: false
+    climate.bedroom_aircon:
+      name: "Bedroom Aircon"
+      hidden: false
+    script.play_last_message:
+      name: "Repite Last Message"
+      hidden: false
+    switch.livingroom_curtains:
+      name: "Switch Curtains"
+      hidden: false
+    cover.livingroom_curtains:
+      name: "Livingroom Curtains"
+      hidden: false
+
+group:
+  all_echos:
+    - media_player.bedroom_speaker
+
+template:
+  - sensor:
+      - name: alexa_audio
+        state: >-
+          {%- if is_state('sensor.last_alexa', 'media_player.livingroom_echo') %}
+            living_room
+          {% elif is_state('sensor.last_alexa', 'media_player.kitchen_echo') %}
+            kitchen
+          {% elif is_state('sensor.last_alexa', 'media_player.bedroom_speaker') %}
+            bedroom
+          {% elif is_state('sensor.last_alexa', 'media_player.bathroom_echo') %}
+            bathroom
+          {% else %}
+            backyard
+          {%- endif %}
+      - name: last_alexa
+        state: >
+          {{ expand('group.all_echos') | selectattr('attributes.last_called','eq',True) | map(attribute='entity_id') | first }}
+
+automation:
+  - id: e1cb17ea-0423-11eb-adc1-0242ac120002
+    alias: Set Last Alexa Called Time
+    initial_state: true
+    trigger:
+      - platform: state
+        entity_id:
+          - media_player.living_room_echo
+          - media_player.bedroom_speaker
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.last_time_alexa_called
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"

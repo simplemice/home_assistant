@@ -1,0 +1,150 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Media
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+media_extractor:
+
+group:
+  audio_devices:
+    - media_player.bedroom_speaker
+
+remote:
+  - platform: xiaomi_miio
+    name: "Livingroom Remote Hub"
+    host: 192.168.3.22
+    token: !secret living_remote
+  - platform: xiaomi_miio
+    name: "Bedroom Remote Hub"
+    host: 192.168.3.21
+    token: !secret bedroom_remote
+
+spotcast:
+  sp_dc: !secret sp_dc
+  sp_key: !secret sp_key
+
+input_boolean:
+  livingroom_tv:
+    name: "Livingroom TV"
+    icon: mdi:television
+
+input_select:
+  media_speakers:
+    name: Media Speakers Rooms
+    options:
+      - None
+      - Livingroom
+      - Bedroom
+      - Kitchen
+      - Bathroom
+      - Garage
+      - Backyard
+    initial: Livingroom
+    icon: mdi:speaker
+  spotify_playlist:
+    name: Spotify Playlist
+    options:
+      - None
+      - Rain Sounds
+      - ChillOut
+      - House
+      - Ethnic
+    initial: None
+    icon: mdi:playlist-star
+  youtube_playlist:
+    name: YouTube Playlist
+    options:
+      - None
+      - Liked
+      - ChillOut
+      - House
+    initial: None
+    icon: mdi:playlist-star
+  youtube_source:
+    name: YouTube Source
+    options:
+      - None
+      - Link1
+      - Link2
+      - Link3
+    initial: None
+    icon: mdi:playlist-star
+  youtube_playmode:
+    name: YouTube Playmode
+    options:
+      - None
+      - Mode1
+      - Mode2
+      - Mode3
+    initial: None
+    icon: mdi:play-box-multiple
+
+sensor:
+  #=== Home Assistant Channels Youtube
+  - platform: youtube
+    channel_id: UCrVLgIniVg6jW38uVqDRIiQ
+
+  - platform: youtube
+    channel_id: UCVtQ4AOSmCFUuvixddYiSxw
+
+  - platform: youtube
+    channel_id: UCYLnawaM-36HncBBUeWrlGA
+
+  - platform: youtube
+    channel_id: UC67SMH0qLMJ4b4Guud0mKjw
+
+  - platform: youtube
+    channel_id: UCQRm_z7seHnGsBiWDNEWr6A
+
+  - platform: youtube
+    channel_id: UCwOBG77Tm8cE24FPxHb_abw
+
+  - platform: youtube
+    channel_id: UCOY6oNxodGWbFg6CjXtae5g
+
+  - platform: youtube
+    channel_id: UCm-cVsRgJHChrEjeKENKJ-A
+
+  - platform: youtube
+    channel_id: UC3VW-yo-88jkrWYbyHBxYUg
+
+  - platform: youtube
+    channel_id: UCiyU6otsAn6v2NbbtM85npg
+
+  - platform: youtube
+    channel_id: UCcq9onYHbs6go3kDpfBoqhg
+
+  - platform: youtube
+    channel_id: UC2gyzKcHbYfqoXA5xbyGXtQ
+
+  - platform: youtube
+    channel_id: UCipZJ6748kd8TbelSxcvcVg
+
+automation:
+  - id: 07101384-d03d-437d-b2be-70e72ae1a6ae
+    alias: Awtrix - Current playing song
+    description: ""
+    use_blueprint:
+      path: homeassistant/awtrix_spotify.yaml
+      input:
+        awtrix_light: 878172095c71c90ce783d87cec0ac1af
+        media_player: media_player.spotify_simplemice
+        icon_in: "18207"
+        text_color:
+          - 157
+          - 10
+          - 255
+
+script:
+  spotify_start_playback:
+    alias: Spotify Start Playback
+    sequence:
+      - service: spotcast.start
+        data:
+          device_name: "{{ states('input_select.speakers') }}"
+          force_playback: true
+          start_volume: 30
+          shuffle: true
+    mode: single
+    icon: mdi:spotify

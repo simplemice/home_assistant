@@ -1,0 +1,30 @@
+# Energy
+sensor.energy_meter:
+  unit_of_measurement: kWh
+  device_class: energy
+  friendly_name: Consumption Energy
+  state_class: total_increasing
+
+sensor.current_energy_tariff:
+  unit_of_measurement: THB/kWh
+
+device_tracker.iss:
+  icon: mdi:space-station
+
+sensor.owm_pollution_carbon_monoxide_co:
+  friendly_name: Pollution Carbon monoxide (CO)
+
+sensor.owm_pollution_coarse_particles_pm10:
+  friendly_name: Pollution Coarse particles (PM10)
+
+light.all_ambient:
+  icon: mdi:led-strip
+
+light.all_lights:
+  icon: mdi:ceiling-light-multiple
+
+binary_sensor.external_doors:
+  icon: mdi:door-sliding
+
+cover.livingroom_curtains:
+  icon: mdi:curtains

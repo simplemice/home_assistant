@@ -1,0 +1,32 @@
+Corneyl's add-on repository:
+  maintainer: Corneyl
+  slug: 3726664c
+  source: https://github.com/corneyl/hassio-addons.git
+ESPHome:
+  maintainer: ESPHome <esphome@nabucasa.com>
+  slug: 5c53de3b
+  source: https://github.com/esphome/home-assistant-addon
+HA Add-ons by alexbelgium:
+  maintainer: alexbelgium
+  slug: '86689438'
+  source: https://github.com/alexbelgium/hassio-addons.git
+Hass.IO Repository for snowzach:
+  maintainer: Zach Brown <zach@prozach.org>
+  slug: ff29d639
+  source: https://github.com/snowzach/hassio-addons.git
+Home Assistant Community Add-ons:
+  maintainer: Franck Nijhof <frenck@addons.community>
+  slug: a0d7b954
+  source: https://github.com/hassio-addons/repository
+Home Assistant Google Drive Backup Repository:
+  maintainer: Stephen Beechen <stephen@beechens.com>
+  slug: f0e7e328
+  source: https://github.com/sabeechen/hassio-google-drive-backup.git
+Music Assistant:
+  maintainer: Music Assistant <marcelveldt@users.noreply.github.com>
+  slug: d5369777
+  source: https://github.com/music-assistant/home-assistant-addon
+Poeschl Home Assistant Add-ons:
+  maintainer: Poeschl <Poeschl@users.noreply.github.com>
+  slug: 76fa38ee
+  source: https://github.com/Poeschl/Hassio-Addons.git

@@ -1,0 +1,33 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Iframe
+#   @description    :   A collection of Home Assistant and Pi Sensors
+###############################################################################
+
+panel_iframe:
+  nodered:
+    title: "Node Red"
+    url: "http://192.168.3.10:1880"
+    icon: mdi:nodejs
+    require_admin: true
+  esphome:
+    title: "ESPHome"
+    url: "http://192.168.3.11:6052"
+    icon: mdi:chip
+    require_admin: true
+  frigate:
+    title: "Frigate"
+    url: "http://192.168.3.8:5000/"
+    icon: mdi:cctv
+    require_admin: true
+  zigbee2mqtt:
+    title: "Zigbee"
+    url: "http://192.168.3.9:8098/"
+    icon: mdi:zigbee
+    require_admin: true
+  mealie:
+    title: "Mealie"
+    url: "http://192.168.3.12:9925/"
+    icon: mdi:food
+    require_admin: true

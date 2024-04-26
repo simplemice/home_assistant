@@ -1,0 +1,291 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Weather
+#   @description    :   Weather automations.
+###############################################################################
+group:
+  weather_alerts:
+    name: "Weather Alerts Group"
+    entities:
+      - input_boolean.lighting_alert
+      - input_boolean.rain_alert
+      - input_boolean.weather_alert
+
+input_boolean:
+  weather_alert:
+    name: "Weather Alert Notification"
+    icon: mdi:weather-lightning-rainy
+  rain_alert:
+    name: "Rain Alert Notification"
+    icon: mdi:weather-pouring
+  lighting_alert:
+    name: "Lighting Alert Notification"
+    icon: mdi:flash-alert
+
+geo_location:
+  - platform: usgs_earthquakes_feed
+    feed_type: "past_day_all_earthquakes"
+    radius: 2000
+    minimum_magnitude: 0.0
+
+utility_meter:
+  rain_daily:
+    source: sensor.openweathermap_rain
+    name: Rain Daily
+    cycle: daily
+    delta_values: true
+  rain_monthly:
+    source: sensor.openweathermap_rain
+    name: Rain Monthly
+    cycle: monthly
+    delta_values: true
+  rain_yearly:
+    source: sensor.openweathermap_rain
+    name: Rain Yearly
+    cycle: yearly
+    delta_values: true
+
+sensor:
+  - platform: history_stats
+    name: Dayly Rain Duration
+    entity_id: sensor.openweathermap_rain
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+  - platform: template
+    sensors:
+      rain_sensor:
+        friendly_name: "Rain Sensor"
+        value_template: >-
+          {%- if is_state("binary_sensor.rain_sensor", "off" ) %}
+              No Rain
+          {%- else -%}
+              Rain Outside
+          {%- endif %}
+        icon_template: >
+          {% if is_state("binary_sensor.rain_sensor", "off") %}
+            mdi:weather-sunny
+          {% else %}
+            mdi:weather-pouring
+          {% endif %}
+
+  - platform: group
+    name: "Outside Temp"
+    unique_id: outside_temp
+    type: mean
+    entities:
+      - sensor.garage_temp_temperature
+      - sensor.backyard_temp_temperature
+
+  - platform: group
+    name: "House Temp"
+    unique_id: home_temp
+    type: mean
+    entities:
+      - sensor.livingroom_temp_temperature
+      - sensor.bedroom_temp_temperature
+      - sensor.kitchen_temp
+
+  - platform: group
+    name: "Outside AQI"
+    unique_id: outside_aqi
+    type: mean
+    entities:
+      - sensor.air_quality_index
+      - sensor.u_s_air_quality_index
+
+  - platform: worldtidesinfo
+    api_key: !secret tides
+
+  - platform: openweathermap_all
+    api_key: !secret openweather_all
+    latitude: !secret weather_lat
+    longitude: !secret weather_long
+
+automation:
+  - id: 3059db4c-8602-4ab6-8cf4-1d07c5992d86
+    alias: Rain Outside Notification
+    description: ""
+    trigger:
+      - platform: state
+        entity_id:
+          - binary_sensor.rain_sensor
+        to: "on"
+    condition:
+      - condition: time
+        after: "08:00:00"
+        before: "20:00:00"
+      - condition: state
+        entity_id: input_boolean.weather_alert
+        state: "on"
+    action:
+      - service: script.rain_outside_notification
+        metadata: {}
+        data: {}
+
+  - id: dc5ba7dd-f092-4d0f-b9ff-73b5936e8161
+    alias: Awtrix - Rain Forecast
+    description: ""
+    use_blueprint:
+      path: homeassistant/awtrix_rain_forecast.yaml
+      input:
+        awtrix_displays:
+          - 878172095c71c90ce783d87cec0ac1af
+        toggle_helper: input_boolean.awtrix_rain
+        my_sensor: weather.openweathermap
+        graph_type: line
+        graph_color:
+          - 157
+          - 10
+          - 255
+        my_text: No rain
+        lifetime: "10"
+
+  - id: 18bb2ee2-309d-4ac7-8dfc-7df928177619
+    alias: Awtrix - Outside Temp
+    description: ""
+    use_blueprint:
+      path: homeassistant/awtrix_create_sensor_app.yaml
+      input:
+        my_sensor: sensor.outside_temp
+        my_template_sensor: >-
+          Outside - {{ states('sensor.outside_temp') }} °C / {{
+          states('sensor.garage_temp_humidity') }} %
+        my_icon: "13593"
+        awtrix_displays:
+          - 878172095c71c90ce783d87cec0ac1af
+        toggle_helper: input_boolean.awtrix_outside_temp
+        text_color:
+          - 157
+          - 10
+          - 255
+        switch_to_app: true
+        duration: "19"
+        scrollspeed: 50
+
+  - id: 4c830d1d-d7eb-408e-a325-9ce85b4f3840
+    alias: Awtrix - Weather
+    description: ""
+    use_blueprint:
+      path: homeassistant/awtrix_weather_app.yaml
+      input:
+        awtrix_displays:
+          - 878172095c71c90ce783d87cec0ac1af
+        toggle_helper: input_boolean.awtrix_weather
+        my_sensor: weather.openweathermap
+        show_windspeed: false
+        background_color:
+          - 0
+          - 0
+          - 0
+        text_color:
+          - 157
+          - 10
+          - 255
+        switch_to_app: true
+        duration: "15"
+        scrollspeed: 50
+
+script:
+  rain_outside_notification:
+    alias: Rain Outside Notification
+    sequence:
+      - choose:
+          - conditions:
+              - condition: and
+                conditions:
+                  - condition: state
+                    entity_id: input_boolean.audible_notifications
+                    state: "on"
+                  - condition: state
+                    entity_id: input_boolean.weather_alert
+                    state: "on"
+            sequence:
+              - service: script.speech_engine
+                data:
+                  message: |
+                    {{ [
+                        "Rain alert: It's currently raining outside. Take necessary precautions when heading outdoors.",
+                        "Attention: Rain detected outside. Don't forget your umbrella if you plan to go out.",
+                        "Rainy weather: It's currently raining. Consider adjusting your plans accordingly.",
+                        "Weather update: Rain is falling outside. Stay dry and be cautious on the roads.",
+                        "Umbrella time: Rain detected outside. Grab an umbrella before heading out.",
+                        "Rainfall alert: It's raining. Make sure to check the weather conditions before going outside.",
+                        "Rainy day reminder: The weather outside is rainy. Take appropriate measures for your activities."
+                    ] | random }}
+              - service: select.select_option
+                target:
+                  entity_id: select.wled_matrix_preset
+                data:
+                  option: Lightning
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 5
+                  milliseconds: 0
+              - service: notify.alexa_media_bedroom_speaker
+                data:
+                  message: >-
+                    <audio
+                    src="soundbank://soundlibrary/weather/thunder/thunder_10"/>
+                  data:
+                    type: tts
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 5
+                  milliseconds: 0
+              - service: notify.alexa_media_bedroom_speaker
+                data:
+                  message: >-
+                    <audio
+                    src="soundbank://soundlibrary/weather/thunder/thunder_10"/>
+                  data:
+                    type: tts
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 5
+                  milliseconds: 0
+              - service: select.select_option
+                data:
+                  option: Black Hole
+                target:
+                  entity_id: select.wled_matrix_preset
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - service: notify.simplemice
+                data:
+                  message: TTS
+                  data:
+                    media_stream: alarm_stream_max
+                    tts_text: |
+                      {{ [
+                          "Rain alert: It's currently raining outside. Take necessary precautions when heading outdoors.",
+                          "Attention: Rain detected outside. Don't forget your umbrella if you plan to go out.",
+                          "Rainy weather: It's currently raining. Consider adjusting your plans accordingly.",
+                          "Weather update: Rain is falling outside. Stay dry and be cautious on the roads.",
+                          "Umbrella time: Rain detected outside. Grab an umbrella before heading out.",
+                          "Rainfall alert: It's raining. Make sure to check the weather conditions before going outside.",
+                          "Rainy day reminder: The weather outside is rainy. Take appropriate measures for your activities."
+                      ] | random }}
+              - service: script.text_notify
+                data:
+                  message: |
+                    {{ [
+                        "Rain alert: It's currently raining outside. Take necessary precautions when heading outdoors.",
+                        "Attention: Rain detected outside. Don't forget your umbrella if you plan to go out.",
+                        "Rainy weather: It's currently raining. Consider adjusting your plans accordingly.",
+                        "Weather update: Rain is falling outside. Stay dry and be cautious on the roads.",
+                        "Umbrella time: Rain detected outside. Grab an umbrella before heading out.",
+                        "Rainfall alert: It's raining. Make sure to check the weather conditions before going outside.",
+                        "Rainy day reminder: The weather outside is rainy. Take appropriate measures for your activities."
+                    ] | random }}
+    icon: fas:cloud-rain

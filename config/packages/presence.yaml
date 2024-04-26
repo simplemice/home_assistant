@@ -1,0 +1,246 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Presence
+#   @description    :   A Collection of Presence Related Trackers and Sensors
+###############################################################################
+group:
+  family:
+    name: Family
+    icon: mdi:human-female-female-child
+    entities:
+      - person.simplemice
+
+input_datetime:
+  mice_wakeup_alarm_time:
+    name: WakeUp Alarm Time
+    has_date: false
+    has_time: true
+
+input_select:
+  here_destination_preset:
+    name: Simplemice Destination
+    options:
+      - zone.home
+      - zone.office
+
+input_boolean:
+  presence_off:
+    name: "Presence Mode Off"
+    icon: mdi:location-enter
+  guest_mode:
+    name: "Guest Mode"
+    icon: mdi:account-group
+  vacation_mode:
+    name: "Vacation Mode"
+    icon: mdi:party-popper
+
+sensor:
+  - platform: mqtt_room
+    device_id: "iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5-100-40004"
+    unique_id: micemob_room
+    name: "Micemob Room"
+    state_topic: "espresense/devices/iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5-100-40004"
+    timeout: 5
+    away_timeout: 30
+
+  - platform: mqtt_room
+    device_id: "name:l7_le"
+    unique_id: micewatch_room
+    name: "Micewatch Room"
+    state_topic: "espresense/devices/name:l7_le"
+    timeout: 5
+    away_timeout: 30
+
+  - platform: template
+    sensors:
+      family_home:
+        friendly_name: "Family home"
+        value_template: >
+          {{ is_state('group.family', 'home') }}
+        icon_template: >
+          {% if is_state('sensor.family_home','0') %} mdi:account-off
+          {% elif is_state('sensor.family_home','1') %} mdi:account
+          {% elif is_state('sensor.family_home','2') %} mdi:account-multiple
+          {% elif is_state('sensor.family_home','3') %} mdi:account-multiple-check
+          {% else %} mdi:account-group
+          {% endif %}
+
+mqtt:
+  sensor:
+    - name: "Room Presence"
+      state_topic: "house/presence/current_room"
+    - name: "Presence Source"
+      state_topic: "house/presence/source"
+
+template:
+  - sensor:
+      - name: "Wake Up Alarm"
+        device_class: timestamp
+        state: "{{ today_at(states('input_datetime.mice_wakeup_alarm_time')) }}"
+  - sensor:
+      - name: "Living Room Occupied"
+        unique_id: living_room_occupied
+        state: >-
+          {% if states('sensor.micemob_room') == 'livingroom' %}
+            yes
+          {% elif states('binary_sensor.living_room_occupancy') == 'on' %}
+            yes
+          {% else %}
+            no
+          {% endif %}
+  - sensor:
+      - name: "Bedroom Room Occupied"
+        unique_id: bedroom_room_occupied
+        state: >-
+          {% if states('sensor.micemob_room') == 'bedroom' %}
+            yes
+          {% elif states('binary_sensor.bedroom_motion') == 'on' %}
+            yes
+          {% else %}
+            no
+          {% endif %}
+  - sensor:
+      - name: "Kitchen Room Occupied"
+        unique_id: kitchen_room_occupied
+        state: >-
+          {% if states('sensor.micemob_room') == 'kitchen' %}
+            yes
+          {% elif states('binary_sensor.kitchen_motion') == 'on' %}
+            yes
+          {% else %}
+            no
+          {% endif %}
+  - sensor:
+      - name: "Garage/Entrance Occupied"
+        unique_id: garage_room_occupied
+        state: >-
+          {% if states('sensor.micemob_room') == 'garage' %}
+            yes
+          {% elif states('binary_sensor.garage_motion') == 'on' %}
+            yes
+          {% else %}
+            no
+          {% endif %}
+  - sensor:
+      - name: "Bathroom Occupied"
+        unique_id: bathroom_room_occupied
+        state: >-
+          {% if states('sensor.micemob_room') == 'bathroom' %}
+            yes
+          {% elif states('binary_sensor.bathroom_motion') == 'on' %}
+            yes
+          {% else %}
+            no
+          {% endif %}
+
+zone:
+  - name: Home
+    latitude: !secret home_lat
+    longitude: !secret home_long
+    radius: 50
+    icon: mdi:home
+
+automation:
+  - id: 6d686767-7440-429a-b9e9-b12640663578
+    alias: Update Micemob Room Presence
+    description: ""
+    trigger:
+      - platform: state
+        entity_id:
+          - sensor.micemob_room
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+        enabled: true
+    action:
+      - service: device_tracker.see
+        data:
+          dev_id: micemob_track
+          location_name: >
+            {% if trigger.to_state.state in ['garage', 'livingroom', 'kitchen', 'bedroom',
+            'bathroom', 'backyard'] %}
+              home
+            {% elif trigger.to_state.state == 'not_home' %}
+              not_home
+            {% else %}
+              unknown
+            {% endif %}
+
+  - id: 6d686767-7440-429b-a2e4-a32640663578
+    alias: Update Micewatch Room Presence
+    description: ""
+    trigger:
+      - platform: state
+        entity_id:
+          - sensor.micewatch_room
+    condition:
+      - condition: template
+        value_template: "{{ trigger.from_state.state != trigger.to_state.state }}"
+        enabled: true
+    action:
+      - service: device_tracker.see
+        data:
+          dev_id: micewatch_track
+          location_name: >
+            {% if trigger.to_state.state in ['garage', 'livingroom', 'kitchen', 'bedroom',
+            'bathroom', 'backyard'] %}
+              home
+            {% elif trigger.to_state.state == 'not_home' %}
+              not_home
+            {% else %}
+              unknown
+            {% endif %}
+
+script:
+  return_home:
+    alias: Return Home
+    sequence:
+      - service: alarm_control_panel.alarm_arm_home
+        metadata: {}
+        data:
+          code: "5412"
+        target:
+          entity_id: alarm_control_panel.house
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 1
+          milliseconds: 0
+      - service: input_boolean.turn_on
+        data: {}
+        target:
+          entity_id:
+            - input_boolean.garage_camera_notification
+            - input_boolean.backyard_camera_notification
+            - input_boolean.audible_notifications
+            - input_boolean.wled_automation
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 1
+          milliseconds: 0
+      - service: input_boolean.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id:
+            - input_boolean.text_notifications
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 1
+          milliseconds: 0
+      - service: scene.turn_on
+        metadata: {}
+        target:
+          entity_id: scene.go_away_states
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 10
+          milliseconds: 0
+      - stop: finish
+        response_variable: return_mode
+    mode: single
+    icon: mdi:home-import-outline

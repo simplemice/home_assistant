@@ -1,0 +1,21 @@
+items:
+- icon: mdi:home
+  id: dashboard_main
+  mode: storage
+  require_admin: false
+  show_in_sidebar: true
+  title: House
+  url_path: dashboard-main
+- icon: mdi:map
+  id: map
+  mode: storage
+  require_admin: false
+  show_in_sidebar: true
+  title: Map
+  url_path: map
+- id: dashboard_test
+  mode: storage
+  require_admin: false
+  show_in_sidebar: true
+  title: test
+  url_path: dashboard-test

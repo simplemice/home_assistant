@@ -1,0 +1,52 @@
+<p align="center">
+  <img width="500" height="500" src="https://github.com/simplemice/home-assistant/blob/main/screenshot/logo.jpg">
+
+# SimpleMice Home Assistant Configuration
+
+</p>
+
+
+# Welcome !
+
+This is my Home Assistant installation.
+
+## Some statistics about my installation:
+
+Description | value
+--|--
+Installed version | {{ states('sensor.home_assistant_operating_system_version') }}
+Total entity objects | {{ states | count }}
+{%- set data = namespace(domains=[]) %}
+{%- for state in states %}
+{%- if state.domain not in data.domains %}
+{%- set data.domains = data.domains + [state.domain] %}
+{%- endif %}
+{%- endfor %}
+{%- for domain in data.domains %}
+Entities in the [`{{domain}}`](https://www.home-assistant.io/components/{{domain}}) domain | {{states[domain] | count }}
+{%- endfor %}
+
+## Core integrations that I use
+
+## My installed extensions:
+
+### Lovelace plugins
+{%- for component in hacs_components | selectattr('category', 'equalto', 'plugin') | sort(attribute='name') %}
+- [{{component.name}}]({{component.documentation}})
+{%- endfor %}
+
+### Themes
+{%- for component in hacs_components | selectattr('category', 'equalto', 'theme') | sort(attribute='name') %}
+- [{{component.name}}]({{component.documentation}})
+{%- endfor %}
+
+### Add-ons
+{%- for addon in addons | sort(attribute='name') %}
+- {{addon.name}}
+{%- endfor %}
+
+***
+
+Like all other Home Assistant instances this is also a Work in Progress :D
+
+***

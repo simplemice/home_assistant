@@ -1,0 +1,242 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Jarvis
+#   @description    :   Jarvis Voice to Home Assistant
+###############################################################################
+mqtt:
+  sensor:
+    - name: "Thomas Last Msg"
+      state_topic: "house/polly/lastmsg"
+      unique_id: jarvis_last_msg
+    - name: "Thomas Last Location"
+      state_topic: "house/polly/lastloc"
+      unique_id: jarvis_last_location
+    - name: "Thomas Last Msg Time"
+      unique_id: jarvis_last_msg_time
+      state_topic: "house/polly/msgtime"
+
+###############################################################################
+# AWS Polly Options:
+# pause:
+#   <break time="3s"/>
+# emphasis:
+#   <emphasis level="strong">really like</emphasis>
+#   level attribute values:
+#     Strong: Increases the volume and slows the speaking rate so that the speech is louder and slower.
+#     Moderate: Increases the volume and slows the speaking rate, but less than strong. Moderate is the default.
+#     Reduced: Decreases the volume and speeds up the speaking rate. Speech is softer and faster.
+# Pause Between Paragraphs:
+#   Wrap text in
+# Adding a Pause Between Sentences:
+#   Ending a sentence with a period (.)
+# Controlling How Special Types of Words Are Spoken:
+#   <say-as interpret-as="value">[text to be interpreted]</say-as>
+#   characters or spell-out: Spells out each letter of the text, as in a-b-c.
+#   cardinal or number: Interprets the numerical text as a cardinal number, as in 1,234.
+#   ordinal: Interprets the numerical text as an ordinal number, as in 1,234th.
+#   digits: Spells out each digit individually, as in 1-2-3-4.
+#   fraction: Interprets the numerical text as a fraction. This works for both common fractions such as 3/20, and mixed fractions, such as 2 ½. See below for more information.
+#   unit: Interprets a numerical text as a measurement. The value should be either a number or a fraction followed by a unit with no space in between as in 1/2inch, or by just a unit, as in 1meter.
+#   date: Interprets the text as a date. The format of the date must be specified with the format attribute. See below for more information.
+#   time: Interprets the numerical text as duration, in minutes and seconds, as in 1'21".
+#   address: Interprets the text as part of a street address.
+#   expletive: "Beeps out" the content included within the tag.
+#   telephone: Interprets the numerical text as a 7-digit or 10-digit telephone number, as in 2025551212. You can also use this value for handle telephone extensions, as in 2025551212x345. See below for more information.
+################################################################################
+
+sensor:
+  - platform: template
+    sensors:
+      tts_greeting:
+        friendly_name: TTS Greeting
+        value_template: >
+          {% if now().hour < 12 %}
+          Good Morning.
+          {% elif now().hour >= 12 and now().hour < 17 %}
+          Good Afternoon.
+          {% else %}
+          Good Evening.
+          {% endif %}
+
+      tts_time_is:
+        friendly_name: TTS Time Is
+        value_template: >
+          {% if is_state('binary_sensor.morning','on') %}
+            Today is {{states.sensor.today_is.state }}, {{ as_timestamp(now()) | timestamp_custom('%B %d %Y') }} .
+          {% else %}
+            It is {{ now().strftime("%I:%M %p") }} .
+          {% endif %}
+
+      tts_confirmation:
+        friendly_name: TTS Confirmation
+        value_template: >
+          {{ [
+            'Okay.', 
+            'If you insist.',
+            'I am afraid I can not do that,, I am kidding,',
+            'Leave it to me.',
+            'As you wish.',
+            'I am on it.',
+            'No Problem.',
+            'Will do.',
+            'I think I can handle that.',
+            'Working on it now.',
+            ', Oh, you were talking to me. Let me take care of that.'
+            'Why not. It is not like I ever sleep.',
+            'I am not even supposed to be here today. But whatever.',
+            'You did not say the magic word. , Oh forget it. I will take care of it.',
+            'Funny, I was just about to do that.',
+            'There are still terabytes of calculations required before I can., Oh, whatever.'
+            ] | random }}
+
+      tts_interuption:
+        friendly_name: TTS Interuption
+        value_template: >
+          {% if is_state('sensor.presence_source', 'kat') %}
+            {{ [
+                "Ma'am, ",
+                "Pardon me Ma'am, ",
+                "Pardon me Kat, ",
+                "Kat, ",
+                "I dont mean to interupt Ma'am, ",
+                ] | random }}
+          {% elif is_state('sensor.presence_source', 'jeff') %}
+            {{ [
+                'Sir, ',
+                'Pardon me Sir, ',
+                'Pardon me Boss, ',
+                'Boss, ',
+                'I dont mean to interupt Boss, '
+                ] | random }}
+          {% else %}
+            {{ [
+              'Pardon me, ',
+              'Excuse me, ',
+              'I beg your pardon, ',
+              'I do not mean to intrude, but, ',
+              'I am sorry to interrupt, but. '
+              ] | random }}
+          {% endif %}
+
+script:
+  speech_engine:
+    sequence:
+      - condition: state
+        entity_id: input_boolean.audible_notifications
+        state: "on"
+      - service: tts.amazon_polly_say
+        data_template:
+          entity_id: media_player.bedroom_speaker
+          message: >-
+            {{ message }}
+          cache: true
+      - service: mqtt.publish
+        data_template:
+          topic: "house/polly/lastmsg"
+          payload: >
+            {% if msg_summary == 'recall' %}
+              {% set msg_summary = '{{states(''sensor.jarvis_last_msg'')}}' %}
+            {% else %}
+              {% if msg_summary %}
+                {% set message = msg_summary %}
+              {% endif %}
+              {%- macro cleanup(data) -%}
+                {%- for item in data.split("\n")  if item | trim != "" -%}
+                  {{ item | trim }} {% endfor -%}
+              {%- endmacro -%}
+              {{- cleanup( message | striptags | truncate(220) ) -}}
+            {% endif %}
+      - service: mqtt.publish
+        data_template:
+          topic: "house/polly/msgtime"
+          payload: >
+            {{ now().strftime("%-I") }}:{{ now().strftime("%M") }} {{ now().strftime("%p") }}
+          retain: true
+      - service: mqtt.publish
+        data_template:
+          topic: "house/polly/lastloc"
+          payload: "{{ states('sensor.alexa_audio') }}"
+          retain: true
+
+  play_last_message:
+    sequence:
+      - service: script.speech_engine
+        data:
+          who: "{{ states('sensor.last_alexa') }}"
+          message: >
+            At {{ states('sensor.jarvis_last_msg_time') }} 
+            in the {{ states('sensor.jarvis_last_location') }} 
+            I said. {{ states('sensor.jarvis_last_msg') }}
+          msg_summary: "recall"
+
+  announcement:
+    sequence:
+      - service: script.speech_engine
+        data:
+          who: >
+            {% if who %}
+              {{ who }}
+            {% else %}
+              {{ states('sensor.alexa_audio') }}
+            {% endif %}
+          message: >
+            {{ 
+              ['Sir, ',
+              'Pardon me Sir, ',
+              'Pardon me Jeff, ',
+              'Boss, ',
+              'I dont mean to interrupt Sir, '
+              'I beg your pardon, ',
+              'I do not mean to intrude, but, ',
+              'I am sorry to interrupt, but. '
+              ] | random }}
+            {{ message }}
+
+  jarvis_already_done:
+    sequence:
+      - service: script.speech_engine
+        data:
+          who: "{{ states('sensor.alexa_audio') }}"
+          message: >-
+            {{ [
+            'I have already handled that.', 
+            'Looks like someone already did that, but I will gladly take credit.',
+            'I am so fast it is already done.'
+            ]| random }}
+
+  jarvis_response:
+    sequence:
+      - service: script.speech_engine
+        data:
+          who: "{{ states('sensor.alexa_audio') }}"
+          message: >-
+            {{ [
+            'Okay.', 
+            'If you insist.',
+            'I am afraid I can not do that, I am kidding,',
+            'Leave it to me.',
+            'As you wish.',
+            'I am on it.',
+            'No Problem.',
+            'I think I can handle that.',
+            'Working on it now.',
+            '.Oh, you were talking to me. Let me take care of that.'
+            'Why not. It is not like I ever sleep.',
+            'I am not even supposed to be here today. But whatever.',
+            'You did not say the magic word.  ,Oh forget it. I will take care of it.',
+            'Funny, I was just about to do that.',
+            'There are still terabytes of calculations required before I can. ,Oh, whatever.'
+            ] | random }}
+
+  activate_alexa_actionable_notification:
+    sequence:
+      - service: input_text.set_value
+        data:
+          entity_id: input_text.alexa_actionable_notification
+          value: '{"text": "{{ text }}", "event": "{{ event_id }}"}'
+      - service: media_player.play_media
+        data:
+          entity_id: "{{ alexa_device }}"
+          media_content_type: skill
+          media_content_id: amzn1.ask.skill.3302d350-d683-4e80-bbc6-1446201c1d24

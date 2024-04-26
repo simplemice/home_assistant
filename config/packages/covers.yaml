@@ -1,0 +1,87 @@
+###############################################################################
+#   @author         :   simplemice
+#   @date           :   27/01/2024
+#   @package        :   Curtains and Covers
+#   @description    :   Curtains Notification, Scripts and Configs.
+###############################################################################
+cover:
+  - platform: group
+    name: "Livingroom Curtains"
+    entities:
+      - cover.livingroom_curtain_l
+      - cover.livingroom_curtain_r
+
+input_boolean:
+  livingroom_curtains:
+    name: "Livingroom Curtains Status"
+    icon: mdi:curtains
+
+input_datetime:
+  curtain_open_time:
+    name: Curtains Open Time
+    has_date: false
+    has_time: true
+  curtain_close_time:
+    name: Curtains Close Time
+    has_date: false
+    has_time: true
+
+switch:
+  - platform: template
+    switches:
+      livingroom_curtains:
+        unique_id: a4c3d1c8-c25c-4af2-93fe-616d6411d270
+        friendly_name: "Livingroom Curtains"
+        value_template: "{{ is_state('input_boolean.livingroom_curtains', 'on') }}"
+        turn_on:
+          - service: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.livingroom_curtains
+          - service: script.curtains
+        turn_off:
+          - service: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.livingroom_curtains
+          - service: script.curtains
+        icon_template: >-
+          {% if is_state('input_boolean.livingroom_curtains', 'on') %}
+            mdi:curtains
+          {% else %}
+            mdi:curtains-closed
+          {% endif %}
+
+template:
+  - sensor:
+      - name: "Livingroom Curtains"
+        unique_id: 849f279e-7031-4c07-847d-c94270b1c2b9
+        state: >
+          {% if is_state('cover.livingroom_curtains', 'open') %}
+            {{ states('cover.livingroom_curtains') }}
+          {% else %}
+            Closed
+          {% endif %}
+
+automation:
+  - id: 972f2058-4fdf-4e49-87c3-c4f0708fe789
+    alias: Turn On Curtains Time Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.curtains_open_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.livingroom_curtains
+
+  - id: cf2c407b-e19b-466e-8bb7-8a4f8be42e17
+    alias: Turn Off Curtains Time Mode
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.curtains_close_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    condition:
+      - condition: state
+        entity_id: input_boolean.livingroom_curtains
+        state: "on"
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.livingroom_curtains

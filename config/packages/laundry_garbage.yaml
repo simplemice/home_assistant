@@ -1,0 +1,163 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Laundy
+#   @description    :   Laundry Package
+###############################################################################
+
+input_boolean:
+  garbage_day:
+    name: "Garbage Day"
+    icon: mdi:delete-circle
+  cleaning_day:
+    name: "House Cleaning"
+    icon: mdi:spray-bottle
+  laundry_helper:
+    name: "Laundry Day Mode"
+    icon: mdi:washing-machine
+  laundry_pickup:
+    name: "Laundry PickUp"
+    icon: mdi:washing-machine-off
+  awtrix_laundry_timer:
+    name: "Awtrix Laundry Timer"
+    icon: mdi:timer
+
+timer:
+  laundry_timer:
+    name: Laundry Timer
+    duration: "02:00:00"
+    icon: mdi:timer
+    restore: true
+
+automation:
+
+script:
+  laundry_start:
+    alias: Laundry Timer Start
+    sequence:
+      - service: timer.start
+        data:
+          duration: "{{ states('input_datetime.time') }}"
+        target:
+          entity_id: timer.laundry_timer
+      - service: input_boolean.turn_on
+        data: {}
+        target:
+          entity_id: input_boolean.awtrix_laundry_timer
+      - service: input_boolean.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id: input_boolean.laundry_helper
+      - service: script.text_notify
+        data:
+          message: |
+            {{ [
+                "Laundry time! The washing machine has started. Get ready for clean clothes!",
+                "Laundry in progress: The washing machine is now running. Time to relax while it works.",
+                "Attention: The laundry has started. Sit back and let the washing machine do its magic.",
+                "Laundry alert: The washing machine is in action. Your clothes are getting cleaned!",
+                "Washing underway! The laundry has started. Enjoy some downtime while it runs.",
+                "Laundry initiated: The washing machine is now operational. Your clothes are in good hands.",
+                "Laundry cycle has begun. The washing machine is hard at work for you."
+            ] | random }}
+    mode: restart
+    icon: mdi:washing-machine-alert
+
+  laundry_finish:
+    alias: Laundry Finish Wait PickUp
+    sequence:
+      - repeat:
+          sequence:
+            - service: script.text_notify
+              data:
+                message: |
+                  {{ [
+                      "Laundry complete! The washing machine has finished its cycle. Time to unload.",
+                      "Laundry success: The washing machine has completed its task. Retrieve your fresh clothes!",
+                      "Attention: The laundry is done. The washing machine has finished its cycle.",
+                      "Laundry alert: The washing machine has finished. Your clothes are ready for the next step.",
+                      "Washing success! The laundry is complete. Retrieve your clean clothes with a smile!",
+                      "Laundry cycle complete: The washing machine has finished its job. Your clothes await.",
+                      "Laundry accomplishment: The washing machine has completed its cycle. Your clothes are now ready."
+                  ] | random }}
+            - delay:
+                hours: 0
+                minutes: 10
+                seconds: 0
+                milliseconds: 0
+          until:
+            - condition: state
+              entity_id: input_boolean.laundry_pickup
+              state: "on"
+    mode: restart
+    icon: hue:room-laundry-off
+
+  laundry_pickup:
+    alias: Laundry PickUp
+    sequence:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.audible_notifications
+                state: "on"
+            sequence:
+              - repeat:
+                  sequence:
+                    - service: script.speech_engine
+                      data:
+                        message: |
+                          {{ [
+                              'Your laundry has been picked up and is ready to wear! Enjoy the fresh feeling',
+                              'Mission accomplished! Your laundry has been picked up. Freshness delivered',
+                              'Enjoy the freshness! Your laundry has been picked up and is waiting for you',
+                              'Freshness unlocked! Your laundry has been picked up and is ready to enjoy',
+                              'Your freshly picked-up laundry awaits! Enjoy the crisp, clean clothes',
+                              'The freshness is yours! Your laundry has been picked up and is ready to go',
+                              'Fresh laundry alert! Your clothes have been picked up and are ready to be worn',
+                              'Your laundry adventure continues with fresh clothes in hand! Enjoy',
+                              'Enjoy the clean slate! Your laundry has been picked up and is ready to wear',
+                              'Laundry success! Your clothes have been picked up and are now fresh and clean'
+                          ] | random }}
+                    - delay:
+                        hours: 0
+                        minutes: 10
+                        seconds: 0
+                        milliseconds: 0
+                  until:
+                    - condition: state
+                      entity_id: input_boolean.laundry_pickup
+                      state: "on"
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - repeat:
+                  sequence:
+                    - service: script.text_notify
+                      data:
+                        message: |
+                          {{ [
+                              'Your laundry has been picked up and is ready to wear! Enjoy the fresh feeling',
+                              'Mission accomplished! Your laundry has been picked up. Freshness delivered',
+                              'Enjoy the freshness! Your laundry has been picked up and is waiting for you',
+                              'Freshness unlocked! Your laundry has been picked up and is ready to enjoy',
+                              'Your freshly picked-up laundry awaits! Enjoy the crisp, clean clothes',
+                              'The freshness is yours! Your laundry has been picked up and is ready to go',
+                              'Fresh laundry alert! Your clothes have been picked up and are ready to be worn',
+                              'Your laundry adventure continues with fresh clothes in hand! Enjoy',
+                              'Enjoy the clean slate! Your laundry has been picked up and is ready to wear',
+                              'Laundry success! Your clothes have been picked up and are now fresh and clean'
+                          ] | random }}
+                    - delay:
+                        hours: 0
+                        minutes: 30
+                        seconds: 0
+                        milliseconds: 0
+                  until:
+                    - condition: state
+                      entity_id: input_boolean.laundry_pickup
+                      state: "on"
+    mode: restart
+    icon: mdi:tumble-dryer-alert

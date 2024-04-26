@@ -1,0 +1,35 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Database
+#   @description    :   Recorder and Logger Configurations
+###############################################################################
+
+recorder:
+  db_url: !secret db_link
+  purge_keep_days: 35
+  auto_purge: true
+  auto_repack: true
+  exclude:
+    entity_globs:
+      - sensor.flightradar24*
+    entities:
+      - sun.sun # Don't record sun data
+      - sensor.last_boot # Comes from 'systemmonitor' sensor platform
+      - sensor.date
+      - sensor.time
+      - sensor.time_utc
+      - sensor.time_date
+      - sensor.time_online
+      - sensor.moon
+
+logbook:
+#  exclude:
+#    domains:
+
+history:
+#  exclude:
+#    domains:
+
+logger:
+  default: error

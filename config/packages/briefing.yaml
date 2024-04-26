@@ -1,0 +1,459 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Briefing
+#   @description    :   Briefing automations.
+###############################################################################
+
+input_boolean:
+  morning_briefing:
+    name: "Morning Briefing Mode"
+    icon: mdi:chat
+  evening_briefing:
+    name: "Evening Briefing Mode"
+    icon: mdi:chat
+
+input_datetime:
+  morning_briefing:
+    name: Morning Briefing Time
+    has_date: false
+    has_time: true
+  evening_briefing:
+    name: Evening Briefing Time
+    has_date: false
+    has_time: true
+  briefing_off:
+    name: Turn Off Briefing Time
+    has_date: false
+    has_time: true
+
+automation:
+  - id: 3bea6bb4-2464-40bf-8f2a-bb380190821f
+    alias: Turn On Morning Briefing Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.morning_briefing', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: input_boolean.turn_on
+        entity_id:
+          - input_boolean.morning_briefing
+
+  - id: 0dca3168-f2b0-403d-87ca-6867e50ccbaf
+    alias: Turn On Evening Briefing Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.evening_briefing', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: input_boolean.turn_on
+        entity_id:
+          - input_boolean.evening_briefing
+
+  - id: c2d05dfd-aad6-482f-9338-ba86bc067369
+    alias: Turn Off Briefing Mode
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.briefing_off', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    condition:
+      - condition: state
+        entity_id: input_boolean.morning_briefing
+        state: "on"
+    action:
+      - service: input_boolean.turn_off
+        entity_id:
+          - input_boolean.morning_briefing
+          - input_boolean.evening_briefing
+
+script:
+  morning_briefing:
+    alias: Simplemice Morning Briefing
+    sequence:
+      - variables:
+          morning_snark: |
+            {{ [
+              'Congratulations on surviving the night.',
+              'I see you made it you made it to another day.',
+              "Congratulations on making it through the night.",
+              "Well done! You have successfully survived another night.",
+              "Kudos! You have conquered the night once again.",
+              "Hats off to you for surviving the challenges of the night.",
+              "Bravo! You have made it through another night unscathed.",
+              "A round of applause for your resilience. You have survived the night!",
+              "Survivor alert! You have navigated through the night successfully.",
+              "Great job on surviving the challenges of the night.",
+              "You have earned your stripes by surviving the night. Well done!",
+              "Pat yourself on the back – you have triumphed over the night.",
+              "Survival achievement unlocked! You have made it to another day.",
+              "Thumbs up for your survival skills! Another night conquered.",
+              "Congratulations on reaching a new day after a night well navigated.",
+              "Fantastic! You have emerged victorious from another night is challenges.",
+              "You have officially conquered the night. Here is to a new day!"
+            ] | random }}
+          weather_status: >
+            {% set state = states('weather.openweathermap') %}
+            {% set temperature = state_attr('weather.openweathermap', 'temperature') %}
+            {% set humidity = state_attr('weather.openweathermap', 'humidity') %}
+            {% set windspeed = state_attr('weather.openweathermap', 'wind_speed') %}
+            {% set rain = state_attr('weather.openweathermap', 'forecast').0.precipitation_probability %}
+            {% if state == 'partlycloudy' %}
+              {% set state = 'Partly Cloudy' %}
+            {% endif %}
+              {{ [
+                'It looks like today the weather will be ' ~ state ~ ', with a temperature of ' ~ temperature ~ ' degrees, humidity of ' ~ humidity ~ '%, wind speed of ' ~ windspeed ~ ' meters per second and a ' ~ rain ~ '% chance of rain. Enjoy your day.',
+                'Today is forecast predicts a ' ~ state ~ ' day in your location. Expect a temperature of ' ~ temperature ~ ' degrees, humidity around ' ~ humidity ~ '%, a light breeze at ' ~ windspeed ~ ' meters per second, and a ' ~ rain ~ '% chance of rain. Make the most of your day',
+                'The weather in your area today will be ' ~ state ~ ' and crisp at ' ~ temperature ~ ' degrees. Humidity is at a pleasant ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a slight ' ~ rain ~ '% chance of rain. Make today awesome',
+                'Your morning weather update: Mostly ' ~ state ~ ' skies with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a mere ' ~ rain ~ '% chance of rain. Have a fantastic day',
+                'Today is weather brings a mix of ' ~ state ~ ' and clouds. Expect a temperature of ' ~ temperature ~ ' degrees, humidity at ' ~ humidity ~ '%, a gentle breeze of ' ~ windspeed ~ ' meters per second, and a ' ~ rain ~ '% chance of rain. Take on the day with enthusiasm!',
+                'It is a ' ~ state ~ ' day in store for you with clear skies and a temperature of ' ~ temperature ~ ' degrees. Humidity is at a comfortable ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is just a ' ~ rain ~ '% chance of rain. Seize the day',
+                'Today is weather report indicates a ' ~ state ~ ' day with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Have a wonderful day',
+                'It is a lovely day ahead with clear skies and a temperature of ' ~ temperature ~ ' degrees. Humidity is at a comfortable ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is only a ' ~ rain ~ '% chance of rain. Enjoy the warmth',
+                'Get ready for a fantastic day ahead! The forecast includes bright ' ~ state ~ ' with a temperature of ' ~ temperature ~ ' degrees. Humidity is at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is only a ' ~ rain ~ '% chance of rain. Enjoy the warmth',
+                'Today is weather features a mix of ' ~ state ~ ' and clouds with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Make it a great day'
+              ] | random }}
+          device_status: >
+            {{ [
+              'Your latest device report is in, and it is all positive news!',
+              'The current device status report is glowing with good news.',
+              'Your device just sent a report – and it is all smooth sailing!',
+              'All systems are in check according to the latest device report.',
+              'Your device report just came in, and it is a clean bill of health!',
+              'Good news! The current device status report is looking great.',
+              'Thumbs up for your device – the latest report shows optimal performance.',
+              'Your device has spoken, and the report is nothing but good vibes!',
+              'The current device status report is a testament to top-notch functionality.',
+              'A round of applause for your device – the report is outstanding!'
+            ] | random }}
+            {% set level = states('sensor.micemob_battery_level') %}
+            {% set charging = states('sensor.micemob_battery_state') %}
+            {% set level2 = states('sensor.micebook_power') %}
+            {% set charging2 = states('sensor.micebook_power') %}
+            {% if has_value('sensor.micebook_power') %}
+              {{ [
+                'Your phone is currently at ' ~ level ~ ' percent.',
+                'You have ' ~ level ~ ' percent remaining on your devices battery.',
+                'You device is reporting ' ~ level ~ ' percent is left on its internal battery.',
+                'Your phone appears to have ' ~ level ~ ' percent remaining.',
+                'The power level of your device is ' ~ level ~ ' percent.'
+              ] | random }}
+              {% if level | int <=20 and charging == 'discharging' %}
+                {{ [
+                'I suggest you connect it to a power source.',
+                'You may want to charge it.',
+                'Charging the battery appears to be best way to avoid loss of power.',
+                'If you would like to use it I think harging it would be the next step.',
+                'May I remind you that your pone is not powered by an infinity stone.',
+                'May I remind you that the device needs power to work.'
+                ] | random }}
+              {% elif level | int <=10 and charging == 'discharging' %}
+                {{ [
+                'I must insist you connect it to a power source if you want to stay in communication with your family.',
+                'At that level your device your device will fail in a hour or so.',
+                'I will be unable to track you if the device loses power.',
+                'May I remind you that your phone has almost exhausted its power reserves.'
+                ] | random }}
+              {% elif level | int <=3 and charging == 'discharging' %}
+                {{ [
+                'Your phones power level is critical.',
+                'Failure due to power loss is imminent.',
+                'If you would like to remain in communication I suggest dropping what you are doing and finding a power source.',
+                'Drop what you are doing and find a power source for your phone.'
+                ] | random }}
+              {% endif %}
+            {% else %}
+              {{ [
+                'Your phone is unresponsive.',
+                'It appears your phone has loss power.',
+                'Your phone is no longer reporting its power level.',
+                'I suspect your phone has had a power failure.',
+                'Your mobile device is no longer responding.'
+                ] | random }}
+                I suggest you locate it. 
+            {% endif %} {{ [ 'And.', 'Also.', ] | random }} {% if
+            has_value('sensor.micebook_power') %}
+              {{ [
+                'Your laptop is currently at ' ~ level2 ~ ' percent.',
+                'You have ' ~ level2 ~ ' percent remaining on your laptop battery.',
+                'Your laptop is reporting ' ~ level2 ~ ' percent is left on its internal battery.',
+                'Your laptop appears to have ' ~ level2 ~ ' percent of power remaining.',
+                'The power level of your laptop is ' ~ level2 ~ ' percent.'
+              ] | random }}
+              {% if level2 | int <=20 and charging2 == 'Discharging' %}
+                {{ [
+                'If you are planning on filming today. May be you charge laptop?',
+                'I insist that you find a suitable power source to charge it.',
+                'I suggest charging it.',
+                'If you plan on continuing to use it today I would consider putting it on a charger.',
+                'May I remind you that the device needs power to work.'
+                ] | random }}
+              {% endif %}
+            {% else %}
+              {{ [
+                'Your laptop is unresponsive.',
+                'It appears your laptop has suffered a power outage.',
+                'I suggest you locate your laptop. I believe it has ran out of power.',
+                'Your laptop is no longer responsive. I suspect a power failure.',
+                'I am unable to communicate with your laptop.'
+                ] | random }}
+                I suggest you locate it. 
+            {% endif %}
+          tasks: >
+            {{ [
+              'Today brings an exciting calendar event your way!',
+              'Brace yourself for today is noteworthy calendar event!',
+              'Gear up for the day, as you have got a special calendar event ahead!',
+              'Get ready for today is calendar event it is worth the anticipation!',
+              'Today unfolds with a notable calendar event in store for you!',
+              'Anticipate a significant calendar event on your agenda today!',
+              'Prepare for today is calendar event, it is set to make an impact!',
+              'Today holds a promising calendar event waiting for your attention!',
+              'Your schedule lights up today with an important calendar event!',
+              'Today comes with a notable calendar event to mark on your agenda!'
+            ] | random }}
+            {% set tasks = state_attr('calendar.inbox', 'all_tasks') | default([]) %}
+            {% if tasks %}
+              Tasks for today:
+              {% for task in tasks %}
+                - {{ task }}
+              {% endfor %}
+            {% else %}
+              No tasks for today.
+            {% endif %}
+          main_tasks: >
+            {{ [
+              'Today brings a thrilling calendar event your way, embrace the excitement',
+              'Brace yourself! Today stands out with a noteworthy calendar event',
+              'Gear up for the exciting day ahead, as you have a distinguished calendar event awaiting',
+              'Ready, set, go! Today is calendar event is worth every bit of your enthusiasm',
+              'Today unfolds with an illustrious calendar event that awaits your involvement',
+              'Take note! Your schedule marks a momentous calendar event today',
+              'Prepare to be amazed! Today is calendar event is set to make a lasting impression',
+              'Today holds a promising calendar event deserving your utmost attention',
+              'Your itinerary shines today with a significant calendar event',
+              'Today brings a notable calendar event to highlight your agenda'
+            ] | random }}
+            {% set tasks = state_attr('calendar.simplemice_network', 'all_tasks') | default([]) %}
+            {% if tasks %}
+              Tasks for today:
+              {% for task in tasks %}
+                - {{ task }}
+              {% endfor %}
+            {% else %}
+              No tasks for today.
+            {% endif %}
+          dinner: >
+            {{ [
+              'Okay, and some about that you plaaned cook tonight...',
+              'Tonights menu is full of exciting possibilities, like as',
+              'Today fantastic idea for dinner menu'
+            ] | random }}
+            {% set meal = states('sensor.mealie_todays_meal') %}
+              {{ [
+                'Tonight, savor the exquisite flavors of ' ~ meal ~ ' as you unwind and indulge in culinary delight',
+                'Treat yourself tonight to a sumptuous feast featuring the delectable ' ~ meal ~ '. You deserve it',
+                'Embrace the evening with a mouthwatering dinner of ' ~ meal ~ '. It is the perfect way to end the day',
+                'Indulge your palate with the sensational taste of ' ~ meal ~ ' tonight. It is a culinary experience not to be missed',
+                'As night falls, immerse yourself in the comforting flavors of ' ~ meal ~ '. It is a feast for the senses',
+                'Dive into a world of culinary bliss with tonight is dinner: ' ~ meal ~ '. Bon appétit!',
+                'Allow yourself to be whisked away by the enchanting flavors of ' ~ meal ~ ' this evening. It is a gastronomic adventure',
+                'Tonight, let the aroma of ' ~ meal ~ ' tantalize your taste buds and elevate your dining experience',
+                'Elevate your evening with the exquisite taste of ' ~ meal ~ '. It is a culinary delight that will leave you satisfied',
+                'Tonights dinner invitation features the irresistible ' ~ meal ~ '. Get ready for a gastronomic journey!',
+                'Tonights dinner promises to be extraordinary with the addition of ' ~ meal ~ ' to your table. Enjoy every bite!'
+              ] | random }}
+          finish: >
+            {{ [
+              'And that is your morning briefing, folks! Remember, if coffee is not helping, it is probably because you need more coffee!',
+              'That wraps up your morning briefing! Now go out there and conquer the day, or at least survive until lunchtime!',
+              'There you have it, your morning briefing served with a side of wit and wisdom! Now go forth and adult like a semi-responsible human!',
+              'And with that, your morning briefing comes to a close! Remember, the early bird gets the worm, but the second mouse gets the cheese!',
+              'Time to bid adieu to your morning briefing! Remember, life is short, smile while you still have teeth!',
+              'And that is a wrap on your morning briefing! Now go out there and be the reason someone smiles... or just be the reason coffee disappears!',
+              'With that, we conclude your morning briefing! Remember, today is a gift, that is why they call it the present. Enjoy unwrapping!',
+              'And there you have it, your morning briefing in all its glory! Now go out there and be so awesome that people think Mondays aren it so bad after all!',
+              'That is all for your morning briefing! Remember, the secret to getting ahead is getting started. Or hitting the snooze button one more time!',
+              'And with that, your morning briefing bids you farewell! Remember, you can not control the length of your life, but you can control its depth. And its coffee intake!'
+            ] | random }}
+      - variables:
+          briefing: >
+            {"morning_snark":"{{morning_snark}}","weather_status":"{{weather_status}}","device_status":"{{device_status}}","tasks":"{{ tasks }}", "dinner":"{{ dinner }}", "main_tasks":"{{ main_tasks }}", "finish":"{{ finish }}"}
+      - service: notify.alexa_media_bedroom_speaker
+        data:
+          message: " {{morning_snark}} {{weather_status}} {{device_status}} {{ tasks }} {{ main_tasks }} {{ dinner }} {{ finish }}"
+      - stop: finish
+        response_variable: morning_briefing
+
+  nightly_briefing:
+    alias: Simplemice Nightly Briefing
+    sequence:
+      - variables:
+          nightly_snark: |
+            {{ [
+              'Well done on making it through the night.',
+              'Congratulations on navigating another evening.',
+              'You have successfully reached the end of the night.',
+              'Kudos on surviving the challenges of the night.',
+              'I see you have triumphed over the darkness once again.',
+              'Cheers to another night conquered.',
+              'Hats off to your resilience through the night.',
+              'Congratulations on a safe and sound night.',
+              'You made it through the night—great job!',
+              'Here is to your strength and perseverance throughout the night.',
+              'Congratulations on surviving the night.',
+              'I see you made it you made it to another day.'
+            ] | random }}
+          device_status: >
+            {% set level = states('sensor.micemob_battery_level') %}
+            {% set charging = states('sensor.micemob_battery_state') %}
+            {% set level2 = states('sensor.micebook_power') %}
+            {% set charging2 = states('sensor.micebook_power') %}
+            {% if has_value('sensor.micebook_power') %}
+              {{ [
+                'Your phone is currently at ' ~ level ~ ' percent.',
+                'You have ' ~ level ~ ' percent remaining on your devices battery.',
+                'You device is reporting ' ~ level ~ ' percent is left on its internal battery.',
+                'Your phone appears to have ' ~ level ~ ' percent remaining.',
+                'The power level of your device is ' ~ level ~ ' percent.'
+              ] | random }}
+              {% if level | int <=20 and charging == 'discharging' %}
+                {{ [
+                'I suggest you connect it to a power source.',
+                'You may want to charge it.',
+                'Charging the battery appears to be best way to avoid loss of power.',
+                'If you would like to use it I think harging it would be the next step.',
+                'May I remind you that your pone is not powered by an infinity stone.',
+                'May I remind you that the device needs power to work.'
+                ] | random }}
+              {% elif level | int <=10 and charging == 'discharging' %}
+                {{ [
+                'I must insist you connect it to a power source if you want to stay in communication with your family.',
+                'At that level your device your device will fail in a hour or so.',
+                'I will be unable to track you if the device loses power.',
+                'May I remind you that your phone has almost exhausted its power reserves.'
+                ] | random }}
+              {% elif level | int <=3 and charging == 'discharging' %}
+                {{ [
+                'Your phones power level is critical.',
+                'Failure due to power loss is imminent.',
+                'If you would like to remain in communication I suggest dropping what you are doing and finding a power source.',
+                'Drop what you are doing and find a power source for your phone.'
+                ] | random }}
+              {% endif %}
+            {% else %}
+              {{ [
+                'Your phone is unresponsive.',
+                'It appears your phone has loss power.',
+                'Your phone is no longer reporting its power level.',
+                'I suspect your phone has had a power failure.',
+                'Your mobile device is no longer responding.'
+                ] | random }}
+                I suggest you locate it. 
+            {% endif %} {{ [ 'And.', 'Also.', ] | random }} {% if
+            has_value('sensor.micebook_power') %}
+              {{ [
+                'Your laptop is currently at ' ~ level2 ~ ' percent.',
+                'You have ' ~ level2 ~ ' percent remaining on your laptop battery.',
+                'Your laptop is reporting ' ~ level2 ~ ' percent is left on its internal battery.',
+                'Your laptop appears to have ' ~ level2 ~ ' percent of power remaining.',
+                'The power level of your laptop is ' ~ level2 ~ ' percent.'
+              ] | random }}
+              {% if level2 | int <=20 and charging2 == 'Discharging' %}
+                {{ [
+                'If you are planning on filming today. May be you charge laptop?',
+                'I insist that you find a suitable power source to charge it.',
+                'I suggest charging it.',
+                'If you plan on continuing to use it today I would consider putting it on a charger.',
+                'May I remind you that the device needs power to work.'
+                ] | random }}
+              {% endif %}
+            {% else %}
+              {{ [
+                'Your laptop is unresponsive.',
+                'It appears your laptop has suffered a power outage.',
+                'I suggest you locate your laptop. I believe it has ran out of power.',
+                'Your laptop is no longer responsive. I suspect a power failure.',
+                'I am unable to communicate with your laptop.'
+                ] | random }}
+                I suggest you locate it. 
+            {% endif %}
+          weather_status: >
+            {% set state = states('weather.openweathermap') %}
+            {% set temperature = state_attr('weather.openweathermap', 'temperature') %}
+            {% set humidity = state_attr('weather.openweathermap', 'humidity') %}
+            {% set windspeed = state_attr('weather.openweathermap', 'wind_speed') %}
+            {% set rain = state_attr('weather.openweathermap', 'forecast').0.precipitation_probability %}
+            {% if state == 'partlycloudy' %}
+              {% set state = 'Partly Cloudy' %}
+            {% endif %}
+              {{ [
+                'As the day comes to a close, the weather is ' ~ state ~ ' with a temperature of ' ~ temperature ~ ' degrees. Humidity is at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Have a peaceful evening.',
+                'Good evening! The weather as the day ends will be ' ~ state ~ ', with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Enjoy the night',
+                'Good evening! As night falls, expect ' ~ state ~ ' weather with a temperature of ' ~ temperature ~ ' degrees. Humidity is at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Have a cozy evening',
+                'Hello there! Your evening weather update: ' ~ state ~ ' skies with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Have a relaxing night',
+                'Good evening! The night brings ' ~ state ~ ' weather, with a temperature of ' ~ temperature ~ ' degrees. Humidity is at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Sweet dreams',
+                'Hello, night owl! Tonight is weather forecast includes ' ~ state ~ ' skies with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Sleep well',
+                'Good evening! The night sky will be ' ~ state ~ ' with a temperature of ' ~ temperature ~ ' degrees. Humidity is at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Have a restful evening',
+                'Hello, night explorer! The weather as you wrap up the day will be ' ~ state ~ ', with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Enjoy your evening',
+                'Good evening! The night brings ' ~ state ~ ' weather with a temperature of ' ~ temperature ~ ' degrees. Humidity is at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Relax and unwind',
+                'As night falls, the weather transitions to ' ~ state ~ ' with a temperature of ' ~ temperature ~ ' degrees. Humidity stands at ' ~ humidity ~ '%, wind speed is ' ~ windspeed ~ ' meters per second, and there is a ' ~ rain ~ '% chance of rain. Have a peaceful evening'
+              ] | random }}
+          tasks: >
+            {% set tasks = state_attr('calendar.inbox', 'all_tasks') | default([]) %}
+            {% if tasks %}
+              Tasks for today:
+              {% for task in tasks %}
+                - {{ task }}
+              {% endfor %}
+            {% else %}
+              No tasks for today.
+            {% endif %}
+          home_status: >
+            {% set open_doors = expand(state_attr('binary_sensor.all_doors', 'entity_id')) |
+              selectattr('state','eq','on') |
+              map(attribute='entity_id') |
+              list %}
+            {% set open_doors_count = open_doors | count %}
+            {% set active_fans = expand(state_attr('fan.all_fans', 'entity_id')) |
+              selectattr('state', 'eq', 'on') |
+              map(attribute='entity_id') |
+              list %}
+            {% set active_fans_count = active_fans | count %}
+            {% set ambient_lights = expand(state_attr('light.all_ambient', 'entity_id')) |
+              selectattr('state', 'eq', 'on') |
+              map(attribute='entity_id') |
+              list %}
+            {% set ambient_lights_count = ambient_lights | count %}
+            {{ [
+              'Good evening! Currently, ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' lights, and ' ~ active_fans_count ~  ' fans are active in your home.',
+              'As night falls, your home is illuminated with ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and ' ~ active_fans_count ~  ' fans providing a tranquil atmosphere.',
+              'Hello there! Wind down your day with the ambiance of ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and ' ~ active_fans_count ~  ' fans in your home.',
+              'Good evening! Your home is evening includes ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and ' ~ active_fans_count ~  ' fans setting the tone for a relaxing night.',
+              'As the day concludes, ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and ' ~ active_fans_count ~  ' fans create a soothing environment in your home.',
+              'Greetings! Relax and unwind in the presence of ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and ' ~ active_fans_count ~  ' fans as night approaches.',
+              'Good evening! Your home is aglow with the radiance of ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and the comforting breeze from ' ~ active_fans_count ~  ' fans.',
+              'As evening sets in, enjoy the charm of ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and the gentle hum of ' ~ active_fans_count ~  ' fans in your home.',
+              'Hello! Wind down your day surrounded by the warmth of ' ~ ambient_lights_count ~  ' ambient lights, the subtle glow of ' ~ active_lights_count ~  ' active lights, and the soothing presence of ' ~ active_fans_count ~  ' fans.',
+              'Good evening! As the night begins, ' ~ ambient_lights_count ~  ' ambient lights, ' ~ active_lights_count ~  ' active lights, and ' ~ active_fans_count ~  ' fans create a cozy and calming atmosphere in your home.'
+            ] | random }}
+          finish: >
+            {{ [
+              'And that is your evening briefing wrapped up! Remember, bedtime stories are just dreams with deadlines!',
+              'With that, we bid adieu to your evening briefing! Remember, the early bird catches the worm, but the night owl gets the pizza delivery!',
+              'Time to close the curtains on your evening briefing! Remember, the best dreams happen when you are awake... or asleep on the couch!',
+              'And there you have it, your evening briefing served with a side of moonlight and mischief! Now go out there and make memories you will laugh about tomorrow!',
+              'That concludes your evening briefing! Remember, every evening is a chance to wipe the slate clean and start afresh... or just binge-watch Netflix!',
+              'And with that, your evening briefing bids you farewell! Remember, the only time success comes before work is in the dictionary... or when ordering takeout!',
+              'With your evening briefing concluded, it is time to unwind and let the good times roll! Remember, life is short, so eat dessert first... or second!',
+              'That is a wrap on your evening briefing! Remember, sleep is like a time machine to breakfast... or to hit the snooze button for the umpteenth time!',
+              'And there you have it, your evening briefing in all its glory! Remember, the only thing better than a glass of wine is two glasses... or three!',
+              'And with that, your evening briefing bids you goodnight! Remember, tomorrow is a new day to do amazing things... or to hit the reset button on today is to-do list!'
+            ] | random }}
+      - variables:
+          briefing: >
+            {"nightly_snark":"{{nightly_snark}}","home_status":"{{home_status}}","weather_status":"{{weather_status}}","device_status":"{{device_status}}","tasks":"{{ tasks }}","finish":"{{ finish }}"}
+      - service: notify.alexa_media_bedroom_speaker
+        data:
+          message: "{{ nightly_snark }} {{ weather_status }} {{ home_status }} {{ device_status }} {{ tasks }} {{ finish }}"
+      - stop: finish
+        response_variable: nightly_briefing
