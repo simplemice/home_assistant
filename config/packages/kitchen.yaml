@@ -138,7 +138,7 @@ script:
             sequence:
               - repeat:
                   sequence:
-                    - service: notify.alexa_media_bedroom_speaker
+                    - service: script.speech_engine
                       data:
                         message: |
                           {{ [
@@ -158,10 +158,10 @@ script:
                   until:
                     - type: is_value
                       condition: device
-                      device_id: 9be7b2d13e72b6683f75158901d19ea5
-                      entity_id: e46e9bc06cadd14b8a18f9eebe612743
+                      device_id: 477f9b243ea2f15c2a3ab16cfac10fda
+                      entity_id: a4096c28b097c8b66e950a85240f2d0c
                       domain: sensor
-                      above: 30
+                      below: 10
           - conditions:
               - condition: and
                 conditions:
@@ -179,7 +179,7 @@ script:
             sequence:
               - repeat:
                   sequence:
-                    - service: script.text_notify
+                    - service: script.text_notify_image
                       data:
                         message: |
                           {{ [
@@ -193,15 +193,15 @@ script:
                             ] | random }}
                     - delay:
                         hours: 0
-                        minutes: 45
+                        minutes: 30
                         seconds: 0
                         milliseconds: 0
                   until:
                     - type: is_value
                       condition: device
-                      device_id: 9be7b2d13e72b6683f75158901d19ea5
-                      entity_id: e46e9bc06cadd14b8a18f9eebe612743
+                      device_id: 477f9b243ea2f15c2a3ab16cfac10fda
+                      entity_id: a4096c28b097c8b66e950a85240f2d0c
                       domain: sensor
-                      above: 30
+                      above: 10
     mode: restart
     icon: mdi:propane-tank-outline
