@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | unknown
-Total entity objects | 1423
+Total entity objects | 1437
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 99
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 7
 Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 105
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 817
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 829
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
 Entities in the [`fan`](https://www.home-assistant.io/components/fan) domain | 1
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 9
@@ -52,7 +52,7 @@ Entities in the [`remote`](https://www.home-assistant.io/components/remote) doma
 Entities in the [`alarm_control_panel`](https://www.home-assistant.io/components/alarm_control_panel) domain | 2
 Entities in the [`weather`](https://www.home-assistant.io/components/weather) domain | 1
 Entities in the [`event`](https://www.home-assistant.io/components/event) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 5
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 7
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 47
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
 

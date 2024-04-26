@@ -27,6 +27,22 @@ script:
                  "/config/www/tweet_images/ad4.jpeg"] | random }}
           who: "home"
 
+  mastodon_me:
+    sequence:
+      - service: script.mastodon_notify_image
+        data:
+          message: >-
+            Home Assistant Server at Casa de Ratón
+             - GitHub: https://github.com/simplemice/home_assistant
+             #homeassistant #homeautomation #github #configuration #status
+          image: >-
+            {{ [ "/config/www/tweet_images/me.jpeg",
+                 "/config/www/tweet_images/me1.jpeg",
+                 "/config/www/tweet_images/me2.jpeg",
+                 "/config/www/tweet_images/me3.jpeg",
+                 "/config/www/tweet_images/me4.jpeg"] | random }}
+          who: "home"
+
   mastodon_snark:
     sequence:
       - service: script.mastodon_notify_image
