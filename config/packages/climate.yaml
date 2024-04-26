@@ -174,11 +174,11 @@ automation:
           - sensor.bedroom_temp_temperature
         below: 25
         id: temp_off
-      - platform: state
-        entity_id:
-          - binary_sensor.bedroom_door_contact
-        to: "off"
-        id: door_closed
+    #      - platform: state
+    #        entity_id:
+    #          - binary_sensor.bedroom_door_contact
+    #        to: "off"
+    #        id: door_closed
     condition:
       - condition: and
         conditions:

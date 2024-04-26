@@ -75,6 +75,25 @@ mqtt:
 
 template:
   - sensor:
+      - name: house_mode
+        unique_id: house_mode
+        state: >
+          {% if is_state('input_boolean.sentry_mode','on') or is_state('input_boolean.barn_door_protocol','on')%}
+            Secured
+          {% elif is_state('input_boolean.guest_mode','on')%}
+            Guest
+          {% elif is_state('input_boolean.vacation_mode','on')%}
+            Vacation
+          {% elif is_state('binary_sensor.family_home','on') and (is_state('binary_sensor.quiet_time','on') or is_state('binary_sensor.overnight','on') )%}
+            Sleep
+          {% elif is_state('binary_sensor.family_home','on') and is_state('input_boolean.guest_mode','off')%}
+            Normal
+          {% elif is_state('binary_sensor.family_home','off') and is_state('input_boolean.baymax_mode','on')%}
+            Monitoring
+          {% else %}
+            None
+          {% endif %}
+  - sensor:
       - name: "Wake Up Alarm"
         device_class: timestamp
         state: "{{ today_at(states('input_datetime.mice_wakeup_alarm_time')) }}"

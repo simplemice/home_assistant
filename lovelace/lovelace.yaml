@@ -87,6 +87,14 @@ config:
           \ %}\n  Good Night, Simplemice!\n{% else %}\n  Dude! Go Sleep!\n{% endif\
           \ %}"
         type: custom:mushroom-title-card
+      - card:
+          image: /local/media/images/home_logo.jpg
+          type: picture
+        conditions:
+        - condition: state
+          entity: person.simplemice
+          state: not_home
+        type: conditional
       - cards:
         - cards:
           - entity: person.simplemice
@@ -215,7 +223,7 @@ config:
           mode: vertical
           type: custom:stack-in-card
         - cards:
-          - entity: person.simplemice
+          - entity: sensor.micewatch_room
             fill_container: true
             icon: "{% if is_state('person.simplemice', 'home') %}\n  mdi:rodent\n\
               {% else %}\n  mdi:motorbike\n{% endif %}"
@@ -223,7 +231,6 @@ config:
               \   green\n{% elif states ('sensor.micewatch_room', 'kitchen') %}\n\
               \   yellow\n{% elif states ('sensor.micewatch_room', 'bedroom') %}\n\
               \   blue\n{% else %}\n   red\n{% endif %}"
-            layout: vertical
             multiline_secondary: true
             primary: "{% if is_state('person.simplemice', 'home') %}\n  Now in the\n\
               {% else %}\n  Now at location\n{% endif %}"
@@ -240,7 +247,6 @@ config:
               \  green\n{% elif states ('sensor.micemob_room', 'kitchen') %}\n   yellow\n\
               {% elif states ('sensor.micemob_room', 'bedroom') %}\n   blue\n{% else\
               \ %}\n   red\n{% endif %}"
-            layout: vertical
             multiline_secondary: true
             primary: "{% if is_state('person.simplemice', 'home') %}\n  Mob in the\n\
               {% else %}\n  Now at location\n{% endif %}"
@@ -249,8 +255,10 @@ config:
               \ m\n{% else %}\n  Geo: {{ states('sensor.micemob_geocoded_location')\
               \ }}\n{% endif %}"
             type: custom:mushroom-template-card
-          type: custom:swipe-card
+          type: vertical-stack
         type: horizontal-stack
+      type: grid
+    - cards:
       - elements:
         - entity: sensor.outside_temp
           style:
@@ -310,55 +318,63 @@ config:
         type: picture-elements
       type: grid
     - cards:
-      - alignment_style: left
-        color_mode: icon
-        day_style: counter
-        drop_todayevents_from: '10:00:00'
-        entities:
-        - calendar.garbage
-        - calendar.laundry
-        - calendar.house
-        event_grouping: true
-        filter_events: false
-        full_size: true
-        hide_time_range: false
-        items_per_row: 2
-        next_days: 7
-        pattern:
-        - color: lime
-          icon: mdi:flower
-          pattern: Organic
-          type: organic
-        - color: light-grey
-          icon: mdi:newspaper
-          pattern: Paper
-          type: paper
-        - color: accent
-          icon: mdi:bottle-soda-classic-outline
-          label: Plastic
-          pattern: Plastic
-          type: recycle
-        - color: lime
-          icon: mdi:trash-can-outline
-          pattern: Waste
-          type: waste
-        - color: light-blue
-          icon: mdi:washing-machine
-          type: others
-        - color: cyan
-          icon: mdi:food
-          label: Mealie
-          pattern: Mealie
-          type: custom
-        - color: indigo
-          icon: mdi:vacuum
-          label: Clean Day
-          pattern: Clean Day
-          type: custom
-        refresh_rate: 30
-        type: custom:trash-card
-        use_summary: true
-        with_label: true
+      - card:
+          alignment_style: left
+          color_mode: icon
+          day_style: counter
+          drop_todayevents_from: '10:00:00'
+          entities:
+          - calendar.garbage
+          - calendar.laundry
+          - calendar.house
+          event_grouping: true
+          filter_events: false
+          full_size: true
+          hide_time_range: false
+          items_per_row: 2
+          next_days: 7
+          pattern:
+          - color: lime
+            icon: mdi:flower
+            pattern: Organic
+            type: organic
+          - color: light-grey
+            icon: mdi:newspaper
+            pattern: Paper
+            type: paper
+          - color: accent
+            icon: mdi:bottle-soda-classic-outline
+            label: Plastic
+            pattern: Plastic
+            type: recycle
+          - color: lime
+            icon: mdi:trash-can-outline
+            pattern: Waste
+            type: waste
+          - color: light-blue
+            icon: mdi:washing-machine
+            type: others
+          - color: cyan
+            icon: mdi:food
+            label: Mealie
+            pattern: Mealie
+            type: custom
+          - color: indigo
+            icon: mdi:vacuum
+            label: Clean Day
+            pattern: Clean Day
+            type: custom
+          refresh_rate: 30
+          type: custom:trash-card
+          use_summary: true
+          with_label: true
+        conditions:
+        - condition: state
+          entity: person.simplemice
+          state: home
+        type: conditional
+      type: grid
+    - cards: []
       type: grid
     - cards: []
       type: grid

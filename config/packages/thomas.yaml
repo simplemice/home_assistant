@@ -98,12 +98,10 @@ script:
       - condition: state
         entity_id: input_boolean.audible_notifications
         state: "on"
-      - service: tts.amazon_polly_say
+      - service: notify.alexa_media_bedroom_speaker
         data_template:
-          entity_id: media_player.bedroom_speaker
           message: >-
             {{ message }}
-          cache: true
       - service: mqtt.publish
         data_template:
           topic: "house/polly/lastmsg"

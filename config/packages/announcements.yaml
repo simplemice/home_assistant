@@ -81,7 +81,7 @@ automation:
               - repeat:
                   count: 3
                   sequence:
-                    - service: notify.alexa_media_bedroom_speaker
+                    - service: script.speech_engine
                       data:
                         message: |
                           {{ [
@@ -146,7 +146,7 @@ automation:
               - repeat:
                   count: 3
                   sequence:
-                    - service: notify.alexa_media_bedroom_speaker
+                    - service: script.speech_engine
                       data:
                         message: |
                           {{ [
@@ -227,7 +227,7 @@ automation:
             entity_id: input_boolean.evening_briefing
             state: "on"
     action:
-      - service: notify.alexa_media_bedroom_speaker
+      - service: script.speech_engine
         data:
           message: |
             {{ [
@@ -256,7 +256,7 @@ automation:
           minutes: 5
           seconds: 0
           milliseconds: 0
-      - service: notify.alexa_media_bedroom_speaker
+      - service: script.speech_engine
         data:
           message: Turning off laptop
       - delay:

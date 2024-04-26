@@ -87,7 +87,7 @@ automation:
                 entity_id: input_boolean.audible_notifications
                 state: "on"
             sequence:
-              - service: notify.alexa_media_bedroom_speaker
+              - service: script.speech_engine
                 data:
                   message: |
                     {{ [
@@ -179,7 +179,7 @@ script:
             sequence:
               - repeat:
                   sequence:
-                    - service: script.text_notify_image
+                    - service: script.text_notify
                       data:
                         message: |
                           {{ [

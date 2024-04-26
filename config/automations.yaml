@@ -172,3 +172,14 @@
             are operational. Mouse House is now managed by the automation system.\",\n
             \   \"The automation matrix is active. Mouse House is under control for
             your convenience.\"\n] | random }}\n"
+- id: '1714126208361'
+  alias: Mastodon Stat Post
+  description: ''
+  trigger:
+  - platform: time
+    at: '15:00:00'
+  condition: []
+  action:
+  - service: script.mastodon_stats
+    data: {}
+  mode: single
