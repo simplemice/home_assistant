@@ -11,7 +11,7 @@ This repo contains the working [Home Assistant](https://home-assistant.io/) conf
 
 #### Casa de Ratón's Three Laws of Home Automation:
 
-When designing Maison De Lune's automations I have made every effort to prioritize the solution based on the following three laws. 
+When designing Casa de Ratón's automations I have made every effort to prioritize the solution based on the following three laws. 
 
 **First Law: Every automation or action should be the result of a passive sensor or indirect action**.
 
