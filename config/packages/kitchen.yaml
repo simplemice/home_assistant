@@ -23,7 +23,7 @@ sensor:
     method: GET
     name: Mealie todays meal
     headers:
-      Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb25nX3Rva2VuIjp0cnVlLCJpZCI6IjFlYmMyNjRiLWY5M2UtNDU2Yy1hNjExLTdiMzIzMjE1MDQ3YyIsIm5hbWUiOiJob21lYXNzaXN0YW50IiwiaW50ZWdyYXRpb25faWQiOiJnZW5lcmljIiwiZXhwIjoxODY4NDQ4NDg4fQ.IfIqJwhnjfAQPe5jMaHGeYP7-s1nsHCPAr-sI2STyJQ
+      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb25nX3Rva2VuIjp0cnVlLCJpZCI6IjFlYmMyNjRiLWY5M2UtNDU2Yy1hNjExLTdiMzIzMjE1MDQ3YyIsIm5hbWUiOiJob21lYXNzaXN0YW50IiwiaW50ZWdyYXRpb25faWQiOiJnZW5lcmljIiwiZXhwIjoxODY4NDQ4NDg4fQ.IfIqJwhnjfAQPe5jMaHGeYP7-s1nsHCPAr-sI2STyJQ"
     value_template: "{{ value_json[0].recipe.name }}"
     force_update: true
     scan_interval: 30
@@ -32,7 +32,7 @@ sensor:
     method: GET
     name: Mealie todays meal ID
     headers:
-      Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb25nX3Rva2VuIjp0cnVlLCJpZCI6IjFlYmMyNjRiLWY5M2UtNDU2Yy1hNjExLTdiMzIzMjE1MDQ3YyIsIm5hbWUiOiJob21lYXNzaXN0YW50IiwiaW50ZWdyYXRpb25faWQiOiJnZW5lcmljIiwiZXhwIjoxODY4NDQ4NDg4fQ.IfIqJwhnjfAQPe5jMaHGeYP7-s1nsHCPAr-sI2STyJQ
+      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb25nX3Rva2VuIjp0cnVlLCJpZCI6IjFlYmMyNjRiLWY5M2UtNDU2Yy1hNjExLTdiMzIzMjE1MDQ3YyIsIm5hbWUiOiJob21lYXNzaXN0YW50IiwiaW50ZWdyYXRpb25faWQiOiJnZW5lcmljIiwiZXhwIjoxODY4NDQ4NDg4fQ.IfIqJwhnjfAQPe5jMaHGeYP7-s1nsHCPAr-sI2STyJQ"
     value_template: "{{ value_json[0].recipe.id }}"
     force_update: true
     scan_interval: 30
@@ -122,7 +122,7 @@ automation:
           entity_id: input_boolean.cooking_timer_finish
 
 script:
-  water_tank_low_notify:
+  kitchen_water_tank_low_notification:
     alias: Kitchen Water Tank Low Notification
     sequence:
       - choose:

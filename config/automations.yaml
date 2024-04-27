@@ -80,98 +80,6 @@
     metadata: {}
     data: {}
   mode: single
-- id: 24d7a430-4993-458c-b829-e1c153a2094f
-  alias: HA Started Notification
-  description: ''
-  trigger:
-  - platform: homeassistant
-    event: start
-  condition:
-  - condition: time
-    after: 08:00:00
-    before: '23:00:00'
-  action:
-  - choose:
-    - conditions:
-      - condition: state
-        entity_id: input_boolean.audible_notifications
-        state: 'on'
-      sequence:
-      - service: script.speech_engine
-        data:
-          message: "{{ [\n    \"System initialization complete. Mouse House is now
-            under control.\",\n    \"The automation system is up and running. Mouse
-            House is at your service.\",\n    \"House management initiated. The system
-            is online, and everything is under control.\",\n    \"Welcome to the automated
-            era! The system has started, and Mouse House is under control.\",\n    \"Automation
-            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
-            are operational. Mouse House is now managed by the automation system.\",\n
-            \   \"The automation matrix is active. Mouse House is under control for
-            your convenience.\"\n] | random }}\n"
-    - conditions:
-      - condition: state
-        entity_id: input_boolean.text_notifications
-        state: 'on'
-      sequence:
-      - service: script.text_notify
-        metadata: {}
-        data:
-          title: 'Alarm Notification:'
-          message: "{{ [\n    \"System initialization complete. Mouse House is now
-            under control.\",\n    \"The automation system is up and running. Mouse
-            House is at your service.\",\n    \"House management initiated. The system
-            is online, and everything is under control.\",\n    \"Welcome to the automated
-            era! The system has started, and Mouse House is under control.\",\n    \"Automation
-            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
-            are operational. Mouse House is now managed by the automation system.\",\n
-            \   \"The automation matrix is active. Mouse House is under control for
-            your convenience.\"\n] | random }}\n"
-- id: 24d7a430-4993-458c-b829-e1c153a2094f
-  alias: HA Started Notification
-  description: ''
-  trigger:
-  - platform: homeassistant
-    event: start
-  condition:
-  - condition: time
-    after: 08:00:00
-    before: '23:00:00'
-  action:
-  - choose:
-    - conditions:
-      - condition: state
-        entity_id: input_boolean.audible_notifications
-        state: 'on'
-      sequence:
-      - service: script.speech_engine
-        data:
-          message: "{{ [\n    \"System initialization complete. Mouse House is now
-            under control.\",\n    \"The automation system is up and running. Mouse
-            House is at your service.\",\n    \"House management initiated. The system
-            is online, and everything is under control.\",\n    \"Welcome to the automated
-            era! The system has started, and Mouse House is under control.\",\n    \"Automation
-            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
-            are operational. Mouse House is now managed by the automation system.\",\n
-            \   \"The automation matrix is active. Mouse House is under control for
-            your convenience.\"\n] | random }}\n"
-    - conditions:
-      - condition: state
-        entity_id: input_boolean.text_notifications
-        state: 'on'
-      sequence:
-      - service: script.text_notify
-        metadata: {}
-        data:
-          title: 'Alarm Notification:'
-          message: "{{ [\n    \"System initialization complete. Mouse House is now
-            under control.\",\n    \"The automation system is up and running. Mouse
-            House is at your service.\",\n    \"House management initiated. The system
-            is online, and everything is under control.\",\n    \"Welcome to the automated
-            era! The system has started, and Mouse House is under control.\",\n    \"Automation
-            protocols engaged. Mouse House is now seamlessly under control.\",\n    \"Systems
-            are operational. Mouse House is now managed by the automation system.\",\n
-            \   \"The automation matrix is active. Mouse House is under control for
-            your convenience.\"\n] | random }}\n"
 - id: '1714126208361'
   alias: Mastodon Stat Post
   description: ''
@@ -183,3 +91,15 @@
   - service: script.mastodon_stats
     data: {}
   mode: single
+- id: '1714190358197'
+  alias: Mastodon Weather Post
+  description: ''
+  trigger:
+  - platform: time_pattern
+    hours: '3'
+  condition: []
+  action:
+  - service: script.mastodon_weather
+    metadata: {}
+    data: {}
+  mode: restart

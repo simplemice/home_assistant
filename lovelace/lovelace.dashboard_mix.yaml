@@ -1,0 +1,87 @@
+config:
+  kiosk_mode:
+    mobile_settings:
+      custom_width: 768
+      hide_header: true
+      ignore_entity_settings: true
+    user_settings:
+    - hide_sidebar: true
+      users:
+      - wallmix
+      - mix3
+    - ignore_entity_settings: true
+      kiosk: true
+      users:
+      - wallmix
+      - mix3
+  swipe_nav:
+    animate: fade
+    enable_mouse_swipe: true
+    prevent_default: true
+    swipe_amount: 30
+    wrap: true
+  views:
+  - sections:
+    - cards:
+      - card:
+          alignment_style: left
+          color_mode: icon
+          day_style: counter
+          drop_todayevents_from: '10:00:00'
+          entities:
+          - calendar.garbage
+          - calendar.laundry
+          - calendar.house
+          event_grouping: true
+          filter_events: false
+          full_size: true
+          hide_time_range: false
+          items_per_row: 2
+          next_days: 7
+          pattern:
+          - color: lime
+            icon: mdi:flower
+            pattern: Organic
+            type: organic
+          - color: light-grey
+            icon: mdi:newspaper
+            pattern: Paper
+            type: paper
+          - color: accent
+            icon: mdi:bottle-soda-classic-outline
+            label: Plastic
+            pattern: Plastic
+            type: recycle
+          - color: lime
+            icon: mdi:trash-can-outline
+            pattern: Waste
+            type: waste
+          - color: light-blue
+            icon: mdi:washing-machine
+            type: others
+          - color: cyan
+            icon: mdi:food
+            label: Mealie
+            pattern: Mealie
+            type: custom
+          - color: indigo
+            icon: mdi:vacuum
+            label: Clean Day
+            pattern: Clean Day
+            type: custom
+          refresh_rate: 30
+          type: custom:trash-card
+          use_summary: true
+          with_label: true
+        conditions:
+        - condition: state
+          entity: person.simplemice
+          state: home
+        type: conditional
+      type: grid
+    - cards:
+      - image: /local/media/images/home_logo.png
+        type: picture
+      type: grid
+    title: Home
+    type: sections

@@ -19,3 +19,10 @@ items:
   show_in_sidebar: true
   title: test
   url_path: dashboard-test
+- icon: mdi:cellphone
+  id: dashboard_mix
+  mode: storage
+  require_admin: false
+  show_in_sidebar: true
+  title: mix
+  url_path: dashboard-mix

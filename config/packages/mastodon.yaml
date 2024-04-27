@@ -33,14 +33,29 @@ script:
         data:
           message: >-
             Home Assistant Server at Casa de Ratón
-             - GitHub: https://github.com/simplemice/home_assistant
+             GitHub: https://github.com/simplemice/home_assistant
              #homeassistant #homeautomation #github #configuration #status
           image: >-
             {{ [ "/config/www/tweet_images/me.jpeg",
-                 "/config/www/tweet_images/me1.jpeg",
-                 "/config/www/tweet_images/me2.jpeg",
-                 "/config/www/tweet_images/me3.jpeg",
-                 "/config/www/tweet_images/me4.jpeg"] | random }}
+                  "/config/www/tweet_images/me1.jpeg",
+                  "/config/www/tweet_images/me2.jpeg",
+                  "/config/www/tweet_images/me3.jpeg",
+                  "/config/www/tweet_images/me4.jpeg"] | random }}
+          who: "home"
+
+  mastodon_weather:
+    sequence:
+      - service: script.mastodon_notify_image
+        data:
+          message: >-
+            Weather Information at Casa de Ratón area:
+              Outside: "{{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %"
+              Pressure: "{{ states('sensor.openweathermap_pressure') }} mmHg"
+              Rain: "{{ states('sensor.openweathermap_forecast_precipitation_probability') }} %"
+            #homeautomation #weather #meteo #phuket
+          image: >-
+            {{ [ "/config/www/media/images/home.jpg",
+                  "/config/www/media/images/home.jpg"] | random }}
           who: "home"
 
   mastodon_snark:
@@ -113,37 +128,35 @@ script:
           who: home
           message: >
             {{- [
-              "Thanks to Home Assistant and Amazon Polly and #AWS I have spoken for {{ states('sensor.speech_time') | round }} mins in the last 7 days.",
-              "I am constantly monitoring Mouse House. For instance I know that {{ states('sensor.lights_runtime') }}",
-              "I am using {{ states('sensor.sensor_count') }} sensors to power {{ states('sensor.automation_count')}} automations and {{ states('sensor.script_count')}} scripts to automate Mouse House thanks to Home Assistant.",
+              "I am constantly monitoring Casa de Ratón. For instance I know that {{ states('sensor.lights_runtime') }}",
+              "I am using {{ states('sensor.sensor_count') }} sensors to power {{ states('sensor.automation_count')}} automations and {{ states('sensor.script_count')}} scripts to automate Casa de Ratón thanks to Home Assistant.",
               "I am running Home Assistant version {{ states('sensor.installed_version') }}",
-              "The average temperature inside Mouse House is {{states('sensor.inside_temp') | round}} degrees.",
+              "The average temperature inside Casa de Ratón is {{states('sensor.temperature') | round}} degrees.",
               "We have used the aircon for a total of {{states('sensor.ac_runtime')}} hours in the last 24 hours.",
               "I am currently managing {{ states('sensor.lights_count') }} lights and {{ states('sensor.tracker_count') }} devices.",
               "Amazon Polly enables me to sound more lifelike by incorporating breathing into my speech using #SAML. #AWS",
               "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. One day @thejeffreystone will get it down to {{ (states('sensor.lines_of_code') | int / 2) | round }} lines.",
               "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. If one gets deleted and no one notices was it ever there?",
-              "So far this year we have had {{ states('sensor.rain_runtime') }} days with rain at Mouse House",
-              "The hottest temp I have recorded this year was {{  states('sensor.max_temp') }} degrees",
-              "The coldest temp I have recorded this year at Mouse House was {{  states('sensor.low_temp') }} degrees",
-              "The strongest wind gust recorded since we have owned Mouse House was {{ states('sensor.ath_wind_gust') }} mph.",
-              "The hottest temp recorded at Mouse House since we have owned it has been {{  states('sensor.ath_max_temp') }} degrees fahrenheit.",
+              "So far this year we have had {{ states('sensor.rain_runtime') }} days with rain at Casa de Ratón",
+              "The hottest temp I have recorded this year was {{  states('sensor.temperature') }} degrees",
+              "The coldest temp I have recorded this year at Casa de Ratón was {{  states('sensor.temperature') }} degrees",
+              "The strongest wind gust recorded since we have owned Casa de Ratón was {{ states('sensor.ath_wind_gust') }} mph.",
+              "The hottest temp recorded at Casa de Ratón since we have owned it has been {{  states('sensor.ath_max_temp') }} degrees fahrenheit.",
               "Did you know there are currently {{ states('sensor.iss') }} people on the ISS? Well, now you do. #space #iss",
-              "{{ states('sensor.sun_status') }} If you are hanging out at Mouse House that is. #24usablehoursineveryday",
+              "{{ states('sensor.sun_status') }} If you are hanging out at Casa de Ratón that is. #24usablehoursineveryday",
               "The moon is currently in the {{ states('sensor.moon') }} phase. For all you space geeks out there.",
-              "There are currently {{ states('sensor.battery_warning_count') }} batteries that need to be changed in this house. So I guess I still need humans. ",
-              "The coldest temp recorded at Mouse House since the middle of 2024 was {{  states('sensor.ath_low_temp') }} degrees",
+              "The coldest temp recorded at Casa de Ratón since the middle of 2024 was {{  states('sensor.temperature') }} degrees",
               "I love thunderstorms. The most Lightning strikes we have gotten in a single 20 minute period this year has been {{  states('sensor.max_lightning_strikes') }}.",
-              "According to my latest speed tests Mouse House is getting
-                {{ states('sensor.internet_test_down') }} Mbps down and {{ states('sensor.internet_test_up') }}
+              "According to my latest speed tests Casa de Ratón is getting
+                {{ states('sensor.speedtest_download') }} Mbps down and {{ states('sensor.speedtest_upload') }}
                 Mbps up. #comcast believes we do not need to upload.",
-              "According to my latest speed tests Mouse House is getting
-                {{ states('sensor.internet_test_down') }} Mbps down and {{ states('sensor.internet_test_up') }}
-                Mbps up. That is #comcast gigabyte plan.",
+              "According to my latest speed tests Casa de Ratón is getting
+                {{ states('sensor.ispeedtest_download') }} Mbps down and {{ states('sensor.speedtest_upload') }}
+                Mbps up.",
               "How fast is your internet? I just checked
-                am Im seeing {{ states('sensor.internet_test_down') }} Mbps down and {{ states('sensor.internet_test_up') }}
-                Mbps up. Pretty sure anyone can beat #comcast. ", 
+                am Im seeing {{ states('sensor.speedtest_download') }} Mbps down and {{ states('sensor.speedtest_upload') }}
+                Mbps up. ", 
               "My speed is monitored using #home_assistant 
-                and at last check is {{ states('sensor.internet_test_down') }} Mbps down and {{ states('sensor.internet_test_up') }}
+                and at last check is {{ states('sensor.speedtest_download') }} Mbps down and {{ states('sensor.speedtest_upload') }}
                 Mbps up."   
             ] | random -}}

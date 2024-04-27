@@ -1,0 +1,54 @@
+sensor:
+  - platform: command_line
+    name: "PiAlert - Last Scan"
+    command: !secret pialert
+    scan_interval: 200
+    unique_id: pialert.status.lastscan
+    value_template: "{{ value_json.Last_Scan }}"
+
+  - platform: command_line
+    name: "PiAlert - All Devices"
+    command: !secret pialert
+    scan_interval: 200
+    unique_id: pialert.status.alldevices
+    unit_of_measurement: ""
+    value_template: "{{ value_json.All_Devices }}"
+
+  - platform: command_line
+    name: "PiAlert - Online Devices"
+    command: !secret pialert
+    scan_interval: 200
+    unique_id: pialert.status.onlinedevices
+    unit_of_measurement: ""
+    value_template: "{{ value_json.Online_Devices }}"
+
+  - platform: command_line
+    name: "PiAlert - Offline Devices"
+    command: !secret pialert
+    scan_interval: 200
+    unique_id: pialert.status.offlinedevices
+    unit_of_measurement: ""
+    value_template: "{{ value_json.Offline_Devices }}"
+
+  - platform: command_line
+    name: "PiAlert - Archived Devices"
+    command: !secret pialert
+    scan_interval: 200
+    unique_id: pialert.status.archiveddevices
+    unit_of_measurement: ""
+    value_template: "{{ value_json.Archived_Devices }}"
+
+  - platform: command_line
+    name: "PiAlert - New Devices"
+    command: !secret pialert
+    scan_interval: 200
+    unique_id: pialert.status.newdevices
+    unit_of_measurement: ""
+    value_template: "{{ value_json.New_Devices }}"
+
+  - platform: command_line
+    name: "PiAlert - Scanning"
+    command: !secret pialert
+    scan_interval: 120
+    unique_id: pialert.status.scanning
+    value_template: "{{ value_json.Scanning }}"

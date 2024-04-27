@@ -144,7 +144,7 @@ automation:
       value_template: "{{ states('sensor.time') == (state_attr('input_datetime.climate_on_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
     action:
       - service: homeassistant.turn_on
-        entity_id: group.house_climate_control
+        entity_id: input_boolean.climate_automation
 
   - id: 04018017-1cb8-45e0-b81c-b4085a48908d
     alias: Turn Off House Climate Mode
@@ -154,14 +154,15 @@ automation:
         value_template: "{{ states('sensor.time') == (state_attr('input_datetime.climate_off_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
     condition:
       - condition: state
-        entity_id: group.house_climate_control
+        entity_id: input_boolean.climate_automation
         state: "on"
     action:
       - service: homeassistant.turn_off
-        entity_id: group.house_climate_control
+        entity_id: input_boolean.climate_automation
 
   - id: 4f4dbbe4-3698-416e-bbf6-17dfcb619395
     alias: Bedroom Night Climate Automation
+    mode: restart
     description: ""
     trigger:
       - platform: numeric_state
@@ -174,6 +175,16 @@ automation:
           - sensor.bedroom_temp_temperature
         below: 25
         id: temp_off
+      - platform: state
+        entity_id:
+          - input_boolean.climate_automation
+        to: "on"
+        id: turn_on
+      - platform: state
+        entity_id:
+          - input_boolean.climate_automation
+        to: "off"
+        id: turn_off
     #      - platform: state
     #        entity_id:
     #          - binary_sensor.bedroom_door_contact
@@ -193,6 +204,7 @@ automation:
           - conditions:
               - condition: trigger
                 id:
+                  - turn_on
                   - temp_on
                   - door_closed
             sequence:
@@ -228,6 +240,7 @@ automation:
               - condition: trigger
                 id:
                   - temp_off
+                  - turn_off
             sequence:
               - service: climate.turn_off
                 metadata: {}

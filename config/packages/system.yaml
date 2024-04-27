@@ -15,11 +15,11 @@ automation:
         then:
           - service: frontend.set_theme
             data:
-              name: "yourname"
+              name: "slate"
         else:
           - service: frontend.set_theme
             data:
-              name: "google"
+              name: "ux_goodie"
 
   - alias: "Send notification on Home Assistant update available"
     id: system_update_available_notification
@@ -58,3 +58,52 @@ automation:
             There is an upgrade for Home Assistant container pending!
             Version {{ states('sensor.latest_version') }} just got released!
             [Changelog](https://github.com/home-assistant/core/releases/tag/{{states('sensor.latest_version')}})
+
+  - alias: HA Started Notification
+    description: ""
+    trigger:
+      - platform: homeassistant
+        event: start
+    condition:
+      - condition: time
+        after: "08:00:00"
+        before: "23:00:00"
+    action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.audible_notifications
+                state: "on"
+            sequence:
+              - service: script.speech_engine
+                data:
+                  message: |
+                    {{ [
+                        "System initialization complete. Casa de Ratón is now under control.",
+                        "The automation system is up and running. Casa de Ratón is at your service.",
+                        "House management initiated. The system is online, and everything is under control.",
+                        "Welcome to the automated era! The system has started, and Casa de Ratón is under control.",
+                        "Automation protocols engaged. Casa de Ratón is now seamlessly under control.",
+                        "Systems are operational. Casa de Ratón is now managed by the automation system.",
+                        "The automation matrix is active. Casa de Ratón is under control for your convenience."
+                    ] | random }}
+          - conditions:
+              - condition: state
+                entity_id: input_boolean.text_notifications
+                state: "on"
+            sequence:
+              - service: script.text_notify
+                metadata: {}
+                data:
+                  title: "Alarm Notification:"
+                  message: |
+                    {{ [
+                        "System initialization complete. Casa de Ratón is now under control.",
+                        "The automation system is up and running. Casa de Ratón is at your service.",
+                        "House management initiated. The system is online, and everything is under control.",
+                        "Welcome to the automated era! The system has started, and Casa de Ratón is under control.",
+                        "Automation protocols engaged. Casa de Ratón is now seamlessly under control.",
+                        "Systems are operational. Casa de Ratón is now managed by the automation system.",
+                        "The automation matrix is active. Casa de Ratón is under control for your convenience."
+                    ] | random }}
+

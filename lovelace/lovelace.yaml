@@ -2,18 +2,18 @@ config:
   kiosk_mode:
     mobile_settings:
       custom_width: 768
-      hide_header: false
+      hide_header: true
       ignore_entity_settings: true
     user_settings:
     - hide_sidebar: true
       users:
-      - bedroom
+      - simplemice
       - monitor
-      - kitchen
     - ignore_entity_settings: true
       kiosk: true
       users:
       - monitor
+      - simplemice
   swipe_nav:
     animate: fade
     enable_mouse_swipe: true
@@ -24,24 +24,6 @@ config:
   - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
     sections:
     - cards:
-      - alignment: center
-        chips:
-        - entity: alarm_control_panel.house
-          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-            }\n"
-          type: alarm-control-panel
-        - entity: weather.openweathermap
-          show_conditions: true
-          show_temperature: true
-          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-            }\n"
-          type: weather
-        - entity: sensor.rain_sensor
-          icon_color: light-green
-          type: entity
-        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
-          }\n"
-        type: custom:mushroom-chips-card
       - alignment: center
         subtitle: '{% set time = now().weekday() %}
 
@@ -87,14 +69,90 @@ config:
           \ %}\n  Good Night, Simplemice!\n{% else %}\n  Dude! Go Sleep!\n{% endif\
           \ %}"
         type: custom:mushroom-title-card
-      - card:
-          image: /local/media/images/home_logo.jpg
-          type: picture
-        conditions:
-        - condition: state
-          entity: person.simplemice
-          state: not_home
-        type: conditional
+      - alignment: center
+        chips:
+        - entity: alarm_control_panel.house
+          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+            }\n"
+          type: alarm-control-panel
+        - entity: weather.openweathermap
+          show_conditions: true
+          show_temperature: true
+          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+            }\n"
+          type: weather
+        - entity: sensor.rain_sensor
+          icon_color: light-green
+          type: entity
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: custom:mushroom-chips-card
+      - image: /local/media/images/home_logo.png
+        type: picture
+      - elements:
+        - entity: sensor.outside_temp
+          style:
+            color: white
+            left: 15%
+            top: 15%
+          type: state-label
+        - entity: sensor.house_temp
+          style:
+            color: white
+            left: 50%
+            top: 30%
+          type: state-label
+        - entity: alarm_control_panel.house
+          style:
+            left: 35%
+            top: 30%
+          type: state-icon
+        - entity: binary_sensor.garage_door_motion_occupancy
+          style:
+            left: 52%
+            top: 75%
+          type: state-icon
+        - entity: fan.all_fans
+          style:
+            left: 75%
+            top: 10%
+          type: state-icon
+        - entity: light.all_ambient
+          style:
+            left: 85%
+            top: 10%
+          type: state-icon
+        - entity: light.all_lights
+          style:
+            left: 95%
+            top: 10%
+          type: state-icon
+        - entity: light.garage_bulb
+          icon: mdi:light-recessed
+          style:
+            left: 55%
+            top: 37%
+          type: state-icon
+        - entity: cover.livingroom_curtains
+          icon: mdi:curtains-closed
+          style:
+            left: 69%
+            top: 60%
+          type: state-icon
+        - entity: binary_sensor.external_doors
+          style:
+            left: 69%
+            top: 50%
+          type: state-icon
+        - entity: light.all_ambient
+          style:
+            left: 69%
+            top: 70%
+          type: state-icon
+        image: /local/media/images/house.jpg
+        type: picture-elements
+      type: grid
+    - cards:
       - cards:
         - cards:
           - entity: person.simplemice
@@ -257,67 +315,6 @@ config:
             type: custom:mushroom-template-card
           type: vertical-stack
         type: horizontal-stack
-      type: grid
-    - cards:
-      - elements:
-        - entity: sensor.outside_temp
-          style:
-            color: white
-            left: 15%
-            top: 15%
-          type: state-label
-        - entity: sensor.house_temp
-          style:
-            color: white
-            left: 50%
-            top: 30%
-          type: state-label
-        - entity: alarm_control_panel.house
-          style:
-            left: 35%
-            top: 30%
-          type: state-icon
-        - entity: binary_sensor.garage_door_motion_occupancy
-          style:
-            left: 52%
-            top: 75%
-          type: state-icon
-        - entity: fan.all_fans
-          style:
-            left: 75%
-            top: 10%
-          type: state-icon
-        - entity: light.all_ambient
-          style:
-            left: 85%
-            top: 10%
-          type: state-icon
-        - entity: light.all_lights
-          style:
-            left: 95%
-            top: 10%
-          type: state-icon
-        - entity: light.garage_bulb
-          icon: mdi:light-recessed
-          style:
-            left: 55%
-            top: 37%
-          type: state-icon
-        - entity: cover.livingroom_curtains
-          icon: mdi:curtains-closed
-          style:
-            left: 69%
-            top: 60%
-          type: state-icon
-        - entity: binary_sensor.external_doors
-          style:
-            left: 69%
-            top: 50%
-          type: state-icon
-        image: /local/media/images/house.jpg
-        type: picture-elements
-      type: grid
-    - cards:
       - card:
           alignment_style: left
           color_mode: icon
@@ -332,7 +329,7 @@ config:
           full_size: true
           hide_time_range: false
           items_per_row: 2
-          next_days: 7
+          next_days: 3
           pattern:
           - color: lime
             icon: mdi:flower
@@ -370,9 +367,11 @@ config:
           with_label: true
         conditions:
         - condition: state
-          entity: person.simplemice
-          state: home
+          entity: script.activate_alexa_actionable_notification
+          state: 'off'
         type: conditional
+      type: grid
+    - cards: []
       type: grid
     - cards: []
       type: grid
@@ -759,24 +758,58 @@ config:
           - entity: input_boolean.climate_automation
           - entity: input_boolean.fan_automation
           - entity: group.house_climate_control
+          - entity: automation.bedroom_night_climate_automation
           state_color: true
           type: entities
         type: vertical-stack
+      - entities:
+        - entities:
+          - switch.uvfive_slmap2_2e5e_switch_status
+          - number.uvfive_slmap2_2e5e_target_time
+          - switch.uvfive_slmap2_2e5e_radar
+          head:
+            entity: sensor.uvfive_slmap2_2e5e_left_time
+            icon: mdi:washing-machine
+          type: custom:fold-entity-row
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: entities
+      type: grid
+    - cards: []
       type: grid
     title: Climate
     type: sections
-  - icon: mdi:shield-home
+  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')    '
+    icon: mdi:shield-home
     path: security
     sections:
     - cards:
-      - entity: alarm_control_panel.house
-        name: House Alarm
-        states:
-        - arm_home
-        - arm_away
-        - arm_night
-        type: alarm-panel
-      title: Alarm Panel
+      - cards:
+        - entity: alarm_control_panel.house
+          fill_container: true
+          icon_type: entity-picture
+          name: Home Alarm
+          states:
+          - armed_away
+          - armed_night
+          - armed_home
+          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+            }\n"
+          type: custom:mushroom-alarm-control-panel-card
+        - entity: alarm_control_panel.safe
+          fill_container: true
+          icon_type: entity-picture
+          labels:
+            ui.card.alarm_control_panel.arm_home: Safe
+            ui.card.alarm_control_panel.clear_code: hmmm
+            ui.card.alarm_control_panel.disarm: Safe Stilled
+          name: Safe Alarm
+          states:
+          - armed_home
+          style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+            }\n"
+          type: custom:mushroom-alarm-control-panel-card
+        type: horizontal-stack
       type: grid
     - cards:
       - cards:
@@ -793,9 +826,12 @@ config:
       type: grid
     - cards: []
       type: grid
+    - cards: []
+      type: grid
     title: Security
     type: sections
-  - icon: mdi:music
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    icon: mdi:music
     path: music
     sections:
     - cards:
@@ -875,7 +911,8 @@ config:
       type: grid
     title: Music
     type: sections
-  - cards: []
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    cards: []
     icon: mdi:youtube
     max_columns: 4
     path: video
@@ -1004,7 +1041,8 @@ config:
       type: grid
     title: Video
     type: sections
-  - icon: mdi:home-lightning-bolt-outline
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    icon: mdi:home-lightning-bolt-outline
     path: energy
     sections:
     - cards:
@@ -1113,7 +1151,8 @@ config:
       type: grid
     title: Energy
     type: sections
-  - icon: mdi:weather-partly-cloudy
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    icon: mdi:weather-partly-cloudy
     path: weather
     sections:
     - cards:
@@ -1500,6 +1539,30 @@ config:
         type: custom:apexcharts-card
       type: grid
     - cards:
+      - color_thresholds:
+        - color: '#e74c3c'
+          value: 25
+        - color: '#1db954'
+          value: 50
+        - color: '#3498db'
+          value: 75
+        entities:
+        - entity: sensor.owm_ultraviolet_index
+        font_size: 80
+        height: 50
+        hours_to_show: 4
+        line_width: 2
+        name: UV Index
+        points_per_hour: 90
+        show:
+          extrema: true
+          icon: false
+        style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
+          \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
+          \ 'none';\n}\n"
+        type: custom:mini-graph-card
+      type: grid
+    - cards:
       - card:
           content: "{% for state in states.geo_location %}\n  {% if state.attributes.source==\"\
             gdacs\" %}\n<ha-icon icon=\"{{ state.attributes.icon }}\"></ha-icon> **<font\
@@ -1519,9 +1582,23 @@ config:
       type: grid
     title: Weather
     type: sections
-  - icon: mdi:chef-hat
+  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')            '
+    icon: mdi:chef-hat
     path: cooking
     sections:
+    - cards:
+      - cards:
+        - camera_image: camera.mealie_today_meal
+          camera_view: live
+          entity: sensor.mealie_todays_meal
+          name: Dinner Tonight
+          show_name: true
+          show_state: true
+          type: picture-entity
+        type: vertical-stack
+      type: grid
+    - cards: []
+      type: grid
     - cards:
       - entities:
         - cards:
@@ -1674,9 +1751,12 @@ config:
         title: Kitchen Water Tank
         type: custom:hui-entities-card
       type: grid
+    - cards: []
+      type: grid
     title: Cooking
     type: sections
-  - icon: mdi:home-analytics
+  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')        '
+    icon: mdi:home-analytics
     path: status
     sections:
     - cards:
@@ -1747,6 +1827,28 @@ config:
           state_color: true
           type: glance
         type: horizontal-stack
+      - entities:
+        - entities:
+          - input_datetime.laundry_custom_time
+          - script.laundry_start
+          head:
+            entity: timer.laundry_timer
+            icon: mdi:washing-machine
+          type: custom:fold-entity-row
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: entities
+      - entities:
+        - entities:
+          - input_datetime.cooking_custom_time
+          - script.cooking_timer
+          head:
+            entity: timer.cooking_timer
+            icon: hue:room-kitchen
+          type: custom:fold-entity-row
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        type: entities
       type: grid
     - cards:
       - aggregate_func: last
@@ -1878,7 +1980,8 @@ config:
       type: grid
     title: Status
     type: sections
-  - cards: []
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    cards: []
     icon: mdi:router-network-wireless
     path: network
     sections:
@@ -2416,7 +2519,8 @@ config:
       type: grid
     title: Network
     type: sections
-  - cards: []
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    cards: []
     icon: phu:proxmox
     max_columns: 8
     path: proxmox
@@ -4299,7 +4403,8 @@ config:
       type: grid
     title: proxmox
     type: sections
-  - cards: []
+  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')    '
+    cards: []
     icon: mdi:palm-tree
     max_columns: 4
     path: other
@@ -4458,10 +4563,39 @@ config:
       type: grid
     title: Other
     type: sections
-  - icon: mdi:home-assistant
+  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+    icon: mdi:home-assistant
     path: assistant
     sections:
-    - cards: []
+    - cards:
+      - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        theme: material_dark_green
+        title: Shopping Cart
+        type: shopping-list
+      type: grid
+    - cards:
+      - badge_color: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
+          \ %}\n  blue\n{% else %}\n  green\n{% endif %}"
+        badge_icon: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
+          \ %}\n  mdi:timer-off\n{% else %}\n  mdi:timer\n{% endif %}"
+        entity: switch.bedroom_speaker_do_not_disturb_switch
+        fill_container: true
+        icon: "{% if is_state('sensor.bedroom_speaker_next_alarm', 'unknown') %}\n\
+          \  mdi:alarm-off\n{% else %}\n  mdi:alarm\n{% endif %}"
+        icon_color: "{% if is_state('sensor.bedroom_speaker_next_alarm', 'unknown')\
+          \ %}\n  blue\n{% else %}\n  green\n{% endif %}"
+        multiline_secondary: true
+        picture: ''
+        primary: Alexa Alarm
+        secondary: Alarm {{ state_attr('sensor.bedroom_speaker_next_alarm', 'status')
+          }} | Active {{ state_attr('sensor.bedroom_speaker_next_alarm', 'total_active')
+          }} | DND {{ states('switch.bedroom_speaker_do_not_disturb_switch') }}
+        style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n\
+          }\n"
+        tap_action:
+          action: toggle
+        type: custom:mushroom-template-card
       type: grid
     title: Assistant
     type: sections

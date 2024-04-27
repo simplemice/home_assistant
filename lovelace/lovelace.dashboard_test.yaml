@@ -214,6 +214,77 @@ config:
               \    }\n  }},\n{%- endfor %}\n"
           type: custom:auto-entities
         type: vertical-stack
+      - cards:
+        - entities:
+          - input_select.test
+          type: entities
+        - entity: input_select.test
+          states:
+            Away:
+              elements:
+              - entity: sensor.outside_temp
+                style:
+                  color: white
+                  left: 15%
+                  top: 15%
+                type: state-label
+              - entity: sensor.house_temp
+                style:
+                  color: white
+                  left: 50%
+                  top: 30%
+                type: state-label
+              - entity: alarm_control_panel.house
+                style:
+                  left: 35%
+                  top: 30%
+                type: state-icon
+              - entity: binary_sensor.garage_door_motion_occupancy
+                style:
+                  left: 52%
+                  top: 75%
+                type: state-icon
+              - entity: fan.all_fans
+                style:
+                  left: 75%
+                  top: 10%
+                type: state-icon
+              - entity: light.all_ambient
+                style:
+                  left: 85%
+                  top: 10%
+                type: state-icon
+              - entity: light.all_lights
+                style:
+                  left: 95%
+                  top: 10%
+                type: state-icon
+              - entity: light.garage_bulb
+                icon: mdi:light-recessed
+                style:
+                  left: 55%
+                  top: 37%
+                type: state-icon
+              - entity: cover.livingroom_curtains
+                icon: mdi:curtains-closed
+                style:
+                  left: 69%
+                  top: 60%
+                type: state-icon
+              - entity: binary_sensor.external_doors
+                style:
+                  left: 69%
+                  top: 50%
+                type: state-icon
+              image: /local/media/images/house.jpg
+              type: picture-elements
+            Home:
+              entities:
+              - light.livingroom_all
+              title: Lights
+              type: glance
+          type: custom:state-switch
+        type: vertical-stack
       type: grid
     - cards:
       - content: "{% set player = 'media_player.NAME' %}\n<table>\n<center>\n<tr>\n\
@@ -283,6 +354,25 @@ config:
         style: "ha-card { \n  border-radius: 20px;\n\nbackground-color: rgba(0,0,0,0);\n\
           box-shadow: none;\n}\n"
         type: custom:stack-in-card
+      - card:
+          image: /local/media/images/home_logo.jpg
+          type: picture
+        conditions:
+        - condition: state
+          entity: person.simplemice
+          state: not_home
+        type: conditional
+      - entity: template
+        states:
+          day:
+            content: What do you want to do today? ;)
+            type: markdown
+          night:
+            content: Good Night! Sleep Tight!
+            type: markdown
+        template: '{% if is_state(''switch.sun.sun'', ''above_horizon'') and now().weekday()
+          < 5 %} day {% else %} night {% endif %}'
+        type: custom:state-switch
       type: grid
     - cards:
       - entities:

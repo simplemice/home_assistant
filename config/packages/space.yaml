@@ -65,7 +65,7 @@ automation:
         payload_template: '{"longitude": "{{ states.sensor.iss_coordinates.attributes.iss_position.longitude | float }}","latitude": "{{ states.sensor.iss_coordinates.attributes.iss_position.latitude | float }}"}'
         retain: true
 
-  - id: iss_mastodon
+  - id: iss_post
     initial_state: true
     alias: "Mastodon ISS Post"
     trigger:
@@ -87,10 +87,23 @@ automation:
                  "/config/www/tweet_images/iss3.jpg",
                  "/config/www/tweet_images/iss4.jpg",
                  "/config/www/tweet_images/iss2.jpg"] | random }}
+      - service: script.twitter_notify_image
+        data_template:
+          tweet: >-
+            {{ [
+            "The #ISS is passing over. Wave. #Space #theycanseeourhouse ",
+            "The #ISS just flew by with there are {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people doing cool stuff. #Space #theycanseeourhouse",
+            "The #ISS just flew by with {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people in it. #Space #theycanseeourhouse"
+            ] | random }}
+          image: >-
+            {{ [ "/config/www/tweet_images/iss.jpg",
+                 "/config/www/tweet_images/iss3.jpg",
+                 "/config/www/tweet_images/iss4.jpg",
+                 "/config/www/tweet_images/iss2.jpg"] | random }}
 
-  - id: full_moon_tweet
+  - id: full_moon
     initial_state: true
-    alias: "Full Moon - Tweet"
+    alias: "Mastodon Full Moon Post"
     trigger:
       - platform: sun
         event: sunset
@@ -141,26 +154,3 @@ automation:
                 "/config/www/tweet_images/moon4.jpeg",
                 "/config/www/tweet_images/moon1.jpeg"
                 ] | random }}
-
-  - id: iss_tweet
-    initial_state: true
-    alias: "ISS Tweet"
-    trigger:
-      - platform: zone
-        event: enter
-        zone: zone.iss_overhead
-        entity_id: device_tracker.iss
-    action:
-      - service: script.twitter_notify_image
-        data_template:
-          tweet: >-
-            {{ [
-            "The #ISS is passing over. Wave. #Space #theycanseeourhouse ",
-            "The #ISS just flew by with there are {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people doing cool stuff. #Space #theycanseeourhouse",
-            "The #ISS just flew by with {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people in it. #Space #theycanseeourhouse"
-            ] | random }}
-          image: >-
-            {{ [ "/config/www/tweet_images/iss.jpg",
-                 "/config/www/tweet_images/iss3.jpg",
-                 "/config/www/tweet_images/iss4.jpg",
-                 "/config/www/tweet_images/iss2.jpg"] | random }}

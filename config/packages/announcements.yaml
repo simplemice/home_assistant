@@ -204,7 +204,7 @@ automation:
         after: "08:00:00"
         before: "22:00:00"
     action:
-      - service: script.water_tank_low_notify
+      - service: script.kitchen_water_tank_low_notification
         metadata: {}
         data: {}
     mode: restart
