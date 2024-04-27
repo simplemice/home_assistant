@@ -10,14 +10,26 @@ automation:
 script:
   mastodon_ad:
     sequence:
-      - service: script.mastodon_notify_image
+      - service: script.mastodon_me_image
         data:
           message: >-
-            Looking for car, scooter or island yaht trip?
+            {{ [
+                "Looking for a car, scooter or island yacht trip? Discover the best rental deals in Phuket!",
+                "Experience Phuket at its best! Rent a car, scooter or book an island yacht trip with us",
+                "Longing for an adventure? Get the best Car, Scooter and Yacht rentals in Phuket - Your unforgettable experience starts here",
+                "Explore Phuket in style! Premium Car, Scooter, and Yacht rentals at competitive rates. Book now!",
+                "Unleash the explorer in you! Car, scooter or yacht - choose your ride in Phuket",
+                "Make the most of Phuket - car and scooter rentals available now! Fancy something more extravagant? Try our yacht trips!",
+                "Seize the day in Phuket! Find the perfect rental car, scooter or set sail on a luxury yacht trip",
+                "Navigate the beautiful streets of Phuket on our rented cars and scooters. Or, enjoy the sea breeze on our unforgettable yacht trips",
+                "Turn your Phuket trip into an extraordinary experience with our car, scooter and yacht rentals",
+                "Drive or sail - Choose your own Phuket adventure! Avail our car, scooter and yacht rental services today!"
+            ] | random }}
             You can find us:
-             - Rental: https://nightdestiny.com 
-             - Telegram: https://t.me/live_phuket
+             - Web: https://nightdestiny.com 
+             - Telegram: https://t.me/simplephuket
              - Whatsapp: http://wa.link/g19x0w
+             - Telegram Channel: https://t.me/live_phuket
              #phuket #excursions #tours #scooter #rental #car #rawai #naiharn #kata #karon #katabeach #karonbeach
           image: >-
             {{ [ "/config/www/tweet_images/ad.jpeg",
@@ -34,7 +46,7 @@ script:
           message: >-
             Home Assistant Server at Casa de Ratón
              GitHub: https://github.com/simplemice/home_assistant
-             #homeassistant #homeautomation #github #configuration #status
+             #homeautomation #github #configuration #status
           image: >-
             {{ [ "/config/www/tweet_images/me.jpeg",
                   "/config/www/tweet_images/me1.jpeg",
@@ -49,9 +61,13 @@ script:
         data:
           message: >-
             Weather Information at Casa de Ratón area:
+              Forecast Condition: "{{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}"
               Outside: "{{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %"
               Pressure: "{{ states('sensor.openweathermap_pressure') }} mmHg"
-              Rain: "{{ states('sensor.openweathermap_forecast_precipitation_probability') }} %"
+              Rain: "{{ states('sensor.openweathermap_forecast_precipitation_probability') }} % / {{ states('sensor.openweathermap_rain') }} mm/h"
+              UV: "{{ states('sensor.owm_ultraviolet_index') }} idx"
+              Wind speed: "{{ states('sensor.openweathermap_wind_speed') }} m/s"
+              Visibility: "{{ states('sensor.openweathermap_visibility') }} km"
             #homeautomation #weather #meteo #phuket
           image: >-
             {{ [ "/config/www/media/images/home.jpg",

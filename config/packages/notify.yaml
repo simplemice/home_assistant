@@ -224,6 +224,25 @@ script:
           #     category: '{{ ios_category }}'
           #   entity_id: '{{ camera_entity }}'
 
+  mastodon_me_image:
+    alias: My Mastodon Image Notification
+    sequence:
+      - service: >
+          {% if who == 'simplemice' %}
+            notify.mastodon_mice
+          {% else %}
+            notify.mastodon_mice
+          {% endif %}
+        data_template:
+          message: >
+            {% set msg = '' %}
+            {% set msg = msg + ' ' + message %}
+            {% set msg = msg + ' #ad' %}
+            {{ msg }}
+          data:
+            media: >-
+              {{ image }}
+
   mastodon_notify_image:
     alias: Mastodon Image Notification
     sequence:

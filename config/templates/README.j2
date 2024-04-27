@@ -14,7 +14,7 @@ This is my Home Assistant installation.
 
 Description | value
 --|--
-Installed version | {{ states('current_version') }}
+Installed version | {{ states('sensor.current_version') }}
 Total entity objects | {{ states | count }}
 {%- set data = namespace(domains=[]) %}
 {%- for state in states %}
