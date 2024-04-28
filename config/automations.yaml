@@ -67,13 +67,15 @@
   - service: script.mastodon_ad
     metadata: {}
     data: {}
-  mode: single
+  mode: restart
 - id: '1713940222818'
   alias: Mastodon Shark Post
   description: ''
   trigger:
   - platform: time
     at: 09:00:00
+  - platform: time
+    at: '18:00:00'
   condition: []
   action:
   - service: script.mastodon_snark
@@ -85,7 +87,7 @@
   description: ''
   trigger:
   - platform: time
-    at: '15:00:00'
+    at: '17:00:00'
   condition: []
   action:
   - service: script.mastodon_stats
@@ -95,8 +97,14 @@
   alias: Mastodon Weather Post
   description: ''
   trigger:
-  - platform: time_pattern
-    hours: '3'
+  - platform: time
+    at: 07:00:00
+  - platform: time
+    at: '13:00:00'
+  - platform: time
+    at: '19:00:00'
+  - platform: time
+    at: 01:00:00
   condition: []
   action:
   - service: script.mastodon_weather

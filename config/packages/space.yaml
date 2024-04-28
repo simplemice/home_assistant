@@ -103,6 +103,7 @@ automation:
 
   - id: full_moon
     initial_state: true
+    mode: restart
     alias: "Mastodon Full Moon Post"
     trigger:
       - platform: sun

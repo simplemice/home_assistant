@@ -21,7 +21,7 @@ config:
     swipe_amount: 30
     wrap: true
   views:
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     sections:
     - cards:
       - alignment: center
@@ -379,7 +379,7 @@ config:
       type: grid
     title: Home
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     icon: mdi:ceiling-light-multiple
     path: light
     sections:
@@ -516,7 +516,7 @@ config:
       type: grid
     title: Light
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     cards: []
     icon: mdi:home-thermometer
     path: climate
@@ -779,7 +779,7 @@ config:
       type: grid
     title: Climate
     type: sections
-  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')    '
+  - background: 'center / cover no-repeat fixed url(''https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg'')    '
     icon: mdi:shield-home
     path: security
     sections:
@@ -830,7 +830,7 @@ config:
       type: grid
     title: Security
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     icon: mdi:music
     path: music
     sections:
@@ -911,7 +911,7 @@ config:
       type: grid
     title: Music
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     cards: []
     icon: mdi:youtube
     max_columns: 4
@@ -1041,7 +1041,7 @@ config:
       type: grid
     title: Video
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     icon: mdi:home-lightning-bolt-outline
     path: energy
     sections:
@@ -1151,7 +1151,7 @@ config:
       type: grid
     title: Energy
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     icon: mdi:weather-partly-cloudy
     path: weather
     sections:
@@ -1582,7 +1582,7 @@ config:
       type: grid
     title: Weather
     type: sections
-  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')            '
+  - background: 'center / cover no-repeat fixed url(''https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg'')            '
     icon: mdi:chef-hat
     path: cooking
     sections:
@@ -1755,7 +1755,7 @@ config:
       type: grid
     title: Cooking
     type: sections
-  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')        '
+  - background: 'center / cover no-repeat fixed url(''https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg'')        '
     icon: mdi:home-analytics
     path: status
     sections:
@@ -1980,7 +1980,7 @@ config:
       type: grid
     title: Status
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     cards: []
     icon: mdi:router-network-wireless
     path: network
@@ -2519,7 +2519,7 @@ config:
       type: grid
     title: Network
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     cards: []
     icon: phu:proxmox
     max_columns: 8
@@ -4403,7 +4403,7 @@ config:
       type: grid
     title: proxmox
     type: sections
-  - background: 'center / cover no-repeat fixed url(''https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg'')    '
+  - background: 'center / cover no-repeat fixed url(''https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg'')    '
     cards: []
     icon: mdi:palm-tree
     max_columns: 4
@@ -4563,7 +4563,7 @@ config:
       type: grid
     title: Other
     type: sections
-  - background: center / cover no-repeat fixed url('https://static.vecteezy.com/system/resources/previews/018/814/603/non_2x/black-abstract-background-free-vector.jpg')
+  - background: center / cover no-repeat fixed url('https://files.123freevectors.com/wp-content/original/153297-black-and-gold-background-graphic.jpg')
     icon: mdi:home-assistant
     path: assistant
     sections:

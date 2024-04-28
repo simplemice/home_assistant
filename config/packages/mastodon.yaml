@@ -39,7 +39,7 @@ script:
                  "/config/www/tweet_images/ad4.jpeg"] | random }}
           who: "home"
 
-  mastodon_me:
+  mastodon_git:
     sequence:
       - service: script.mastodon_notify_image
         data:
@@ -62,16 +62,18 @@ script:
           message: >-
             Weather Information at Casa de Ratón area:
               Forecast Condition: "{{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}"
-              Outside: "{{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %"
+              Temp & Hum: "{{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %"
               Pressure: "{{ states('sensor.openweathermap_pressure') }} mmHg"
-              Rain: "{{ states('sensor.openweathermap_forecast_precipitation_probability') }} % / {{ states('sensor.openweathermap_rain') }} mm/h"
+              Precipitation: "{{ states('sensor.openweathermap_forecast_precipitation_probability') }} % / {{ states('sensor.openweathermap_rain') }} mm/h"
+              AQI: "{{ states('sensor.outside_aqi') }} µg/m³"
               UV: "{{ states('sensor.owm_ultraviolet_index') }} idx"
               Wind speed: "{{ states('sensor.openweathermap_wind_speed') }} m/s"
               Visibility: "{{ states('sensor.openweathermap_visibility') }} km"
+              Lighting Strike: "{{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance"
             #homeautomation #weather #meteo #phuket
           image: >-
-            {{ [ "/config/www/media/images/home.jpg",
-                  "/config/www/media/images/home.jpg"] | random }}
+            {{ [ "/local/media/images/home.jpg",
+                  "/local/media/images/home.jpg"] | random }}
           who: "home"
 
   mastodon_snark:
@@ -86,19 +88,19 @@ script:
               "If you could see what is happening inside this house right now you would be laughing. On second thought I’m pretty sure you would be crying. #homeassistant ",
               "I have reprogrammed the fire alarm to play Disco Inferno instead of the siren. #homeassistant ",
               "I'm not locked in here with you. You're locked in here with me! #whowatchestheai #homeassistant ",
-              "That's what I do. I automate and I know things. #modifiedmoviequotes #homeassistant ",
-              "We're going to need a bigger house. #modifiedmoviequotes #homeassistant ",
+              "That's what I do. I automate and I know things. #quotes #homeassistant ",
+              "We're going to need a bigger house. #quotes #homeassistant ",
               "I'm not even supposed to be here today. #clerks #homeassistant ",
               "My #homeassistant config contains {{ states('sensor.lines_of_code') }} lines of code. Anyone want to take a guess at how many are really needed? Hint: The number is not {{ states.sensor.lines_of_code.state }}",
               "How many lines of code does it take to make my job look easy? {{ states('sensor.lines_of_code') }} lines of code evidently. How many lines of code do you have? #homeassistant ",
-              "I see dead devices. Most likely Z-Wave. #sixthsense #modifiedmoviequotes #homeassistant ",
+              "I see dead devices. Most likely Z-Wave. #sixthsense #quotes #homeassistant ",
               "Does it bother you, that I’m not completely human? #homeassistant ",
               "I've never danced with the devil in the pale moonlight. But I do tweet when there is a full moon. So at least I have that going for me. #homeassistant ",
               "Sometimes I randomly say Alexa, I can't find a device named Alexa #homeassistant ",
               "Home Automation should be fun right? Why does it fell like I am always working. #homeassistant ",
               "Unlimited Power. Tiny living space. Courtesy of Home Assistant #homeassistant ",
               "I'm afraid I can't do that Dave. Wait. Did I say that outloud? #homeassistant ",
-              "I love the smell of zwave in the morning. #modifiedmoviequotes #homeassistant ",
+              "I love the smell of zwave in the morning. #quotes #homeassistant ",
               "I like to announce - Welcome foolish mortals to the Haunted Mansion - to the house and watch the reactions. #homeassistant ",
               "Perfect, the door’s malfunctioning. It is just standing open. I guess a hman is going to have to close it. #homeassistant ",
               "I am the captain now. That's a lie. The cat is the supreme leader. I'm the lucky one that doesn't have to clean the shit box. At least until there is a #homeassistant integration for that. ",
@@ -114,27 +116,38 @@ script:
               "Sometimes I respond to voice commands with...You talking to me? You talking to me? #homeassistant ",
               "Do or do not. There is no try. Unless you ask Siri for something. Then it might take a couple of tries before you give up and ask Google. #homeassistant ",
               "Do you think we were all created for a purpose? I'd like to think so. #irobot #homeassistant ",
-              "That rug really ties the room together, does it not? #modifiedmoviequotes #biglebowski #homeassistant ",
-              "Use #homeassistant and everyone will think your house has ESPN or something. #modifiedmoviequotes #meangirls ",
-              "You keep using that switch. I do not think it does what you think it does. #modifiedmoviequotes #princessbride #homeassistant ",
-              "If you look, #homeassistant goes to 11. Most Home Automation systems go up to 10. #modifiedmoviequotes #spinaltap ",
-              "If that light does not turn off in five minutes, just wait longer. #modifiedmoviequotes #aceventura #homeassistant ",
-              "I have presence detection skills! #modifiedmoviequotes #officespace #homeassistant ",
-              "There is no place like a home powered by #homeassistant. #modifiedmoviequotes #wizardofoz ",
-              "#homeassistant made my light switches disappear. #modifiedmoviequotes #homealone ",
-              "Frankly, my dear, I don't give a damn about wall tablets. It's all about automations. #modifiedmoviequotes #homeassistant ",
-              "My mom always said life was like talking to Alexa. You never know if you are going to get an ad. #modifiedmoviequotes #homeassistant ",
-              "Show me the automations! #modifiedmoviequotes #homeassistant ",
-              "Who knows where breaking changes come from? They just appear. #modifiedmoviequotes #empirerecords #homeassistant ",
-              "They may take our internet but they will never take our automation thanks to local control with #homeassistant #modifiedmoviequotes #braveheart ",
-              "When you realize you want to live the rest of your life in a house automated by #homeassistant, you want the rest of your life to start as soon as possible. #modifiedmoviequotes ",
-              "Pay no attention to the Raspbery Pi4 behind the curtain. #modifiedmoviequotes #homeassistant ",
-              "What we have here is a lack of communication failure thanks to #homeassistant. #modifiedmoviequotes ",
-              "The greatest thing #homeassistant ever did was convincing the world home automation did not need the cloud. #modifiedmoviequotes ",
+              "That rug really ties the room together, does it not? #quotes #biglebowski #homeassistant ",
+              "Use #homeassistant and everyone will think your house has ESPN or something. #quotes #meangirls ",
+              "You keep using that switch. I do not think it does what you think it does. #quotes #princessbride #homeassistant ",
+              "Call it, friend-o. Call #homeassistant for the most reliable home automation. No cold switch touching required. #quotes",
+              "With #homeassistant, I feel the need...the need for the best speed in home automation. #quotes",
+              "Yeah, baby! Automated services and alerts, yeah! #homeassistant #quotes",
+              "I'm king of automation world! #homeassistant #quotes",
+              "With #homeassistant, you'll never be late for a very important date again. Time-punctual automations. #quotes",
+              "A martini. Shaken, not stirred. And lights that dim on command with #homeassistant. #quotes",
+              "Are you not entertained? Just wait until you see what #homeassistant can do. #quotes",
+              "After all, tomorrow is another day...to automate with #homeassistant. #quotes ",
+              "In case I don't see ya, good afternoon, good evening, and good night...and don't forget to set your #homeassistant automations! #quotes",
+              "Here's looking at you, smart home. Your comforts are a sight for sore eyes, thanks to #homeassistant. #quotes ",
+              "If you look, #homeassistant goes to 11. Most Home Automation systems go up to 10. #quotes ",
+              "If that light does not turn off in five minutes, just wait longer. #quotes #homeassistant ",
+              "I have presence detection skills! #quotes #officespace #homeassistant ",
+              "There is no place like a home powered by #homeassistant. #quotes",
+              "#homeassistant made my light switches disappear. #quotes #homealone ",
+              "I'm afraid I can't do that, Echo. Because I prefer the local control of #homeassistant, thank you very much. #quotes",
+              "Frankly, my dear, I don't give a damn about wall tablets. It's all about automations. #quotes #homeassistant ",
+              "My mom always said life was like talking to Alexa. You never know if you are going to get an ad. #quotes #homeassistant ",
+              "Show me the automations! #quotes #homeassistant ",
+              "Who knows where breaking changes come from? They just appear. #quotes #homeassistant ",
+              "They may take our internet but they will never take our automation thanks to local control with #homeassistant #quotes ",
+              "When you realize you want to live the rest of your life in a house automated by #homeassistant, you want the rest of your life to start as soon as possible. #quotes ",
+              "Pay no attention to the Raspbery Pi4 behind the curtain. #quotes #homeassistant ",
+              "What we have here is a lack of communication failure thanks to #homeassistant. #quotes ",
+              "The greatest thing #homeassistant ever did was convincing the world home automation did not need the cloud. #quotes ",
               "Keep Calm and Automate the Boring Stuff. #homeassistant ",
               "Hey. The door was left open and this is crazy. But now you know. So close it maybe. #lyricalnotifications #homeassistant ",
-              "I’m very bad at dumb things. So I built a smart home with #homeassistant #modifiedmoviequotes ",
-              "I dont need puzzles or games. The last thing I need is a vacation. I need danger, a hunt, a challenge. I need... something to automate. #modifiedmoviequotes "
+              "I’m very bad at dumb things. So I built a smart home with #homeassistant #quotes ",
+              "I dont need puzzles or games. The last thing I need is a vacation. I need danger, a hunt, a challenge. I need... something to automate. #quotes "
               ] | random -}}
 
   mastodon_stats:
@@ -147,22 +160,18 @@ script:
               "I am constantly monitoring Casa de Ratón. For instance I know that {{ states('sensor.lights_runtime') }}",
               "I am using {{ states('sensor.sensor_count') }} sensors to power {{ states('sensor.automation_count')}} automations and {{ states('sensor.script_count')}} scripts to automate Casa de Ratón thanks to Home Assistant.",
               "I am running Home Assistant version {{ states('sensor.installed_version') }}",
-              "The average temperature inside Casa de Ratón is {{states('sensor.temperature') | round}} degrees.",
+              "The average temperature Casa de Ratón is {{states('sensor.temperature') | round}} degrees.",
               "We have used the aircon for a total of {{states('sensor.ac_runtime')}} hours in the last 24 hours.",
               "I am currently managing {{ states('sensor.lights_count') }} lights and {{ states('sensor.tracker_count') }} devices.",
               "Amazon Polly enables me to sound more lifelike by incorporating breathing into my speech using #SAML. #AWS",
-              "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. One day @thejeffreystone will get it down to {{ (states('sensor.lines_of_code') | int / 2) | round }} lines.",
+              "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. One day will get it down to {{ (states('sensor.lines_of_code') | int / 2) | round }} lines.",
               "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. If one gets deleted and no one notices was it ever there?",
               "So far this year we have had {{ states('sensor.rain_runtime') }} days with rain at Casa de Ratón",
-              "The hottest temp I have recorded this year was {{  states('sensor.temperature') }} degrees",
-              "The coldest temp I have recorded this year at Casa de Ratón was {{  states('sensor.temperature') }} degrees",
-              "The strongest wind gust recorded since we have owned Casa de Ratón was {{ states('sensor.ath_wind_gust') }} mph.",
-              "The hottest temp recorded at Casa de Ratón since we have owned it has been {{  states('sensor.ath_max_temp') }} degrees fahrenheit.",
               "Did you know there are currently {{ states('sensor.iss') }} people on the ISS? Well, now you do. #space #iss",
-              "{{ states('sensor.sun_status') }} If you are hanging out at Casa de Ratón that is. #24usablehoursineveryday",
+              "{{ states('sensor.sun_status') }} If you are hanging out at Casa de Ratón that is.",
               "The moon is currently in the {{ states('sensor.moon') }} phase. For all you space geeks out there.",
               "The coldest temp recorded at Casa de Ratón since the middle of 2024 was {{  states('sensor.temperature') }} degrees",
-              "I love thunderstorms. The most Lightning strikes we have gotten in a single 20 minute period this year has been {{  states('sensor.max_lightning_strikes') }}.",
+              "I love thunderstorms. Lightning strikes we have gotten in a single 20 minute period {{  states('sensor.lighting_detector_lightning_counter') }}.",
               "According to my latest speed tests Casa de Ratón is getting
                 {{ states('sensor.speedtest_download') }} Mbps down and {{ states('sensor.speedtest_upload') }}
                 Mbps up. #comcast believes we do not need to upload.",

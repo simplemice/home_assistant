@@ -240,7 +240,7 @@ script:
             {% set msg = msg + ' #ad' %}
             {{ msg }}
           data:
-            media: >-
+            image: >-
               {{ image }}
 
   mastodon_notify_image:
