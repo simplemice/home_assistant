@@ -36,24 +36,6 @@
         laundry in the wardrobe for freshness',\n    'Welcome back, laundry conqueror!
         Time to put away your clean clothes in the wardrobe'\n] | random }}\n"
   mode: restart
-- id: '1711677500799'
-  alias: Awtrix - Laundry Timer
-  description: ''
-  use_blueprint:
-    path: homeassistant/awtrix_create_sensor_app.yaml
-    input:
-      awtrix_displays:
-      - 878172095c71c90ce783d87cec0ac1af
-      toggle_helper: input_boolean.awtrix_laundry_timer
-      my_sensor: timer.laundry_timer
-      my_template_sensor: Laundry PickUp - {{ (as_timestamp(state_attr('timer.laundry_timer',
-        'finishes_at'))) | timestamp_custom('%X') }}
-      my_icon: '42893'
-      text_color:
-      - 157
-      - 10
-      - 255
-      lifetime: '3600'
 - id: '1713940163943'
   alias: Mastodon Ad Posting
   description: ''
@@ -100,11 +82,19 @@
   - platform: time
     at: 07:00:00
   - platform: time
+    at: '10:00:00'
+  - platform: time
     at: '13:00:00'
+  - platform: time
+    at: '16:00:00'
   - platform: time
     at: '19:00:00'
   - platform: time
+    at: '22:00:00'
+  - platform: time
     at: 01:00:00
+  - platform: time
+    at: 04:00:00
   condition: []
   action:
   - service: script.mastodon_weather
