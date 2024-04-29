@@ -6,15 +6,35 @@
 ###############################################################################
 
 sensor:
+  #  - platform: template
+  #    sensors:
+  #      lights_runtime:
+  #        unique_id: lights_runtime
+  #        friendly_name: "Lights Runtime Today"
+  #        unit_of_measurement: "h"
+  #        value_template: "{{ (states('sensor.lights_runtime_today') | float + states('sensor.ambient_runtime_today') | float) }}"
+  #        attribute_templates:
+  #          value: "{{ (60 * (states('sensor.lights_runtime_today') | float + states('sensor.ambient_runtime_today') | float)) | int }}"
+
   - platform: template
     sensors:
       lights_runtime:
         unique_id: lights_runtime
         friendly_name: "Lights Runtime Today"
         unit_of_measurement: "h"
-        value_template: "{{ (states('sensor.lights_runtime_today') | float + states('sensor.ambient_runtime_today') | float) }}"
+        value_template: >
+          {% if states('sensor.lights_runtime_today') != 'unknown' and states('sensor.ambient_runtime_today') != 'unknown' %}
+            {{ ((states('sensor.lights_runtime_today') | float) + (states('sensor.ambient_runtime_today') | float)) }}
+          {% else %}
+            0
+          {% endif %}
         attribute_templates:
-          value: "{{ (60 * (states('sensor.lights_runtime_today') | float + states('sensor.ambient_runtime_today') | float)) | int }}"
+          value: >
+            {% if states('sensor.lights_runtime_today') != 'unknown' and states('sensor.ambient_runtime_today') != 'unknown' %}
+              {{ (60 * ((states('sensor.lights_runtime_today') | float) + (states('sensor.ambient_runtime_today') | float))) | int }}
+            {% else %}
+              0
+            {% endif %}
 
   - platform: history_stats
     name: lights_runtime_today
@@ -38,19 +58,19 @@ sensor:
 
 utility_meter:
   monthly_light:
-    source: sensor.all_lights
+    source: sensor.lights_runtime
     unique_id: monthly_light
     name: Monthly Lights
     cycle: monthly
 
   daily_light:
-    source: sensor.all_lights
+    source: sensor.lights_runtime
     unique_id: daily_lights
     name: Daily Lights
     cycle: daily
 
   weekly_light:
-    source: sensor.all_lights
+    source: sensor.lights_runtime
     unique_id: weekly_lights
     name: Weekly Lights
     cycle: weekly

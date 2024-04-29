@@ -110,13 +110,13 @@
     - input_boolean.climate_automation
     to: 'off'
     from: 'on'
-    id: climate_on
+    id: climate_off
   - platform: state
     entity_id:
     - input_boolean.climate_automation
     to: 'on'
     from: 'off'
-    id: climate_off
+    id: climate_on
   condition: []
   action:
   - choose:

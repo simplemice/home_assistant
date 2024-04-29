@@ -1863,18 +1863,6 @@ views:
           }\n"
         type: custom:auto-entities
       type: vertical-stack
-    - cards:
-      - entities:
-        - entity: sensor.tracker_count
-        - entity: sensor.sensor_count
-        - entity: sensor.automation_count
-        - entity: sensor.script_count
-        show_icon: true
-        show_name: true
-        show_state: true
-        state_color: true
-        type: glance
-      type: horizontal-stack
     - entities:
       - entities:
         - input_datetime.laundry_custom_time
@@ -1895,6 +1883,18 @@ views:
         type: custom:fold-entity-row
       style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
       type: entities
+    - cards:
+      - entities:
+        - entity: sensor.tracker_count
+        - entity: sensor.sensor_count
+        - entity: sensor.automation_count
+        - entity: sensor.script_count
+        show_icon: true
+        show_name: true
+        show_state: true
+        state_color: true
+        type: glance
+      type: horizontal-stack
     type: grid
   - cards:
     - aggregate_func: last

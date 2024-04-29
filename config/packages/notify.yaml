@@ -139,14 +139,15 @@ script:
       - condition: state
         entity_id: input_boolean.telegram_notifications
         state: "on"
-      - service: notify.telegram_mice
+      - service: >
+          {% if who == 'simplemice' %}
+            notify.telegram_mice
+          {% else %}
+            notify.telegram_group
+          {% endif %}
         data:
-          message: "{{ message }}"
           title: "{{ title }}"
-      - service: notify.telegram_group
-        data:
           message: "{{ message }}"
-          title: "{{ title }}"
 
   text_notify:
     alias: "Main Text Notification"
