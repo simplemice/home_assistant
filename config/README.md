@@ -15,10 +15,10 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.4.4
-Total entity objects | 1499
+Total entity objects | 1507
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 101
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 849
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 859
 Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 108
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 10
 Entities in the [`input_boolean`](https://www.home-assistant.io/components/input_boolean) domain | 40
@@ -27,7 +27,7 @@ Entities in the [`timer`](https://www.home-assistant.io/components/timer) domain
 Entities in the [`input_text`](https://www.home-assistant.io/components/input_text) domain | 1
 Entities in the [`input_select`](https://www.home-assistant.io/components/input_select) domain | 9
 Entities in the [`input_datetime`](https://www.home-assistant.io/components/input_datetime) domain | 16
-Entities in the [`zone`](https://www.home-assistant.io/components/zone) domain | 5
+Entities in the [`zone`](https://www.home-assistant.io/components/zone) domain | 6
 Entities in the [`climate`](https://www.home-assistant.io/components/climate) domain | 1
 Entities in the [`switch`](https://www.home-assistant.io/components/switch) domain | 65
 Entities in the [`sun`](https://www.home-assistant.io/components/sun) domain | 1
@@ -54,7 +54,7 @@ Entities in the [`text`](https://www.home-assistant.io/components/text) domain |
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 7
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
 Entities in the [`fan`](https://www.home-assistant.io/components/fan) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 16
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 13
 
 ## Core integrations that I use
 

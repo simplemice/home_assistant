@@ -1532,28 +1532,83 @@ views:
       type: custom:apexcharts-card
     type: grid
   - cards:
-    - color_thresholds:
-      - color: '#e74c3c'
-        value: 25
-      - color: '#1db954'
-        value: 50
-      - color: '#3498db'
-        value: 75
-      entities:
-      - entity: sensor.owm_ultraviolet_index
-      font_size: 80
-      height: 50
-      hours_to_show: 4
-      line_width: 2
-      name: UV Index
-      points_per_hour: 90
-      show:
-        extrema: true
-        icon: false
-      style: "ha-card { \n    --paper-card-background-color: 'rgba(0, 0, 0, 0.0)';\n\
-        \    --ha-card-background: \"rgba(0, 0, 0, 0.0)\";\n    --ha-card-box-shadow:\
-        \ 'none';\n}\n"
-      type: custom:mini-graph-card
+    - apex_config:
+        chart:
+          height: auto
+        dataLabels:
+          enabled: false
+        fill:
+          gradient:
+            inverseColors: false
+            opacityFrom: 0.5
+            opacityTo: 0
+            shadeIntensity: 0.8
+            stops:
+            - - 0
+              - 50
+              - 100
+            type: vertical
+          type: gradient
+        grid:
+          show: false
+        legend:
+          fontFamily: Raleway
+          fontSize: 12px
+          height: 40
+        stroke:
+          curve: smooth
+          width: 3
+        tooltip:
+          enabled: true
+        xaxis:
+          axisBorder:
+            show: false
+          labels:
+            style:
+              fontFamily: Raleway
+              fontSize: 14px
+        yaxis:
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#FFB62E'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          show: true
+        - decimalsInFloat: 0
+          forceNiceScale: true
+          labels:
+            style:
+              colors: '#2eb9ff'
+              fontFamily: Raleway
+              fontSize: 12px
+              fontWeight: bold
+          opposite: true
+          show: true
+      graph_span: 7d
+      header:
+        colorize_states: true
+        show: true
+        show_states: true
+        title: UV Graph
+      series:
+      - color: '#FFB62E'
+        entity: sensor.owm_ultraviolet_index
+        fill_raw: last
+        float_precision: 0
+        group_by:
+          duration: 60min
+          func: avg
+        name: UV Index
+        show:
+          extremas: true
+        type: area
+      type: custom:apexcharts-card
+      update_interval: 1min
+    type: grid
+  - cards: []
     type: grid
   - cards:
     - card:
@@ -4557,12 +4612,6 @@ views:
   path: assistant
   sections:
   - cards:
-    - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
-      theme: material_dark_green
-      title: Shopping Cart
-      type: shopping-list
-    type: grid
-  - cards:
     - badge_color: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
         \ %}\n  blue\n{% else %}\n  green\n{% endif %}"
       badge_icon: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
@@ -4583,6 +4632,16 @@ views:
       tap_action:
         action: toggle
       type: custom:mushroom-template-card
+    type: grid
+  - cards:
+    - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+      theme: material_dark_green
+      title: Shopping Cart
+      type: shopping-list
+    type: grid
+  - cards: []
+    type: grid
+  - cards: []
     type: grid
   title: Assistant
   type: sections

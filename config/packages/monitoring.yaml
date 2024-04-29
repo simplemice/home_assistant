@@ -140,26 +140,30 @@ sensor:
         unique_id: numbers_naentities
         value_template: >-
           {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | count }}
+
       hvac_action:
         friendly_name: "HVAC Action"
         unique_id: numbers_hvac
         value_template: "{{states.climate.home.attributes.hvac_action}}"
+
       today_is:
         friendly_name: "Today is"
         unique_id: today_is
         value_template: "{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][now().weekday()] }}"
+
       month_is:
         friendly_name: "Month is"
         unique_id: month_is
         value_template: "{{ ['January','February','March','April','May','June','August','September','October','November','December'][now().month-1] }}"
+
       holiday:
         friendly_name: "Holiday"
         unique_id: holiday
         value_template: >-
           {% if states.calendar.holidays == 'on' %}
             {{ states.calendar.holidays.attributes.message }}
-          {% elif states.calendar.anchorage_holidays.state == 'on' %}
-            {{ states.calendar.anchorage_holidays.attributes.message }}
+          {% elif states.calendar.mouse_holidays.state == 'on' %}
+            {{ states.calendar.mouse_holidays.attributes.message }}
           {% else %}
             none
           {% endif %}
@@ -168,14 +172,10 @@ sensor:
 
   - platform: template
     sensors:
-      na_entities:
-        friendly_name: "NA Entities"
-        value_template: >-
-          {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | truncate(250, False) }}
-      na_entities_count:
-        friendly_name: "Number of NA Entities"
-        value_template: >-
-          {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | count }}
+      speed_mph:
+        friendly_name: Simplemice Speed km/h
+        value_template: "{{ state_attr('device_tracker.micemob', 'speed') | round(0)  }}"
+        unit_of_measurement: "km/h"
 
   - platform: template
     sensors:
