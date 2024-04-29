@@ -175,16 +175,6 @@ automation:
           - sensor.bedroom_temp_temperature
         below: 25
         id: temp_off
-      - platform: state
-        entity_id:
-          - input_boolean.climate_automation
-        to: "on"
-        id: turn_on
-      - platform: state
-        entity_id:
-          - input_boolean.climate_automation
-        to: "off"
-        id: turn_off
     #      - platform: state
     #        entity_id:
     #          - binary_sensor.bedroom_door_contact
@@ -204,7 +194,6 @@ automation:
           - conditions:
               - condition: trigger
                 id:
-                  - turn_on
                   - temp_on
                   - door_closed
             sequence:
@@ -246,16 +235,5 @@ automation:
                 data: {}
                 target:
                   entity_id: climate.bedroom_aircon
-      - if:
-          - condition: trigger
-            id:
-              - turn_off
-        then:
-          - service: climate.set_hvac_mode
-            metadata: {}
-            data:
-              hvac_mode: "off"
-            target:
-              entity_id: climate.bedroom_aircon
 
 script:

@@ -101,3 +101,45 @@
     metadata: {}
     data: {}
   mode: restart
+- id: '1714358939598'
+  alias: Climate Auto Control
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - input_boolean.climate_automation
+    to: 'off'
+    from: 'on'
+    id: climate_on
+  - platform: state
+    entity_id:
+    - input_boolean.climate_automation
+    to: 'on'
+    from: 'off'
+    id: climate_off
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - climate_on
+      sequence:
+      - service: climate.set_hvac_mode
+        metadata: {}
+        data:
+          hvac_mode: dry
+        target:
+          entity_id: climate.bedroom_aircon
+    - conditions:
+      - condition: trigger
+        id:
+        - climate_off
+      sequence:
+      - service: climate.set_hvac_mode
+        metadata: {}
+        data:
+          hvac_mode: 'off'
+        target:
+          entity_id: climate.bedroom_aircon
+  mode: single

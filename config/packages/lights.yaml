@@ -59,10 +59,7 @@ light:
   - platform: group
     name: "All Lights"
     entities:
-      - light.lightstrip
       - light.bedside_lamp
-      - light.bathroom_bulb
-      - light.garage_bulb
   - platform: group
     name: "Camera Night Light"
     entities:
@@ -71,18 +68,12 @@ light:
   - platform: group
     name: "All Ambient"
     entities:
-      - light.kitchen_bottom_ambient
-      - light.kitchen_upstair_ambient
-      - light.tv_table_ambient
-      - light.sofa_ambient
-      - light.wled_matrix
-      - light.lumi_gateway_v3_light
+      - light.downstair_kitchen_ambient
   - platform: group
     unique_id: kitchen_ambient
     name: "Kitchen Ambient"
     entities:
-      - light.kitchen_upstair_ambient
-      - light.kitchen_bottom_ambient
+      - light.downstair_kitchen_ambient
 
 input_datetime:
   adaptive_night_on_time:
