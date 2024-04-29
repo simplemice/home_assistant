@@ -8,7 +8,6 @@ input_boolean:
   github_automation:
     name: "Github Push Automation"
     icon: mdi:github
-        initial_state: true
 
 input_datetime:
   github_auto_on_time:

@@ -28,3 +28,6 @@ binary_sensor.external_doors:
 
 cover.livingroom_curtains:
   icon: mdi:curtains
+
+sensor.atmospheric_pressure:
+  unit_of_measurement: mmHg
