@@ -44,7 +44,11 @@
     event: start
     offset: '12:0:0'
     entity_id: calendar.mastodon
-  condition: []
+  condition:
+  - condition: state
+    entity_id: calendar.mastodon
+    attribute: message
+    state: Ad
   action:
   - service: script.mastodon_ad
     metadata: {}
@@ -143,3 +147,31 @@
         target:
           entity_id: climate.bedroom_aircon
   mode: single
+- id: '1714547795137'
+  alias: Light On
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sun.sun
+    to: below_horizon
+  condition: []
+  action:
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.lamp
+  mode: single
+- id: '1714569609969'
+  alias: Awtrix current playing song
+  description: ''
+  use_blueprint:
+    path: homeassistant/awtrix_spotify.yaml
+    input:
+      awtrix_light: 4c7efdc44c80355d417605701646c757
+      media_player: media_player.spotify_simplemice
+      text_color:
+      - 208
+      - 0
+      - 250
+      icon_in: '18207'

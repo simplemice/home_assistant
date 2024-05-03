@@ -98,8 +98,8 @@ sensor:
       - sensor.air_quality_index
       - sensor.u_s_air_quality_index
 
-  - platform: worldtidesinfo
-    api_key: !secret tides
+  # - platform: worldtidesinfo
+  #    api_key: !secret tides
 
   - platform: openweathermap_all
     api_key: !secret openweather_all

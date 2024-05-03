@@ -21,9 +21,7 @@ fan:
   - platform: group
     name: "All Fans"
     entities:
-      - fan.bedroom_fan
-      - fan.tower_fan
-      - fan.kitchen_fan
+      - fan.fan
 
 input_boolean:
   climate_automation:

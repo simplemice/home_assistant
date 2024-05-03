@@ -7,26 +7,10 @@
 
 command_line:
   - sensor:
-      name: coinmarketcap_curl
-      command: !secret coinmarketcap_curl
-      value_template: "{{ value_json.value }}"
-      scan_interval: 600 #10 mins refresh (this rate will use 144 credits per day out of the allocated 333 credits)
-      json_attributes:
-        - data
-  - sensor:
       name: "Lines of Code"
       unique_id: lines_of_code
       command: "find /config -name '*.yaml' | xargs cat | wc -l"
       scan_interval: 20000
-  - sensor:
-      name: "GitHub Stats"
-      unique_id: github_stats
-      command: "curl https://api.github.com/repos/thejeffreystone/homeassistant-config"
-      scan_interval: 20000
-      value_template: "{{ value_json.name }}"
-      json_attributes:
-        - open_issues
-        - stargazers_count
 
 binary_sensor:
   - platform: tod
@@ -38,25 +22,21 @@ binary_sensor:
     after: sunrise
     before: sunset
   - platform: tod
-    name: Quiet time
+    name: Sleep time
     after: "22:00"
     before: "07:30"
   - platform: tod
     name: Morning
     after: "07:30"
-    before: "09:30"
+    before: "10:00"
   - platform: tod
-    name: Midday
-    after: "09:30"
+    name: Afternoon
+    after: "10:00"
     before: "18:00"
   - platform: tod
     name: Evening
     after: "18:00"
     before: "22:00"
-  - platform: tod
-    name: Overnight
-    after: "22:00"
-    before: "07:30"
 
 sensor:
   - platform: history_stats
@@ -172,7 +152,7 @@ sensor:
 
   - platform: template
     sensors:
-      speed_mph:
+      speed_kmh:
         friendly_name: Simplemice Speed km/h
         value_template: "{{ state_attr('device_tracker.micemob', 'speed') | round(0)  }}"
         unit_of_measurement: "km/h"

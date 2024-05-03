@@ -33,3 +33,5 @@ history:
 
 logger:
   default: error
+  logs:
+    worldtidesinfocustom: debug

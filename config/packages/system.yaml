@@ -11,15 +11,15 @@ automation:
         entity_id: sun.sun
         to: below_horizon
     action:
-      - if: "{{ is_state('sun.sun', 'below_horizon')}}"
+      - if: "{{ is_state('sun.sun', 'above_horizon')}}"
         then:
           - service: frontend.set_theme
             data:
-              name: "slate"
+              name: "Google"
         else:
           - service: frontend.set_theme
             data:
-              name: "ux_goodie"
+              name: "slate"
 
   - alias: "Send notification on Home Assistant update available"
     id: system_update_available_notification
@@ -106,4 +106,3 @@ automation:
                         "Systems are operational. Casa de Ratón is now managed by the automation system.",
                         "The automation matrix is active. Casa de Ratón is under control for your convenience."
                     ] | random }}
-

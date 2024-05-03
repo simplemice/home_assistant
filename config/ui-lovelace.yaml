@@ -84,8 +84,14 @@ views:
         type: entity
       style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
       type: custom:mushroom-chips-card
-    - image: /local/media/images/home_logo.png
-      type: picture
+    - card:
+        image: /local/media/images/home_logo.jpg
+        type: picture
+      conditions:
+      - condition: state
+        entity: person.simplemice
+        state: not_home
+      type: conditional
     - elements:
       - entity: sensor.outside_temp
         style:
@@ -152,165 +158,204 @@ views:
   - cards:
     - cards:
       - cards:
-        - entity: person.simplemice
-          hide_name: false
-          layout: vertical
-          tap_action:
-            action: fire-dom-event
-            browser_mod:
-              data:
-                content:
-                  card:
-                    cards:
-                    - entity: sensor.micemob_geocoded_location
-                      icon: mdi:map-marker
-                      icon_color: yellow
-                      primary_info: none
-                      type: custom:mushroom-entity-card
-                    - auto_fit: true
-                      dark_mode: false
-                      default_zoom: 16
-                      entities:
-                      - entity: person.simplemice
-                      type: map
-                    type: vertical-stack
-                  style: "ha-card {\n   --padding-right: 15px;\n   --padding-left:\
-                    \ 15px;\n   --padding-bottom: 15px;\n   --box-shadow: 0px 0px;\n\
-                    \   --ha-card-border-width: 0px;\n}\n"
-                  type: custom:mod-card
-                title: Simplemice
-              service: browser_mod.popup
-          type: custom:mushroom-person-card
-          use_entity_picture: true
-        - alignment: center
-          chips:
-          - entity: sensor.micemob_battery_state
-            icon: mdi:power-plug
-            icon_color: "          {% set state=states('sensor.micemob_battery_state')\
-              \ %}\n          {% if state=='charging' %}\n          green\n      \
-              \    {% elif state=='discharging' %}\n          #6f6f6f\n         {%\
-              \ endif %}"
+        - cards:
+          - custom_fields:
+              battery: "[[[\n  var i = states['sensor.micemob_battery_level'].attributes.icon;\n\
+                \  var b = states['sensor.micemob_battery_level'].state;\n  return\
+                \ `<ha-icon icon='${i}' style='width: 20px; color: var(--battery-color-sensor);\
+                \ vertical-align:2px'>\n  </ha-icon> <span><span style=\"color: var(--text-battery-color-sensor);\"\
+                >${b}% </span></span>`;\n]]]                \n"
+              place: "[[[\n  if (states['person.simplemice'].state =='not_home')\n\
+                \  return `${states['sensor.micemob_geocoded_location'].state}` \n\
+                ]]]                    \n"
+              proximity: "[[[\n  if (states['sensor.home_micemob_distance'].state\
+                \ <= 0)\n  return \"\"\n  else return `<ha-icon icon=\"mdi:home-export-outline\"\
+                \n  style=\"width: 20px; height: 20px; color: var(--primary-color);\"\
+                > \n  </ha-icon>  <span>\\<span style=\"color: var(--text-color-sensor);\"\
+                >${states['sensor.travel_time_duration'].state} Mins</span></span>`\
+                \ \n  ]]]\n"
+              status: "[[[\n  if (states['sensor.micemob_room'].state =='livingroom')\
+                \ { \n  return `<ha-icon icon=\"mdi:sofa\"\n  style=\"width: 20px;\
+                \ height: 20px; color: var(--primary-color);\"></ha-icon><span> Livingroom</span>`;\
+                \                    \n  } \n  if (states['sensor.micemob_room'].state\
+                \ =='bedroom') { \n  return `<ha-icon icon=\"mdi:bed\"\n  style=\"\
+                width: 20px; height: 20px; color: var(--primary-color);\"></ha-icon><span>\
+                \ Bedroom</span>`;                    \n  }                   \n \
+                \ if (states['sensor.micemob_room'].state =='kitchen') { \n  return\
+                \ `<ha-icon icon=\"mdi:countertop\"\n  style=\"width: 20px; height:\
+                \ 20px; color: var(--primary-color);\"></ha-icon><span> Kitchen</span>`;\n\
+                \  } \n  if (states['sensor.micemob_room'].state =='backyard') { \n\
+                \  return `<ha-icon icon=\"mdi:flower\"\n  style=\"width: 20px; height:\
+                \ 20px; color: var(--primary-color);\"></ha-icon><span> Backyard</span>`;\
+                \                        \n  } \n  if (states['binary_sensor.micemob_music_active'].state\
+                \ =='on') { \n  return `<ha-icon icon=\"mdi:headphones-bluetooth\"\
+                \n  style=\"width: 20px; height: 20px; color: var(--primary-color);\"\
+                ></ha-icon><span> Music</span>`;                        \n  } \n \
+                \ else {\n  return `<ha-icon icon=\"mdi:map-marker-radius\"\n  style=\"\
+                width: 20px; height: 20px; color: var(--primary-color);\"></ha-icon><span>\
+                \ ${entity.state}</span>`;\n  }\n]]]      \n"
+              storage: "[[[\n  return `<ha-icon icon=\"mdi:speedometer\"\n  style=\"\
+                width: 20px; height: 20px; color: var(--primary-color);\">\n  </ha-icon>\
+                \  <span>\\<span style=\"color: var(--text-color-sensor);\">${states['sensor.speed_kmh'].state}\
+                \ km/h</span></span>` \n]]]                           \n"
+              wifi: "[[[\n  if (states['binary_sensor.micemob_wifi_state'].state =='On')\
+                \ { \n  return `<ha-icon icon=\"mdi:wifi\" \n  style=\"width: 20px;\
+                \ height: 20px; color: var(--text-wifi-color-sensor);\">\n  </ha-icon>\
+                \ <span><span style=\"color: var(--text-wifi-color-sensor);\"></span></span>`;\
+                \   \n  }  \n  if (states['binary_sensor.micemob_wifi_state'].state\
+                \ =='Off') { \n  return `<ha-icon icon=\"mdi:wifi\"\n  style=\"width:\
+                \ 20px; height: 20px; color: var(--primary-color);\">\n  </ha-icon>\
+                \ <span><span style=\"color: var(--text-wifi-color-sensor);\">Disconnected</span></span>`;\
+                \                    \n  } \n  else {\n  return `<ha-icon icon=\"\
+                mdi:wifi\"\n  style=\"width: 20px; height: 20px; color: var(--primary-color);\"\
+                >\n  </ha-icon> <span><span style=\"color: var(--text-wifi-color-sensor);\"\
+                >${states['sensor.micemob_wifi_connection'].state}</span></span>`;\n\
+                \  }\n]]]              \n"
+              work: "[[[\n  if (states['sensor.home_micemob_distance'].state <= 3000)\n\
+                \  return \"\"\n  else return `<ha-icon icon=\"mdi:office-building\"\
+                \n  style=\"width: 20px; height: 20px; color: var(--primary-color);\"\
+                >\n  </ha-icon> <span>\\<span style=\"color: var(--text-color-sensor);\"\
+                >${states['sensor.travel_time_duration'].state} Mins</span></span>`\
+                \ \n]]]      \n"
+            entity: person.simplemice
+            entity_picture: /local/media/images/me.jpg
+            show_entity_picture: true
+            show_icon: false
+            show_last_changed: true
+            show_name: false
+            state:
+            - entity_picture: /local/media/images/me.jpg
+              value: home
+            - entity_picture: /local/media/images/me_lr.jpg
+              value: not_home
+            - entity_picture: /local/media/images/me_lr.jpg
+              value: livingroom
+            - entity_picture: /local/media/images/me.jpg
+              value: kitchen
+            - entity_picture: /local/media/images/me_music.jpg
+              value: music
+            - entity_picture: /local/media/images/me.jpg
+              value: bedroom
+            - entity_picture: /local/media/images/me.jpg
+              value: garage
+            - entity_picture: /local/media/images/me.jpg
+              value: backyard
+            - entity_picture: /local/media/images/me.jpg
+              value: guest
+            - entity_picture: /local/media/images/me.jpg
+              value: bathroom
+            styles:
+              card:
+              - height: 260px
+              custom_fields:
+                battery:
+                - top: 2%
+                - left: 68%
+                - position: absolute
+                - font-size: 12px
+                - color: ''
+                - --battery-color-sensor: "[[[ \n  if (states['sensor.micemob_battery_level'].state\
+                    \ < 30) return \"#ff1a1a\";\n  if (states['sensor.micemob_battery_level'].state\
+                    \ < 50) return \"#F3970A\";\n  if (states['sensor.micemob_battery_level'].state\
+                    \ < 101) return \"#50A14F\";\n  else return \"#ffc640\" \n]]]\
+                    \                     "
+                place:
+                - bottom: 25%
+                - left: 5%
+                - position: absolute
+                - font-size: 10px
+                proximity:
+                - bottom: 60%
+                - left: 69%
+                - position: absolute
+                - font-size: 12px
+                status:
+                - top: 2%
+                - left: 5%
+                - position: absolute
+                - font-size: 12px
+                storage:
+                - bottom: 15%
+                - left: 5%
+                - position: absolute
+                - font-size: 12px
+                wifi:
+                - bottom: 5%
+                - left: 5%
+                - position: absolute
+                - font-size: 12px
+                - color: ''
+                - --text-wifi-color-sensor: "[[[ \n  if (states[\"binary_sensor.micemob_wifi_state\"\
+                    ].state =='off') \n  return \"#aaaaaa\";\n  if (states[\"binary_sensor.micemob_wifi_state\"\
+                    ].state =='on') \n  return \"#aaaaaa\";\n]]]        "
+                work:
+                - bottom: 40%
+                - left: 69%
+                - position: absolute
+                - font-size: 12px
+              icon:
+              - bottom: 7%
+              - left: 0%
+              - width: 120px
+              - height: 120px
+              - position: relative
+              - border: "[[[\n  if (states['sensor.micemob_room'].state =='bedroom')\
+                  \ return '5px solid #EB6011';\n  if (states['person.simplemice'].state\
+                  \ =='home') return '5px solid #77c66e';\n  if (states['sensor.micemob_room'].state\
+                  \ =='kitchen') return '5px solid deepskyblue';\n  if (states['sensor.micemob_room'].state\
+                  \ =='School') return '5px solid #EF881A';\n  if (states['sensor.micemob_room'].state\
+                  \ =='Kick Boxing') return '5px solid #28055D';\n  if (states['sensor.micemob_room'].state\
+                  \ =='Swimming') return '5px solid #341AEF';                    \
+                  \    \n  if (states['sensor.micemob_room'].state =='Stables') return\
+                  \ '5px solid #EBD411';\n  if (states['sensor.micemob_room'].state\
+                  \ =='Amys Parents') return '5px solid #E411EB';\n  if (states['sensor.micemob_room'].state\
+                  \ =='Daves Parents') return '5px solid #9811EB';\n  if (states['person.simplemice'].state\
+                  \ =='not_home') return '5px solid #EB2511';                    \
+                  \  \n  else return '5px solid gray';\n]]]    \n"
+              - border-radius: 20%
+              label:
+              - bottom: 2%
+              - position: absolute
+              - font-size: 10px
+              name:
+              - top: 15%
+              - left: 5%
+              - position: absolute
+              - font-size: 12px
             tap_action:
-              action: more-info
-            type: template
-          - entity: sensor.micemob_battery_level
-            icon: "          {% set bl = states('sensor.micemob_battery_level') |\
-              \ int %}\n          {% if bl < 10 %} mdi:battery-outline\n         \
-              \ {% elif bl < 20 %} mdi:battery-10\n          {% elif bl < 30 %} mdi:battery-20\n\
-              \          {% elif bl < 40 %} mdi:battery-30\n          {% elif bl <\
-              \ 50 %} mdi:battery-40\n          {% elif bl < 60 %} mdi:battery-50\n\
-              \          {% elif bl < 70 %} mdi:battery-60\n          {% elif bl <\
-              \ 80 %} mdi:battery-70\n          {% elif bl < 90 %} mdi:battery-80\n\
-              \          {% elif bl < 100 %} mdi:battery-90\n          {% elif bl\
-              \ == 100 %} mdi:battery\n          {% else %} mdi:battery-unknown\n\
-              \          {% endif %}\n"
-            icon_color: "          {% set bl = states('sensor.micemob_battery_level')\
-              \ | int %}\n          {% if bl < 10 %} red\n          {% elif bl < 20\
-              \ %} red\n          {% elif bl < 30 %} red\n          {% elif bl < 40\
-              \ %} orange\n          {% elif bl < 50 %} orange\n          {% elif\
-              \ bl < 60 %} green\n          {% elif bl < 70 %} green\n          {%\
-              \ elif bl < 80 %} green\n          {% elif bl < 90 %} green\n      \
-              \    {% elif bl < 100 %} green\n          {% elif bl == 100 %} green\n\
-              \          {% else %} grey\n          {% endif %}"
-            tap_action:
-              action: more-info
-            type: template
-          - entity: binary_sensor.micemob_bluetooth_state
-            icon: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
-              %}
-
-              {% if state==''on'' %}
-
-              mdi:bluetooth
-
-              {% elif state==''off'' %}
-
-              mdi:bluetooth-off
-
-              {% endif %}
-
-              '
-            icon_color: '{% set state=states(''binary_sensor.micemob_bluetooth_state'')
-              %}
-
-              {% if state==''on'' %}
-
-              green
-
-              {% elif state==''off'' %}
-
-              red
-
-              {% endif %}
-
-              '
-            type: template
-          - entity: binary_sensor.micemob_wifi_state
-            icon: '{% set state=states(''binary_sensor.micemob_wifi_state'') %}
-
-              {% if state==''on'' %}
-
-              mdi:wifi
-
-              {% elif state==''off'' %}
-
-              mdi:wifi-off
-
-              {% endif %}
-
-              '
-            icon_color: '{% set state=states(''binary_sensor.micemob_wifi_state'')
-              %}
-
-              {% if state==''on'' %}
-
-              green
-
-              {% elif state==''off'' %}
-
-              red
-
-              {% endif %}
-
-              '
-            type: template
-          type: custom:mushroom-chips-card
-        mode: vertical
+              action: none
+            triggers_update: all
+            type: custom:button-card
+          type: vertical-stack
+        - custom_fields:
+            status: "[[[\n  if (states['person.simplemice'].state =='home') { \n \
+              \ return `<ha-icon icon=\"\"\n  style=\"width: 20px; height: 20px; color:\
+              \ var(--primary-color);\"></ha-icon><span></span>`;                \
+              \                         \n  } \n  else {\n  return `<ha-icon icon=\"\
+              mdi:map\"\n  style=\"width: 20px; height: 20px; color: var(--primary-color);\"\
+              ></ha-icon><span> Map</span>`;\n  }\n]]]                       \n"
+          entity: person.simplemice
+          icon: mdi:map
+          show_entity_picture: false
+          show_icon: true
+          show_last_changed: false
+          show_name: false
+          styles:
+            card:
+            - height: 20px
+            custom_fields:
+              status:
+              - bottom: 7%
+              - left: 5%
+              - width: 100%
+              - position: absolute
+            label:
+            - bottom: 10%
+            - position: absolute
+            - font-size: 12px
+          triggers_update: all
+          type: custom:button-card
         type: custom:stack-in-card
-      - cards:
-        - entity: sensor.micewatch_room
-          fill_container: true
-          icon: "{% if is_state('person.simplemice', 'home') %}\n  mdi:rodent\n{%\
-            \ else %}\n  mdi:motorbike\n{% endif %}"
-          icon_color: "{% if states ('sensor.micewatch_room', 'livingroom') %}\n \
-            \  green\n{% elif states ('sensor.micewatch_room', 'kitchen') %}\n   yellow\n\
-            {% elif states ('sensor.micewatch_room', 'bedroom') %}\n   blue\n{% else\
-            \ %}\n   red\n{% endif %}"
-          multiline_secondary: true
-          primary: "{% if is_state('person.simplemice', 'home') %}\n  Now in the\n\
-            {% else %}\n  Now at location\n{% endif %}"
-          secondary: "{% if is_state('person.simplemice', 'home') %}\n  Room: {{ states('sensor.micewatch_room')\
-            \ }}\n  Distance: {{ state_attr('sensor.micewatch_room', 'distance') }}\
-            \ m\n{% else %}\n  Geo: {{ states('sensor.micemob_geocoded_location')\
-            \ }}\n{% endif %}"
-          type: custom:mushroom-template-card
-        - entity: sensor.micemob_room
-          fill_container: true
-          icon: "{% if is_state('person.simplemice', 'home') %}\n  mdi:cellphone\n\
-            {% else %}\n  mdi:motorbike\n{% endif %}"
-          icon_color: "{% if states ('sensor.micemob_room', 'livingroom') %}\n   green\n\
-            {% elif states ('sensor.micemob_room', 'kitchen') %}\n   yellow\n{% elif\
-            \ states ('sensor.micemob_room', 'bedroom') %}\n   blue\n{% else %}\n\
-            \   red\n{% endif %}"
-          multiline_secondary: true
-          primary: "{% if is_state('person.simplemice', 'home') %}\n  Mob in the\n\
-            {% else %}\n  Now at location\n{% endif %}"
-          secondary: "{% if is_state('person.simplemice', 'home') %}\n  {{ states('sensor.micemob_room')\
-            \ }}\n  Distance: {{ state_attr('sensor.micemob_room', 'distance') }}\
-            \ m\n{% else %}\n  Geo: {{ states('sensor.micemob_geocoded_location')\
-            \ }}\n{% endif %}"
-          type: custom:mushroom-template-card
-        type: vertical-stack
       type: horizontal-stack
     - card:
         alignment_style: left
@@ -367,10 +412,6 @@ views:
         entity: script.activate_alexa_actionable_notification
         state: 'off'
       type: conditional
-    type: grid
-  - cards: []
-    type: grid
-  - cards: []
     type: grid
   - cards: []
     type: grid
@@ -756,6 +797,7 @@ views:
         - entity: input_boolean.fan_automation
         - entity: group.house_climate_control
         - entity: automation.bedroom_night_climate_automation
+        - entity: automation.morning_climate_off
         state_color: true
         type: entities
       type: vertical-stack
@@ -1897,6 +1939,133 @@ views:
       type: horizontal-stack
     type: grid
   - cards:
+    - cards:
+      - entities:
+        - subtitle: Instalation v{{ state_attr('update.hacs_update', 'installed_version')
+            }} - Web v{{ state_attr('update.hacs_update', 'latest_version') }}
+          title: HACS
+          type: custom:mushroom-title-card
+        - type: section
+        - chips:
+          - content: Update Notes
+            icon: mdi:web
+            icon_color: blue
+            tap_action:
+              action: url
+              url_path: https://github.com/hacs/integration/releases
+            type: template
+          - content: '{{ state_attr(''update.hacs_update'', ''installed_version'')
+              }}'
+            entity: update.hacs_update
+            icon: mdi:package-variant-closed
+            icon_color: green
+            tap_action:
+              action: none
+            type: template
+          - content: '{{ state_attr(''update.hacs_update'', ''latest_version'') }}'
+            entity: update.hacs_update
+            icon: mdi:package-variant-closed
+            icon_color: orange
+            tap_action:
+              action: none
+            type: template
+          type: custom:mushroom-chips-card
+        - type: section
+        type: entities
+      - card:
+          card_mod:
+            style: "ha-card {\n  border-style: none;\n  background: none;\n}\ndiv.card-content\
+              \ {\n  padding: 0px;\n}\n"
+          type: entities
+        filter:
+          template: "{%- set dev = namespace() %} {%- set dev.name = '' %} {%- set\
+            \ dev.update = '' %}\n{%- for devid in (integration_entities('hac') |\
+            \ map('device_id') | list) %}\n  {%- set dev.name = device_attr(devid,\
+            \ \"name\") %}\n  {%- for ent in device_entities(devid) %}\n    {%- if\
+            \ (ent.find(\"update\") | int>=0) %}\n      {%- set dev.update = ent %}\n\
+            \    {%- endif %}\n  {%- endfor %}\n  {{-\n    { 'type': 'custom:mushroom-update-card',\n\
+            \      'entity': dev.update,\n      'name': dev.name,\n      'show_buttons_control':\
+            \ true,\n      'collapsible_controls': false,\n      'layout': 'horizontal'\n\
+            \    }\n  }},\n{%- endfor %}\n"
+        type: custom:auto-entities
+      type: vertical-stack
+    - card_mod:
+        style: "ha-card {\n  border-style: none;\n  background: none;\n  --mush-title-padding:\
+          \ 0px 0px 0px;\n}  \n"
+      cards:
+      - cards:
+        - entity: sensor.jarvis_last_msg
+          type: tile
+        - entity: sensor.jarvis_last_location
+          type: tile
+        - entity: sensor.jarvis_last_msg_time
+          type: tile
+        - entity: script.play_last_message
+          fill_container: true
+          type: custom:mushroom-entity-card
+        - entity: input_select.polly_voice
+          fill_container: true
+          type: custom:mushroom-select-card
+        type: vertical-stack
+      type: horizontal-stack
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#e45e65'
+        value: 5
+      - color: '#039BE5'
+        value: 7
+      - color: '#e0b400'
+        value: 9
+      color_thresholds_transition: soft
+      entities:
+      - sensor.sleep_time_duration
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:bed
+      lower_bound: 0
+      name: Sleep Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 3
+      - color: '#e5fa05'
+        value: 5
+      - color: '#f20714'
+        value: 7
+      color_thresholds_transition: soft
+      entities:
+      - sensor.lights_runtime_today
+      - sensor.ambient_runtime_today
+      - sensor.lights_runtime
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:lightbulb-cfl
+      lower_bound: 0
+      name: Light Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    type: grid
+  - cards:
     - aggregate_func: last
       card_mod:
         class: top-level-graph
@@ -1949,78 +2118,6 @@ views:
         labels: false
       smoothing: false
       type: custom:mini-graph-card
-    type: grid
-  - cards:
-    - aggregate_func: last
-      card_mod:
-        class: top-level-graph
-      color_thresholds:
-      - color: '#e45e65'
-        value: 5
-      - color: '#039BE5'
-        value: 7
-      - color: '#e0b400'
-        value: 9
-      color_thresholds_transition: soft
-      entities:
-      - sensor.sleep_time_duration
-      group_by: date
-      hour24: true
-      hours_to_show: 168
-      icon: mdi:bed
-      lower_bound: 0
-      name: Sleep Time Duration (7 days)
-      show:
-        extrema: true
-        fill: fade
-        graph: bar
-        labels: false
-      smoothing: false
-      type: custom:mini-graph-card
-    - aggregate_func: last
-      card_mod:
-        class: top-level-graph
-      color_thresholds:
-      - color: '#07f7eb'
-        value: 3
-      - color: '#e5fa05'
-        value: 5
-      - color: '#f20714'
-        value: 7
-      color_thresholds_transition: soft
-      entities:
-      - sensor.lights_runtime
-      group_by: date
-      hour24: true
-      hours_to_show: 168
-      icon: mdi:lightbulb-cfl
-      lower_bound: 0
-      name: Light Time Duration (7 days)
-      show:
-        extrema: true
-        fill: fade
-        graph: bar
-        labels: false
-      smoothing: false
-      type: custom:mini-graph-card
-    type: grid
-  - cards:
-    - cards:
-      - cards:
-        - entity: sensor.jarvis_last_msg
-          type: tile
-        - entity: sensor.jarvis_last_location
-          type: tile
-        - entity: sensor.jarvis_last_msg_time
-          type: tile
-        - entity: script.play_last_message
-          fill_container: true
-          type: custom:mushroom-entity-card
-        - entity: input_select.polly_voice
-          fill_container: true
-          type: custom:mushroom-select-card
-        type: vertical-stack
-      type: horizontal-stack
     type: grid
   - cards: []
     type: grid
@@ -4612,6 +4709,12 @@ views:
   path: assistant
   sections:
   - cards:
+    - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+      theme: material_dark_green
+      title: Shopping Cart
+      type: shopping-list
+    type: grid
+  - cards:
     - badge_color: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
         \ %}\n  blue\n{% else %}\n  green\n{% endif %}"
       badge_icon: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
@@ -4632,12 +4735,12 @@ views:
       tap_action:
         action: toggle
       type: custom:mushroom-template-card
-    type: grid
-  - cards:
-    - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
-      theme: material_dark_green
-      title: Shopping Cart
-      type: shopping-list
+    - entity: sensor.micemob_next_alarm
+      type: tile
+    - entity: sensor.notify_nightdestiny_com
+      type: tile
+    - entity: sensor.inbox_nightdestiny_com
+      type: tile
     type: grid
   - cards: []
     type: grid

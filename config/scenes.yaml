@@ -1,1 +1,64 @@
-[]
+- id: '1714547712381'
+  name: Lamp
+  entities:
+    light.bedside_lamp:
+      min_color_temp_kelvin: 2000
+      max_color_temp_kelvin: 6535
+      min_mireds: 153
+      max_mireds: 500
+      supported_color_modes:
+      - color_temp
+      - hs
+      color_mode: hs
+      brightness: 255
+      color_temp_kelvin:
+      color_temp:
+      hs_color:
+      - 286
+      - 100
+      rgb_color:
+      - 195
+      - 0
+      - 255
+      xy_color:
+      - 0.306
+      - 0.118
+      icon: mdi:lamp
+      friendly_name: Bedside Lamp
+      supported_features: 0
+      state: 'on'
+    light.kitchen_ambient:
+      effect_list:
+      - blink
+      - breathe
+      - channel_change
+      - finish_effect
+      - okay
+      - stop_effect
+      supported_color_modes:
+      - xy
+      effect:
+      color_mode: xy
+      brightness: 255
+      hs_color:
+      - 306.118
+      - 100
+      rgb_color:
+      - 255
+      - 0
+      - 229
+      xy_color:
+      - 0.42
+      - 0.17
+      entity_id:
+      - light.downstair_kitchen_ambient
+      icon: mdi:lightbulb-group
+      friendly_name: Kitchen Ambient
+      supported_features: 44
+      state: 'on'
+  icon: mdi:lamp
+  metadata:
+    light.bedside_lamp:
+      entity_only: true
+    light.kitchen_ambient:
+      entity_only: true

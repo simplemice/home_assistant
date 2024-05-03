@@ -37,10 +37,10 @@ input_boolean:
 
 sensor:
   - platform: mqtt_room
-    device_id: "iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5-100-40004"
+    device_id: "iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5_100_40004"
     unique_id: micemob_room
     name: "Micemob Room"
-    state_topic: "espresense/devices/iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5-100-40004"
+    state_topic: "espresense/devices/iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5_100_40004"
     timeout: 5
     away_timeout: 30
 
@@ -65,13 +65,6 @@ sensor:
           {% elif is_state('sensor.family_home','3') %} mdi:account-multiple-check
           {% else %} mdi:account-group
           {% endif %}
-
-mqtt:
-  sensor:
-    - name: "Room Presence"
-      state_topic: "house/presence/current_room"
-    - name: "Presence Source"
-      state_topic: "house/presence/source"
 
 template:
   - sensor:

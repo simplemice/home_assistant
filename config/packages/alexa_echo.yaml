@@ -79,8 +79,7 @@ automation:
     trigger:
       - platform: state
         entity_id:
-          - media_player.living_room_echo
-          - media_player.bedroom_speaker
+          - group.all_echos
     action:
       - service: input_datetime.set_datetime
         target:
