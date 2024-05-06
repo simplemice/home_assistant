@@ -7,7 +7,7 @@
 
 switch:
   - platform: wake_on_lan
-    name: Micemob_turn_on
+    name: Micemob_wol
     host: 100.107.27.72
     mac: 48:2a:e3:10:f6:04
 
