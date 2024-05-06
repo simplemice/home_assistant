@@ -1,3 +1,16 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   02/19/2024
+#   @package        :   System
+#   @description    :   A Collection of Presence Related Trackers and Sensors
+###############################################################################
+
+switch:
+  - platform: wake_on_lan
+    name: Micemob_turn_on
+    host: 100.107.27.72
+    mac: 48:2a:e3:10:f6:04
+
 automation:
   - id: set_theme
     alias: "Automate Theme"

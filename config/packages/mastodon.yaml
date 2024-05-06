@@ -70,7 +70,7 @@ script:
               Wind speed: "{{ states('sensor.openweathermap_wind_speed') }} m/s"
               Visibility: "{{ states('sensor.openweathermap_visibility') }} km"
               Lighting Strike: "{{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance"
-            #homeautomation #weather #meteo #phuket
+            #homeautomation #weather #meteo #phuket #thailand
           image: >-
             {{ [ "/local/media/images/home.jpg",
                   "/local/media/images/home.jpg"] | random }}
