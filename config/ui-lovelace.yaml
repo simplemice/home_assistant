@@ -1188,6 +1188,11 @@ views:
       forecast: true
       hourly_forecast: true
       type: custom:weather-card
+    - entity: sensor.rain_sensor
+      fill_container: true
+      icon_color: red
+      layout: horizontal
+      type: custom:mushroom-entity-card
     - entity: sensor.gdacs_alerts
       name: GDACS Alerts
       state_color: true
@@ -1225,90 +1230,176 @@ views:
       type: iframe
       url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=m/s&zoom=10&overlay=radar&product=radar&level=surface&lat=7.908&lon=98.341&message=true"
         frameborder="0"
-    - apex_config:
-        chart:
-          height: auto
-        dataLabels:
-          enabled: false
-        fill:
-          gradient:
-            inverseColors: false
-            opacityFrom: 0.5
-            opacityTo: 0
-            shadeIntensity: 0.8
-            stops:
-            - - 0
-              - 50
-              - 100
-            type: vertical
-          type: gradient
-        grid:
-          show: false
-        legend:
-          fontFamily: Raleway
-          fontSize: 12px
-          height: 40
-        stroke:
-          curve: smooth
-          width: 3
-        tooltip:
-          enabled: true
-        xaxis:
-          axisBorder:
+    - cards:
+      - apex_config:
+          chart:
+            height: auto
+          dataLabels:
+            enabled: false
+          fill:
+            gradient:
+              inverseColors: false
+              opacityFrom: 0.5
+              opacityTo: 0
+              shadeIntensity: 0.8
+              stops:
+              - - 0
+                - 50
+                - 100
+              type: vertical
+            type: gradient
+          grid:
             show: false
-          labels:
-            style:
-              fontFamily: Raleway
-              fontSize: 14px
-        yaxis:
-        - decimalsInFloat: 0
-          forceNiceScale: true
-          labels:
-            style:
-              colors: '#FFB62E'
-              fontFamily: Raleway
-              fontSize: 12px
-              fontWeight: bold
+          legend:
+            fontFamily: Raleway
+            fontSize: 12px
+            height: 40
+          stroke:
+            curve: smooth
+            width: 3
+          tooltip:
+            enabled: true
+          xaxis:
+            axisBorder:
+              show: false
+            labels:
+              style:
+                fontFamily: Raleway
+                fontSize: 14px
+          yaxis:
+          - decimalsInFloat: 0
+            forceNiceScale: true
+            labels:
+              style:
+                colors: '#FFB62E'
+                fontFamily: Raleway
+                fontSize: 12px
+                fontWeight: bold
+            show: true
+          - decimalsInFloat: 0
+            forceNiceScale: true
+            labels:
+              style:
+                colors: '#2eb9ff'
+                fontFamily: Raleway
+                fontSize: 12px
+                fontWeight: bold
+            opposite: true
+            show: true
+        graph_span: 7d
+        header:
+          colorize_states: true
           show: true
-        - decimalsInFloat: 0
-          forceNiceScale: true
-          labels:
-            style:
-              colors: '#2eb9ff'
-              fontFamily: Raleway
-              fontSize: 12px
-              fontWeight: bold
-          opposite: true
+          show_states: true
+          title: Outside Temp & Hum Graph
+        series:
+        - color: '#FFB62E'
+          entity: sensor.outside_temp
+          fill_raw: last
+          float_precision: 0
+          group_by:
+            duration: 60min
+            func: avg
+          name: Temperature
+          show:
+            extremas: true
+          type: area
+        - color: '#2eb9ff'
+          entity: sensor.outside_humidity
+          fill_raw: last
+          float_precision: 0
+          group_by:
+            duration: 60min
+            func: avg
+          name: Humidity
+          type: area
+        type: custom:apexcharts-card
+        update_interval: 1min
+      - apex_config:
+          chart:
+            height: auto
+          dataLabels:
+            enabled: false
+          fill:
+            gradient:
+              inverseColors: false
+              opacityFrom: 0.5
+              opacityTo: 0
+              shadeIntensity: 0.8
+              stops:
+              - - 0
+                - 50
+                - 100
+              type: vertical
+            type: gradient
+          grid:
+            show: false
+          legend:
+            fontFamily: Raleway
+            fontSize: 12px
+            height: 40
+          stroke:
+            curve: smooth
+            width: 3
+          tooltip:
+            enabled: true
+          xaxis:
+            axisBorder:
+              show: false
+            labels:
+              style:
+                fontFamily: Raleway
+                fontSize: 14px
+          yaxis:
+          - decimalsInFloat: 0
+            forceNiceScale: true
+            labels:
+              style:
+                colors: '#FFB62E'
+                fontFamily: Raleway
+                fontSize: 12px
+                fontWeight: bold
+            show: true
+          - decimalsInFloat: 0
+            forceNiceScale: true
+            labels:
+              style:
+                colors: '#2eb9ff'
+                fontFamily: Raleway
+                fontSize: 12px
+                fontWeight: bold
+            opposite: true
+            show: true
+        graph_span: 7d
+        header:
+          colorize_states: true
           show: true
-      graph_span: 7d
-      header:
-        colorize_states: true
-        show: true
-        show_states: true
-        title: Temp & Hum Graph
-      series:
-      - color: '#FFB62E'
-        entity: sensor.openweathermap_forecast_temperature
-        fill_raw: last
-        float_precision: 0
-        group_by:
-          duration: 60min
-          func: avg
-        name: Temperature
-        show:
-          extremas: true
-        type: area
-      - color: '#2eb9ff'
-        entity: sensor.openweathermap_humidity
-        fill_raw: last
-        float_precision: 0
-        group_by:
-          duration: 60min
-          func: avg
-        name: Humidity
-        type: area
-      type: custom:apexcharts-card
-      update_interval: 1min
+          show_states: true
+          title: Temp & Hum Graph
+        series:
+        - color: '#FFB62E'
+          entity: sensor.openweathermap_forecast_temperature
+          fill_raw: last
+          float_precision: 0
+          group_by:
+            duration: 60min
+            func: avg
+          name: Temperature
+          show:
+            extremas: true
+          type: area
+        - color: '#2eb9ff'
+          entity: sensor.openweathermap_humidity
+          fill_raw: last
+          float_precision: 0
+          group_by:
+            duration: 60min
+            func: avg
+          name: Humidity
+          type: area
+        type: custom:apexcharts-card
+        update_interval: 1min
+      type: custom:swipe-card
     type: grid
   - cards:
     - aspect_ratio: 56%
