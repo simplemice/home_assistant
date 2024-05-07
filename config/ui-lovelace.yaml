@@ -801,17 +801,6 @@ views:
         state_color: true
         type: entities
       type: vertical-stack
-    - entities:
-      - entities:
-        - switch.uvfive_slmap2_2e5e_switch_status
-        - number.uvfive_slmap2_2e5e_target_time
-        - switch.uvfive_slmap2_2e5e_radar
-        head:
-          entity: sensor.uvfive_slmap2_2e5e_left_time
-          icon: mdi:washing-machine
-        type: custom:fold-entity-row
-      style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
-      type: entities
     type: grid
   - cards: []
     type: grid

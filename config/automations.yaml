@@ -151,11 +151,14 @@
   alias: Light On
   description: ''
   trigger:
-  - platform: state
+  - platform: numeric_state
     entity_id:
-    - sun.sun
-    to: below_horizon
-  condition: []
+    - sensor.travel_time_distance
+    below: 0.5
+  condition:
+  - condition: sun
+    before: sunrise
+    after: sunset
   action:
   - service: scene.turn_on
     metadata: {}
