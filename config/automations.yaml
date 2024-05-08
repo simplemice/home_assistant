@@ -301,8 +301,8 @@
     path: homeassistant/awtrix_create_sensor_app.yaml
     input:
       switch_to_app: true
-      my_template_sensor: The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}}
-        THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB
+      my_template_sensor: Gasohol 91 - {{ states('sensor.gas_91_price_ptt')}} THB
+        and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB
       awtrix_displays:
       - 4c7efdc44c80355d417605701646c757
       my_sensor: sensor.gas_91_price_ptt
