@@ -8,7 +8,7 @@ media_extractor:
 
 group:
   audio_devices:
-    - media_player.bedroom_speaker
+    - media_player.portable_echo
 
 remote:
   - platform: xiaomi_miio

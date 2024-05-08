@@ -51,7 +51,7 @@ emulated_hue:
 
 group:
   all_echos:
-    - media_player.bedroom_speaker
+    - media_player.portable_echo
 
 template:
   - sensor:
@@ -61,7 +61,7 @@ template:
             living_room
           {% elif is_state('sensor.last_alexa', 'media_player.kitchen_echo') %}
             kitchen
-          {% elif is_state('sensor.last_alexa', 'media_player.bedroom_speaker') %}
+          {% elif is_state('sensor.last_alexa', 'media_player.portable_echo') %}
             bedroom
           {% elif is_state('sensor.last_alexa', 'media_player.bathroom_echo') %}
             bathroom
