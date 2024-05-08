@@ -152,7 +152,7 @@ script:
           title: "{{ title }}"
           message: "{{ message }}"
 
-  telegram_weather:
+  telegram_phuket:
     alias: Telegram Weather Notification
     sequence:
       - service: notify.telegram_phuket
