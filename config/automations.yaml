@@ -160,19 +160,23 @@
     - sensor.home_micemob_distance
     below: 1
   condition:
-  - condition: sun
-    before: sunrise
-    after: sunset
+  - condition: and
+    conditions:
+    - condition: sun
+      before: sunrise
+      after: sunset
+    - condition: state
+      entity_id: person.simplemice
+      state: not_home
   action:
   - service: scene.turn_on
     metadata: {}
     target:
       entity_id: scene.lamp
-  - service: light.turn_on
+  - service: scene.turn_on
     metadata: {}
-    data: {}
     target:
-      entity_id: light.porch_bulb
+      entity_id: scene.kitchen_ambient
   mode: single
 - id: '1714569609969'
   alias: Awtrix current playing song
@@ -248,4 +252,18 @@
       data: {}
       target:
         entity_id: light.porch_bulb
+  mode: single
+- id: '1715172273118'
+  alias: Mastodon Gas Price Posting
+  description: ''
+  trigger:
+  - platform: time
+    at: 09:00:00
+  - platform: time
+    at: '16:00:00'
+  condition: []
+  action:
+  - service: script.mastodon_gasoline
+    metadata: {}
+    data: {}
   mode: single

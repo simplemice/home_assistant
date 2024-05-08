@@ -29,3 +29,36 @@
   metadata:
     light.closet_lamp:
       entity_only: true
+- id: '1715167044111'
+  name: Kitchen Ambient
+  entities:
+    light.downstair_kitchen_ambient:
+      effect_list:
+      - blink
+      - breathe
+      - okay
+      - channel_change
+      - finish_effect
+      - stop_effect
+      supported_color_modes:
+      - xy
+      effect:
+      color_mode: xy
+      brightness: 255
+      hs_color:
+      - 308.941
+      - 100
+      rgb_color:
+      - 255
+      - 0
+      - 217
+      xy_color:
+      - 0.437
+      - 0.178
+      friendly_name: Kitchen Ambient
+      supported_features: 44
+      state: 'on'
+  icon: mdi:led-strip
+  metadata:
+    light.downstair_kitchen_ambient:
+      entity_only: true

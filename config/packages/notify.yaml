@@ -257,7 +257,21 @@ script:
           message: >
             {% set msg = '' %}
             {% set msg = msg + ' ' + message %}
-            {% set msg = msg + ' #iot #smarthome #homeassistant' %}
+            {% set msg = msg + ' #photo ' %}
+            {{ msg }}
+          data:
+            media: >-
+              {{ image }}
+
+  mastodon_notify_home:
+    alias: Mastodon Home Notification
+    sequence:
+      - service: notify.mastodon_home
+        data_template:
+          message: >
+            {% set msg = '' %}
+            {% set msg = msg + ' ' + message %}
+            {% set msg = msg + ' #autostatus #iot #smarthome #homeassistant' %}
             {{ msg }}
           data:
             media: >-

@@ -438,7 +438,7 @@ views:
           show_color_temp_control: true
           type: custom:mushroom-light-card
           use_light_color: true
-        - entity: light.bedside_lamp
+        - entity: light.closet_lamp
           fill_container: true
           show_brightness_control: true
           show_color_control: true
@@ -1730,7 +1730,13 @@ views:
       type: custom:apexcharts-card
       update_interval: 1min
     type: grid
-  - cards: []
+  - cards:
+    - camera_image: camera.phuket_curve_picture
+      camera_view: auto
+      entities: []
+      image: https://demo.home-assistant.io/stub_config/kitchen.png
+      title: Phuket Tides
+      type: picture-glance
     type: grid
   - cards:
     - card:
