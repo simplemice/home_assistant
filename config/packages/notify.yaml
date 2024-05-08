@@ -153,12 +153,18 @@ script:
           message: "{{ message }}"
 
   telegram_phuket:
-    alias: Telegram Weather Notification
+    alias: Telegram Phuket Notification
     sequence:
-      - service: notify.telegram_phuket
+      - service: >
+          {% if who == 'simplemice' %}
+            notify.telegram_mice
+          {% else %}
+            notify.telegram_phuket
+          {% endif %}
         data:
           title: "{{ title }}"
           message: "{{ message }}"
+          photo: "{{ image }}"
 
   text_notify:
     alias: "Main Text Notification"

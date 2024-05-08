@@ -8,9 +8,10 @@
 automation:
 
 script:
-  telegram_weather:
+  telegram_auto_weather:
+    alias: "Auto Post Weather to Phuket Channel"
     sequence:
-      - service: script.telegram_weather
+      - service: script.telegram_phuket
         data:
           message: >-
             Weather Information at Casa de Ratón area:
