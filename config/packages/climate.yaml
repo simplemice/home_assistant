@@ -108,6 +108,15 @@ sensor:
     duration:
       hours: 24
 
+  - platform: group
+    name: "House Temp"
+    unique_id: home_temp
+    type: mean
+    entities:
+      - sensor.livingroom_temp_temperature
+      - sensor.bedroom_temp_temperature
+      - sensor.kitchen_temp
+
 utility_meter:
   monthly_climate:
     source: sensor.ac_runtime_today
@@ -131,6 +140,12 @@ utility_meter:
     source: sensor.fan_runtime_today
     unique_id: monthly_fan
     name: Monthly Fan
+    cycle: monthly
+
+  monthly_temp:
+    source: sensor.house_temp
+    unique_id: monthly_temp
+    name: Inside Monthly Temp
     cycle: monthly
 
 automation:

@@ -29,6 +29,13 @@ input_boolean:
     name: "Livingroom TV"
     icon: mdi:television
 
+utility_meter:
+  monthly_music:
+    source: sensor.monthly_music_time
+    unique_id: monthly_music
+    name: Monthly Music
+    cycle: monthly
+
 input_select:
   media_speakers:
     name: Media Speakers Rooms
@@ -81,6 +88,16 @@ input_select:
     icon: mdi:play-box-multiple
 
 sensor:
+  - platform: history_stats
+    name: monthly_music_time
+    unique_id: monthly_music_time
+    entity_id: media_player.spotify_simplemice
+    state: "playing"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
   #=== Home Assistant Channels Youtube
   - platform: youtube
     channel_id: UCrVLgIniVg6jW38uVqDRIiQ

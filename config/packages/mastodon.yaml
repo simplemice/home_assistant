@@ -162,11 +162,20 @@ script:
             {{- [
               "I am constantly monitoring Casa de Ratón. For instance I know that {{ states('sensor.lights_runtime') }}",
               "I am using {{ states('sensor.sensor_count') }} sensors to power {{ states('sensor.automation_count')}} automations and {{ states('sensor.script_count')}} scripts to automate Casa de Ratón thanks to Home Assistant.",
+              "The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} #phuket #gas #gasoline"
+              "I am running Home Assistant version {{ states('sensor.current_version') }} (https://github.com/simplemice/home_assistant)",
+              "The average temperature inside Casa de Ratón is {{states('sensor.monthly_temp') | round}} degrees celsius",
+              "Music playing in Casa de Ratón for a total {{states('sensor.music_time')}} hours in the last month",
+              "I am currently managing {{ states('sensor.lights_count') }} lights and {{ states('sensor.tracker_count') }} devices.",
+              "Amazon Polly enables me to sound more lifelike by incorporating breathing into my speech using #SAML. #AWS",
+              "At Casa de Ratón we have received a total of {{ states('sensor.rain_monthly') }} mm of rain.",
+              "Did you know there are currently {{ states('sensor.iss') }} people on the ISS? Well, now you do. #space #iss",
+              "The moon is currently in the {{ states('sensor.moon') }} phase. For all you space geeks out there.",
+              "I love thunderstorms. Lightning strikes we have gotten in a single 20 minute period {{  states('sensor.lighting_detector_lightning_counter') }}.",
               "I am running Home Assistant version {{ states('sensor.installed_version') }}",
               "The average temperature Casa de Ratón is {{states('sensor.temperature') | round}} degrees.",
               "We have used the aircon for a total of {{states('sensor.ac_runtime')}} hours in the last 24 hours.",
               "I am currently managing {{ states('sensor.lights_count') }} lights and {{ states('sensor.tracker_count') }} devices.",
-              "Amazon Polly enables me to sound more lifelike by incorporating breathing into my speech using #SAML. #AWS",
               "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. One day will get it down to {{ (states('sensor.lines_of_code') | int / 2) | round }} lines.",
               "My Home Assistant config contains {{ states('sensor.lines_of_code') }} lines of code. If one gets deleted and no one notices was it ever there?",
               "So far this year we have had {{ states('sensor.rain_runtime') }} days with rain at Casa de Ratón",
@@ -174,7 +183,6 @@ script:
               "{{ states('sensor.sun_status') }} If you are hanging out at Casa de Ratón that is.",
               "The moon is currently in the {{ states('sensor.moon') }} phase. For all you space geeks out there.",
               "The coldest temp recorded at Casa de Ratón since the middle of 2024 was {{  states('sensor.temperature') }} degrees",
-              "I love thunderstorms. Lightning strikes we have gotten in a single 20 minute period {{  states('sensor.lighting_detector_lightning_counter') }}.",
               "According to my latest speed tests Casa de Ratón is getting
                 {{ states('sensor.speedtest_download') }} Mbps down and {{ states('sensor.speedtest_upload') }}
                 Mbps up. #comcast believes we do not need to upload.",

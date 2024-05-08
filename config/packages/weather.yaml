@@ -40,21 +40,16 @@ utility_meter:
     name: Rain Monthly
     cycle: monthly
     delta_values: true
-  rain_yearly:
-    source: sensor.pirateweather_precip_intensity
-    name: Rain Yearly
-    cycle: yearly
-    delta_values: true
 
 sensor:
   - platform: history_stats
     name: Dayly Rain Duration
-    entity_id: sensor.pirateweather_precip_intensity
+    entity_id: sensor.rain_drop
     state: "on"
     type: time
     end: "{{ now().replace(hour=9, minute=0, second=0) }}"
     duration:
-      hours: 24
+      hours: 730
 
   - platform: template
     sensors:
@@ -88,15 +83,6 @@ sensor:
     entities:
       - sensor.porch_temp_humidity
       - sensor.backyard_temp_humidity
-
-  - platform: group
-    name: "House Temp"
-    unique_id: home_temp
-    type: mean
-    entities:
-      - sensor.livingroom_temp_temperature
-      - sensor.bedroom_temp_temperature
-      - sensor.kitchen_temp
 
   - platform: group
     name: "Outside AQI"
