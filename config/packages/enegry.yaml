@@ -23,7 +23,7 @@ template:
       name: "Current Energy Tariff"
       unique_id: e3eb0f96-c83a-41d3-8a01-a6df38895301
       icon: mdi:currency-thb
-#      unit_of_measurement: "THB/kWh"
+      #      unit_of_measurement: "THB/kWh"
       state: >
         {% if states ('sensor.monthly_energy') | float <= 15 %}
           2.35

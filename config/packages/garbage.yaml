@@ -1,0 +1,18 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Garbage
+#   @description    :   Garbage Package
+###############################################################################
+
+input_boolean:
+  garbage_day:
+    name: "Garbage Day"
+    icon: mdi:delete-circle
+  cleaning_day:
+    name: "House Cleaning"
+    icon: mdi:spray-bottle
+
+automation:
+
+script:

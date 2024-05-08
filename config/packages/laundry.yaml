@@ -6,14 +6,8 @@
 ###############################################################################
 
 input_boolean:
-  garbage_day:
-    name: "Garbage Day"
-    icon: mdi:delete-circle
-  cleaning_day:
-    name: "House Cleaning"
-    icon: mdi:spray-bottle
   laundry_helper:
-    name: "Laundry Day Mode"
+    name: "Laundry Day"
     icon: mdi:washing-machine
   laundry_pickup:
     name: "Laundry PickUp"
@@ -25,9 +19,27 @@ input_boolean:
 timer:
   laundry_timer:
     name: Laundry Timer
-    duration: "02:00:00"
+    duration: "02:30:00"
     icon: mdi:timer
     restore: true
+
+sensor:
+  - platform: history_stats
+    name: laundry_runtime_month
+    unique_id: laundry_runtime_month
+    entity_id: sensor.monthly_laundry
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=12, minute=0, second=0) }}"
+    duration:
+      hours: 730
+
+utility_meter:
+  monthly_laundry:
+    source: timer.laundry_timer
+    unique_id: monthly_laundry
+    name: Monthly Laundry
+    cycle: monthly
 
 automation:
 

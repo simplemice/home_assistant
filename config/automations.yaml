@@ -195,3 +195,19 @@
       - 255
       my_text: No rain
       switch_to_app: true
+- id: '1715135148977'
+  alias: Awtrix Weather Forecast
+  description: ''
+  use_blueprint:
+    path: homeassistant/awtrix_weather_app.yaml
+    input:
+      awtrix_displays:
+      - 4c7efdc44c80355d417605701646c757
+      toggle_helper: input_boolean.awtrix_weather
+      my_sensor: weather.openweathermap
+      text_color:
+      - 200
+      - 0
+      - 255
+      switch_to_app: true
+      scrollspeed: 50
