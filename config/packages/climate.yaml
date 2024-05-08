@@ -86,7 +86,6 @@ sensor:
     entities:
       - sensor.livingroom_temp_temperature
       - sensor.bedroom_temp_temperature
-      - sensor.kitchen_temp
 
 utility_meter:
   monthly_climate:

@@ -9,7 +9,7 @@ automation:
 
 script:
   telegram_auto_weather:
-    alias: "Auto Post Weather to Phuket Channel"
+    alias: "Telegram Phuket Weather"
     sequence:
       - service: script.telegram_phuket
         data:
@@ -30,4 +30,18 @@ script:
           image: >-
             {{ [ "/local/media/images/weather.jpg",
                   "/local/media/images/weather1.jpg"] | random }}
+          who: "home"
+
+  telegram_gasoline:
+    alias: "Telegram Phuket Gas Price"
+    sequence:
+      - service: script.telegram_phuket
+        data:
+          message: " The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt "
+          image: >-
+            {{ [ "/config/www/tweet_images/me.jpeg",
+                  "/config/www/tweet_images/me1.jpeg",
+                  "/config/www/tweet_images/me2.jpeg",
+                  "/config/www/tweet_images/me3.jpeg",
+                  "/config/www/tweet_images/me4.jpeg"] | random }}
           who: "home"

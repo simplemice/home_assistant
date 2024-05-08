@@ -14,3 +14,8 @@ input_boolean:
   wled_automation:
     name: "Ambient Wled Automation"
     icon: mdi:led-strip
+  awtrix_gasoline:
+    name: "Awtrix Gas Price"
+    icon: mdi:fuel
+
+script:

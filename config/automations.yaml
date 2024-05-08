@@ -267,3 +267,47 @@
     metadata: {}
     data: {}
   mode: single
+- id: '1715178071678'
+  alias: Telegram Phuket Weather Post
+  description: ''
+  trigger:
+  - platform: time
+    at: 09:00:00
+  - platform: time
+    at: '17:00:00'
+  condition: []
+  action:
+  - service: script.telegram_auto_weather
+    metadata: {}
+    data: {}
+  mode: single
+- id: '1715179083522'
+  alias: Telegram Gas Price Posting
+  description: ''
+  trigger:
+  - platform: time
+    at: '10:00:00'
+  - platform: time
+    at: '18:00:00'
+  condition: []
+  action:
+  - service: script.telegram_gasoline
+    data: {}
+  mode: single
+- id: '1715182243826'
+  alias: Awtrix Gas Price
+  description: ''
+  use_blueprint:
+    path: homeassistant/awtrix_create_sensor_app.yaml
+    input:
+      switch_to_app: true
+      my_template_sensor: The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}}
+        THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB
+      awtrix_displays:
+      - 4c7efdc44c80355d417605701646c757
+      my_sensor: sensor.gas_91_price_ptt
+      text_color:
+      - 251
+      - 0
+      - 255
+      toggle_helper: input_boolean.awtrix_gasoline
