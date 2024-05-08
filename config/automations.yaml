@@ -178,3 +178,20 @@
       - 0
       - 250
       icon_in: '18207'
+- id: '1715134667975'
+  alias: Awtrix Rain Forecast
+  description: ''
+  use_blueprint:
+    path: homeassistant/awtrix_rain_forecast.yaml
+    input:
+      awtrix_displays:
+      - 4c7efdc44c80355d417605701646c757
+      toggle_helper: input_boolean.awtrix_rain
+      my_sensor: weather.openweathermap
+      graph_type: line
+      graph_color:
+      - 0
+      - 238
+      - 255
+      my_text: No rain
+      switch_to_app: true

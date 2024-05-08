@@ -31,17 +31,17 @@ geo_location:
 
 utility_meter:
   rain_daily:
-    source: sensor.openweathermap_rain
+    source: sensor.pirateweather_precip_intensity
     name: Rain Daily
     cycle: daily
     delta_values: true
   rain_monthly:
-    source: sensor.openweathermap_rain
+    source: sensor.pirateweather_precip_intensity
     name: Rain Monthly
     cycle: monthly
     delta_values: true
   rain_yearly:
-    source: sensor.openweathermap_rain
+    source: sensor.pirateweather_precip_intensity
     name: Rain Yearly
     cycle: yearly
     delta_values: true
@@ -49,7 +49,7 @@ utility_meter:
 sensor:
   - platform: history_stats
     name: Dayly Rain Duration
-    entity_id: sensor.openweathermap_rain
+    entity_id: sensor.pirateweather_precip_intensity
     state: "on"
     type: time
     end: "{{ now().replace(hour=9, minute=0, second=0) }}"
@@ -131,69 +131,6 @@ automation:
       - service: script.rain_outside_notification
         metadata: {}
         data: {}
-
-  - id: dc5ba7dd-f092-4d0f-b9ff-73b5936e8161
-    alias: Awtrix - Rain Forecast
-    description: ""
-    use_blueprint:
-      path: homeassistant/awtrix_rain_forecast.yaml
-      input:
-        awtrix_displays:
-          - 878172095c71c90ce783d87cec0ac1af
-        toggle_helper: input_boolean.awtrix_rain
-        my_sensor: weather.openweathermap
-        graph_type: line
-        graph_color:
-          - 157
-          - 10
-          - 255
-        my_text: No rain
-        lifetime: "10"
-
-  - id: 18bb2ee2-309d-4ac7-8dfc-7df928177619
-    alias: Awtrix - Outside Temp
-    description: ""
-    use_blueprint:
-      path: homeassistant/awtrix_create_sensor_app.yaml
-      input:
-        my_sensor: sensor.outside_temp
-        my_template_sensor: >-
-          Outside - {{ states('sensor.outside_temp') }} °C / {{
-          states('sensor.garage_temp_humidity') }} %
-        my_icon: "13593"
-        awtrix_displays:
-          - 878172095c71c90ce783d87cec0ac1af
-        toggle_helper: input_boolean.awtrix_outside_temp
-        text_color:
-          - 157
-          - 10
-          - 255
-        switch_to_app: true
-        duration: "19"
-        scrollspeed: 50
-
-  - id: 4c830d1d-d7eb-408e-a325-9ce85b4f3840
-    alias: Awtrix - Weather
-    description: ""
-    use_blueprint:
-      path: homeassistant/awtrix_weather_app.yaml
-      input:
-        awtrix_displays:
-          - 878172095c71c90ce783d87cec0ac1af
-        toggle_helper: input_boolean.awtrix_weather
-        my_sensor: weather.openweathermap
-        show_windspeed: false
-        background_color:
-          - 0
-          - 0
-          - 0
-        text_color:
-          - 157
-          - 10
-          - 255
-        switch_to_app: true
-        duration: "15"
-        scrollspeed: 50
 
 script:
   rain_outside_notification:
