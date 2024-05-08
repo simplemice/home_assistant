@@ -37,7 +37,7 @@ automation:
         to: "on"
     condition: []
     action:
-      - service: notify.alexa_media_bedroom_speaker
+      - service: notify.alexa_media_portable_echo
         data:
           message: <audio src="soundbank://soundlibrary/alarms/beeps_and_bloops/bell_03"/>
           data:

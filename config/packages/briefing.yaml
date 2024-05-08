@@ -278,7 +278,7 @@ script:
       - variables:
           briefing: >
             {"morning_snark":"{{morning_snark}}","weather_status":"{{weather_status}}","device_status":"{{device_status}}","tasks":"{{ tasks }}", "dinner":"{{ dinner }}", "main_tasks":"{{ main_tasks }}", "finish":"{{ finish }}"}
-      - service: notify.alexa_media_bedroom_speaker
+      - service: notify.alexa_media_portable_echo
         data:
           message: " {{morning_snark}} {{weather_status}} {{device_status}} {{ tasks }} {{ main_tasks }} {{ dinner }} {{ finish }}"
       - stop: finish
@@ -452,7 +452,7 @@ script:
       - variables:
           briefing: >
             {"nightly_snark":"{{nightly_snark}}","home_status":"{{home_status}}","weather_status":"{{weather_status}}","device_status":"{{device_status}}","tasks":"{{ tasks }}","finish":"{{ finish }}"}
-      - service: notify.alexa_media_bedroom_speaker
+      - service: notify.alexa_media_portable_echo
         data:
           message: "{{ nightly_snark }} {{ weather_status }} {{ home_status }} {{ device_status }} {{ tasks }} {{ finish }}"
       - stop: finish

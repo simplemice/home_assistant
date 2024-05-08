@@ -199,7 +199,7 @@ script:
           - service: script.speech_engine
             data:
               message: Safe Alarm Disarmed!
-          - service: notify.alexa_media_bedroom_speaker
+          - service: notify.alexa_media_portable_echo
             data:
               message: <audio src="soundbank://soundlibrary/alarms/car_alarms/car_alarm_05"/>
               data:
@@ -212,7 +212,7 @@ script:
           - service: script.speech_engine
             data:
               message: Safe Alarm Armed!
-          - service: notify.alexa_media_bedroom_speaker
+          - service: notify.alexa_media_portable_echo
             data:
               message: <audio src="soundbank://soundlibrary/alarms/car_alarms/car_alarm_05"/>
               data:
