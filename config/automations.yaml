@@ -220,3 +220,32 @@
       - 255
       switch_to_app: true
       scrollspeed: 50
+- id: '1715157720144'
+  alias: Porch Motion Lights
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.porch_motion
+  condition:
+  - condition: sun
+    before: sunrise
+    after: sunset
+  action:
+  - if:
+    - condition: state
+      entity_id: binary_sensor.porch_motion
+      state: 'on'
+    then:
+    - service: light.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.porch_bulb
+    else:
+    - service: light.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.porch_bulb
+  mode: single
