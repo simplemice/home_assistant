@@ -84,6 +84,9 @@ notify:
   - name: telegram_group
     platform: telegram
     chat_id: !secret tg_group
+  - name: telegram_phuket
+    platform: telegram
+    chat_id: !secret tg_phu
   - name: telegram_mice
     platform: telegram
     chat_id: !secret tg_me

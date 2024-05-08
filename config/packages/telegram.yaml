@@ -1,0 +1,32 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/01/2024
+#   @package        :   Teleram
+#   @description    :   Just the Telegram
+###############################################################################
+
+automation:
+
+script:
+  telegram_weather:
+    sequence:
+      - service: script.telegram_phuket
+        data:
+          message: >-
+            Weather Information at Casa de Ratón area:
+              Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
+              Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
+              Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
+              Precipitation: {{ state_translated('binary_sensor.rain_drop') }} - {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
+              AQI: {{ states('sensor.outside_aqi') }} µg/m³
+              UV: {{ states('sensor.owm_ultraviolet_index') }} idx
+              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
+              Wind speed: {{ states('sensor.pirateweather_wind_speed') }} m/s / {{ states('sensor.pirateweather_wind_bearing') }} °
+              Visibility: {{ states('sensor.openweathermap_visibility') }} km
+              Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
+              Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
+            #weather #meteo #phuket
+          image: >-
+            {{ [ "/local/media/images/home.jpg",
+                  "/local/media/images/home.jpg"] | random }}
+          who: "home"
