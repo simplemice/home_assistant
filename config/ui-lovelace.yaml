@@ -1420,8 +1420,8 @@ views:
             shadeIntensity: 0.8
             stops:
             - - 0
-              - 50
-              - 100
+              - 10
+              - 20
             type: vertical
           type: gradient
         grid:
@@ -1470,7 +1470,7 @@ views:
         title: Rain Graph
       series:
       - color: '#FFB62E'
-        entity: sensor.openweathermap_forecast_precipitation_probability
+        entity: sensor.pirateweather_precip_probability
         fill_raw: last
         float_precision: 0
         group_by:
@@ -1481,9 +1481,9 @@ views:
           extremas: true
         type: area
       - color: '#2eb9ff'
-        entity: sensor.openweathermap_rain
+        entity: sensor.pirateweather_precip_intensity
         fill_raw: last
-        float_precision: 0
+        float_precision: 4
         group_by:
           duration: 60min
           func: avg
