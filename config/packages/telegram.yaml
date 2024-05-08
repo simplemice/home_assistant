@@ -10,7 +10,7 @@ automation:
 script:
   telegram_weather:
     sequence:
-      - service: script.telegram_phuket
+      - service: script.telegram_weather
         data:
           message: >-
             Weather Information at Casa de Ratón area:
@@ -27,6 +27,6 @@ script:
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
             #weather #meteo #phuket
           image: >-
-            {{ [ "/local/media/images/home.jpg",
-                  "/local/media/images/home.jpg"] | random }}
+            {{ [ "/local/media/images/weather.jpg",
+                  "/local/media/images/weather1.jpg"] | random }}
           who: "home"

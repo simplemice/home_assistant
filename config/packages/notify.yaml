@@ -152,6 +152,14 @@ script:
           title: "{{ title }}"
           message: "{{ message }}"
 
+  telegram_weather:
+    alias: Telegram Weather Notification
+    sequence:
+      - service: notify.telegram_phuket
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+
   text_notify:
     alias: "Main Text Notification"
     fields:
