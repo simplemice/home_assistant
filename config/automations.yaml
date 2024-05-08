@@ -190,8 +190,8 @@
       my_sensor: weather.openweathermap
       graph_type: line
       graph_color:
+      - 212
       - 0
-      - 238
       - 255
       my_text: No rain
       switch_to_app: true
