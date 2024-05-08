@@ -98,7 +98,7 @@ script:
       - condition: state
         entity_id: input_boolean.audible_notifications
         state: "on"
-      - service: notify.alexa_media_bedroom_speaker
+      - service: notify.alexa_media_portable_echo
         data_template:
           message: >-
             {{ message }}
