@@ -79,7 +79,8 @@ light:
   - platform: group
     name: "All Lights"
     entities:
-      - light.bedside_lamp
+      - light.porch_bulb
+      - light.closet_lamp
   - platform: group
     name: "Camera Night Light"
     entities:
@@ -87,11 +88,6 @@ light:
       - light.kitchen_power_strip_switch
   - platform: group
     name: "All Ambient"
-    entities:
-      - light.downstair_kitchen_ambient
-  - platform: group
-    unique_id: kitchen_ambient
-    name: "Kitchen Ambient"
     entities:
       - light.downstair_kitchen_ambient
 

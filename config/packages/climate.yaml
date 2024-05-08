@@ -17,19 +17,10 @@ group:
     entities:
       - climate.bedroom_aircon
 
-fan:
-  - platform: group
-    name: "All Fans"
-    entities:
-      - fan.fan
-
 input_boolean:
   climate_automation:
     name: "House Climate Automation"
     icon: mdi:air-conditioner
-  fan_automation:
-    name: "House Fan Automation"
-    icon: mdi:fan-auto
 
 input_datetime:
   climate_on_time:
@@ -68,16 +59,6 @@ sensor:
         attribute_templates:
           value: "{{ (60 * (states('sensor.ac_runtime_today_cool') | float + states('sensor.ac_runtime_today_dry') | float)) | int }}"
 
-  - platform: template
-    sensors:
-      fan_runtime:
-        unique_id: fan_runtime
-        friendly_name: "Fan Runtime Today"
-        unit_of_measurement: "h"
-        value_template: "{{ (states('sensor.fan_runtime_today') | float) }}"
-        attribute_templates:
-          value: "{{ (60 * (states('sensor.fan_runtime_today') | float)) | int }}"
-
   - platform: history_stats
     name: ac_runtime_today_cool
     unique_id: ac_runtime_today_cool
@@ -98,16 +79,6 @@ sensor:
     duration:
       hours: 24
 
-  - platform: history_stats
-    name: fan_runtime_today
-    unique_id: fan_runtime_today
-    entity_id: fan.all_fans
-    state: "on"
-    type: time
-    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
-    duration:
-      hours: 24
-
   - platform: group
     name: "House Temp"
     unique_id: home_temp
@@ -123,25 +94,11 @@ utility_meter:
     unique_id: monthly_climate
     name: Monthly Climate
     cycle: monthly
-
   daily_climate:
     source: sensor.ac_runtime_today
     unique_id: daily_climate
     name: Daily Climate
     cycle: daily
-
-  daily_fan:
-    source: sensor.fan_runtime_today
-    unique_id: daily_fan
-    name: Daily Fan
-    cycle: daily
-
-  monthly_fan:
-    source: sensor.fan_runtime_today
-    unique_id: monthly_fan
-    name: Monthly Fan
-    cycle: monthly
-
   monthly_temp:
     source: sensor.house_temp
     unique_id: monthly_temp

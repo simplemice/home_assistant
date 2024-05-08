@@ -96,7 +96,7 @@ sensor:
     type: time
     end: "{{ now().replace(hour=9, minute=0, second=0) }}"
     duration:
-      hours: 24
+      hours: 730
 
   #=== Home Assistant Channels Youtube
   - platform: youtube

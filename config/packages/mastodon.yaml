@@ -64,7 +64,7 @@ script:
               Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
               Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
               Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
-              Precipitation: {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
+              Precipitation: {{ states('binary_sensor.rain_drop') }} - {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
               AQI: {{ states('sensor.outside_aqi') }} µg/m³
               UV: {{ states('sensor.owm_ultraviolet_index') }} idx
               Ozone: {{ states('sensor.pirateweather_ozone') }} Du

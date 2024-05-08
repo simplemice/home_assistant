@@ -1,0 +1,54 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Fans
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+input_boolean:
+  fan_automation:
+    name: "House Fan Automation"
+    icon: mdi:fan-auto
+
+fan:
+  - platform: group
+    name: "All Fans"
+    entities:
+      - fan.fan
+
+sensor:
+  - platform: template
+    sensors:
+      fan_runtime:
+        unique_id: fan_runtime
+        friendly_name: "Fan Runtime Today"
+        unit_of_measurement: "h"
+        value_template: "{{ (states('sensor.fan_runtime_today') | float) }}"
+        attribute_templates:
+          value: "{{ (60 * (states('sensor.fan_runtime_today') | float)) | int }}"
+
+  - platform: history_stats
+    name: fan_runtime_today
+    unique_id: fan_runtime_today
+    entity_id: fan.all_fans
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 24
+
+utility_meter:
+  daily_fan:
+    source: sensor.fan_runtime_today
+    unique_id: daily_fan
+    name: Daily Fan
+    cycle: daily
+
+  monthly_fan:
+    source: sensor.fan_runtime_today
+    unique_id: monthly_fan
+    name: Monthly Fan
+    cycle: monthly
+
+automation:
+
+script:

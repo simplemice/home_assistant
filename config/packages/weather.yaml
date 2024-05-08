@@ -59,7 +59,7 @@ sensor:
           {%- if is_state("binary_sensor.rain_drop", "off" ) %}
               No Rain
           {%- else -%}
-              Rain Outside
+              Rain Now
           {%- endif %}
         icon_template: >
           {% if is_state("binary_sensor.rain_drop", "off") %}
