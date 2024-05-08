@@ -14,7 +14,7 @@ script:
       - service: script.telegram_phuket
         data:
           message: >-
-            Weather Information at Casa de Ratón area:
+            Weather Information at Phuket:
               Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
               Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
               Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg

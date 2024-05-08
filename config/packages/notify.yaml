@@ -74,6 +74,7 @@ telegram_bot:
     allowed_chat_ids:
       - !secret tg_group
       - !secret tg_me
+      - !secret tg_phuket
 
 notify:
   - name: simplemice
