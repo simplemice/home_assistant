@@ -81,12 +81,12 @@ notify:
     services:
       - service: mobile_app_micemob
       - service: mobile_app_micebook
+  - name: telegram_phuket
+    platform: telegram
+    chat_id: !secret tg_phuket
   - name: telegram_group
     platform: telegram
     chat_id: !secret tg_group
-  - name: telegram_phuket
-    platform: telegram
-    chat_id: !secret tg_phu
   - name: telegram_mice
     platform: telegram
     chat_id: !secret tg_me
@@ -164,7 +164,6 @@ script:
         data:
           title: "{{ title }}"
           message: "{{ message }}"
-          photo: "{{ image }}"
 
   text_notify:
     alias: "Main Text Notification"
