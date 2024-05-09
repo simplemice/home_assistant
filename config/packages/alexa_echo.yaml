@@ -21,32 +21,17 @@ emulated_hue:
     light.bedside_lamp:
       name: "Bedside Lamp"
       hidden: false
-    light.lightstrip:
-      name: "Lightstrip"
-      hidden: false
     light.garage_bulb:
       name: "Garage Light"
       hidden: false
     fan.bedroom_fan:
       name: "Bedroom Fan"
       hidden: false
-    fan.tower_fan:
-      name: "Tower Fan"
-      hidden: false
-    fan.door_fan:
-      name: "Door Fan"
-      hidden: false
     climate.bedroom_aircon:
       name: "Bedroom Aircon"
       hidden: false
     script.play_last_message:
       name: "Repite Last Message"
-      hidden: false
-    switch.livingroom_curtains:
-      name: "Switch Curtains"
-      hidden: false
-    cover.livingroom_curtains:
-      name: "Livingroom Curtains"
       hidden: false
 
 group:
