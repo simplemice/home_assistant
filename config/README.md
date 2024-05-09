@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.2
-Total entity objects | 1408
+Total entity objects | 1554
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
-Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 99
+Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 100
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
-Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 104
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 813
+Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 139
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 846
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 11
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
 Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 2
@@ -33,9 +33,9 @@ Entities in the [`input_text`](https://www.home-assistant.io/components/input_te
 Entities in the [`input_boolean`](https://www.home-assistant.io/components/input_boolean) domain | 35
 Entities in the [`zone`](https://www.home-assistant.io/components/zone) domain | 5
 Entities in the [`conversation`](https://www.home-assistant.io/components/conversation) domain | 1
-Entities in the [`switch`](https://www.home-assistant.io/components/switch) domain | 59
+Entities in the [`switch`](https://www.home-assistant.io/components/switch) domain | 67
 Entities in the [`sun`](https://www.home-assistant.io/components/sun) domain | 1
-Entities in the [`camera`](https://www.home-assistant.io/components/camera) domain | 6
+Entities in the [`camera`](https://www.home-assistant.io/components/camera) domain | 8
 Entities in the [`climate`](https://www.home-assistant.io/components/climate) domain | 1
 Entities in the [`calendar`](https://www.home-assistant.io/components/calendar) domain | 11
 Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 28
@@ -55,9 +55,9 @@ Entities in the [`text`](https://www.home-assistant.io/components/text) domain |
 Entities in the [`time`](https://www.home-assistant.io/components/time) domain | 1
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 40
 Entities in the [`event`](https://www.home-assistant.io/components/event) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 3
 Entities in the [`number`](https://www.home-assistant.io/components/number) domain | 5
-Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 1
+Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 12
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 59
 
 ## Core integrations that I use
 
