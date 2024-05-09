@@ -191,23 +191,6 @@
       - 0
       - 250
       icon_in: '18207'
-- id: '1715134667975'
-  alias: Awtrix Rain Forecast
-  description: ''
-  use_blueprint:
-    path: homeassistant/awtrix_rain_forecast.yaml
-    input:
-      awtrix_displays:
-      - 4c7efdc44c80355d417605701646c757
-      toggle_helper: input_boolean.awtrix_rain
-      my_sensor: weather.openweathermap
-      graph_type: line
-      graph_color:
-      - 212
-      - 0
-      - 255
-      my_text: No rain
-      switch_to_app: true
 - id: '1715135148977'
   alias: Awtrix Weather Forecast
   description: ''
@@ -272,9 +255,7 @@
   description: ''
   trigger:
   - platform: time
-    at: 09:00:00
-  - platform: time
-    at: '17:00:00'
+    at: '10:00:00'
   condition: []
   action:
   - service: script.telegram_auto_weather
@@ -286,9 +267,7 @@
   description: ''
   trigger:
   - platform: time
-    at: '10:00:00'
-  - platform: time
-    at: '18:00:00'
+    at: '10:30:00'
   condition: []
   action:
   - service: script.telegram_gasoline
@@ -311,3 +290,20 @@
       - 0
       - 255
       toggle_helper: input_boolean.awtrix_gasoline
+- id: '1715226672662'
+  alias: Awtrix Rain
+  description: ''
+  use_blueprint:
+    path: homeassistant/awtrix_rain_forecast.yaml
+    input:
+      awtrix_displays:
+      - 4c7efdc44c80355d417605701646c757
+      toggle_helper: input_boolean.awtrix_rain
+      my_sensor: weather.pirateweather
+      graph_color:
+      - 212
+      - 0
+      - 255
+      my_text: No rain
+      switch_to_app: true
+      graph_type: line

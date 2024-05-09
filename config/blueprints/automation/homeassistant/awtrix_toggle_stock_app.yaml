@@ -1,6 +1,6 @@
 ##########
 # This Blueprint is created by Smart Home Junkie
-# (c) copyright 2023 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
+# (c) copyright 2024 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
 # or in any other way exploit any part of copyrighted material without the prior written permission from Smart Home Junkie
 ##########
 
@@ -16,7 +16,6 @@ blueprint:
       selector:
         device:
           integration: mqtt
-          model: "AWTRIX Light"
           manufacturer: Blueforcer
           multiple: true
     toggle_helper:
@@ -32,15 +31,15 @@ blueprint:
         select:
           options:
             - label: "Time"
-              value: "time"
+              value: "Time"
             - label: "Date"
-              value: "date"
+              value: "Date"
             - label: "Temperature"
-              value: "temp"
+              value: "Temperature"
             - label: "Humidity"
-              value: "hum"
+              value: "Humidity"
             - label: "Battery"
-              value: "bat"
+              value: "Battery"
           mode: list
 
 mode: queued

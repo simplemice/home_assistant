@@ -1,6 +1,6 @@
 ##########
 # This Blueprint is created by Smart Home Junkie
-# (c) copyright 2023 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
+# (c) copyright 2024 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
 # or in any other way exploit any part of copyrighted material without the prior written permission from Smart Home Junkie
 ##########
 
@@ -16,7 +16,6 @@ blueprint:
       selector:
         device:
           integration: mqtt
-          model: "AWTRIX Light"
           manufacturer: Blueforcer
           multiple: true
     toggle_helper:
@@ -144,13 +143,6 @@ variables:
   my_toggle_helper: toggle_helper
   my_duration: !input duration
   my_text: !input my_text
-  my_graph_data: >
-    {% set graph_data = state_attr(my_sensor, 'forecast')[:11] | map(attribute='precipitation') | map('multiply', 100) | map('round', 0) | map('int') | list %}
-    {% if (graph_data | sum > 0) %}
-      {{ graph_data }}
-    {% else %}
-      false
-    {% endif %}
   my_lifetime: !input lifetime
   switch_to_app: !input switch_to_app
   app_name: "rain_forecast"
@@ -168,6 +160,20 @@ variables:
     clear-night: 12181
 
 action:
+  - variables:
+      weather_entity: !input my_sensor
+      forecast: "{{ state_attr(weather_entity, 'forecast') }}"
+  - service: weather.get_forecasts
+    data:
+      type: hourly
+    response_variable: my_forecast
+    target:
+      entity_id: !input my_sensor
+    continue_on_error: true
+  - variables:
+      my_graph_data: >
+        {% set f = forecast if forecast is not none else my_forecast[my_sensor].forecast %}
+        {{ f[:11] | map(attribute='precipitation') | map('multiply', 100) | map('round', 0) | map('int') | list }}
   - choose:
       - conditions:
           - condition: trigger
@@ -185,7 +191,7 @@ action:
                       {   
                         "{{ graph_type }}": {{ my_graph_data }},
                         "autoscale": {{ iif(autoscale, "true", "false") }},
-                        "text": "{{ iif(my_graph_data=='false',my_text,'') }}",
+                        "text": "{{ iif(my_graph_data | sum > 0,'',my_text) }}",
                         "background": {{ background_color }},
                         "color": {{graph_color}},
                         "icon": "{{ states(my_sensor) }}",
@@ -243,7 +249,7 @@ action:
                       {   
                         "{{ graph_type }}": {{ my_graph_data }},
                         "autoscale": {{ iif(autoscale, "true", "false") }},
-                        "text": "{{ iif(my_graph_data=='false',my_text,'') }}",
+                        "text": "{{ iif(my_graph_data | sum > 0,'',my_text) }}",
                         "background": {{ background_color }},
                         "color": {{graph_color}},
                         "icon": "{{ states(my_sensor) }}",

@@ -1,6 +1,6 @@
 ##########
 # This Blueprint is created by Smart Home Junkie
-# (c) copyright 2023 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
+# (c) copyright 2024 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
 # or in any other way exploit any part of copyrighted material without the prior written permission from Smart Home Junkie
 ##########
 
@@ -16,7 +16,6 @@ blueprint:
       selector:
         device:
           integration: mqtt
-          model: "AWTRIX Light"
           manufacturer: Blueforcer
           multiple: true
     toggle_helper:
@@ -37,6 +36,30 @@ blueprint:
       selector:
         boolean:
       default: true
+    language:
+      name: Language
+      description: Show the weather condition in this language
+      selector:
+        select:
+          options:
+            - label: "English"
+              value: "en"
+            - label: "Danish"
+              value: "dk"
+            - label: "Dutch"
+              value: "nl"
+            - label: "French"
+              value: "fr"
+            - label: "German"
+              value: "de"
+            - label: "Polish"
+              value: "pl"
+            - label: "Portuguese"
+              value: "pt"
+            - label: "Spanish"
+              value: "es"
+          mode: dropdown
+      default: "en"
     show_temperature:
       name: Show temperature
       description: Should the temperature be shown?
@@ -178,6 +201,7 @@ blueprint:
               value: "TheaterChase"
             - label: "TwinklingStars"
               value: "TwinklingStars"
+          mode: dropdown
       default: ""
 
 mode: queued
@@ -218,12 +242,140 @@ variables:
   my_repeat: !input repeat
   my_duration: !input duration
   show_text: !input show_text
+  language: !input language
   show_temperature: !input show_temperature
   show_windspeed: !input show_windspeed
   show_humidity: !input show_humidity
+  danish: >
+    {%- set translation = { 
+                      'clear-night':'klar nat',
+                      'cloudy':'skyet',
+                      'fog':'tåge',
+                      'hail':'hagl',
+                      'lightning':'lyn',
+                      'partlycloudy':'delvis skyet',
+                      'pouring':'styrtende regn',
+                      'rainy':'regnfuld',
+                      'snowy-rainy':'slud',
+                      'snowy':'sne',
+                      'sunny':'sol',
+                      'windy':'blæst'
+                      } -%}
+    {{ translation[states(my_sensor)] }}
+  dutch: >
+    {%- set translation = { 
+                      'clear-night':'helder',
+                      'cloudy':'bewolkt',
+                      'fog':'mist',
+                      'hail':'hagel',
+                      'lightning':'bliksem',
+                      'partlycloudy':'halfbewolkt',
+                      'pouring':'regen',
+                      'rainy':'regenachtig',
+                      'snowy-rainy':'sneeuw/regen',
+                      'snowy':'sneeuw',
+                      'sunny':'zonnig',
+                      'windy':'wind'
+                      } -%}
+    {{ translation[states(my_sensor)] }}
+  german: >
+    {%- set translation = { 
+                      'clear-night':'klare nacht',
+                      'cloudy':'wolkig',
+                      'fog':'nebel',
+                      'hail':'hagel',
+                      'lightning':'blitz',
+                      'partlycloudy':'teilweise wolkig',
+                      'pouring':'gießen',
+                      'rainy':'regnerisch',
+                      'snowy-rainy':'verschneit-regnerisch',
+                      'snowy':'schnee',
+                      'sunny':'sonnig',
+                      'windy':'windig'
+                      } -%}
+    {{ translation[states(my_sensor)] }}
+  french: >
+    {%- set translation = { 
+                      'clear-night':'nuit claire',
+                      'cloudy':'nuageux',
+                      'fog':'brouillard',
+                      'hail':'grêle',
+                      'lightning':'foudre',
+                      'partlycloudy':'partiellement nuageux',
+                      'pouring':'verser',
+                      'rainy':'pluvieux',
+                      'snowy-rainy':'neigeux et pluvieux',
+                      'snowy':'neigeux',
+                      'sunny':'ensoleillé',
+                      'windy':'venteux'
+                      } -%}
+    {{ translation[states(my_sensor)] }}
+  spanish: >
+    {%- set translation = { 
+                      'clear-night':'noche clara',
+                      'cloudy':'nublado',
+                      'fog':'niebla',
+                      'hail':'granizo',
+                      'lightning':'truenos',
+                      'partlycloudy':'parcialmente nublado',
+                      'pouring':'torrencial',
+                      'rainy':'lluvioso',
+                      'snowy-rainy':'nevado-lluvioso',
+                      'snowy':'nevado',
+                      'sunny':'soleado',
+                      'windy':'ventoso'
+                      } -%}
+    {{ translation[states(my_sensor)] }}
+  portugese: >
+    {%- set translation = { 
+                      'clear-night':'noite clara',
+                      'cloudy':'nublado',
+                      'fog':'névoa',
+                      'hail':'saudação',
+                      'lightning':'raio',
+                      'partlycloudy':'parcialmente nublado',
+                      'pouring':'derramando',
+                      'rainy':'chuvoso',
+                      'snowy-rainy':'nevado-chuvoso',
+                      'snowy':'Nevado',
+                      'sunny':'ensolarado',
+                      'windy':'ventoso'
+                      } -%}
+  polish: >
+    {%- set translation = { 
+                      'clear-night':'czysta noc',
+                      'cloudy':'pochmurny',
+                      'fog':'mgła',
+                      'hail':'grad',
+                      'lightning':'Błyskawica',
+                      'partlycloudy':'częściowe zachmurzenie',
+                      'pouring':'zsyp',
+                      'rainy':'deszczowy',
+                      'snowy-rainy':'śnieżno-deszczowy',
+                      'snowy':'śnieżny',
+                      'sunny':'słoneczny',
+                      'windy':'wietrzny'
+                      } -%}
+    {{ translation[states(my_sensor)] }}
   my_text: >
     {%- if (show_text) -%}
-      {{ states(my_sensor) }}
+      {%- if language == 'en' -%}
+        {{ states(my_sensor) }}
+      {%- elif language == 'dk' -%}
+        {{ danish }}
+      {%- elif language == 'nl' -%}
+        {{ dutch }}
+      {%- elif language == 'de' -%}
+        {{ german }}
+      {%- elif language == 'fr' -%}
+        {{ french }}
+      {%- elif language == 'es' -%}
+        {{ spanish }}
+      {%- elif language == 'pt' -%}
+        {{ portugese }}
+      {%- elif language == 'pl' -%}
+        {{ polish }}
+      {%- endif -%}
     {%- endif -%}
     {%- if (show_temperature) -%}
       {{ ' ' }}{{ state_attr(my_sensor, 'temperature') }}{{state_attr(my_sensor, "temperature_unit")}}
@@ -238,18 +390,6 @@ variables:
   switch_to_app: !input switch_to_app
   app_name: >
     {{ my_sensor | trim }}
-  weather_mapper:
-    rainy: 72
-    cloudy: 26488
-    fog: 12196
-    hail: 2441
-    snowy: 4702
-    sunny: 2282
-    windy: 3363
-    lightning: 630
-    pouring: 49300
-    partlycloudy: 13852
-    clear-night: 12181
   scrolling: !input scroll
   scroll_speed: !input scrollspeed
   effect: !input effect

@@ -1,6 +1,6 @@
 ##########
 # This Blueprint is created by Smart Home Junkie
-# (c) copyright 2023 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
+# (c) copyright 2024 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
 # or in any other way exploit any part of copyrighted material without the prior written permission from Smart Home Junkie
 ##########
 
@@ -16,7 +16,6 @@ blueprint:
       selector:
         device:
           integration: mqtt
-          model: "AWTRIX Light"
           manufacturer: Blueforcer
           multiple: true
     toggle_helper:
@@ -86,9 +85,31 @@ blueprint:
       selector:
         color_rgb:
       default: [255, 255, 255]
+    use_threshold:
+      name: Use Threshold value?
+      description: If set to true, the color of your text will adapt based on whether the value of your sensor is below or above the threshold value.
+      selector:
+        boolean:
+      default: false
+    threshold_value:
+      name: Threshold Value
+      description: Enter a value that can be used as a threshold to switch colors
+      default: "0"
+    low_value_text_color:
+      name: Low-value Text color
+      description: Select the color when the value of the sensor is lower than the threshold value
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
+    high_value_text_color:
+      name: High-value Text color
+      description: Select the color when the value of the sensor is equal to or higher than the threshold value
+      selector:
+        color_rgb:
+      default: [255, 255, 255]
     show_rainbow:
       name: Rainbow Colors
-      description: Should the notification be shown in Rainbow colors?
+      description: Should the notification be shown in Rainbow colors? This overwrites all other text color settings.
       selector:
         boolean:
       default: false
@@ -100,6 +121,10 @@ blueprint:
       name: Duration (in seconds)
       description: Sets how long the app should be displayed. 0 is global app time.
       default: "0"
+    # interval:
+    #   name: Interval (in seconds)
+    #   description: Sets the minimum interval time between sending MQTT messages to your MQTT broker. This helps prevent your MQTT broker from being flooded when a sensor value changes frequently.
+    #   default: "15"
     lifetime:
       name: Lifetime (in seconds)
       description: Sets how long the app should stay alive before it gets removed from the app cycle automatically. 0 is infinite lifetime.
@@ -172,6 +197,8 @@ blueprint:
       default: ""
 
 mode: queued
+max: 60
+# max_exceeded: silent
 
 trigger:
   - platform: state
@@ -204,7 +231,7 @@ variables:
   my_sensor: !input my_sensor
   my_template_sensor: !input my_template_sensor
   background_color: !input background_color
-  text_color: !input text_color
+  base_text_color: !input text_color
   text_case: !input text_case
   show_rainbow: !input show_rainbow
   my_toggle_helper: toggle_helper
@@ -212,6 +239,7 @@ variables:
     {{ my_sensor | trim }}
   my_repeat: !input repeat
   my_duration: !input duration
+  # my_interval: !input interval
   my_lifetime: !input lifetime
   switch_to_app: !input switch_to_app
   my_text: >
@@ -219,6 +247,22 @@ variables:
   scrolling: !input scroll
   scroll_speed: !input scrollspeed
   effect: !input effect
+  use_threshold: !input use_threshold
+  threshold_value: !input threshold_value
+  low_value_text_color: !input low_value_text_color
+  high_value_text_color: !input high_value_text_color
+  my_value: >
+    {{ iif(my_template_sensor == "", states(my_sensor), my_template_sensor | string | select('in','.-0123456789') | join ) }}
+  text_color: >-
+    {% if use_threshold == true %}
+      {% if my_value | float(0) < threshold_value | float(0) %}
+        {{ low_value_text_color }}
+      {% else %}
+        {{ high_value_text_color }}
+      {% endif %}
+    {% else %}
+      {{ base_text_color }}
+    {% endif %}
 
 action:
   - choose:
@@ -324,3 +368,5 @@ action:
                       {   
                         "name": "{{app_name}}"
                       }
+          # - delay:
+          #     seconds: !input interval

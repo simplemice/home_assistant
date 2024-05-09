@@ -1,6 +1,6 @@
 ##########
 # This Blueprint is created by Smart Home Junkie
-# (c) copyright 2023 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
+# (c) copyright 2024 by Smart Home Junkie. You may not copy, reproduce, distribute, transmit, modify, create derivative works,
 # or in any other way exploit any part of copyrighted material without the prior written permission from Smart Home Junkie
 ##########
 
@@ -16,12 +16,11 @@ blueprint:
       selector:
         device:
           integration: mqtt
-          model: "AWTRIX Light"
           manufacturer: Blueforcer
           multiple: true
     apptime_helper:
       name: App Time Number Helper
-      description: Select the App Time Number Helper that stores the App time.
+      description: Select the App Time Number Helper that stores the App time (in seconds).
       selector:
         entity:
           domain: input_number
@@ -36,7 +35,7 @@ variables:
   device_ids: !input awtrix_displays
   devices: >-
     {% macro get_device(device_id) %}
-      {{ states((device_entities(device_id) | select('search','device_topic') | list)[0]) }}
+      {{ states((device_entities(device_id) | select('search','device_topic') | list)[0] | default('unknown')) }}
     {% endmacro %}
 
     {% set ns = namespace(devices=[]) %}
@@ -44,7 +43,7 @@ variables:
       {% set device=get_device(device_id)|replace(' ','')|replace('\n','') %}
       {% set ns.devices = ns.devices + [ device ] %}
     {% endfor %}
-    {{ ns.devices | reject('match','unavailable') | list }}
+    {{ ns.devices | reject('match','unavailable|unknown') | list }}
   apptime_value: !input apptime_helper
 
 action:
