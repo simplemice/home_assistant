@@ -98,11 +98,6 @@ utility_meter:
     unique_id: daily_climate
     name: Daily Climate
     cycle: daily
-  monthly_temp:
-    source: sensor.house_temp
-    unique_id: monthly_temp
-    name: Inside Monthly Temp
-    cycle: monthly
 
 automation:
   - id: 34c71e59-cd69-4481-b758-958807cf3537

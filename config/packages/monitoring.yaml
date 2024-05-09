@@ -124,7 +124,7 @@ sensor:
       hvac_action:
         friendly_name: "HVAC Action"
         unique_id: numbers_hvac
-        value_template: "{{states.climate.home.attributes.hvac_action}}"
+        value_template: "{{states.climate.bedroom.attributes.hvac_action}}"
 
       today_is:
         friendly_name: "Today is"

@@ -28,11 +28,8 @@ image_processing:
       - name: car
 
 input_boolean:
-  backyard_camera_notification:
+  security_camera_notification:
     name: "Backyard Camera Notification"
-    icon: mdi:cctv
-  garage_camera_notification:
-    name: "Garage Camera Notification"
     icon: mdi:cctv
 
 sensor:
@@ -69,4 +66,3 @@ sensor:
           {% else %}
             mdi:cctv-off
           {% endif %}
-

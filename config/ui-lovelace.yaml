@@ -1951,27 +1951,53 @@ views:
         labels: false
       smoothing: false
       type: custom:mini-graph-card
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 3
+      - color: '#e5fa05'
+        value: 5
+      - color: '#f20714'
+        value: 7
+      color_thresholds_transition: soft
+      entities:
+      - sensor.ac_runtime_today
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:air-conditioner
+      lower_bound: 0
+      name: AirCon Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
     type: grid
   - cards:
     - aggregate_func: last
       card_mod:
         class: top-level-graph
       color_thresholds:
-      - color: '#e45e65'
+      - color: '#07f7eb'
+        value: 3
+      - color: '#e5fa05'
         value: 5
-      - color: '#039BE5'
+      - color: '#f20714'
         value: 7
-      - color: '#e0b400'
-        value: 9
       color_thresholds_transition: soft
       entities:
-      - sensor.sleep_time_duration
+      - sensor.fan_runtime_today
       group_by: date
       hour24: true
       hours_to_show: 168
-      icon: mdi:bed
+      icon: mdi:fan
       lower_bound: 0
-      name: Sleep Time Duration (7 days)
+      name: Fans Time Duration (7 days)
       show:
         extrema: true
         fill: fade
@@ -2014,64 +2040,6 @@ views:
         class: top-level-graph
       color_thresholds:
       - color: '#07f7eb'
-        value: 3
-      - color: '#e5fa05'
-        value: 5
-      - color: '#f20714'
-        value: 7
-      color_thresholds_transition: soft
-      entities:
-      - sensor.ac_runtime_today
-      group_by: date
-      hour24: true
-      hours_to_show: 168
-      icon: mdi:air-conditioner
-      lower_bound: 0
-      name: AirCon Time Duration (7 days)
-      show:
-        extrema: true
-        fill: fade
-        graph: bar
-        labels: false
-      smoothing: false
-      type: custom:mini-graph-card
-    - aggregate_func: last
-      card_mod:
-        class: top-level-graph
-      color_thresholds:
-      - color: '#07f7eb'
-        value: 3
-      - color: '#e5fa05'
-        value: 5
-      - color: '#f20714'
-        value: 7
-      color_thresholds_transition: soft
-      entities:
-      - sensor.fan_runtime_today
-      group_by: date
-      hour24: true
-      hours_to_show: 168
-      icon: mdi:fan
-      lower_bound: 0
-      name: Fans Time Duration (7 days)
-      show:
-        extrema: true
-        fill: fade
-        graph: bar
-        labels: false
-      smoothing: false
-      type: custom:mini-graph-card
-    type: grid
-  - cards: []
-    type: grid
-  - cards: []
-    type: grid
-  - cards:
-    - aggregate_func: last
-      card_mod:
-        class: top-level-graph
-      color_thresholds:
-      - color: '#07f7eb'
         value: 100
       - color: '#e5fa05'
         value: 250
@@ -2093,8 +2061,6 @@ views:
         labels: false
       smoothing: false
       type: custom:mini-graph-card
-    type: grid
-  - cards:
     - aggregate_func: last
       card_mod:
         class: top-level-graph
@@ -2121,6 +2087,68 @@ views:
         labels: false
       smoothing: false
       type: custom:mini-graph-card
+    type: grid
+  - cards: []
+    type: grid
+  - cards: []
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#e45e65'
+        value: 5
+      - color: '#039BE5'
+        value: 7
+      - color: '#e0b400'
+        value: 9
+      color_thresholds_transition: soft
+      entities:
+      - sensor.thomas_runtime_month
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:bed
+      lower_bound: 0
+      name: Thomas Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#e45e65'
+        value: 5
+      - color: '#039BE5'
+        value: 7
+      - color: '#e0b400'
+        value: 9
+      color_thresholds_transition: soft
+      entities:
+      - sensor.echo_runtime_month
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:bed
+      lower_bound: 0
+      name: Echo's Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    type: grid
+  - cards: []
     type: grid
   title: Status
   type: sections

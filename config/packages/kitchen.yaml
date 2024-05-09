@@ -17,13 +17,19 @@ input_boolean:
     name: "Cooking Mode"
     icon: mdi:message-bulleted
 
+input_datetime:
+  cooking_timer_set:
+    name: Cooking Timer Set
+    has_date: false
+    has_time: true
+
 sensor:
   - platform: rest
     resource: "http://192.168.3.10:9925/api/groups/mealplans/today"
     method: GET
     name: Mealie todays meal
     headers:
-      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb25nX3Rva2VuIjp0cnVlLCJpZCI6IjFlYmMyNjRiLWY5M2UtNDU2Yy1hNjExLTdiMzIzMjE1MDQ3YyIsIm5hbWUiOiJob21lYXNzaXN0YW50IiwiaW50ZWdyYXRpb25faWQiOiJnZW5lcmljIiwiZXhwIjoxODY4NDQ4NDg4fQ.IfIqJwhnjfAQPe5jMaHGeYP7-s1nsHCPAr-sI2STyJQ"
+      Authorization: !secret mealie
     value_template: "{{ value_json[0].recipe.name }}"
     force_update: true
     scan_interval: 30
@@ -32,94 +38,26 @@ sensor:
     method: GET
     name: Mealie todays meal ID
     headers:
-      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb25nX3Rva2VuIjp0cnVlLCJpZCI6IjFlYmMyNjRiLWY5M2UtNDU2Yy1hNjExLTdiMzIzMjE1MDQ3YyIsIm5hbWUiOiJob21lYXNzaXN0YW50IiwiaW50ZWdyYXRpb25faWQiOiJnZW5lcmljIiwiZXhwIjoxODY4NDQ4NDg4fQ.IfIqJwhnjfAQPe5jMaHGeYP7-s1nsHCPAr-sI2STyJQ"
+      Authorization: !secret mealie
     value_template: "{{ value_json[0].recipe.id }}"
     force_update: true
     scan_interval: 30
 
 automation:
-  - id: b668f047-c409-4bec-a12a-537b615038e4
-    alias: Notification - Cooking Complete
-    description: ""
+  - id: test
+    description: "Testing Cooking Timer"
+    mode: single
     trigger:
       - platform: state
         entity_id:
-          - sensor.careli_maf01_68e5_air_fryer
-        from: cooking
-        to: shutdown
-      - platform: state
-        entity_id:
-          - sensor.careli_maf01_68e5_air_fryer
-        from: cooking
-        to: standby
-      - platform: state
-        entity_id:
-          - sensor.careli_maf01_68e5_air_fryer
-        to: cooked
-        from: cooking
-      - platform: state
-        entity_id:
-          - sensor.chunmi_n23l01_bcf8_oven
-        from: cooking
-        to: cook finish
-      - platform: state
-        entity_id:
-          - sensor.chunmi_eh3_e09c_cooker
-        from: running
-        to: keepwarm
-      - platform: state
-        entity_id:
-          - sensor.chunmi_eh3_e09c_cooker
-        from: running
-        to: idle
-      - platform: event
-        event_type: timer.finished
-        event_data:
-          entity_id: timer.cooking_timer
-    condition:
-      - condition: time
-        after: "08:00:00"
-        before: "20:00:00"
+          - input_datetime.cooking_timer_set
+    condition: []
     action:
-      - choose:
-          - conditions:
-              - condition: state
-                entity_id: input_boolean.audible_notifications
-                state: "on"
-            sequence:
-              - service: script.speech_engine
-                data:
-                  message: |
-                    {{ [
-                        "Dinner is served! Cooking is complete. Enjoy your meal!",
-                        "Good news: Cooking is done! Your delicious meal is ready to be savored.",
-                        "Chef's masterpiece: Cooking is complete. Your meal is now ready for enjoyment.",
-                        "Cooking success: Your culinary creation is complete. Time to feast!",
-                        "Ding! Cooking is finished. Your meal is hot and ready.",
-                        "Culinary triumph: The cooking process is complete. Bon appétit!",
-                        "Cooking achievement unlocked! Your meal is ready to be enjoyed."
-                    ] | random }}
-          - conditions:
-              - condition: state
-                entity_id: input_boolean.text_notifications
-                state: "on"
-            sequence:
-              - service: script.text_notify
-                data:
-                  message: |
-                    {{ [
-                        "Dinner is served! Cooking is complete. Enjoy your meal!",
-                        "Good news: Cooking is done! Your delicious meal is ready to be savored.",
-                        "Chef's masterpiece: Cooking is complete. Your meal is now ready for enjoyment.",
-                        "Cooking success: Your culinary creation is complete. Time to feast!",
-                        "Ding! Cooking is finished. Your meal is hot and ready.",
-                        "Culinary triumph: The cooking process is complete. Bon appétit!",
-                        "Cooking achievement unlocked! Your meal is ready to be enjoyed."
-                    ] | random }}
-      - service: input_boolean.turn_off
-        data: {}
+      - service: timer.start
+        data:
+          duration: "{{ states('input_datetime.test_time') }}"
         target:
-          entity_id: input_boolean.cooking_timer_finish
+          entity_id: timer.cooking_timer
 
 script:
   kitchen_water_tank_low_notification:

@@ -12,15 +12,9 @@ utility_meter:
     name: Monthly Energy
     cycle: monthly
 
-  yearly_energy:
-    source: sensor.energy_meter
-    unique_id: yearly_energy
-    name: Yearly Energy
-    cycle: yearly
-
 template:
   - sensor:
-      name: "Current Energy Tariff"
+      name: "Energy Tariff Price"
       unique_id: e3eb0f96-c83a-41d3-8a01-a6df38895301
       icon: mdi:currency-thb
       #      unit_of_measurement: "THB/kWh"
@@ -42,7 +36,7 @@ template:
         {% endif %}
 
   - sensor:
-      name: "Current Energy Tariff Name"
+      name: "Energy Tariff State"
       unique_id: e2fb0f96-c83a-41d3-8a01-a4df34325301
       icon: mdi:lightning-bolt-circle
       state: "{{ 'peak' if today_at('09:00') < now() < today_at('22:00') else 'offpeak' }}"

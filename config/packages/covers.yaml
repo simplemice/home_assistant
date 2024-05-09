@@ -62,26 +62,5 @@ template:
           {% endif %}
 
 automation:
-  - id: 972f2058-4fdf-4e49-87c3-c4f0708fe789
-    alias: Turn On Curtains Time Mode
-    initial_state: true
-    trigger:
-      platform: template
-      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.curtains_open_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
-    action:
-      - service: input_boolean.turn_on
-        entity_id: input_boolean.livingroom_curtains
 
-  - id: cf2c407b-e19b-466e-8bb7-8a4f8be42e17
-    alias: Turn Off Curtains Time Mode
-    initial_state: true
-    trigger:
-      - platform: template
-        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.curtains_close_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
-    condition:
-      - condition: state
-        entity_id: input_boolean.livingroom_curtains
-        state: "on"
-    action:
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.livingroom_curtains
+script:

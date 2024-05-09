@@ -69,12 +69,6 @@ utility_meter:
     name: Daily Lights
     cycle: daily
 
-  weekly_light:
-    source: sensor.lights_runtime
-    unique_id: weekly_lights
-    name: Weekly Lights
-    cycle: weekly
-
 light:
   - platform: group
     name: "All Lights"
