@@ -299,11 +299,12 @@
       awtrix_displays:
       - 4c7efdc44c80355d417605701646c757
       toggle_helper: input_boolean.awtrix_rain
-      my_sensor: weather.pirateweather
+      my_sensor: weather.openweathermap
       graph_color:
       - 212
       - 0
       - 255
       my_text: No rain
       switch_to_app: true
-      graph_type: line
+      graph_type: bar
+      duration: '5'
