@@ -35,11 +35,6 @@ utility_meter:
     unique_id: monthly_music
     name: Monthly Music
     cycle: monthly
-  monthly_tv:
-    source: sensor.monthly_tv_time
-    unique_id: monthly_tv
-    name: Monthly TV
-    cycle: monthly
 
 input_select:
   media_speakers:
