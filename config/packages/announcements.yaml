@@ -21,11 +21,6 @@ input_number:
     max: 1
     step: 0.1
 
-input_boolean:
-  debug_texts:
-    name: "Debug Text"
-    icon: mdi:debug-step-into
-
 automation:
   - id: ebcc502a-5aeb-4447-a73a-75397d1195fa
     alias: Assist Ready Notify
@@ -202,7 +197,7 @@ automation:
     condition:
       - condition: time
         after: "08:00:00"
-        before: "22:00:00"
+        before: "20:00:00"
       - condition: state
         entity_id: person.simplemice
         state: not_home
@@ -211,70 +206,3 @@ automation:
         metadata: {}
         data: {}
     mode: restart
-
-  - id: f1cd3c8c-91e3-4c09-b135-c4116519bfc2
-    alias: Notification - Sleep time go to bed
-    trigger:
-      - platform: time
-        at: "21:35:00"
-    condition:
-      - condition: and
-        conditions:
-          - condition: state
-            entity_id: person.simplemice
-            state: home
-          - condition: state
-            entity_id: binary_sensor.bed_presense
-            state: "off"
-          - condition: state
-            entity_id: input_boolean.evening_briefing
-            state: "on"
-    action:
-      - service: script.speech_engine
-        data:
-          message: |
-            {{ [
-                "Bedtime routine initiated. It is time to wind down and prepare for sleep.",
-                "Nighttime rituals starting: Turning off the laptop, saving work, and getting ready to wash and sleep.",
-                "Attention: Bedtime has begun. Time to wrap up work, turn off the laptop, and prepare for a good nights sleep.",
-                "Bedtime alert! Save your work, turn off the laptop, and get ready to wash and sleep.",
-                "Nighttime preparations underway: Turning off the laptop, saving work, and getting ready for bedtime.",
-                "Sleep mode activated: Save your work, turn off the laptop, and prepare to wash and sleep.",
-                "Goodnight routine started: Turning off the laptop, saving work, and preparing for a restful night.",
-                "Time to unwind: Bedtime is here. Save your work, turn off the laptop, and get ready to sleep.",
-                "Bedtime sequence initiated. Turn off the laptop, save your work, and prepare to wash and sleep.",
-                "Nighttime rituals in progress: Turning off the laptop, saving work, and preparing to wash before sleep."
-            ] | random }}
-      - delay:
-          hours: 0
-          minutes: 5
-          seconds: 0
-          milliseconds: 0
-      - service: script.nightly_briefing
-        metadata: {}
-        data: {}
-        response_variable: nightly_briefing
-      - delay:
-          hours: 0
-          minutes: 5
-          seconds: 0
-          milliseconds: 0
-      - service: script.speech_engine
-        data:
-          message: Turning off laptop
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 10
-          milliseconds: 0
-      - service: shell_command.screen_lock_micebook
-        metadata: {}
-        data: {}
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 10
-          milliseconds: 0
-      - service: shell_command.suspend_micebook
-        metadata: {}
-        data: {}
