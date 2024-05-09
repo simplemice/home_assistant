@@ -367,7 +367,7 @@ views:
         - calendar.laundry
         - calendar.house
         event_grouping: true
-        filter_events: false
+        filter_events: true
         full_size: true
         hide_time_range: false
         items_per_row: 2
@@ -4765,22 +4765,22 @@ views:
       type: shopping-list
     type: grid
   - cards:
-    - badge_color: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
-        \ %}\n  blue\n{% else %}\n  green\n{% endif %}"
-      badge_icon: "{% if is_state('sensor.bedroom_speaker_next_timer', 'unknown')\
-        \ %}\n  mdi:timer-off\n{% else %}\n  mdi:timer\n{% endif %}"
-      entity: switch.bedroom_speaker_do_not_disturb_switch
+    - badge_color: "{% if is_state('sensor.portable_echo_next_timer', 'unknown') %}\n\
+        \  blue\n{% else %}\n  green\n{% endif %}"
+      badge_icon: "{% if is_state('sensor.portable_echo_next_timer', 'unknown') %}\n\
+        \  mdi:timer-off\n{% else %}\n  mdi:timer\n{% endif %}"
+      entity: switch.portable_echo_do_not_disturb_switch
       fill_container: true
-      icon: "{% if is_state('sensor.bedroom_speaker_next_alarm', 'unknown') %}\n \
-        \ mdi:alarm-off\n{% else %}\n  mdi:alarm\n{% endif %}"
-      icon_color: "{% if is_state('sensor.bedroom_speaker_next_alarm', 'unknown')\
-        \ %}\n  blue\n{% else %}\n  green\n{% endif %}"
+      icon: "{% if is_state('sensor.portable_echo_next_alarm', 'unknown') %}\n  mdi:alarm-off\n\
+        {% else %}\n  mdi:alarm\n{% endif %}"
+      icon_color: "{% if is_state('sensor.portable_echo_next_alarm', 'unknown') %}\n\
+        \  blue\n{% else %}\n  green\n{% endif %}"
       multiline_secondary: true
       picture: ''
       primary: Alexa Alarm
-      secondary: Alarm {{ state_attr('sensor.bedroom_speaker_next_alarm', 'status')
-        }} | Active {{ state_attr('sensor.bedroom_speaker_next_alarm', 'total_active')
-        }} | DND {{ states('switch.bedroom_speaker_do_not_disturb_switch') }}
+      secondary: Alarm {{ state_attr('sensor.portable_echo_next_alarm', 'status')
+        }} | Active {{ state_attr('sensor.portable_echo_next_alarm', 'total_active')
+        }} | DND {{ states('switch.portable_echo_do_not_disturb_switch') }}
       style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
       tap_action:
         action: toggle
@@ -4791,6 +4791,12 @@ views:
       type: tile
     - entity: sensor.inbox_nightdestiny_com
       type: tile
+    - entity: sensor.wake_up_alarm
+      state_color: true
+      type: entity
+    - entity: input_datetime.mice_wakeup_alarm_time
+      fill_container: true
+      type: custom:mushroom-entity-card
     type: grid
   - cards: []
     type: grid

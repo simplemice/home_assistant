@@ -13,7 +13,7 @@ cover:
 
 input_boolean:
   livingroom_curtains:
-    name: "Livingroom Curtains Status"
+    name: "Livingroom Curtains"
     icon: mdi:curtains
 
 input_datetime:
@@ -25,30 +25,6 @@ input_datetime:
     name: Curtains Close Time
     has_date: false
     has_time: true
-
-switch:
-  - platform: template
-    switches:
-      livingroom_curtains:
-        unique_id: a4c3d1c8-c25c-4af2-93fe-616d6411d270
-        friendly_name: "Livingroom Curtains"
-        value_template: "{{ is_state('input_boolean.livingroom_curtains', 'on') }}"
-        turn_on:
-          - service: input_boolean.turn_on
-            target:
-              entity_id: input_boolean.livingroom_curtains
-          - service: script.curtains
-        turn_off:
-          - service: input_boolean.turn_off
-            target:
-              entity_id: input_boolean.livingroom_curtains
-          - service: script.curtains
-        icon_template: >-
-          {% if is_state('input_boolean.livingroom_curtains', 'on') %}
-            mdi:curtains
-          {% else %}
-            mdi:curtains-closed
-          {% endif %}
 
 template:
   - sensor:
