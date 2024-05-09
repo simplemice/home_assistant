@@ -34,6 +34,17 @@ emulated_hue:
       name: "Repite Last Message"
       hidden: false
 
+sensor:
+  - platform: history_stats
+    name: Echo Runtime Month
+    unique_id: echos_runtime
+    entity_id: group.all_echos
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 730
+
 group:
   all_echos:
     - media_player.portable_echo

@@ -16,7 +16,21 @@ mqtt:
       unique_id: jarvis_last_msg_time
       state_topic: "house/polly/msgtime"
 
+group:
+  all_assist:
+    - binary_sensor.livingroom_atom_echo
+
 sensor:
+  - platform: history_stats
+    name: Thomas Runtime Month
+    unique_id: assist_runtime
+    entity_id: group.all_assist
+    state: "on"
+    type: time
+    end: "{{ now().replace(hour=9, minute=0, second=0) }}"
+    duration:
+      hours: 730
+
   - platform: template
     sensors:
       tts_greeting:

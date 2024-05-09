@@ -307,4 +307,4 @@
       my_text: No rain
       switch_to_app: true
       graph_type: bar
-      duration: '5'
+      duration: '0'

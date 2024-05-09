@@ -1925,25 +1925,32 @@ views:
       type: horizontal-stack
     type: grid
   - cards:
-    - card_mod:
-        style: "ha-card {\n  border-style: none;\n  background: none;\n  --mush-title-padding:\
-          \ 0px 0px 0px;\n}  \n"
-      cards:
-      - cards:
-        - entity: sensor.jarvis_last_msg
-          type: tile
-        - entity: sensor.jarvis_last_location
-          type: tile
-        - entity: sensor.jarvis_last_msg_time
-          type: tile
-        - entity: script.play_last_message
-          fill_container: true
-          type: custom:mushroom-entity-card
-        - entity: input_select.polly_voice
-          fill_container: true
-          type: custom:mushroom-select-card
-        type: vertical-stack
-      type: horizontal-stack
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#e45e65'
+        value: 5
+      - color: '#039BE5'
+        value: 7
+      - color: '#e0b400'
+        value: 9
+      color_thresholds_transition: soft
+      entities:
+      - sensor.sleep_time_duration
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:bed
+      lower_bound: 0
+      name: Sleep Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
     type: grid
   - cards:
     - aggregate_func: last
@@ -2056,6 +2063,64 @@ views:
       type: custom:mini-graph-card
     type: grid
   - cards: []
+    type: grid
+  - cards: []
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 100
+      - color: '#e5fa05'
+        value: 250
+      - color: '#f20714'
+        value: 500
+      color_thresholds_transition: soft
+      entities:
+      - sensor.monthly_music
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:lightbulb-cfl
+      lower_bound: 0
+      name: Music Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
+    type: grid
+  - cards:
+    - aggregate_func: last
+      card_mod:
+        class: top-level-graph
+      color_thresholds:
+      - color: '#07f7eb'
+        value: 100
+      - color: '#e5fa05'
+        value: 250
+      - color: '#f20714'
+        value: 500
+      color_thresholds_transition: soft
+      entities:
+      - sensor.monthly_music
+      group_by: date
+      hour24: true
+      hours_to_show: 168
+      icon: mdi:lightbulb-cfl
+      lower_bound: 0
+      name: TV Time Duration (7 days)
+      show:
+        extrema: true
+        fill: fade
+        graph: bar
+        labels: false
+      smoothing: false
+      type: custom:mini-graph-card
     type: grid
   title: Status
   type: sections
@@ -4645,6 +4710,27 @@ views:
   path: assistant
   sections:
   - cards:
+    - card_mod:
+        style: "ha-card {\n  border-style: none;\n  background: none;\n  --mush-title-padding:\
+          \ 0px 0px 0px;\n}  \n"
+      cards:
+      - cards:
+        - entity: sensor.jarvis_last_msg
+          type: tile
+        - entity: sensor.jarvis_last_location
+          type: tile
+        - entity: sensor.jarvis_last_msg_time
+          type: tile
+        - entity: script.play_last_message
+          fill_container: true
+          type: custom:mushroom-entity-card
+        - entity: input_select.polly_voice
+          fill_container: true
+          type: custom:mushroom-select-card
+        type: vertical-stack
+      type: horizontal-stack
+    type: grid
+  - cards:
     - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
       theme: material_dark_green
       title: Shopping Cart
@@ -4677,8 +4763,6 @@ views:
       type: tile
     - entity: sensor.inbox_nightdestiny_com
       type: tile
-    type: grid
-  - cards: []
     type: grid
   - cards: []
     type: grid
