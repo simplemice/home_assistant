@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.2
-Total entity objects | 1411
+Total entity objects | 1435
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 99
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
-Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 104
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 813
+Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 105
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 814
 Entities in the [`fan`](https://www.home-assistant.io/components/fan) domain | 2
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 11
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
@@ -57,7 +57,7 @@ Entities in the [`automation`](https://www.home-assistant.io/components/automati
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
 Entities in the [`number`](https://www.home-assistant.io/components/number) domain | 5
 Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 3
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 25
 
 ## Core integrations that I use
 
