@@ -188,22 +188,27 @@
     before: sunrise
     after: sunset
   action:
-  - if:
-    - condition: state
-      entity_id: binary_sensor.porch_motion
-      state: 'on'
-    then:
-    - service: light.turn_on
-      metadata: {}
-      data: {}
-      target:
-        entity_id: light.porch_bulb
-    else:
-    - service: light.turn_off
-      metadata: {}
-      data: {}
-      target:
-        entity_id: light.porch_bulb
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: binary_sensor.porch_motion
+        state: 'on'
+      sequence:
+      - service: light.turn_on
+        metadata: {}
+        data: {}
+        target:
+          entity_id: light.porch_bulb
+    - conditions:
+      - condition: state
+        entity_id: binary_sensor.porch_motion
+        state: 'off'
+      sequence:
+      - service: light.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id: light.porch_bulb
   mode: single
 - id: '1715172273118'
   alias: Mastodon Gas Price Posting
