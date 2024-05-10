@@ -72,7 +72,8 @@ automation:
             Version {{ states('sensor.latest_version') }} just got released!
             [Changelog](https://github.com/home-assistant/core/releases/tag/{{states('sensor.latest_version')}})
 
-  - alias: HA Started Notification
+  - id: ha_started_notify
+    alias: HA Started Notification
     description: ""
     trigger:
       - platform: homeassistant

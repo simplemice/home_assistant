@@ -55,7 +55,7 @@ automation:
     action:
       - service: timer.start
         data:
-          duration: "{{ states('input_datetime.test_time') }}"
+          duration: "{{ states('input_datetime.cooking_timer_set') }}"
         target:
           entity_id: timer.cooking_timer
 
