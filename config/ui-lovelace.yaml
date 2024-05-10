@@ -621,8 +621,8 @@ views:
         - color: '#FF69B4'
           value: 70
         entities:
-        - sensor.temperature
-        - sensor.humidity
+        - sensor.outside_temp
+        - sensor.outside_humidity
         graph: line
         hours_to_show: 48
         points_per_hour: 1
@@ -673,8 +673,8 @@ views:
         - color: '#FF69B4'
           value: 70
         entities:
-        - sensor.temperature
-        - sensor.humidity
+        - sensor.bedroom_temp_temperature
+        - sensor.bedroom_temp_humidity
         graph: line
         hours_to_show: 48
         points_per_hour: 1
