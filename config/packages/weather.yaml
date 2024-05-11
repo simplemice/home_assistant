@@ -40,13 +40,18 @@ utility_meter:
     name: Rain Monthly
     cycle: monthly
     delta_values: true
+  rain_yearly:
+    source: sensor.pirateweather_precip_intensity
+    name: Rain Yearly
+    cycle: yearly
+    delta_values: true
 
 sensor:
   - platform: history_stats
     name: Dayly Rain Duration
     entity_id: sensor.rain_drop
     state: "on"
-    type: time
+    type: count
     end: "{{ now().replace(hour=9, minute=0, second=0) }}"
     duration:
       hours: 730

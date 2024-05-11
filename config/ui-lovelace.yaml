@@ -1483,12 +1483,6 @@ views:
       update_interval: 1min
     type: grid
   - cards:
-    - aspect_ratio: 56%
-      title: PM & Osone Index
-      type: iframe
-      url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=no2&product=cams&level=surface&lat=7.908&lon=98.341&message=true
-    type: grid
-  - cards:
     - apex_config:
         plotOptions:
           radialBar:
@@ -1631,12 +1625,75 @@ views:
       update_interval: 1min
     type: grid
   - cards:
-    - camera_image: camera.phuket_curve_picture
-      camera_view: auto
-      entities: []
-      image: https://demo.home-assistant.io/stub_config/kitchen.png
-      title: Phuket Tides
-      type: picture-glance
+    - apex_config:
+        plotOptions:
+          radialBar:
+            dataLabels:
+              name:
+                show: false
+              value:
+                show: false
+            endAngle: 300
+            hollow:
+              background: transparent
+              image: false
+              margin: 5
+              size: 30%
+            offsetY: 0
+            startAngle: 0
+      chart_type: radialBar
+      experimental:
+        color_threshold: true
+      header:
+        colorize_states: true
+        show: true
+        show_states: true
+        title: Space Weather
+      series:
+      - color_threshold:
+        - color: green
+          opacity: 1
+          value: 50
+        - color: yellow
+          value: 100
+        - color: red
+          value: 200
+        entity: sensor.solar_flux_index
+        float_precision: 0
+        name: 'Solar Flux '
+        show:
+          extremas: true
+          in_header: true
+        type: column
+      - color_threshold:
+        - color: green
+          opacity: 1
+          value: 25
+        - color: yellow
+          value: 50
+        - color: red
+          value: 75
+        entity: sensor.m_class_1_day_probability
+        name: M-Class
+        type: column
+      - color_threshold:
+        - color: green
+          opacity: 1
+          value: 25
+        - color: yellow
+          value: 50
+        - color: red
+          value: 75
+        entity: sensor.x_class_1_day_probability
+        name: X-Class
+        type: column
+      type: custom:apexcharts-card
+    type: grid
+  - cards:
+    - aspect_ratio: 56%
+      title: PM & Osone Index
+      type: iframe
+      url: https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=default&metricWind=default&zoom=10&overlay=no2&product=cams&level=surface&lat=7.908&lon=98.341&message=true
     type: grid
   - cards:
     - card:
