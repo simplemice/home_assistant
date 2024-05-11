@@ -4822,6 +4822,13 @@ views:
       type: shopping-list
     type: grid
   - cards:
+    - entity: sensor.notify_nightdestiny_com
+      type: tile
+    - entity: sensor.inbox_nightdestiny_com
+      type: tile
+    - entity: sensor.wake_up_alarm
+      state_color: true
+      type: entity
     - badge_color: "{% if is_state('sensor.portable_echo_next_timer', 'unknown') %}\n\
         \  blue\n{% else %}\n  green\n{% endif %}"
       badge_icon: "{% if is_state('sensor.portable_echo_next_timer', 'unknown') %}\n\
@@ -4844,16 +4851,17 @@ views:
       type: custom:mushroom-template-card
     - entity: sensor.micemob_next_alarm
       type: tile
-    - entity: sensor.notify_nightdestiny_com
-      type: tile
-    - entity: sensor.inbox_nightdestiny_com
-      type: tile
-    - entity: sensor.wake_up_alarm
-      state_color: true
-      type: entity
     - entity: input_datetime.mice_wakeup_alarm_time
       fill_container: true
       type: custom:mushroom-entity-card
+    - entity: input_boolean.work_mode
+      type: tile
+    - entity: sensor.work_alarm
+      type: tile
+    - entity: input_datetime.mice_work_alarm_time
+      type: tile
+    - entity: input_datetime.mice_work_alarm_off
+      type: tile
     type: grid
   - cards: []
     type: grid
