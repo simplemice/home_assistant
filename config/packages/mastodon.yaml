@@ -186,7 +186,7 @@ script:
               "Did you know there are currently {{ states('sensor.iss') }} people on the ISS? Well, now you do. #space #iss",
               "The moon is currently in the {{ states('sensor.moon') }} phase. For all you space geeks out there.",
               "I love thunderstorms. Lightning strikes we have gotten in a single 20 minute period {{  states('sensor.lighting_detector_lightning_counter') }}.",
-              "I am running Home Assistant version {{ states('sensor.current_version') }}",
+              "I am running Home Assistant version {{ states('sensor.current_version') }}", 
               "The average temperature Casa de Ratón is {{states('sensor.temperature') | round}} degrees.",
               "We have used the aircon for a total of {{states('sensor.ac_runtime')}} hours in the last 24 hours.",
               "I am currently managing {{ states('sensor.lights_count') }} lights and {{ states('sensor.tracker_count') }} devices.",
