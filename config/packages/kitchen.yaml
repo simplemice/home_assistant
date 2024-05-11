@@ -45,7 +45,7 @@ sensor:
 
 automation:
   - id: test
-    description: "Testing Cooking Timer"
+    alias: "Testing Cooking Timer"
     mode: single
     trigger:
       - platform: state

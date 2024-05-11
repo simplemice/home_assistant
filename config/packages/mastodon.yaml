@@ -72,7 +72,12 @@ script:
     sequence:
       - service: script.mastodon_notify_home
         data:
-          message: "Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % and X-Class flare {{ states('sensor.x_class_1_day_probability') }} % with Solar Flux {{ states('sensor.solar_flux_index') }}"
+          message: >
+            Space Weather:
+            M-Class flare {{ states('sensor.m_class_1_day_probability') }} %
+            X-Class flare {{ states('sensor.x_class_1_day_probability') }} %
+            Solar Flux {{ states('sensor.solar_flux_index') }}
+            #space #weather #spaceshtorm
 
   mastodon_weather:
     sequence:

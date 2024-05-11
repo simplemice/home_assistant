@@ -4814,18 +4814,9 @@ views:
           type: custom:mushroom-select-card
         type: vertical-stack
       type: horizontal-stack
+    title: Thomas Control
     type: grid
   - cards:
-    - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
-      theme: material_dark_green
-      title: Shopping Cart
-      type: shopping-list
-    type: grid
-  - cards:
-    - entity: sensor.notify_nightdestiny_com
-      type: tile
-    - entity: sensor.inbox_nightdestiny_com
-      type: tile
     - entity: sensor.wake_up_alarm
       state_color: true
       type: entity
@@ -4851,19 +4842,30 @@ views:
       type: custom:mushroom-template-card
     - entity: sensor.micemob_next_alarm
       type: tile
+    - entity: sensor.work_alarm
+      type: tile
     - entity: input_datetime.mice_wakeup_alarm_time
       fill_container: true
       type: custom:mushroom-entity-card
-    - entity: input_boolean.work_mode
-      type: tile
-    - entity: sensor.work_alarm
-      type: tile
     - entity: input_datetime.mice_work_alarm_time
       type: tile
     - entity: input_datetime.mice_work_alarm_off
       type: tile
+    - entity: input_boolean.work_mode
+      type: tile
+    title: Alarms
     type: grid
   - cards: []
+    type: grid
+  - cards:
+    - entity: sensor.notify_nightdestiny_com
+      type: tile
+    - entity: sensor.inbox_nightdestiny_com
+      type: tile
+    - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
+      theme: material_dark_green
+      title: Shopping Cart
+      type: shopping-list
     type: grid
   title: Assistant
   type: sections
