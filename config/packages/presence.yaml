@@ -20,6 +20,10 @@ input_datetime:
     name: Work Alarm Time
     has_date: false
     has_time: true
+  mice_work_alarm_off:
+    name: Work Alarm Off
+    has_date: false
+    has_time: true
 
 input_select:
   here_destination_preset:
@@ -37,6 +41,9 @@ input_boolean:
     icon: mdi:account-group
   vacation_mode:
     name: "Vacation Mode"
+    icon: mdi:party-popper
+  work_mode:
+    name: "Work Mode"
     icon: mdi:party-popper
 
 sensor:
@@ -107,6 +114,30 @@ zone:
     icon: mdi:home
 
 automation:
+  - id: 34c71e59-cd69-4481-b758-958807cf3537
+    alias: Turn On Work Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.mice_work_alarm_time', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: homeassistant.turn_on
+        entity_id: input_boolean.work_mode
+
+  - id: 04018017-1cb8-45e0-b81c-b4085a48908d
+    alias: Turn Off Work Mode
+    initial_state: true
+    trigger:
+      - platform: template
+        value_template: "{{ states('sensor.time') == (state_attr('input_datetime.mice_work_alarm_off', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    condition:
+      - condition: state
+        entity_id: input_boolean.work_mode
+        state: "on"
+    action:
+      - service: homeassistant.turn_off
+        entity_id: input_boolean.work_mode
+
   - id: 6d686767-7440-429a-b9e9-b12640663578
     alias: Update Micemob Room Presence
     description: ""
