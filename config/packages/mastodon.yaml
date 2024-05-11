@@ -85,7 +85,8 @@ script:
               Visibility: {{ states('sensor.openweathermap_visibility') }} km
               Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
-            #weather #meteo #phuket
+              Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
+              #weather #meteo #phuket
           image: >-
             {{ [ "/local/media/images/home.jpg",
                   "/local/media/images/home.jpg"] | random }}
