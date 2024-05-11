@@ -24,12 +24,14 @@ recorder:
       - sensor.moon
 
 logbook:
-#  exclude:
-#    domains:
+  exclude:
+    domains:
+      - remote
 
 history:
-#  exclude:
-#    domains:
+  exclude:
+    domains:
+      - remote
 
 logger:
   default: error
