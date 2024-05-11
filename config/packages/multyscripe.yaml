@@ -40,6 +40,7 @@ multiscrape:
         select: "body > main > div > div.container.pb-5.fuel_comparison > div:nth-child(1) > div > div > div > div.th-fuel-table > table > tbody > tr:nth-child(2) > td:nth-child(2)"
         icon: mdi:gas-station
         #value_template: "{{ value and value or '' }}"
+        device_class: monetary
 
   - resource: https://www.motorist.co.th/en/petrol-prices
     scan_interval: 3600
@@ -51,6 +52,7 @@ multiscrape:
         select: "body > main > div > div.container.pb-5.fuel_comparison > div:nth-child(1) > div > div > div > div.th-fuel-table > table > tbody > tr:nth-child(5) > td:nth-child(2)"
         icon: mdi:gas-station
         #value_template: "{{ value and value or '' }}"
+        device_class: monetary
 
   - resource: https://www.motorist.co.th/en/petrol-prices
     scan_interval: 3600
@@ -62,6 +64,7 @@ multiscrape:
         select: "body > main > div > div.container.pb-5.fuel_comparison > div:nth-child(1) > div > div > div > div.th-fuel-table > table > tbody > tr:nth-child(2) > td:nth-child(3)"
         icon: mdi:gas-station
         #value_template: "{{ value and value or '' }}"
+        device_class: monetary
 
   - resource: https://www.motorist.co.th/en/petrol-prices
     scan_interval: 3600
@@ -73,6 +76,7 @@ multiscrape:
         select: "body > main > div > div.container.pb-5.fuel_comparison > div:nth-child(1) > div > div > div > div.th-fuel-table > table > tbody > tr:nth-child(5) > td:nth-child(3)"
         icon: mdi:gas-station
         #value_template: "{{ value and value or '' }}"
+        device_class: monetary
 
   - resource: https://www.motorist.co.th/en/petrol-prices
     scan_interval: 3600
@@ -84,6 +88,7 @@ multiscrape:
         select: "body > main > div > div.container.pb-5.fuel_comparison > div:nth-child(1) > div > div > div > div.th-fuel-table > table > tbody > tr:nth-child(2) > td:nth-child(4)"
         icon: mdi:gas-station
         #value_template: "{{ value and value or '' }}"
+        device_class: monetary
 
   - resource: https://www.motorist.co.th/en/petrol-prices
     scan_interval: 3600
@@ -95,3 +100,4 @@ multiscrape:
         select: "body > main > div > div.container.pb-5.fuel_comparison > div:nth-child(1) > div > div > div > div.th-fuel-table > table > tbody > tr:nth-child(5) > td:nth-child(4)"
         icon: mdi:gas-station
         #value_template: "{{ value and value or '' }}"
+        device_class: monetary
