@@ -16,6 +16,10 @@ input_datetime:
     name: WakeUp Alarm Time
     has_date: false
     has_time: true
+  mice_work_alarm_time:
+    name: Work Alarm Time
+    has_date: false
+    has_time: true
 
 input_select:
   here_destination_preset:
@@ -90,6 +94,10 @@ template:
       - name: "Wake Up Alarm"
         device_class: timestamp
         state: "{{ today_at(states('input_datetime.mice_wakeup_alarm_time')) }}"
+  - sensor:
+      - name: "Work Alarm"
+        device_class: timestamp
+        state: "{{ today_at(states('input_datetime.mice_work_alarm_time')) }}"
 
 zone:
   - name: Home
