@@ -345,11 +345,6 @@
         entity_id: input_boolean.work_mode
         state: 'off'
       sequence:
-      - service: input_boolean.turn_off
-        metadata: {}
-        data: {}
-        target:
-          entity_id: input_boolean.work_mode
       - service: light.turn_off
         target:
           entity_id:
@@ -365,9 +360,14 @@
     - person.simplemice
     to: home
   condition:
-  - condition: state
-    entity_id: light.porch_bulb
-    state: 'on'
+  - condition: and
+    conditions:
+    - condition: state
+      entity_id: light.porch_bulb
+      state: 'on'
+    - condition: sun
+      before: sunrise
+      after: sunset
   action:
   - service: scene.turn_on
     target:
