@@ -376,3 +376,24 @@
       - scene.kitchen_ambient
     data: {}
   mode: single
+- id: '1715521277578'
+  alias: Test Light After Sunset
+  description: ''
+  trigger:
+  - platform: sun
+    event: sunset
+    offset: +0:10:00
+  condition:
+  - condition: state
+    entity_id: person.simplemice
+    state: home
+  action:
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.kitchen_ambient
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.lamp
+  mode: single
