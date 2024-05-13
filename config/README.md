@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.3
-Total entity objects | 1480
+Total entity objects | 1535
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 99
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 837
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 840
 Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 108
-Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 2
+Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 4
 Entities in the [`input_number`](https://www.home-assistant.io/components/input_number) domain | 4
 Entities in the [`input_select`](https://www.home-assistant.io/components/input_select) domain | 8
 Entities in the [`input_boolean`](https://www.home-assistant.io/components/input_boolean) domain | 36
@@ -57,7 +57,7 @@ Entities in the [`number`](https://www.home-assistant.io/components/number) doma
 Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 1
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 19
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 69
 
 ## Core integrations that I use
 
