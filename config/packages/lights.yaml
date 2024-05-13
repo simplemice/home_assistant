@@ -84,6 +84,7 @@ light:
     name: "All Ambient"
     entities:
       - light.downstair_kitchen_ambient
+      - light.livingroom_closet_ambient
 
 input_boolean:
   lights_automation:
