@@ -4,33 +4,50 @@
 #   @package        :   Gas Price
 #   @description    :   Scripe Gas Price automations.
 ###############################################################################
+sensor:
+  - platform: group
+    name: Lowest 91 Gas name
+    unique_id: 91_low_name
+    type: product
+    entities:
+      - sensor.gas_91_price_ptt
+      - sensor.gas_91_price_bcp
+      - sensor.gas_91_price_shell
 
 template:
   - sensor:
       - name: Lowest 91 Gas Price
         unique_id: 91_low_price
         state: >
-          {% if states('sensor.gas_91_price_ptt') | int < states('sensor.gas_91_price_bcp') | int  and states('sensor.gas_91_price_ptt') | int  < states('sensor.gas_91_price_shell') | int %}
-            {{ states('sensor.gas_91_price_ptt') }}
-          {% elif states('sensor.gas_91_price_bcp') | int < states('sensor.gas_91_price_ptt') | int  and states('sensor.gas_91_price_bcp') | int  < states('sensor.gas_91_price_shell') | int %}
-            {{ states('sensor.gas_91_price_bcp') }}
-          {% elif states('sensor.gas_91_price_shell') | int < states('sensor.gas_91_price_ptt') | int  and states('sensor.gas_91_price_shell') | int  < states('sensor.gas_91_price_bcp') | int %}
-            {{ states('sensor.gas_91_price_shell') }}
+          {% set ptt_price = states('sensor.gas_91_price_ptt') | replace('฿', '') | float %}
+          {% set bcp_price = states('sensor.gas_91_price_bcp') | replace('฿', '') | float %}
+          {% set shell_price = states('sensor.gas_91_price_shell') | replace('฿', '') | float %}
+
+          {% if ptt_price <= bcp_price and ptt_price <= shell_price %}
+              {{ states('sensor.gas_91_price_ptt') }}
+          {% elif bcp_price <= ptt_price and bcp_price <= shell_price %}
+              {{ states('sensor.gas_91_price_bcp') }}
+          {% elif shell_price <= ptt_price and shell_price <= bcp_price %}
+              {{ states('sensor.gas_91_price_shell') }}
           {% else %}
-            Something went wrong
+              Something went wrong
           {% endif %}
   - sensor:
       - name: Lowest 95 Gas Price
         unique_id: 95_low_price
         state: >
-          {% if states('sensor.gas_95_price_ptt') | int < states('sensor.gas_95_price_bcp') | int  and states('sensor.gas_95_price_ptt') | int  < states('sensor.gas_95_price_shell') | int %}
-            {{ states('sensor.gas_95_price_ptt') }}
-          {% elif states('sensor.gas_95_price_bcp') | int < states('sensor.gas_95_price_ptt') | int  and states('sensor.gas_95_price_bcp') | int  < states('sensor.gas_95_price_shell') | int %}
-            {{ states('sensor.gas_95_price_bcp') }}
-          {% elif states('sensor.gas_95_price_shell') | int < states('sensor.gas_95_price_ptt') | int  and states('sensor.gas_95_price_shell') | int  < states('sensor.gas_95_price_bcp') | int %}
-            {{ states('sensor.gas_95_price_shell') }}
+          {% set ptt_price = states('sensor.gas_95_price_ptt') | replace('฿', '') | float %}
+          {% set bcp_price = states('sensor.gas_95_price_bcp') | replace('฿', '') | float %}
+          {% set shell_price = states('sensor.gas_95_price_shell') | replace('฿', '') | float %}
+
+          {% if ptt_price <= bcp_price and ptt_price <= shell_price %}
+              {{ states('sensor.gas_95_price_ptt') }}
+          {% elif bcp_price <= ptt_price and bcp_price <= shell_price %}
+              {{ states('sensor.gas_95_price_bcp') }}
+          {% elif shell_price <= ptt_price and shell_price <= bcp_price %}
+              {{ states('sensor.gas_95_price_shell') }}
           {% else %}
-            Something went wrong
+              Something went wrong
           {% endif %}
 
 multiscrape:
