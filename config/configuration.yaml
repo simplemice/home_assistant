@@ -8,6 +8,7 @@ homeassistant:
   whitelist_external_dirs:
     - /config/www/camera_snaps
     - /config/www/media
+    - /config/www/media/images
     - /config/www/tweet_images
     - /config/www/plates
   auth_providers:

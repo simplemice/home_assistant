@@ -253,7 +253,7 @@
   description: ''
   trigger:
   - platform: time
-    at: '10:30:00'
+    at: '10:15:00'
   condition: []
   action:
   - service: script.telegram_gasoline

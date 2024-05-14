@@ -28,9 +28,10 @@ script:
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
               Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
             #weather #meteo #phuket
-          image: >-
-            {{ [ "/local/media/images/weather.jpg",
-                  "/local/media/images/weather1.jpg"] | random }}
+          file: >-
+            {{ [ "/config/www/media/images/weather.jpg",
+                  "/config/www/media/images/weather1.jpg",
+                  "/config/www/media/images/weather2.jpg"] | random }}
           who: "home"
 
   telegram_gasoline:
@@ -39,10 +40,8 @@ script:
       - service: script.telegram_phuket
         data:
           message: " The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt "
-          image: >-
-            {{ [ "/config/www/tweet_images/me.jpeg",
-                  "/config/www/tweet_images/me1.jpeg",
-                  "/config/www/tweet_images/me2.jpeg",
-                  "/config/www/tweet_images/me3.jpeg",
-                  "/config/www/tweet_images/me4.jpeg"] | random }}
+          file: >-
+            {{ [ "/config/www/tweet_images/gas_price.jpg",
+                  "/config/www/tweet_images/gas_price1.jpg",
+                  "/config/www/tweet_images/gas_price2.jpg"] | random }}
           who: "home"
