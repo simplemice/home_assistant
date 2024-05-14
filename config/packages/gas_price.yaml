@@ -4,15 +4,6 @@
 #   @package        :   Gas Price
 #   @description    :   Scripe Gas Price automations.
 ###############################################################################
-sensor:
-  - platform: group
-    name: Lowest 91 Gas name
-    unique_id: 91_low_name
-    type: product
-    entities:
-      - sensor.gas_91_price_ptt
-      - sensor.gas_91_price_bcp
-      - sensor.gas_91_price_shell
 
 template:
   - sensor:
@@ -24,11 +15,11 @@ template:
           {% set shell_price = states('sensor.gas_91_price_shell') | replace('฿', '') | float %}
 
           {% if ptt_price <= bcp_price and ptt_price <= shell_price %}
-              {{ states('sensor.gas_91_price_ptt') }}
+              {{ states('sensor.gas_91_price_ptt') }} at PTT Station
           {% elif bcp_price <= ptt_price and bcp_price <= shell_price %}
-              {{ states('sensor.gas_91_price_bcp') }}
+              {{ states('sensor.gas_91_price_bcp') }} at BCP Station
           {% elif shell_price <= ptt_price and shell_price <= bcp_price %}
-              {{ states('sensor.gas_91_price_shell') }}
+              {{ states('sensor.gas_91_price_shell') }} at Shell Station
           {% else %}
               Something went wrong
           {% endif %}
@@ -41,11 +32,11 @@ template:
           {% set shell_price = states('sensor.gas_95_price_shell') | replace('฿', '') | float %}
 
           {% if ptt_price <= bcp_price and ptt_price <= shell_price %}
-              {{ states('sensor.gas_95_price_ptt') }}
+              {{ states('sensor.gas_95_price_ptt') }} at PTT Station
           {% elif bcp_price <= ptt_price and bcp_price <= shell_price %}
-              {{ states('sensor.gas_95_price_bcp') }}
+              {{ states('sensor.gas_95_price_bcp') }} at BCP Station
           {% elif shell_price <= ptt_price and shell_price <= bcp_price %}
-              {{ states('sensor.gas_95_price_shell') }}
+              {{ states('sensor.gas_95_price_shell') }} at Shell Station
           {% else %}
               Something went wrong
           {% endif %}

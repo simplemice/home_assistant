@@ -60,12 +60,12 @@ script:
                   "/config/www/tweet_images/gas_price2.jpg"] | random }}
           caption: >
             {{ [
-            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. That's more than my morning coffee! #phuket #gasoline #gasstation #ptt",
-            "The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt",
-            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt",
-            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt",
-            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt",
-            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt"
+            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than my morning coffee! #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "The price of Gasohol 91 today {{ states('sensor.lowest_91_gas_price')}}  and Gasohol 95 {{ states('sensor.lowest_95_gas_price')}}  #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt #bcp #shell"
             ] | random }}
 
   ##################
@@ -85,10 +85,10 @@ script:
                   "/config/www/tweet_images/gas_price2.jpg"] | random }}
           caption: >
             {{ [
-            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. That's more than my morning coffee! #phuket #gasoline #gasstation #ptt",
-            "The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt",
-            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt",
-            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt",
-            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt",
-            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt"
+            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than my morning coffee! #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "The price of Gasohol 91 today {{ states('sensor.lowest_91_gas_price')}}  and Gasohol 95 {{ states('sensor.lowest_95_gas_price')}}  #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt #bcp #shell"
             ] | random }}

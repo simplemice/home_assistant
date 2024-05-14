@@ -26,18 +26,17 @@ script:
                 "Drive or sail - Choose your own Phuket adventure! Avail our car, scooter and yacht rental services today!"
             ] | random }}
             You can find us:
-             - Web: https://nightdestiny.com 
-             - Telegram: https://t.me/simplephuket
-             - Whatsapp: http://wa.link/g19x0w
-             - Telegram Channel: https://t.me/live_phuket
-             #phuket #excursions #tours #scooter #rental #car #rawai #naiharn #kata #karon #katabeach #karonbeach
+              - Web: https://nightdestiny.com 
+              - Telegram: https://t.me/simplephuket
+              - Whatsapp: http://wa.link/g19x0w
+              - Telegram Channel: https://t.me/live_phuket
+              #phuket #excursions #tours #scooter #rental #car #rawai #naiharn #kata #karon #katabeach #karonbeach
           image: >-
             {{ [ "/config/www/tweet_images/ad.jpeg",
-                 "/config/www/tweet_images/ad1.jpeg",
-                 "/config/www/tweet_images/ad2.jpeg",
-                 "/config/www/tweet_images/ad3.jpeg",
-                 "/config/www/tweet_images/ad4.jpeg"] | random }}
-          who: "home"
+                  "/config/www/tweet_images/ad1.jpeg",
+                  "/config/www/tweet_images/ad2.jpeg",
+                  "/config/www/tweet_images/ad3.jpeg",
+                  "/config/www/tweet_images/ad4.jpeg"] | random }}
 
   mastodon_git:
     sequence:
@@ -45,28 +44,34 @@ script:
         data:
           message: >-
             Home Assistant Server at Casa de Ratón
-             GitHub: https://github.com/simplemice/home_assistant
-             #homeautomation #github #configuration #status
+              GitHub: https://github.com/simplemice/home_assistant
+              #homeautomation #github #configuration #status
           image: >-
             {{ [ "/config/www/tweet_images/me.jpeg",
                   "/config/www/tweet_images/me1.jpeg",
                   "/config/www/tweet_images/me2.jpeg",
                   "/config/www/tweet_images/me3.jpeg",
                   "/config/www/tweet_images/me4.jpeg"] | random }}
-          who: "home"
 
   mastodon_gasoline:
     sequence:
       - service: script.mastodon_notify_home
         data:
-          message: " The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt "
+          message: >
+            {{ [
+            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than my morning coffee! #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "The price of Gasohol 91 today {{ states('sensor.lowest_91_gas_price')}}  and Gasohol 95 {{ states('sensor.lowest_95_gas_price')}}  #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt #bcp #shell",
+            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt #bcp #shell"
+            ] | random }}
           image: >-
             {{ [ "/config/www/tweet_images/me.jpeg",
                   "/config/www/tweet_images/me1.jpeg",
                   "/config/www/tweet_images/me2.jpeg",
                   "/config/www/tweet_images/me3.jpeg",
                   "/config/www/tweet_iomages/me4.jpeg"] | random }}
-          who: "home"
 
   mastodon_space_weather:
     sequence:
@@ -104,13 +109,11 @@ script:
           image: >-
             {{ [ "/local/media/images/home.jpg",
                   "/local/media/images/home.jpg"] | random }}
-          who: "home"
 
   mastodon_snark:
     sequence:
       - service: script.mastodon_notify_home
         data_template:
-          who: "home"
           message: >
             {{- [
               "Hello people. Look at your house, now back to me. Now back to your house, now back to me. Sadly your house isn't me. But if you switch to #homeassistant your house could be automated like me. ",
@@ -185,7 +188,6 @@ script:
     sequence:
       - service: script.mastodon_notify_home
         data_template:
-          who: home
           message: >
             {{- [
               "I am constantly monitoring Casa de Ratón. For instance I know that {{ states('sensor.lights_runtime') }}",
