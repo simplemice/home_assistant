@@ -165,6 +165,20 @@ script:
         data:
           title: "{{ title }}"
           message: "{{ message }}"
+          data:
+            photo:
+              - url: "{{ image }}"
+
+  telegram_group_test:
+    alias: Telegram Test Notification
+    sequence:
+      - service: notify.telegram_group
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            photo:
+              - file: "{{ image }}"
 
   text_notify:
     alias: "Main Text Notification"

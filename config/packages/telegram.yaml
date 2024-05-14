@@ -41,9 +41,18 @@ script:
       - service: script.telegram_phuket
         data:
           message: " The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt "
-          data:
-            photo:
-              - file: >
-                  {{ [ "/config/www/tweet_images/gas_price.jpg",
-                        "/config/www/tweet_images/gas_price1.jpg",
-                        "/config/www/tweet_images/gas_price2.jpg"] | random }}
+          image: >
+            {{ [ "/config/www/tweet_images/gas_price.jpg",
+                  "/config/www/tweet_images/gas_price1.jpg",
+                  "/config/www/tweet_images/gas_price2.jpg"] | random }}
+
+  telegram_gasoline_test:
+    alias: "Telegram Test Gas Price"
+    sequence:
+      - service: script.telegram_group_test
+        data:
+          message: " The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt "
+          image: >
+            {{ [ "/config/www/tweet_images/gas_price.jpg",
+                  "/config/www/tweet_images/gas_price1.jpg",
+                  "/config/www/tweet_images/gas_price2.jpg"] | random }}

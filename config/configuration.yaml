@@ -4,13 +4,14 @@ homeassistant:
   customize: !include customize.yaml
   packages: !include_dir_named packages
   media_dirs:
-    media: /config/www/media
+    media: /config/www/media/
   whitelist_external_dirs:
-    - /config/www/camera_snaps
-    - /config/www/media
-    - /config/www/media/images
-    - /config/www/tweet_images
-    - /config/www/plates
+    - /config/www/camera_snaps/
+    - /config/www/media/
+    - /config/www/media/images/
+    - /config/www/tweet_images/
+    - /config/www/plates/
+    - /config/www/
   auth_providers:
     - type: trusted_networks
       trusted_networks:
