@@ -340,7 +340,7 @@
               minutes: 1
               seconds: 0
               milliseconds: 0
-          while:
+          until:
           - condition: state
             entity_id: input_boolean.work_mode
             state: 'on'

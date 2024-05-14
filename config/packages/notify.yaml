@@ -167,7 +167,8 @@ script:
           message: "{{ message }}"
           data:
             photo:
-              - url: "{{ image }}"
+              - file: "{{ image }}"
+                caption: "{{ caption }}"
 
   telegram_group_test:
     alias: Telegram Test Notification
@@ -179,6 +180,7 @@ script:
           data:
             photo:
               - file: "{{ image }}"
+                caption: "{{ caption }}"
 
   text_notify:
     alias: "Main Text Notification"

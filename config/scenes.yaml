@@ -73,7 +73,8 @@
       - stop_effect
       supported_color_modes:
       - xy
-      effect:
+      friendly_name: Kitchen Ambient
+      supported_features: 44
       color_mode: xy
       brightness: 255
       hs_color:
@@ -86,12 +87,37 @@
       xy_color:
       - 0.437
       - 0.178
-      friendly_name: Kitchen Ambient
+      state: 'on'
+    light.kitchen_closet_ambient:
+      effect_list:
+      - blink
+      - breathe
+      - okay
+      - channel_change
+      - finish_effect
+      - stop_effect
+      supported_color_modes:
+      - xy
+      friendly_name: Kitchen Closet Ambient
       supported_features: 44
+      color_mode: xy
+      hs_color:
+      - 172.913
+      - 99.608
+      rgb_color:
+      - 1
+      - 255
+      - 225
+      xy_color:
+      - 0.154
+      - 0.392
+      brightness: 255
       state: 'on'
   icon: mdi:led-strip
   metadata:
     light.downstair_kitchen_ambient:
+      entity_only: true
+    light.kitchen_closet_ambient:
       entity_only: true
 - id: '1715623981949'
   name: Closet Off
@@ -154,16 +180,35 @@
       - stop_effect
       supported_color_modes:
       - xy
-      effect:
+      friendly_name: Kitchen Ambient
+      supported_features: 44
       color_mode:
       brightness:
       hs_color:
       rgb_color:
       xy_color:
-      friendly_name: Kitchen Ambient
+      state: 'off'
+    light.kitchen_closet_ambient:
+      effect_list:
+      - blink
+      - breathe
+      - okay
+      - channel_change
+      - finish_effect
+      - stop_effect
+      supported_color_modes:
+      - xy
+      friendly_name: Kitchen Closet Ambient
       supported_features: 44
+      color_mode:
+      hs_color:
+      rgb_color:
+      xy_color:
+      brightness:
       state: 'off'
   icon: mdi:led-strip
   metadata:
     light.downstair_kitchen_ambient:
+      entity_only: true
+    light.kitchen_closet_ambient:
       entity_only: true

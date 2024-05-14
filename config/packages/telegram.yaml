@@ -28,12 +28,25 @@ script:
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
               Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
             #weather #meteo #phuket
-          data:
-            photo:
-              - file: >
-                  {{ [ "/config/www/media/images/weather.jpg",
-                        "/config/www/media/images/weather1.jpg",
-                        "/config/www/media/images/weather2.jpg"] | random }}
+          image: >
+            {{ [ "/config/www/tweet_images/weather.jpg",
+                  "/config/www/tweet_images/weather1.jpg",
+                  "/config/www/tweet_images/weather2.jpg"] | random }}
+          caption: >
+            Weather Information at Phuket:
+              Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
+              Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
+              Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
+              Precipitation: {{ state_translated('binary_sensor.rain_drop') }} - {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
+              AQI: {{ states('sensor.outside_aqi') }} µg/m³
+              UV: {{ states('sensor.owm_ultraviolet_index') }} idx
+              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
+              Wind speed: {{ states('sensor.pirateweather_wind_speed') }} m/s / {{ states('sensor.pirateweather_wind_bearing') }} °
+              Visibility: {{ states('sensor.openweathermap_visibility') }} km
+              Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
+              Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
+              Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
+            #weather #meteo #phuket
 
   telegram_gasoline:
     alias: "Telegram Phuket Gas Price"
@@ -45,6 +58,20 @@ script:
             {{ [ "/config/www/tweet_images/gas_price.jpg",
                   "/config/www/tweet_images/gas_price1.jpg",
                   "/config/www/tweet_images/gas_price2.jpg"] | random }}
+          caption: >
+            {{ [
+            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. That's more than my morning coffee! #phuket #gasoline #gasstation #ptt",
+            "The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt",
+            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt",
+            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt",
+            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt",
+            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt"
+            ] | random }}
+
+  ##################
+  ##################
+  ##################
+  ##################
 
   telegram_gasoline_test:
     alias: "Telegram Test Gas Price"
@@ -56,3 +83,12 @@ script:
             {{ [ "/config/www/tweet_images/gas_price.jpg",
                   "/config/www/tweet_images/gas_price1.jpg",
                   "/config/www/tweet_images/gas_price2.jpg"] | random }}
+          caption: >
+            {{ [
+            "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. That's more than my morning coffee! #phuket #gasoline #gasstation #ptt",
+            "The price of Gasohol 91 today {{ states('sensor.gas_91_price_ptt')}} THB and Gasohol 95 {{ states('sensor.gas_95_price_ptt')}} THB #phuket #gasoline #gasstation #ptt",
+            "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. At least your wheels can't eat that much! #phuket #gasoline #gasstation #ptt",
+            "That is what I call climbing! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation #ptt",
+            "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation #ptt",
+            "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.gas_91_price_ptt')}} THB, and Gasohol 95 is {{ states('sensor.gas_95_price_ptt')}} THB. Looks like we all picked the wrong coin! #phuket #gasoline #gasstation #ptt"
+            ] | random }}

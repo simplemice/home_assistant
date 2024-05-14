@@ -489,7 +489,7 @@ views:
           use_light_color: true
         type: horizontal-stack
       - cards:
-        - entity: light.wled_matrix
+        - entity: light.kitchen_closet_ambient
           fill_container: true
           show_brightness_control: true
           show_color_control: true
