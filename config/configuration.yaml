@@ -11,6 +11,7 @@ homeassistant:
     - /config/www/media/images/
     - /config/www/tweet_images/
     - /config/www/plates/
+    - /config/www/birds/
     - /config/www/
   auth_providers:
     - type: trusted_networks
