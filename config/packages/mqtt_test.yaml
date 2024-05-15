@@ -1,0 +1,8 @@
+mqtt:
+  sensor:
+    - name: "BirdNet All"
+      state_topic: "birdnet/all"
+      unique_id: bird
+    - name: "BirdNet All"
+      state_topic: "birdnet/confident"
+      unique_id: birdnet
