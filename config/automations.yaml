@@ -303,57 +303,51 @@
     - input_boolean.work_mode
   condition: []
   action:
-  - choose:
-    - conditions:
-      - condition: state
-        entity_id: input_boolean.work_mode
-        state: 'on'
-      sequence:
-      - service: light.turn_on
-        metadata: {}
-        data:
-          rgb_color:
-          - 255
-          - 0
-          - 0
-          brightness_pct: 100
-        target:
-          entity_id: light.closet_lamp
-      - repeat:
-          sequence:
-          - service: script.speech_engine
-            data:
-              message: "{{ [\n    \"Reminder: It is time to get ready for work. Donot
-                forget to bid your coffee adieu\",\n    \"Attention: Time to prepare
-                for work. Leave your sense of humor at home it tends to work overtime\",\n
-                \   \"It is time to swap the cozy couch for the office chair. BTW,
-                your cat is already eyeing your spot\",\n    \"Get-ready alert Time
-                to prep for work. Coffee into the thermos, and off you go! Yes, your
-                cat finds this amusing\",\n    \"Donot forget: It is time for work.
-                And yes, your coffee claims it doesnot know you\",\n    \"Maintenance
-                reminder: Time to get ready for work. Your coffee asked not to be
-                disturbed until tomorrow\",\n    \"Consumable status: It's time to
-                head to work. Do recall that your coffee prefers to stay home\"\n]
-                | random }}\n"
-          - delay:
-              hours: 0
-              minutes: 1
-              seconds: 0
-              milliseconds: 0
-          until:
-          - condition: state
-            entity_id: input_boolean.work_mode
-            state: 'on'
-    - conditions:
-      - condition: state
-        entity_id: input_boolean.work_mode
-        state: 'off'
-      sequence:
-      - service: light.turn_off
-        target:
-          entity_id:
-          - light.closet_lamp
-        data: {}
+  - if:
+    - condition: state
+      entity_id: input_boolean.work_mode
+      state: 'on'
+    then:
+    - repeat:
+        sequence:
+        - service: script.speech_engine
+          data:
+            message: "{{ [\n    \"Reminder: It is time to get ready for work. Donot
+              forget to bid your coffee adieu\",\n    \"Attention: Time to prepare
+              for work. Leave your sense of humor at home it tends to work overtime\",\n
+              \   \"It is time to swap the cozy couch for the office chair. BTW, your
+              cat is already eyeing your spot\",\n    \"Get-ready alert Time to prep
+              for work. Coffee into the thermos, and off you go! Yes, your cat finds
+              this amusing\",\n    \"Donot forget: It is time for work. And yes, your
+              coffee claims it doesnot know you\",\n    \"Maintenance reminder: Time
+              to get ready for work. Your coffee asked not to be disturbed until tomorrow\",\n
+              \   \"Consumable status: It's time to head to work. Do recall that your
+              coffee prefers to stay home\"\n] | random }}\n"
+        - delay:
+            hours: 0
+            minutes: 1
+            seconds: 0
+            milliseconds: 0
+        until:
+        - condition: state
+          entity_id: input_boolean.work_mode
+          state: 'on'
+    - service: light.turn_on
+      metadata: {}
+      data:
+        rgb_color:
+        - 255
+        - 0
+        - 0
+        brightness_pct: 100
+      target:
+        entity_id: light.closet_lamp
+    else:
+    - service: light.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.closet_lamp
   mode: single
 - id: '1715440619474'
   alias: Test Back Home Light On

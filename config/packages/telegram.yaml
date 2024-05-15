@@ -15,19 +15,6 @@ script:
         data:
           message: >-
             Weather Information at Phuket:
-              Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
-              Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
-              Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
-              Precipitation: {{ state_translated('binary_sensor.rain_drop') }} - {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
-              AQI: {{ states('sensor.outside_aqi') }} µg/m³
-              UV: {{ states('sensor.owm_ultraviolet_index') }} idx
-              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
-              Wind speed: {{ states('sensor.pirateweather_wind_speed') }} m/s / {{ states('sensor.pirateweather_wind_bearing') }} °
-              Visibility: {{ states('sensor.openweathermap_visibility') }} km
-              Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
-              Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
-              Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
-            #weather #meteo #phuket
           image: >
             {{ [ "/config/www/tweet_images/weather.jpg",
                   "/config/www/tweet_images/weather1.jpg",
@@ -47,6 +34,43 @@ script:
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
               Space Weather: M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
             #weather #meteo #phuket
+
+  telegram_auto_rain:
+    alias: "Telegram Phuket Rain"
+    sequence:
+      - service: script.telegram_phuket
+        data:
+          message: >-
+            Weather Information at Phuket:
+          image: >
+            {{ [ "/config/www/tweet_images/rain.jpg",
+                  "/config/www/tweet_images/rain1.jpg",
+                  "/config/www/tweet_images/rain2.jpg"] | random }}
+          caption: >
+            Rain Started at Phuket Area:
+              Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
+              Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
+              Precipitation: {{ state_translated('binary_sensor.rain_drop') }} - {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
+              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
+              Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
+              Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
+            #rain #weather #phuket
+
+  telegram_auto_about:
+    alias: "Telegram Phuket About"
+    sequence:
+      - service: script.telegram_phuket
+        data:
+          message: >-
+            About Information at Phuket:
+          image: >
+            {{ [ "/config/www/tweet_images/0.jpg",
+                  "/config/www/tweet_images/1.jpg",
+                  "/config/www/tweet_images/2.jpg"] | random }}
+          caption: >
+            Moon Status:
+              Moon: {{ states('sensor.moon') }} 
+            #moon #ad #phuket
 
   telegram_gasoline:
     alias: "Telegram Phuket Gas Price"

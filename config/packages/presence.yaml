@@ -44,7 +44,7 @@ input_boolean:
     icon: mdi:party-popper
   work_mode:
     name: "Work Mode"
-    icon: mdi:party-popper
+    icon: mdi:briefcase
 
 sensor:
   - platform: mqtt_room

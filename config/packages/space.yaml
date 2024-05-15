@@ -155,3 +155,21 @@ automation:
                 "/config/www/tweet_images/moon4.jpeg",
                 "/config/www/tweet_images/moon1.jpeg"
                 ] | random }}
+      - service: script.telegram_auto_moon
+
+script:
+  telegram_auto_moon:
+    alias: "Telegram Phuket Full Moon"
+    sequence:
+      - service: script.telegram_phuket
+        data:
+          message: >-
+            Moon Information at Phuket:
+          image: >
+            {{ [ "/config/www/tweet_images/moon.jpg",
+                  "/config/www/tweet_images/moon1.jpg",
+                  "/config/www/tweet_images/moon2.jpg"] | random }}
+          caption: >
+            Full Moon at Phuket Area:
+              Moon Phase: {{ states('sensor.moon') }}
+            #moon #fullmoon #phuket
