@@ -1,17 +1,26 @@
 template:
-  sensor:
-    - trigger:
-        - platform: mqtt
-          topic: "birdnet"
-        - platform: time
-          at: "00:00:00"
-          id: reset
-      sensor:
-        - unique_id: c893533c-3c06-4ebe-a5bb-da833da0a947
-          name: BirdNET-Go Events
-          state: >
+  - trigger:
+      - platform: mqtt
+        topic: "birdnet"
+      - platform: time
+        at: "00:00:00"
+        id: reset
+    sensor:
+      - unique_id: c893533c-3c06-4ebe-a5bb-da833da0a947
+        name: BirdNET-Go Events
+        state: "{{ today_at(trigger.payload_json.Time) }}"
+        attributes:
+          bird_events: >
             {% if trigger.id == 'reset' %}
               {{ now() }}
             {% else %}
               {{ today_at(trigger.payload_json.Time) }}
             {% endif %}
+              {% else %}
+                {% set time = trigger.payload_json.Time %}
+                {% set name = trigger.payload_json.CommonName %}
+                {% set confidence = trigger.payload_json.Confidence|round(2) * 100 ~ '%' %}
+                {% set current = this.attributes.get('bird_events', []) %}
+                {% set new = dict(time=time, name=name, confidence=confidence) %}
+                {{ current + [new] }}
+              {% endif %}
