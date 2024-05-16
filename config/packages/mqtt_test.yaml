@@ -12,15 +12,12 @@ template:
         attributes:
           bird_events: >
             {% if trigger.id == 'reset' %}
-              {{ now() }}
+              {{ [] }}
             {% else %}
-              {{ today_at(trigger.payload_json.Time) }}
+              {% set time = trigger.payload_json.Time %}
+              {% set name = trigger.payload_json.CommonName %}
+              {% set confidence = trigger.payload_json.Confidence|round(2) * 100 ~ '%' %}
+              {% set current = this.attributes.get('bird_events', []) %}
+              {% set new = dict(time=time, name=name, confidence=confidence) %}
+              {{ current + [new] }}
             {% endif %}
-              {% else %}
-                {% set time = trigger.payload_json.Time %}
-                {% set name = trigger.payload_json.CommonName %}
-                {% set confidence = trigger.payload_json.Confidence|round(2) * 100 ~ '%' %}
-                {% set current = this.attributes.get('bird_events', []) %}
-                {% set new = dict(time=time, name=name, confidence=confidence) %}
-                {{ current + [new] }}
-              {% endif %}
