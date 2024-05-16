@@ -1,5 +1,17 @@
-mqtt:
+template:
   sensor:
-    - name: "BirdNet"
-      state_topic: "birdnet"
-      unique_id: bird
+    - trigger:
+        - platform: mqtt
+          topic: "birdnet"
+        - platform: time
+          at: "00:00:00"
+          id: reset
+      sensor:
+        - unique_id: c893533c-3c06-4ebe-a5bb-da833da0a947
+          name: BirdNET-Go Events
+          state: >
+            {% if trigger.id == 'reset' %}
+              {{ now() }}
+            {% else %}
+              {{ today_at(trigger.payload_json.Time) }}
+            {% endif %}
