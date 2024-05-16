@@ -1,3 +1,10 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   BirdNet-Go
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+
 template:
   - trigger:
       - platform: mqtt
