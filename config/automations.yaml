@@ -409,4 +409,5 @@
   - service: script.mastodon_birds
     metadata: {}
     data: {}
+    enabled: true
   mode: single
