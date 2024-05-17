@@ -4650,9 +4650,9 @@ views:
   path: other
   sections:
   - cards:
-    - content: 'Time|&nbsp; Common Name|Day Count|&nbsp; Max Confidence
+    - content: 'Time|&nbsp; Common Name|Day Count|&nbsp; Max Confidence|&nbsp; Link
 
-        :---|:---|:---:|:---:
+        :---|:---|:---:|:---:|:---:
 
         {%- set t = now() %}
 
@@ -4675,7 +4675,7 @@ views:
         thisbird)) | map(attribute=''confidence'') | max) %}
 
         {{ubird.time}} |&nbsp; {{ubird.name}} | {{ubird_count}} |&nbsp; {{ubird_max_confidence
-        }}
+        }} |&nbsp; https://en.wikipedia.org/wiki/{{ubird.name | replace('' '', ''_'')}}
 
         {%- endfor %}
 

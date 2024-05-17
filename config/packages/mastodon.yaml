@@ -53,6 +53,33 @@ script:
                   "/config/www/tweet_images/me3.jpeg",
                   "/config/www/tweet_images/me4.jpeg"] | random }}
 
+  mastodon_birds:
+    sequence:
+      - service: script.mastodon_notify_home
+        data:
+          message: >
+            {% set bird_list = state_attr('sensor.birdnet_go_events','bird_events') | sort(attribute='time', reverse=true) | map(attribute='name') | unique | list %}
+            {% set bird_objects = state_attr('sensor.birdnet_go_events','bird_events') | sort(attribute='time', reverse=true) %}
+            {{ [
+              "Spread your wings and mind! Today, "{{ bird_objects | length }}" bird species made their appearance with "{{ bird_list | length }}" events! Here's a bird pun for you - Why don't we ever see birds at work? Because they decided to quit their jobs and go-stalk tweeting!",
+              "Sounds of nature alert! We encountered "{{ bird_objects | length }}" different birdsongs today, with a flurry of "{{ bird_list | length }}" events. And remember, bird-watching is like Twitter, but all the tweets are real!",
+              "Chirpy updates! Today our feathered friends gave us "{{ bird_objects | length }}" species and  "{{ bird_list | length }}" bird events. Joke time - Why don't birds use the internet? They already chirped into the right network!",
+              "The chirp-ometer counts "{{ bird_objects | length }}" species in "{{ bird_list | length }}" events today. Here's a feather-light joke: Why don't birds follow GPS? Because they prefer tweet-er!",
+              "It's flocked in! We spotted "{{ bird_objects | length }}" species in "{{ bird_list | length }}" bird events today. Here's a flippant flipper for you: How does a bird with a broken wing manage to land safely? With a 'tweet'-ment plan!",
+              "Our bird-alytics detected "{{ bird_objects | length }}" unique species amongst "{{ bird_list | length }}" events today. Why do birds never lose their way home? Because they always wing it!",
+              "Feather report - today brought us "{{ bird_objects | length }}" bird species and "{{ bird_list | length }}" bird events. Here is today's wing-tip: You know why the bird got a timeout? It wouldn't stop tweeting!",
+              "Bird scores of the day - "{{ bird_objects | length }}" species observed and "{{ bird_list | length }}" tweets released into the wild. Careful when holding a bird, they tend to tweet about everything!",
+              "In the pecking order today, "{{ bird_objects | length }}" species stood out among "{{ bird_list | length }}" birding events. Learn from birds - Why store when you can eat worms all day?!",
+              "Winging it through the day, we identified "{{ bird_objects | length }}" species amidst "{{ bird_list | length }}" avian activities. Perch up and remember - The bird that wakes up early, gets the best worms and the best views!"
+            ] | random }}
+              Birds detected list https://t.me/live_phuket
+            #birdnet #birds #autostatus #phuket
+          image: >-
+            {{ [ "/config/www/tweet_images/bird.jpg",
+                  "/config/www/tweet_images/bird1.jpg",
+                  "/config/www/tweet_images/bird2.jpg",
+                  "/config/www/tweet_iomages/bird3.jpg"] | random }}
+
   mastodon_gasoline:
     sequence:
       - service: script.mastodon_notify_home

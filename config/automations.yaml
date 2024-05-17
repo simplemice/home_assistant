@@ -395,3 +395,18 @@
     target:
       entity_id: scene.lamp
   mode: single
+- id: '1715922054256'
+  alias: Telegram Mastodon Phuket BirdNet
+  description: ''
+  trigger:
+  - platform: time
+    at: '22:01:00'
+  condition: []
+  action:
+  - service: script.telegram_auto_birdnet
+    metadata: {}
+    data: {}
+  - service: script.mastodon_birds
+    metadata: {}
+    data: {}
+  mode: single
