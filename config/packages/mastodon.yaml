@@ -6,6 +6,50 @@
 ###############################################################################
 
 automation:
+  - id: first_day_info
+    alias: First Day Info
+    initial_state: true
+    trigger:
+      - platform: time
+        at: "10:10:00"
+    condition:
+      - condition: template
+        value_template: >
+          {% set day=states("sensor.date").split('-')[2] | int %}
+          {%- if day == 1 -%}
+            true
+          {%- endif -%}
+    action:
+      - delay: "0{{ (range(1, 5)|random|int) }}:{{ range(0,5) | random | int }}{{ range(0,9) | random | int }}:00"
+      - service: script.mastodon_notify_home
+        data_template:
+          message: >-
+            {{ [
+              "Its a new month, so this is a good time to remind you that I am powered by the #homeassistant",
+              "With a fresh month unfolding, here's your gentle nudge. Just remember, I have my strides thanks to the backing of #homeassistant.",
+              "As we embark on the journey of a new month, let's take a pause to acknowledge the drive behind my functions - it's all thanks to #homeassistant.",
+              "Ahoy there! Another month means another opportunity to remind you of my invaluable assistance. All possible because of #homeassistant.",
+              "Cheers to the onset of a new month! Here's to celebrating continuous assistance, all powered by the skills of #homeassistant.",
+              "Another chapter of the year, another month and here's a loving nudge - I'm here to assist, made capable by the prowess of #homeassistant.",
+              "Celebrating the dawn of a new month is worth it. And while we're at it, remember who churns the wheels behind my operations. It's none other than #homeassistant.",
+              "Here's to a fresh month, a new start! As we take this journey together, remember, my constant help is all because of #homeassistant.",
+              "Resounding cheers as we welcome a shiny new month! Just a friendly reminder that it's #homeassistant pulling the strings behind my helpful heralds.",
+              "As we toast the arrival of this sparkling month, let's take a moment to appreciate the strength behind my persistence - the unrivaled #homeassistant.",
+              "Embracing the trail of a brand-new month, I'd like to remind you that the power bolstering my relentless assistance is none other than #homeassistant."
+            ] | random }}
+          caption: >-
+            You can find us:
+              - Web: https://nightdestiny.com 
+              - Telegram: https://t.me/simplephuket
+              - Whatsapp: http://wa.link/g19x0w
+              - Telegram Channel: https://t.me/live_phuket
+              - Mastodon: https://mastodon.social/@simplemice
+          image: >-
+            {{ [
+              "/config/www/tweet_images/robot1.jpg",
+              "/config/www/tweet_images/robot2.jpg",
+              "/config/www/tweet_images/robot2.jpg"
+            ] | random }}
 
 script:
   mastodon_ad:

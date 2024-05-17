@@ -4650,10 +4650,7 @@ views:
   path: other
   sections:
   - cards:
-    - content: 'Time|&nbsp; Common Name|Day Count|&nbsp; Max Confidence|&nbsp; Link
-
-
-        {%- set t = now() %}
+    - content: '{%- set t = now() %}
 
         {%- set bird_list = state_attr(''sensor.birdnet_go_events'',''bird_events'')
         | sort(attribute=''time'', reverse=true) | map(attribute=''name'') | unique
