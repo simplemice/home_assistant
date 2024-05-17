@@ -4652,7 +4652,6 @@ views:
   - cards:
     - content: 'Time|&nbsp; Common Name|Day Count|&nbsp; Max Confidence|&nbsp; Link
 
-        :---|:---|:---:|:---:|:---:
 
         {%- set t = now() %}
 
