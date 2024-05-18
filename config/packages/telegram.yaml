@@ -8,6 +8,28 @@
 automation:
 
 script:
+  telegram_auto_holidays:
+    alias: "Telegram Phuket Holidays"
+    sequence:
+      - service: script.telegram_phuket
+        data_template:
+          message: "Holidays Status"
+          image: >
+            {{ [ "/config/www/tweet_images/holiday.jpg",
+                  "/config/www/tweet_images/holiday1.jpg",
+                  "/config/www/tweet_images/holiday2.jpg",
+                  "/config/www/tweet_images/holiday3.jpg"] | random }}
+          caption: >
+            {% set tasks = state_attr('calendar.holidays_in_thailand', 'all_tasks') | default([]) %}
+            {% if tasks %}
+              Today Holiday is:
+              {% for task in tasks %}
+                - {{ task }}
+              {% endfor %}
+            {% else %}
+              Today No Holiday
+            {% endif %}
+
   telegram_auto_birdnet:
     alias: "Telegram Phuket Birdnet"
     sequence:
@@ -79,21 +101,22 @@ script:
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
             #rain #weather #phuket
 
-  telegram_auto_about:
-    alias: "Telegram Phuket About"
+  telegram_auto_news:
+    alias: "Telegram Phuket News"
     sequence:
       - service: script.telegram_phuket
         data:
           message: >-
             About Information at Phuket:
+              Thailand News: https://t.me/thailand_news
           image: >
-            {{ [ "/config/www/tweet_images/0.jpg",
-                  "/config/www/tweet_images/1.jpg",
-                  "/config/www/tweet_images/2.jpg"] | random }}
+            {{ [ "/config/www/tweet_images/news.jpg",
+                  "/config/www/tweet_images/news1.jpg",
+                  "/config/www/tweet_images/news2.jpg"] | random }}
           caption: >
-            Moon Status:
-              Moon: {{ states('sensor.moon') }} 
-            #moon #ad #phuket
+            More Information at Phuket:
+              Thailand News: https://t.me/thailand_news
+            #about #ad #phuket
 
   telegram_gasoline:
     alias: "Telegram Phuket Gas Price"

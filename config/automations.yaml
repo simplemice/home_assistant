@@ -411,3 +411,17 @@
     data: {}
     enabled: true
   mode: single
+- id: '1716002601688'
+  alias: Teleram Phuket Holidays
+  description: ''
+  trigger:
+  - platform: calendar
+    event: start
+    offset: '8:30:0'
+    entity_id: calendar.holidays_in_thailand
+  condition: []
+  action:
+  - service: script.telegram_auto_holidays
+    metadata: {}
+    data: {}
+  mode: single
