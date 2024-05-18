@@ -371,6 +371,14 @@
         metadata: {}
         target:
           entity_id: scene.before_work_alarm
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 5
+          milliseconds: 0
+      - service: scene.reload
+        metadata: {}
+        data: {}
   mode: single
 - id: '1715440619474'
   alias: Test Back Home Light On
