@@ -150,7 +150,6 @@ script:
                         "Rainfall alert: It's raining. Make sure to check the weather conditions before going outside.",
                         "Rainy day reminder: The weather outside is rainy. Take appropriate measures for your activities."
                     ] | random }}
-              - service: script.telegram_auto_rain
               - service: select.select_option
                 target:
                   entity_id: select.wled_matrix_preset
@@ -222,5 +221,4 @@ script:
                         "Rainfall alert: It's raining. Make sure to check the weather conditions before going outside.",
                         "Rainy day reminder: The weather outside is rainy. Take appropriate measures for your activities."
                     ] | random }}
-              - service: script.telegram_auto_rain
     icon: fas:cloud-rain

@@ -4827,6 +4827,271 @@ views:
       title: International Space Station
       type: custom:vertical-stack-in-card
     type: grid
+  - cards:
+    - cards:
+      - custom_fields:
+          launch_pad: "[[[\n  return `Launch Pad: ${states['sensor.rocket_launch_1'].attributes['launch_pad']}`\n\
+            ]]]\n"
+          location: "[[[\n  return `Location: ${states['sensor.rocket_launch_1'].attributes['launch_location']}`\n\
+            ]]]\n"
+          provider: "[[[\n  return `Provider: ${states['sensor.rocket_launch_1'].attributes[\"\
+            provider\"]}`\n]]]\n"
+          tags: "[[[\n  return `Tags: ${states['sensor.rocket_launch_1'].attributes['tags']}`\n\
+            ]]]\n"
+          target_date: "[[[\n  return `Target Date: ${states['sensor.rocket_launch_1'].attributes['launch_date_target']}`\n\
+            ]]]\n"
+          vehicle: "[[[\n  return `Vehicle: ${states['sensor.rocket_launch_1'].attributes['vehicle']}`\n\
+            ]]]\n"
+        entity: sensor.rocket_launch_1
+        layout: icon_state
+        show_icon: false
+        show_name: false
+        show_state: true
+        styles:
+          card:
+          - font-size: 12px
+          - padding: 10px
+          custom_fields:
+            launch_pad:
+            - align-self: start
+            - justify-self: start
+            location:
+            - align-self: start
+            - justify-self: start
+            provider:
+            - align-self: start
+            - justify-self: start
+            tags:
+            - align-self: start
+            - justify-self: start
+            target_date:
+            - align-self: start
+            - justify-self: start
+            vehicle:
+            - align-self: start
+            - justify-self: start
+          grid:
+          - grid-template-areas: '"s" "provider" "vehicle" "launch_pad" "location"
+              "target_date" "tags"'
+          - grid-template-columns: 1fr
+          - grid-template-rows: 1fr min-content min-content min-content
+          state:
+          - font-weight: bold
+          - font-size: 16px
+          - align-self: start
+          - justify-self: start
+        type: custom:button-card
+      - custom_fields:
+          launch_pad: "[[[\n  return `Launch Pad: ${states['sensor.rocket_launch_2'].attributes['launch_pad']}`\n\
+            ]]]\n"
+          location: "[[[\n  return `Location: ${states['sensor.rocket_launch_2'].attributes['launch_location']}`\n\
+            ]]]\n"
+          provider: "[[[\n  return `Provider: ${states['sensor.rocket_launch_2'].attributes[\"\
+            provider\"]}`\n]]]\n"
+          tags: "[[[\n  return `Tags: ${states['sensor.rocket_launch_2'].attributes['tags']}`\n\
+            ]]]\n"
+          target_date: "[[[\n  return `Target Date: ${states['sensor.rocket_launch_2'].attributes['launch_date_target']}`\n\
+            ]]]\n"
+          vehicle: "[[[\n  return `Vehicle: ${states['sensor.rocket_launch_2'].attributes['vehicle']}`\n\
+            ]]]\n"
+        entity: sensor.rocket_launch_2
+        layout: icon_state
+        show_icon: false
+        show_name: false
+        show_state: true
+        styles:
+          card:
+          - font-size: 12px
+          - padding: 10px
+          custom_fields:
+            launch_pad:
+            - align-self: start
+            - justify-self: start
+            location:
+            - align-self: start
+            - justify-self: start
+            provider:
+            - align-self: start
+            - justify-self: start
+            tags:
+            - align-self: start
+            - justify-self: start
+            target_date:
+            - align-self: start
+            - justify-self: start
+            vehicle:
+            - align-self: start
+            - justify-self: start
+          grid:
+          - grid-template-areas: '"s" "provider" "vehicle" "launch_pad" "location"
+              "target_date" "tags"'
+          - grid-template-columns: 1fr
+          - grid-template-rows: 1fr min-content min-content min-content
+          state:
+          - font-weight: bold
+          - font-size: 16px
+          - align-self: start
+          - justify-self: start
+        type: custom:button-card
+      - custom_fields:
+          launch_pad: "[[[\n  return `Launch Pad: ${states['sensor.rocket_launch_3'].attributes['launch_pad']}`\n\
+            ]]]\n"
+          location: "[[[\n  return `Location: ${states['sensor.rocket_launch_3'].attributes['launch_location']}`\n\
+            ]]]\n"
+          provider: "[[[\n  return `Provider: ${states['sensor.rocket_launch_3'].attributes[\"\
+            provider\"]}`\n]]]\n"
+          tags: "[[[\n  return `Tags: ${states['sensor.rocket_launch_3'].attributes['tags']}`\n\
+            ]]]\n"
+          target_date: "[[[\n  return `Target Date: ${states['sensor.rocket_launch_3'].attributes['launch_date_target']}`\n\
+            ]]]\n"
+          vehicle: "[[[\n  return `Vehicle: ${states['sensor.rocket_launch_3'].attributes['vehicle']}`\n\
+            ]]]\n"
+        entity: sensor.rocket_launch_3
+        layout: icon_state
+        show_icon: false
+        show_name: false
+        show_state: true
+        styles:
+          card:
+          - font-size: 12px
+          - padding: 10px
+          custom_fields:
+            launch_pad:
+            - align-self: start
+            - justify-self: start
+            location:
+            - align-self: start
+            - justify-self: start
+            provider:
+            - align-self: start
+            - justify-self: start
+            tags:
+            - align-self: start
+            - justify-self: start
+            target_date:
+            - align-self: start
+            - justify-self: start
+            vehicle:
+            - align-self: start
+            - justify-self: start
+          grid:
+          - grid-template-areas: '"s" "provider" "vehicle" "launch_pad" "location"
+              "target_date" "tags"'
+          - grid-template-columns: 1fr
+          - grid-template-rows: 1fr min-content min-content min-content
+          state:
+          - font-weight: bold
+          - font-size: 16px
+          - align-self: start
+          - justify-self: start
+        type: custom:button-card
+      - custom_fields:
+          launch_pad: "[[[\n  return `Launch Pad: ${states['sensor.rocket_launch_4'].attributes['launch_pad']}`\n\
+            ]]]\n"
+          location: "[[[\n  return `Location: ${states['sensor.rocket_launch_4'].attributes['launch_location']}`\n\
+            ]]]\n"
+          provider: "[[[\n  return `Provider: ${states['sensor.rocket_launch_4'].attributes[\"\
+            provider\"]}`\n]]]\n"
+          tags: "[[[\n  return `Tags: ${states['sensor.rocket_launch_4'].attributes['tags']}`\n\
+            ]]]\n"
+          target_date: "[[[\n  return `Target Date: ${states['sensor.rocket_launch_4'].attributes['launch_date_target']}`\n\
+            ]]]\n"
+          vehicle: "[[[\n  return `Vehicle: ${states['sensor.rocket_launch_4'].attributes['vehicle']}`\n\
+            ]]]\n"
+        entity: sensor.rocket_launch_4
+        layout: icon_state
+        show_icon: false
+        show_name: false
+        show_state: true
+        styles:
+          card:
+          - font-size: 12px
+          - padding: 10px
+          custom_fields:
+            launch_pad:
+            - align-self: start
+            - justify-self: start
+            location:
+            - align-self: start
+            - justify-self: start
+            provider:
+            - align-self: start
+            - justify-self: start
+            tags:
+            - align-self: start
+            - justify-self: start
+            target_date:
+            - align-self: start
+            - justify-self: start
+            vehicle:
+            - align-self: start
+            - justify-self: start
+          grid:
+          - grid-template-areas: '"s" "provider" "vehicle" "launch_pad" "location"
+              "target_date" "tags"'
+          - grid-template-columns: 1fr
+          - grid-template-rows: 1fr min-content min-content min-content
+          state:
+          - font-weight: bold
+          - font-size: 16px
+          - align-self: start
+          - justify-self: start
+        type: custom:button-card
+      - custom_fields:
+          launch_pad: "[[[\n  return `Launch Pad: ${states['sensor.rocket_launch_5'].attributes['launch_pad']}`\n\
+            ]]]\n"
+          location: "[[[\n  return `Location: ${states['sensor.rocket_launch_5'].attributes['launch_location']}`\n\
+            ]]]\n"
+          provider: "[[[\n  return `Provider: ${states['sensor.rocket_launch_5'].attributes[\"\
+            provider\"]}`\n]]]\n"
+          tags: "[[[\n  return `Tags: ${states['sensor.rocket_launch_5'].attributes['tags']}`\n\
+            ]]]\n"
+          target_date: "[[[\n  return `Target Date: ${states['sensor.rocket_launch_5'].attributes['launch_date_target']}`\n\
+            ]]]\n"
+          vehicle: "[[[\n  return `Vehicle: ${states['sensor.rocket_launch_5'].attributes['vehicle']}`\n\
+            ]]]\n"
+        entity: sensor.rocket_launch_5
+        layout: icon_state
+        show_icon: false
+        show_name: false
+        show_state: true
+        styles:
+          card:
+          - font-size: 12px
+          - padding: 10px
+          custom_fields:
+            launch_pad:
+            - align-self: start
+            - justify-self: start
+            location:
+            - align-self: start
+            - justify-self: start
+            provider:
+            - align-self: start
+            - justify-self: start
+            tags:
+            - align-self: start
+            - justify-self: start
+            target_date:
+            - align-self: start
+            - justify-self: start
+            vehicle:
+            - align-self: start
+            - justify-self: start
+          grid:
+          - grid-template-areas: '"s" "provider" "vehicle" "launch_pad" "location"
+              "target_date" "tags"'
+          - grid-template-columns: 1fr
+          - grid-template-rows: 1fr min-content min-content min-content
+          state:
+          - font-weight: bold
+          - font-size: 16px
+          - align-self: start
+          - justify-self: start
+        type: custom:button-card
+      title: Next 5 Rocket Launches
+      type: vertical-stack
+    type: grid
   - cards: []
     type: grid
   title: Other
