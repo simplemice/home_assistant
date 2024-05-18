@@ -18,17 +18,17 @@ emulated_hue:
     - script
     - climate
   entities:
-    light.bedside_lamp:
-      name: "Bedside Lamp"
+    light.wall_ambient:
+      name: "Wall Light"
       hidden: false
-    light.garage_bulb:
-      name: "Garage Light"
+    scene.kitchen_ambient:
+      name: "Kitchen Ambient"
       hidden: false
-    fan.bedroom_fan:
+    scene.closet_off:
       name: "Bedroom Fan"
       hidden: false
-    climate.bedroom_aircon:
-      name: "Bedroom Aircon"
+    scene.closet_on:
+      name: "Closet"
       hidden: false
     script.play_last_message:
       name: "Repite Last Message"

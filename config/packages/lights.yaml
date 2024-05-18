@@ -86,6 +86,7 @@ light:
       - light.downstair_kitchen_ambient
       - light.livingroom_closet_ambient
       - light.kitchen_closet_ambient
+      - light.wall_ambient
   - platform: group
     name: "Kitchen Ambient"
     entities:
