@@ -121,11 +121,6 @@ sensor:
         value_template: >-
           {{ states | selectattr('state', 'eq', 'unavailable') | map(attribute='entity_id') | list | count }}
 
-      hvac_action:
-        friendly_name: "HVAC Action"
-        unique_id: numbers_hvac
-        value_template: "{{states.climate.bedroom.attributes.hvac_action}}"
-
       today_is:
         friendly_name: "Today is"
         unique_id: today_is

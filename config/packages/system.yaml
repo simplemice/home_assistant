@@ -99,7 +99,14 @@ automation:
                         "Welcome to the automated era! The system has started, and Casa de Ratón is under control.",
                         "Automation protocols engaged. Casa de Ratón is now seamlessly under control.",
                         "Systems are operational. Casa de Ratón is now managed by the automation system.",
-                        "The automation matrix is active. Casa de Ratón is under control for your convenience."
+                        "The automation matrix is active. Casa de Ratón is under control for your convenience.",
+                        "Congratulations! The system has finished its warm-up stretches and is ready to compete in the automation Olympics. Casa de Ratón is now under unrivaled control. Now let's shoot for that gold medal",
+                        "Ta-da! Like a well-behaved gerbil on a wheel, our automation system is up and smoothly running. Casa de Ratón is at your service. Feel free to sit back, relax, and enjoy the ride.",
+                        "The starting gun has sounded, and we're off to the races! Automated house management has taken off faster than a hare in a cartoon. Sit tight, because Casa de Ratón has everything under control – and we're not tortoise about it.",
+                        "Welcome to the future – the robots haven't taken over yet, but they've kindly agreed to run Casa de Ratón. So sit back, relax, and let's enjoy this wild ride together",
+                        "Like a superhero soaring through the sky, our automation protocols are now engaged. With super-powered precision, every nook and cranny of Casa de Ratón is under control",
+                        "All systems are Go! Go! Go! Unlike my nephew’s failed science project, the automation in Casa de Ratón is now fully operational and expertly managed",
+                        "Buckle up! The automation matrix is live, and it's more exciting than a sci-fi movie marathon. Casa de Ratón is under control – popcorn not included."
                     ] | random }}
           - conditions:
               - condition: state
@@ -118,5 +125,12 @@ automation:
                         "Welcome to the automated era! The system has started, and Casa de Ratón is under control.",
                         "Automation protocols engaged. Casa de Ratón is now seamlessly under control.",
                         "Systems are operational. Casa de Ratón is now managed by the automation system.",
-                        "The automation matrix is active. Casa de Ratón is under control for your convenience."
+                        "The automation matrix is active. Casa de Ratón is under control for your convenience.",
+                        "Congratulations! The system has finished its warm-up stretches and is ready to compete in the automation Olympics. Casa de Ratón is now under unrivaled control. Now let's shoot for that gold medal",
+                        "Ta-da! Like a well-behaved gerbil on a wheel, our automation system is up and smoothly running. Casa de Ratón is at your service. Feel free to sit back, relax, and enjoy the ride.",
+                        "The starting gun has sounded, and we're off to the races! Automated house management has taken off faster than a hare in a cartoon. Sit tight, because Casa de Ratón has everything under control – and we're not tortoise about it.",
+                        "Welcome to the future – the robots haven't taken over yet, but they've kindly agreed to run Casa de Ratón. So sit back, relax, and let's enjoy this wild ride together",
+                        "Like a superhero soaring through the sky, our automation protocols are now engaged. With super-powered precision, every nook and cranny of Casa de Ratón is under control",
+                        "All systems are Go! Go! Go! Unlike my nephew’s failed science project, the automation in Casa de Ratón is now fully operational and expertly managed",
+                        "Buckle up! The automation matrix is live, and it's more exciting than a sci-fi movie marathon. Casa de Ratón is under control – popcorn not included."
                     ] | random }}
