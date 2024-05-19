@@ -111,10 +111,9 @@ script:
               Thailand News: https://t.me/thailand_news
           image: >
             {{ [ "/config/www/tweet_images/news.jpg",
-                  "/config/www/tweet_images/news1.jpg",
-                  "/config/www/tweet_images/news2.jpg"] | random }}
+                  "/config/www/tweet_images/news1.jpg"] | random }}
           caption: >
-            More Information at Phuket:
+            More Information about Phuket:
               Thailand News: https://t.me/thailand_news
             #about #ad #phuket
 
@@ -179,5 +178,5 @@ script:
 
               Vehicle: {{ states['sensor.rocket_launch_5'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_5'].attributes["launch_date_target"] }}
                Tags: {{ states['sensor.rocket_launch_5'].attributes["tags"] }}
-               
+
             #space #launch #automation

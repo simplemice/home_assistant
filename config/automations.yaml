@@ -241,7 +241,7 @@
   description: ''
   trigger:
   - platform: time
-    at: '10:00:00'
+    at: 09:55:00
   condition: []
   action:
   - service: script.telegram_auto_weather
