@@ -15,7 +15,7 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.4
-Total entity objects | 1611
+Total entity objects | 1675
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 102
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
@@ -50,12 +50,12 @@ Entities in the [`tts`](https://www.home-assistant.io/components/tts) domain | 2
 Entities in the [`calendar`](https://www.home-assistant.io/components/calendar) domain | 10
 Entities in the [`media_player`](https://www.home-assistant.io/components/media_player) domain | 4
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
-Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 43
+Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 44
 Entities in the [`wake_word`](https://www.home-assistant.io/components/wake_word) domain | 1
 Entities in the [`stt`](https://www.home-assistant.io/components/stt) domain | 1
 Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
 Entities in the [`time`](https://www.home-assistant.io/components/time) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 39
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 102
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 46
 Entities in the [`event`](https://www.home-assistant.io/components/event) domain | 1
 

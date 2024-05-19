@@ -147,6 +147,35 @@ script:
             "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! #phuket #gasoline #gasstation "
             ] | random }}
 
+  telegram_rocket_launch:
+    alias: "Telegram Rocket Lauch Messages"
+    sequence:
+      - service: script.telegram_phuket
+        data:
+          message: " "
+          image: >
+            {{ [ "/config/www/tweet_images/space.jpg",
+                  "/config/www/tweet_images/space.jpg",
+                  "/config/www/tweet_images/space.jpg"] | random }}
+          caption: >
+            Space Launch:
+              Vehicle: {{ states['sensor.rocket_launch_1'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_1'].attributes["launch_date_target"] }}
+               Tags: {{ states['sensor.rocket_launch_1'].attributes["tags"] }}
+
+              Vehicle: {{ states['sensor.rocket_launch_2'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_2'].attributes["launch_date_target"] }}
+               Tags: {{ states['sensor.rocket_launch_2'].attributes["tags"] }}
+
+              Vehicle: {{ states['sensor.rocket_launch_3'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_3'].attributes["launch_date_target"] }} 
+               Tags: {{ states['sensor.rocket_launch_3'].attributes["tags"] }}
+
+              Vehicle: {{ states['sensor.rocket_launch_4'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_4'].attributes["launch_date_target"] }} 
+               Tags: {{ states['sensor.rocket_launch_4'].attributes["tags"] }}
+
+              Vehicle: {{ states['sensor.rocket_launch_5'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_5'].attributes["launch_date_target"] }}
+               Tags: {{ states['sensor.rocket_launch_5'].attributes["tags"] }}
+
+            #space #launch #automation
+
   ##################
   ##################
   ##################
