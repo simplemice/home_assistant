@@ -114,7 +114,7 @@ zone:
     icon: mdi:home
 
 automation:
-  - id: 34c71e59-cd69-4481-b758-958807cf3537
+  - id: 34c71e59-cd69-4481-c768-968807cf3537
     alias: Turn On Work Mode
     initial_state: true
     trigger:
@@ -124,7 +124,7 @@ automation:
       - service: homeassistant.turn_on
         entity_id: input_boolean.work_mode
 
-  - id: 04018017-1cb8-45e0-b81c-b4085a48908d
+  - id: 04018017-1cb8-45e0-c31d-b4005a48908d
     alias: Turn Off Work Mode
     initial_state: true
     trigger:
