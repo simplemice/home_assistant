@@ -5,6 +5,15 @@
 #   @description    :   A Collection of Notification Scripts and Configs.
 ###############################################################################
 
+mqtt:
+  sensor:
+    - name: "Last Notification Msg"
+      state_topic: "house/notify/lastmsg"
+      unique_id: last_notify_msg
+    - name: "Last Notification Msg Time"
+      unique_id: last_notify_msg_time
+      state_topic: "house/notify/msgtime"
+
 tts:
   - platform: amazon_polly
     aws_access_key_id: !secret poly_id
@@ -181,6 +190,28 @@ script:
             photo:
               - file: "{{ image }}"
                 caption: "{{ caption }}"
+      - service: mqtt.publish
+        data_template:
+          topic: "house/notify/lastmsg"
+          payload: >
+            {% if msg_summary == 'recall' %}
+              {% set msg_summary = '{{states(''sensor.last_notify_msg'')}}' %}
+            {% else %}
+              {% if msg_summary %}
+                {% set message = msg_summary %}
+              {% endif %}
+              {%- macro cleanup(data) -%}
+                {%- for item in data.split("\n")  if item | trim != "" -%}
+                  {{ item | trim }} {% endfor -%}
+              {%- endmacro -%}
+              {{- cleanup( message | striptags | truncate(220) ) -}}
+            {% endif %}
+      - service: mqtt.publish
+        data_template:
+          topic: "house/notify/msgtime"
+          payload: >
+            {{ now().strftime("%-I") }}:{{ now().strftime("%M") }} {{ now().strftime("%p") }}
+          retain: true
 
   text_notify:
     alias: "Main Text Notification"
