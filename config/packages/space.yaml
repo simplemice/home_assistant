@@ -87,24 +87,11 @@ automation:
                  "/config/www/tweet_images/iss3.jpg",
                  "/config/www/tweet_images/iss4.jpg",
                  "/config/www/tweet_images/iss2.jpg"] | random }}
-      - service: script.twitter_notify_image
-        data_template:
-          tweet: >-
-            {{ [
-            "The #ISS is passing over. Wave. #Space #theycanseeourhouse ",
-            "The #ISS just flew by with there are {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people doing cool stuff. #Space #theycanseeourhouse",
-            "The #ISS just flew by with {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people in it. #Space #theycanseeourhouse"
-            ] | random }}
-          image: >-
-            {{ [ "/config/www/tweet_images/iss.jpg",
-                 "/config/www/tweet_images/iss3.jpg",
-                 "/config/www/tweet_images/iss4.jpg",
-                 "/config/www/tweet_images/iss2.jpg"] | random }}
 
   - id: full_moon
     initial_state: true
     mode: restart
-    alias: "Mastodon Full Moon Post"
+    alias: "Full Moon Notification"
     trigger:
       - platform: sun
         event: sunset
@@ -116,38 +103,54 @@ automation:
     action:
       - service: script.speech_engine
         data_template:
-          who: "{{ states.sensor.alexa_audio.state }}"
           message: >
-            <p>
               {{ [
-              'There is a Full Moon out tonight. and this time it is the <emphasis>actual</emphasis> moon. And <emphasis>not</emphasis> the neighbor. ',
-              'Hey look, There is the full moon. ',
-              'The moon is <emphasis>huge<e/mphasis>! And full. ',
-              'If you went outside right now you might see the full moon. <break time="2s"/> Of course if you wait long enough there will be one inside the house too. ',
-              'If you want to see the full moon, <emphasis>tonight is the night</emphasis>.']
-              | random }}
-            </p>
-      - service: script.twitter_notify_image
-        data_template:
-          tweet: >-
-            {{ [
-            "There is a Full Moon out tonight, and this time it's the actual moon and not the neighbor. ",
-            "Hey look kids, There's the full moon. ",
-            "The moon is huge! And full. "] | random + "#Space #fullmoon"}}
-          image: >-
-            {{ [ "/config/www/tweet_images/full_moon.jpg",
-                "/config/www/tweet_images/moon2.jpeg",
-                "/config/www/tweet_images/moon3.jpeg",
-                "/config/www/tweet_images/moon4.jpeg",
-                "/config/www/tweet_images/moon1.jpeg"
-                ] | random }}
+              "Don't miss out on the moonlit magic. A full moon tonight! And no, we're not asking you to turn into a werewolf",
+              "Catch the Moon's best performance tonight: a 100% illuminated sky! Just make sure not to blame your lunacy on it",
+              "Tonight's forecast: 100% chance of a full moon. And zero percent chance of it being cheese... unfortunately",
+              "Full moon alert tonight! If you start howling, don't worry – we won't judge",
+              "Look out, the moon's in full glory tonight. Werewolves? We're not saying anything...just beware",
+              "Tonight, the moon is playing its leading role in the sky! Don't let the neighbor's bald head fool you, look up",
+              "Enjoy the full moon tonight! Just remember, staring too long might turn you into Picasso's next inspiration",
+              "The Moon's on full display tonight! Hopefully not as full as after your ice cream binge...",
+              "Be sure not to mistake the neighbor's bright porch light for the full moon tonight",
+              "Full Moon party in the sky tonight! Just be sure, it's the moon and not a spotlight on your hidden stash of cookies",
+              "The moon is doing the whole 'being round and fully visible' thing tonight. Can't blame us if your belly is doing the same",
+              "Howling at the moon is scientifically proven to rid you of Monday blues. Don't knock it until you've tried it under tonight's full moon",
+              "High tide in the sky tonight with a full moon! And remember, it's not okay to blame the moon for high 'tide' in your laundry room",
+              "Remember to enjoy the full moon tonight, but don’t confuse it for a lunar eclipse when your neighbor's satellite dish gets in the way",
+              "Tonight's full moon is a sight to behold. But no, it's still not close enough to reach for a moon cheese sample",
+              "Tonight you can see the full lunar landing site from your backyard! Just don't expect any astronauts to wave back",
+              "A full moon tonight! But no, your phone battery won't die faster because of it",
+              "The moon has rounded up its act tonight! If your kid is bouncing off walls, can’t necessarily blame lunar gravity, can we?",
+              "Catch the stunning full moon tonight! But don't fret, there's no alien invasion planned...as far as we know",
+              "Tonight's full moon: a perfect excuse to gaze skyward and ponder life's big questions. Like, why did they open a salad place next to a donut shop?"
+              ] | random }}
       - service: script.mastodon_notify_image
         data_template:
-          tweet: >-
+          message: >-
             {{ [
-            "There is a Full Moon out tonight, and this time it's the actual moon and not the neighbor. ",
-            "Hey look kids, There's the full moon. ",
-            "The moon is huge! And full. "] | random + "#Space #fullmoon"}}
+              "Don't miss out on the moonlit magic. A full moon tonight! And no, we're not asking you to turn into a werewolf",
+              "Catch the Moon's best performance tonight: a 100% illuminated sky! Just make sure not to blame your lunacy on it",
+              "Tonight's forecast: 100% chance of a full moon. And zero percent chance of it being cheese... unfortunately",
+              "Full moon alert tonight! If you start howling, don't worry – we won't judge",
+              "Look out, the moon's in full glory tonight. Werewolves? We're not saying anything...just beware",
+              "Tonight, the moon is playing its leading role in the sky! Don't let the neighbor's bald head fool you, look up",
+              "Enjoy the full moon tonight! Just remember, staring too long might turn you into Picasso's next inspiration",
+              "The Moon's on full display tonight! Hopefully not as full as after your ice cream binge...",
+              "Be sure not to mistake the neighbor's bright porch light for the full moon tonight",
+              "Full Moon party in the sky tonight! Just be sure, it's the moon and not a spotlight on your hidden stash of cookies",
+              "The moon is doing the whole 'being round and fully visible' thing tonight. Can't blame us if your belly is doing the same",
+              "Howling at the moon is scientifically proven to rid you of Monday blues. Don't knock it until you've tried it under tonight's full moon",
+              "High tide in the sky tonight with a full moon! And remember, it's not okay to blame the moon for high 'tide' in your laundry room",
+              "Remember to enjoy the full moon tonight, but don’t confuse it for a lunar eclipse when your neighbor's satellite dish gets in the way",
+              "Tonight's full moon is a sight to behold. But no, it's still not close enough to reach for a moon cheese sample",
+              "Tonight you can see the full lunar landing site from your backyard! Just don't expect any astronauts to wave back",
+              "A full moon tonight! But no, your phone battery won't die faster because of it",
+              "The moon has rounded up its act tonight! If your kid is bouncing off walls, can’t necessarily blame lunar gravity, can we?",
+              "Catch the stunning full moon tonight! But don't fret, there's no alien invasion planned...as far as we know",
+              "Tonight's full moon: a perfect excuse to gaze skyward and ponder life's big questions. Like, why did they open a salad place next to a donut shop?"
+            ] | random + "#Space #fullmoon"}}
           image: >-
             {{ [ "/config/www/tweet_images/full_moon.jpg",
                 "/config/www/tweet_images/moon2.jpeg",
@@ -158,18 +161,3 @@ automation:
       - service: script.telegram_auto_moon
 
 script:
-  telegram_auto_moon:
-    alias: "Telegram Phuket Full Moon"
-    sequence:
-      - service: script.telegram_phuket
-        data:
-          message: >-
-            Moon Information at Phuket:
-          image: >
-            {{ [ "/config/www/tweet_images/moon.jpg",
-                  "/config/www/tweet_images/moon1.jpg",
-                  "/config/www/tweet_images/moon2.jpg"] | random }}
-          caption: >
-            Full Moon at Phuket Area:
-              Moon Phase: {{ states('sensor.moon') }}
-            #moon #fullmoon #phuket

@@ -5115,6 +5115,10 @@ views:
         - entity: script.play_last_message
           fill_container: true
           type: custom:mushroom-entity-card
+        - entity: sensor.last_notification_msg
+          type: tile
+        - entity: sensor.last_notification_msg_time
+          type: tile
         - entity: input_select.polly_voice
           fill_container: true
           type: custom:mushroom-select-card
@@ -5164,10 +5168,6 @@ views:
   - cards: []
     type: grid
   - cards:
-    - entity: sensor.notify_nightdestiny_com
-      type: tile
-    - entity: sensor.inbox_nightdestiny_com
-      type: tile
     - style: "ha-card { \nbackground-color: rgba(0,0,0,0);\nbox-shadow: none;\n}\n"
       theme: material_dark_green
       title: Shopping Cart

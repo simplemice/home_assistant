@@ -161,16 +161,33 @@ script:
         data:
           title: "{{ title }}"
           message: "{{ message }}"
+      - service: mqtt.publish
+        data_template:
+          topic: "house/notify/lastmsg"
+          payload: >
+            {% if msg_summary == 'recall' %}
+              {% set msg_summary = '{{states(''sensor.last_notify_msg'')}}' %}
+            {% else %}
+              {% if msg_summary %}
+                {% set message = msg_summary %}
+              {% endif %}
+              {%- macro cleanup(data) -%}
+                {%- for item in data.split("\n")  if item | trim != "" -%}
+                  {{ item | trim }} {% endfor -%}
+              {%- endmacro -%}
+              {{- cleanup( message | striptags | truncate(220) ) -}}
+            {% endif %}
+      - service: mqtt.publish
+        data_template:
+          topic: "house/notify/msgtime"
+          payload: >
+            {{ now().strftime("%-I") }}:{{ now().strftime("%M") }} {{ now().strftime("%p") }}
+          retain: true
 
   telegram_phuket:
-    alias: Telegram Phuket Notification
+    alias: Telegram Phuket Channel Notification
     sequence:
-      - service: >
-          {% if who == 'simplemice' %}
-            notify.telegram_mice
-          {% else %}
-            notify.telegram_phuket
-          {% endif %}
+      - service: notify.telegram_phuket
         data:
           title: "{{ title }}"
           message: "{{ message }}"
@@ -337,22 +354,6 @@ script:
             {% set msg = msg + ' ' + message %}
             {% set msg = msg + ' #autostatus #iot #smarthome #homeassistant' %}
             {{ msg }}
-          data:
-            media: >-
-              {{ image }}
-
-  twitter_notify_image:
-    alias: Twitter Image Notification
-    sequence:
-      - service: >
-          {% if who == 'simplemice' %}
-            notify.twitter
-          {% else %}
-            notify.twitter
-          {% endif %}
-        data_template:
-          message: >-
-            {{ tweet }} #iot #smarthome #homeassistant
           data:
             media: >-
               {{ image }}

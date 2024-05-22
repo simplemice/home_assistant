@@ -236,29 +236,6 @@
     metadata: {}
     data: {}
   mode: single
-- id: '1715178071678'
-  alias: Telegram Phuket Weather Post
-  description: ''
-  trigger:
-  - platform: time
-    at: 09:55:00
-  condition: []
-  action:
-  - service: script.telegram_auto_weather
-    metadata: {}
-    data: {}
-  mode: single
-- id: '1715179083522'
-  alias: Telegram Gas Price Posting
-  description: ''
-  trigger:
-  - platform: time
-    at: 09:10:00
-  condition: []
-  action:
-  - service: script.telegram_gasoline
-    data: {}
-  mode: single
 - id: '1715182243826'
   alias: Awtrix Gas Price
   description: ''
@@ -483,18 +460,4 @@
     metadata: {}
     data: {}
     enabled: true
-  mode: single
-- id: '1716002601688'
-  alias: Teleram Phuket Holidays
-  description: ''
-  trigger:
-  - platform: calendar
-    event: start
-    offset: '8:30:0'
-    entity_id: calendar.holidays_in_thailand
-  condition: []
-  action:
-  - service: script.telegram_auto_holidays
-    metadata: {}
-    data: {}
   mode: single
