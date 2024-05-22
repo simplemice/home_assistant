@@ -104,28 +104,28 @@ automation:
       - service: script.speech_engine
         data_template:
           message: >
-              {{ [
-              "Don't miss out on the moonlit magic. A full moon tonight! And no, we're not asking you to turn into a werewolf",
-              "Catch the Moon's best performance tonight: a 100% illuminated sky! Just make sure not to blame your lunacy on it",
-              "Tonight's forecast: 100% chance of a full moon. And zero percent chance of it being cheese... unfortunately",
-              "Full moon alert tonight! If you start howling, don't worry – we won't judge",
-              "Look out, the moon's in full glory tonight. Werewolves? We're not saying anything...just beware",
-              "Tonight, the moon is playing its leading role in the sky! Don't let the neighbor's bald head fool you, look up",
-              "Enjoy the full moon tonight! Just remember, staring too long might turn you into Picasso's next inspiration",
-              "The Moon's on full display tonight! Hopefully not as full as after your ice cream binge...",
-              "Be sure not to mistake the neighbor's bright porch light for the full moon tonight",
-              "Full Moon party in the sky tonight! Just be sure, it's the moon and not a spotlight on your hidden stash of cookies",
-              "The moon is doing the whole 'being round and fully visible' thing tonight. Can't blame us if your belly is doing the same",
-              "Howling at the moon is scientifically proven to rid you of Monday blues. Don't knock it until you've tried it under tonight's full moon",
-              "High tide in the sky tonight with a full moon! And remember, it's not okay to blame the moon for high 'tide' in your laundry room",
-              "Remember to enjoy the full moon tonight, but don’t confuse it for a lunar eclipse when your neighbor's satellite dish gets in the way",
-              "Tonight's full moon is a sight to behold. But no, it's still not close enough to reach for a moon cheese sample",
-              "Tonight you can see the full lunar landing site from your backyard! Just don't expect any astronauts to wave back",
-              "A full moon tonight! But no, your phone battery won't die faster because of it",
-              "The moon has rounded up its act tonight! If your kid is bouncing off walls, can’t necessarily blame lunar gravity, can we?",
-              "Catch the stunning full moon tonight! But don't fret, there's no alien invasion planned...as far as we know",
-              "Tonight's full moon: a perfect excuse to gaze skyward and ponder life's big questions. Like, why did they open a salad place next to a donut shop?"
-              ] | random }}
+            {{ [
+            "Don't miss out on the moonlit magic. A full moon tonight! And no, we're not asking you to turn into a werewolf",
+            "Catch the Moon's best performance tonight: a 100% illuminated sky! Just make sure not to blame your lunacy on it",
+            "Tonight's forecast: 100% chance of a full moon. And zero percent chance of it being cheese... unfortunately",
+            "Full moon alert tonight! If you start howling, don't worry – we won't judge",
+            "Look out, the moon's in full glory tonight. Werewolves? We're not saying anything...just beware",
+            "Tonight, the moon is playing its leading role in the sky! Don't let the neighbor's bald head fool you, look up",
+            "Enjoy the full moon tonight! Just remember, staring too long might turn you into Picasso's next inspiration",
+            "The Moon's on full display tonight! Hopefully not as full as after your ice cream binge...",
+            "Be sure not to mistake the neighbor's bright porch light for the full moon tonight",
+            "Full Moon party in the sky tonight! Just be sure, it's the moon and not a spotlight on your hidden stash of cookies",
+            "The moon is doing the whole 'being round and fully visible' thing tonight. Can't blame us if your belly is doing the same",
+            "Howling at the moon is scientifically proven to rid you of Monday blues. Don't knock it until you've tried it under tonight's full moon",
+            "High tide in the sky tonight with a full moon! And remember, it's not okay to blame the moon for high 'tide' in your laundry room",
+            "Remember to enjoy the full moon tonight, but don’t confuse it for a lunar eclipse when your neighbor's satellite dish gets in the way",
+            "Tonight's full moon is a sight to behold. But no, it's still not close enough to reach for a moon cheese sample",
+            "Tonight you can see the full lunar landing site from your backyard! Just don't expect any astronauts to wave back",
+            "A full moon tonight! But no, your phone battery won't die faster because of it",
+            "The moon has rounded up its act tonight! If your kid is bouncing off walls, can’t necessarily blame lunar gravity, can we?",
+            "Catch the stunning full moon tonight! But don't fret, there's no alien invasion planned...as far as we know",
+            "Tonight's full moon: a perfect excuse to gaze skyward and ponder life's big questions. Like, why did they open a salad place next to a donut shop?"
+            ] | random }}
       - service: script.mastodon_notify_image
         data_template:
           message: >-
@@ -150,7 +150,7 @@ automation:
               "The moon has rounded up its act tonight! If your kid is bouncing off walls, can’t necessarily blame lunar gravity, can we?",
               "Catch the stunning full moon tonight! But don't fret, there's no alien invasion planned...as far as we know",
               "Tonight's full moon: a perfect excuse to gaze skyward and ponder life's big questions. Like, why did they open a salad place next to a donut shop?"
-            ] | random + "#Space #fullmoon"}}
+            ] | random + "#space #fullmoon"}}
           image: >-
             {{ [ "/config/www/tweet_images/full_moon.jpg",
                 "/config/www/tweet_images/moon2.jpeg",

@@ -110,7 +110,7 @@ views:
           left: 35%
           top: 30%
         type: state-icon
-      - entity: binary_sensor.garage_door_motion_occupancy
+      - entity: binary_sensor.porch_motion
         style:
           left: 52%
           top: 75%
@@ -130,7 +130,7 @@ views:
           left: 95%
           top: 10%
         type: state-icon
-      - entity: light.garage_bulb
+      - entity: light.porch_bulb
         icon: mdi:light-recessed
         style:
           left: 55%
