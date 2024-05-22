@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.4
-Total entity objects | 1632
+Total entity objects | 1648
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 103
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
 Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 143
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 895
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 901
 Entities in the [`fan`](https://www.home-assistant.io/components/fan) domain | 2
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 15
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 2
@@ -50,7 +50,6 @@ Entities in the [`media_player`](https://www.home-assistant.io/components/media_
 Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 44
 Entities in the [`weather`](https://www.home-assistant.io/components/weather) domain | 2
 Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 23
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 48
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
 Entities in the [`event`](https://www.home-assistant.io/components/event) domain | 1
@@ -58,6 +57,7 @@ Entities in the [`time`](https://www.home-assistant.io/components/time) domain |
 Entities in the [`wake_word`](https://www.home-assistant.io/components/wake_word) domain | 1
 Entities in the [`stt`](https://www.home-assistant.io/components/stt) domain | 1
 Entities in the [`remote`](https://www.home-assistant.io/components/remote) domain | 1
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 33
 
 ## Core integrations that I use
 
