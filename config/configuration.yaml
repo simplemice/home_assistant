@@ -27,6 +27,7 @@ wake_on_lan:
 conversation:
 ssdp:
 zeroconf:
+python_script:
 
 http:
   #  ssl_certificate: /config/ssh_keys/homeassistant.pem
