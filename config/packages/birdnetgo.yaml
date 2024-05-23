@@ -28,3 +28,16 @@ template:
               {% set new = dict(time=time, name=name, confidence=confidence) %}
               {{ current + [new] }}
             {% endif %}
+
+automation:
+  - alias: Store Bird Data to Database
+    trigger:
+      - platform: state
+        entity_id: sensor.birdnet_go_events
+    action:
+      service: python_script.store_bird_data
+      data:
+        time: "{{ state_attr('sensor.birdnet_go_events', 'time') }}"
+        birdName: "{{ state_attr('sensor.birdnet_go_events', 'name') }}"
+        eventCount: "{{ state_attr('sensor.birdnet_go_events', 'eventCount') }}"
+        confidence: "{{ state_attr('sensor.birdnet_go_events', 'confidence') }}"

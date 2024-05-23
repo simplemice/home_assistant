@@ -52,37 +52,3 @@ script:
                Tags: {{ states['sensor.rocket_launch_5'].attributes["tags"] }}
 
             #space #launch #automation
-
-  ##################
-  ##################
-  ##################
-  ##################
-
-  telegram_test:
-    alias: "Telegram Test Messages"
-    sequence:
-      - service: script.telegram_group_test
-        data:
-          message: " "
-          image: >
-            {{ [ "/config/www/tweet_images/space.jpg",
-                  "/config/www/tweet_images/space.jpg",
-                  "/config/www/tweet_images/space.jpg"] | random }}
-          caption: >
-            Space Launch:
-              Vehicle: {{ states['sensor.rocket_launch_1'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_1'].attributes["launch_date_target"] }}
-               Tags: {{ states['sensor.rocket_launch_1'].attributes["tags"] }}
-
-              Vehicle: {{ states['sensor.rocket_launch_2'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_2'].attributes["launch_date_target"] }}
-               Tags: {{ states['sensor.rocket_launch_2'].attributes["tags"] }}
-
-              Vehicle: {{ states['sensor.rocket_launch_3'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_3'].attributes["launch_date_target"] }} 
-               Tags: {{ states['sensor.rocket_launch_3'].attributes["tags"] }}
-
-              Vehicle: {{ states['sensor.rocket_launch_4'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_4'].attributes["launch_date_target"] }} 
-               Tags: {{ states['sensor.rocket_launch_4'].attributes["tags"] }}
-
-              Vehicle: {{ states['sensor.rocket_launch_5'].attributes["vehicle"] }} / Date: {{ states['sensor.rocket_launch_5'].attributes["launch_date_target"] }}
-               Tags: {{ states['sensor.rocket_launch_5'].attributes["tags"] }}
-
-            #space #launch #automation
