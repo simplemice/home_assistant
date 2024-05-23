@@ -25,6 +25,47 @@ template:
               {% set name = trigger.payload_json.CommonName %}
               {% set confidence = trigger.payload_json.Confidence|round(2) * 100 ~ '%' %}
               {% set current = this.attributes.get('bird_events', []) %}
-              {% set new = dict(time=time, name=name, confidence=confidence) %}
+              {% set new = dict(time=time, name=name, confidence=confidence description= Wikipedia(name)) %}
               {{ current + [new] }}
             {% endif %}
+
+  - trigger:
+      - platform: mqtt
+        topic: "birdnet"
+      - platform: time
+        at: "{{ now().replace(day=1).replace(hour=0).replace(minute=0) }}" # monthly trigger
+        id: reset_monthly
+    sensor:
+      - platform: template
+        sensors:
+          birdnet_go_monthly_events:
+            friendly_name: "BirdNET-Go Monthly Events"
+            value_template: "{{ states('sensor.birdnet_go_events') }}"
+            attribute_templates:
+              bird_events: >
+                {% if trigger.id == 'reset_monthly' %}
+                  {{ [] }}
+                {% else %}
+                  {% set time = trigger.payload_json.Time %}
+                  {% set name = trigger.payload_json.CommonName %}
+                  {% set confidence = trigger.payload_json.Confidence|round(2) * 100 ~ '%' %}
+                  {% set current_month = state_attr('sensor.birdnet_go_monthly_events', 'bird_events') | default([]) %}
+                  {% set new = dict(time=time, name=name, confidence=confidence, description= your_custom_function_for_Wikipedia(name)) %}
+                  {{ current_month + [new] | tojson }}
+                {% endif %}
+
+# Configuration for utility_meter
+utility_meter:
+  monthly_bird_detection:
+    source: sensor.birdnet_go_events
+    cycle: monthly
+
+# Configuration for history_stats
+sensor:
+  - platform: history_stats
+    name: Monthly Bird Detection
+    entity_id: sensor.birdnet_go_events
+    state: "on" # assuming the sensor.birdnet_go_events is set to 'on' when a bird is detected
+    type: count
+    start: "{{ now().replace(day=1).replace(hour=0).replace(minute=0).replace(second=0) }}"
+    end: "{{ now() }}"
