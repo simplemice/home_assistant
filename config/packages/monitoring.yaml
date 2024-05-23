@@ -151,10 +151,3 @@ sensor:
         friendly_name: Simplemice Speed km/h
         value_template: "{{ state_attr('device_tracker.micemob', 'speed') | round(0)  }}"
         unit_of_measurement: "km/h"
-
-  - platform: template
-    sensors:
-      del_price:
-        friendly_name: "DEL Price"
-        unit_of_measurement: "USD"
-        value_template: "{{ ((states.sensor.coinmarketcap_curl.attributes.data.DEL.quote.USD.price) | float) | round(2) }}"
