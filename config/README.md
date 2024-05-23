@@ -15,49 +15,49 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.4
-Total entity objects | 1624
+Total entity objects | 1622
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 103
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
 Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 142
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 901
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 899
+Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 4
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 15
 Entities in the [`fan`](https://www.home-assistant.io/components/fan) domain | 2
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 2
-Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 4
-Entities in the [`input_boolean`](https://www.home-assistant.io/components/input_boolean) domain | 36
-Entities in the [`input_datetime`](https://www.home-assistant.io/components/input_datetime) domain | 13
-Entities in the [`input_select`](https://www.home-assistant.io/components/input_select) domain | 8
-Entities in the [`input_number`](https://www.home-assistant.io/components/input_number) domain | 4
-Entities in the [`timer`](https://www.home-assistant.io/components/timer) domain | 4
 Entities in the [`input_text`](https://www.home-assistant.io/components/input_text) domain | 1
+Entities in the [`input_datetime`](https://www.home-assistant.io/components/input_datetime) domain | 13
+Entities in the [`input_number`](https://www.home-assistant.io/components/input_number) domain | 4
+Entities in the [`input_select`](https://www.home-assistant.io/components/input_select) domain | 8
+Entities in the [`input_boolean`](https://www.home-assistant.io/components/input_boolean) domain | 36
+Entities in the [`timer`](https://www.home-assistant.io/components/timer) domain | 4
 Entities in the [`zone`](https://www.home-assistant.io/components/zone) domain | 5
-Entities in the [`climate`](https://www.home-assistant.io/components/climate) domain | 1
 Entities in the [`conversation`](https://www.home-assistant.io/components/conversation) domain | 1
+Entities in the [`image_processing`](https://www.home-assistant.io/components/image_processing) domain | 2
 Entities in the [`switch`](https://www.home-assistant.io/components/switch) domain | 75
+Entities in the [`climate`](https://www.home-assistant.io/components/climate) domain | 1
 Entities in the [`sun`](https://www.home-assistant.io/components/sun) domain | 1
 Entities in the [`camera`](https://www.home-assistant.io/components/camera) domain | 8
 Entities in the [`button`](https://www.home-assistant.io/components/button) domain | 74
-Entities in the [`image_processing`](https://www.home-assistant.io/components/image_processing) domain | 2
 Entities in the [`device_tracker`](https://www.home-assistant.io/components/device_tracker) domain | 56
-Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 44
 Entities in the [`alarm_control_panel`](https://www.home-assistant.io/components/alarm_control_panel) domain | 2
-Entities in the [`tts`](https://www.home-assistant.io/components/tts) domain | 2
-Entities in the [`remote`](https://www.home-assistant.io/components/remote) domain | 1
-Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
 Entities in the [`calendar`](https://www.home-assistant.io/components/calendar) domain | 12
+Entities in the [`remote`](https://www.home-assistant.io/components/remote) domain | 1
+Entities in the [`tts`](https://www.home-assistant.io/components/tts) domain | 2
+Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 44
 Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 12
 Entities in the [`weather`](https://www.home-assistant.io/components/weather) domain | 2
-Entities in the [`select`](https://www.home-assistant.io/components/select) domain | 14
 Entities in the [`media_player`](https://www.home-assistant.io/components/media_player) domain | 5
+Entities in the [`select`](https://www.home-assistant.io/components/select) domain | 14
 Entities in the [`wake_word`](https://www.home-assistant.io/components/wake_word) domain | 1
 Entities in the [`stt`](https://www.home-assistant.io/components/stt) domain | 1
 Entities in the [`number`](https://www.home-assistant.io/components/number) domain | 5
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 1
+Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
 Entities in the [`time`](https://www.home-assistant.io/components/time) domain | 1
-Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 1
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 48
 Entities in the [`event`](https://www.home-assistant.io/components/event) domain | 1
+Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
 
 ## Core integrations that I use
 

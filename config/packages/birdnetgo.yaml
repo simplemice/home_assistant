@@ -25,26 +25,6 @@ template:
               {% set name = trigger.payload_json.CommonName %}
               {% set confidence = trigger.payload_json.Confidence|round(2) * 100 ~ '%' %}
               {% set current = this.attributes.get('bird_events', []) %}
-              {% set new = dict(time=time, name=name, confidence=confidence description= Wikipedia(name)) %}
+              {% set new = dict(time=time, name=name, confidence=confidence) %}
               {{ current + [new] }}
             {% endif %}
-
-# Configuration for history_stats
-sensor:
-  - platform: history_stats
-    name: Monthly Bird Detection
-    entity_id: sensor.birdnet_go_events
-    state: "on" # assuming the sensor.birdnet_go_events is set to 'on' when a bird is detected
-    type: count
-    start: "{{ now().replace(day=1).replace(hour=0).replace(minute=0).replace(second=0) }}"
-    end: "{{ now() }}"
-
-  - platform: sql
-    db_url: mysql://!secret db_user:!secret db_password@192.168.3.7/BirdDB
-    queries:
-      - name: Monthly Bird Detections
-        query: >
-          SELECT name, COUNT(*) AS count
-          FROM bird_detections
-          WHERE TIME >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
-          GROUP BY name;
