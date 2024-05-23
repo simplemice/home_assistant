@@ -400,7 +400,7 @@
         data: {}
   mode: single
 - id: '1715440619474'
-  alias: Test Back Home Light On
+  alias: Back Home Light On
   description: ''
   trigger:
   - platform: state
@@ -418,11 +418,12 @@
       after: sunset
   action:
   - service: scene.turn_on
+    data:
+      transition: 60
     target:
       entity_id:
-      - scene.lamp
+      - scene.closet_on
       - scene.kitchen_ambient
-    data: {}
   mode: single
 - id: '1715521277578'
   alias: Test Light After Sunset
