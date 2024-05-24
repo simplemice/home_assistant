@@ -17,6 +17,7 @@ emulated_hue:
     - automation
     - script
     - climate
+    - light
   entities:
     light.wall_ambient:
       name: "Wall Light"
