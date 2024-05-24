@@ -15,7 +15,7 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.4
-Total entity objects | 1613
+Total entity objects | 1628
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 103
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
@@ -57,7 +57,7 @@ Entities in the [`number`](https://www.home-assistant.io/components/number) doma
 Entities in the [`time`](https://www.home-assistant.io/components/time) domain | 1
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 49
 Entities in the [`event`](https://www.home-assistant.io/components/event) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 11
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 26
 
 ## Core integrations that I use
 
