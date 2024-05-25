@@ -137,7 +137,7 @@ automation:
       - platform: numeric_state
         entity_id:
           - sensor.bedroom_temp_temperature
-        below: 25
+        below: 26
         id: temp_off
     #      - platform: state
     #        entity_id:
