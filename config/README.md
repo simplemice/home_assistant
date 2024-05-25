@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.5
-Total entity objects | 1604
+Total entity objects | 1617
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 103
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
-Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 142
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 897
+Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 143
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 898
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 2
 Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 4
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 15
@@ -42,7 +42,7 @@ Entities in the [`device_tracker`](https://www.home-assistant.io/components/devi
 Entities in the [`image_processing`](https://www.home-assistant.io/components/image_processing) domain | 2
 Entities in the [`alarm_control_panel`](https://www.home-assistant.io/components/alarm_control_panel) domain | 2
 Entities in the [`remote`](https://www.home-assistant.io/components/remote) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 2
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 13
 Entities in the [`script`](https://www.home-assistant.io/components/script) domain | 36
 Entities in the [`calendar`](https://www.home-assistant.io/components/calendar) domain | 12
 Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 12
