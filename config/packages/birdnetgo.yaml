@@ -36,9 +36,12 @@ sensor:
         value_template: >
           {% set last_bird_event = state_attr('sensor.birdnet_go_events', 'bird_events') | sort(attribute='time', reverse=true) | first %}
           {{ 'https://en.wikipedia.org/wiki/' ~ last_bird_event.name | replace(' ', '_') }}
-  - platform: command_line
-    name: bird_image_url
-    command: "echo ''"
+
+  - platform: template
+    sensors:
+      bird_image_url:
+        friendly_name: "Bird Image URL"
+        value_template: "{{ states('sensor.bird_image_url') }}"
 
 automation:
   - alias: Fetch bird image
