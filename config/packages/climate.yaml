@@ -174,7 +174,7 @@ automation:
               - service: climate.set_hvac_mode
                 metadata: {}
                 data:
-                  hvac_mode: cool
+                  hvac_mode: dry
                 target:
                   entity_id: climate.bedroom_aircon
               - delay:

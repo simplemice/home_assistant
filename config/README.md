@@ -15,7 +15,7 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.5
-Total entity objects | 1762
+Total entity objects | 1739
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 106
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
@@ -48,7 +48,7 @@ Entities in the [`number`](https://www.home-assistant.io/components/number) doma
 Entities in the [`select`](https://www.home-assistant.io/components/select) domain | 11
 Entities in the [`image`](https://www.home-assistant.io/components/image) domain | 12
 Entities in the [`calendar`](https://www.home-assistant.io/components/calendar) domain | 12
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 67
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 44
 Entities in the [`media_player`](https://www.home-assistant.io/components/media_player) domain | 4
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
 Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
