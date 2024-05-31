@@ -163,8 +163,8 @@ script:
                   "/config/www/tweet_images/status_full2.jpg",
                   "/config/www/tweet_images/status_full3"] | random }}
           caption: >
-            *Morning Phuket Information*
-            *Weather:*
+            Morning Phuket Information
+            Weather:
               Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
               Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
               Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
@@ -178,9 +178,9 @@ script:
               Visibility: {{ states('sensor.openweathermap_visibility') }} km
               Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
               Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
-            *Space Weather:*  
+            Space Weather:  
               M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
-            *Gasoline Prices:*
+            Gasoline Prices:
               {{ [
                 "Today, Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Remember, a journey of a thousand miles begins with a great gas price! #phuket #gasoline #gasstation",
                 "Hurry up! Today's prices for Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Who said laughter is the best fuel, clearly hasn't seen our prices! #phuket #gasoline #gasstation ",
