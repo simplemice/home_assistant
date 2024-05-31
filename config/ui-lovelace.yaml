@@ -752,6 +752,11 @@ views:
   - cards:
     - cards:
       - cameras:
+        - camera_entity: camera.doods_camera
+        type: custom:frigate-card
+      type: vertical-stack
+    - cards:
+      - cameras:
         - camera_entity: camera.garage
         type: custom:frigate-card
       type: vertical-stack

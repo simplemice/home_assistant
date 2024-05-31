@@ -21,7 +21,28 @@ input_number:
     max: 1
     step: 0.1
 
+input_boolean:
+  sleep_automation:
+    name: "Sleep Automation"
+    icon: mdi:sleep
+
+input_datetime:
+  sleep_time_on:
+    name: Sleep Time On
+    has_date: false
+    has_time: true
+
 automation:
+  - id: 34c76e59-cd69-13c1-b758-958807cf3537
+    alias: Turn On Sleep Mode
+    initial_state: true
+    trigger:
+      platform: template
+      value_template: "{{ states('sensor.time') == (state_attr('input_datetime.sleep_time_on', 'timestamp') | int | timestamp_custom('%H:%M', False)) }}"
+    action:
+      - service: homeassistant.turn_on
+        entity_id: input_boolean.sleep_automation
+
   - id: ebcc502a-5aeb-4447-a73a-75397d1195fa
     alias: Assist Ready Notify
     description: ""
@@ -53,6 +74,71 @@ automation:
           message:
             '{{ [ "Guest Mode has been enabled.", "I have turned on guest mode.",
             "I have enabled guest mode. ", "Guest Mode is on." ] | random }}'
+
+  - id: good_night
+    initial_state: true
+    mode: restart
+    alias: "Good Night Notification"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.sleep_automation
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: person.simplemice
+        state: "home"
+    action:
+      - repeat:
+          count: 3
+          sequence:
+            - service: script.speech_engine
+              data_template:
+                message: >
+                  {{ [
+                  "Time to dream of unique unicorns and cosmic cookies. Bed is calling your name, goodnight!",
+                  "Time to meet Mr. Sandman. Just remember, I wonder if he ever misses the beach? Sleep tight!",
+                  "Embrace the night, you have nothing to lose but rest. Sleep well!",
+                  "Remember, sleep is like the unicorn - it is rumored to exist, but hard to catch. Sweet dreams!",
+                  "They say that going to sleep on Sunday will cause symptoms called 'Monday.' Be brave, goodnight!",
+                  "It's snuggle o'clock! Aim for the moon, even if you miss, there's always the comforter. Sleep well!",
+                  "Sleeping is a cure to forget about pain, worries, and everything for a while. Also, there might be cookies. Goodnight!",
+                  "Sweet dreams! By the way, do you know why you never wake up feeling rested after camping? Because it is in tents. Goodnight!",
+                  "Bedtime alert! Remember to dream big... just not longer than your alarm clock. Goodnight!",
+                  "Check-in for your journey to dreamland has commenced. Please proceed with your cuddly teddy bear. Sleep tight!",
+                  "Time to ride the sleep express! Remember, there might be bumps along the way, that’s just monsters under the bed playing catch. Sweet dreams!",
+                  "To sleep is to let your mind wander, to dream is to let it go on an adventure! Time to buckle up and float away to dreamland.",
+                  "Time for your secret sleep superhero powers to kick in. Snooze well, brave one!",
+                  "Let's enjoy a round trip to dreamland. Snuggle up, relax, and enjoy the ride. Pleasant dreams!",
+                  "It's time to visit the land where dreams are made! Don't forget, imagination is the only luggage you need. Goodnight!",
+                  "Your express ticket to dreamland is here! Hop on the Sleepy Time Express! Sweet dreams!",
+                  "Time to embark on your nightly journey to the stars through your dreams. Have a magical trip!",
+                  "Ever wonder if your dreams miss you when you can't sleep? There's only one way to find out... Goodnight!",
+                  "Yes, you! It's time to count those sheep. If you can’t sleep, don’t count the troubles. Count the stars instead. Goodnight!",
+                  "Meet the moon with eyes wide shut. The best meal for a new day’s morning issue is the remnants of last night’s dream.",
+                  "Time to hit the hay! Remember, the bed is a magical place where you can do all your tomorrow’s work in your head. Good night!",
+                  "Bedtime alert! Don't forget to count those sheep and if you run out, count some more! Sleep tight!",
+                  "It's time to call it a day! If anyone asks, we're conducting a very important meeting... with our pillows. Sweet dreams!",
+                  "Sleepy time! Remember, the best bridge between despair and hope is a good night's sleep. Off to dreamland!",
+                  "Time to tuck in! Don't let the bed bugs bite... unless you're into that sort of thing. Good night!",
+                  "It's time to embrace the sandman. But remember, you can't trust atoms, they make up everything. Night Night!",
+                  "Bedtime's here! You know what they say, early to bed, early to catch the worms... or was it more sleep? Anyway, sweet dreams!"
+                  ] | random }}
+            - delay:
+                hours: 0
+                minutes: 1
+                seconds: 0
+                milliseconds: 0
+      - service: light.turn_off
+        metadata: {}
+        data:
+          transition: 120
+        target:
+          entity_id: light.all_ambient
+      - service: input_boolean.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id: input_boolean.sleep_automation
 
   - id: 9f8e66eb-06d4-4bba-b264-7bc98f78c928
     alias: Replace Toothbrush Consumable Notification

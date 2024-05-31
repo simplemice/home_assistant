@@ -395,6 +395,11 @@
           minutes: 0
           seconds: 5
           milliseconds: 0
+      - service: light.turn_off
+        metadata: {}
+        data: {}
+        target:
+          entity_id: light.closet_lamp
       - service: scene.reload
         metadata: {}
         data: {}
@@ -417,13 +422,23 @@
       before: sunrise
       after: sunset
   action:
-  - service: scene.turn_on
+  - service: light.turn_on
+    metadata: {}
     data:
       transition: 60
+      brightness_pct: 5
     target:
-      entity_id:
-      - scene.closet_on
-      - scene.kitchen_ambient
+      entity_id: light.wall_ambient
+  - repeat:
+      count: 2
+      sequence:
+      - service: scene.turn_on
+        data:
+          transition: 120
+        target:
+          entity_id:
+          - scene.closet_on
+          - scene.kitchen_ambient
   mode: single
 - id: '1715521277578'
   alias: Test Light After Sunset
@@ -461,4 +476,104 @@
     metadata: {}
     data: {}
     enabled: true
+  mode: single
+- id: '1716865528059'
+  alias: Doods Camera Test
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.porch_motion
+    to: 'on'
+  - platform: state
+    entity_id:
+    - binary_sensor.garage_motion
+    to: 'on'
+  condition: []
+  action:
+  - service: image_processing.scan
+    data: {}
+    target:
+      entity_id:
+      - image_processing.doods_garage
+      - image_processing.platerecognizer_garage
+  mode: single
+- id: '1716908764339'
+  alias: Birdnet restart
+  description: ''
+  trigger:
+  - platform: time
+    at: 04:00:00
+  condition: []
+  action:
+  - service: hassio.addon_restart
+    metadata: {}
+    data:
+      addon: 86689438_birdnet-go
+  mode: single
+- id: '1716955494094'
+  alias: Room Select
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.micemob_room
+  condition: []
+  action:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: sensor.micemob_room
+        state: livingroom
+      sequence:
+      - service: input_select.select_option
+        metadata: {}
+        data:
+          option: Livingroom
+        target:
+          entity_id: input_select.house_room
+    - conditions:
+      - condition: state
+        entity_id: sensor.micemob_room
+        state: kitchen
+      sequence:
+      - service: input_select.select_option
+        metadata: {}
+        data:
+          option: Kitchen
+        target:
+          entity_id: input_select.house_room
+    - conditions:
+      - condition: state
+        entity_id: sensor.micemob_room
+        state: bedroom
+      sequence:
+      - service: input_select.select_option
+        metadata: {}
+        data:
+          option: Bedroom
+        target:
+          entity_id: input_select.house_room
+    - conditions:
+      - condition: state
+        entity_id: sensor.micemob_room
+        state: garage
+      sequence:
+      - service: input_select.select_option
+        metadata: {}
+        data:
+          option: Garage
+        target:
+          entity_id: input_select.house_room
+    - conditions:
+      - condition: state
+        entity_id: sensor.micemob_room
+        state: bathroom
+      sequence:
+      - service: input_select.select_option
+        metadata: {}
+        data:
+          option: Bathroom
+        target:
+          entity_id: input_select.house_room
   mode: single

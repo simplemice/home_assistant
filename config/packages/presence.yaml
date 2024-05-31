@@ -31,6 +31,17 @@ input_select:
     options:
       - zone.home
       - zone.office
+  house_room:
+    name: Room Select
+    options:
+      - Garage
+      - Livingroom
+      - Bedroom
+      - Kitchen
+      - Bathroom
+      - Backyard
+    initial: Livingroom
+    icon: mdi:hue:room-attic
 
 input_boolean:
   presence_off:
@@ -48,10 +59,10 @@ input_boolean:
 
 sensor:
   - platform: mqtt_room
-    device_id: "iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5_100_40004"
+    device_id: "iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5-100-40004"
     unique_id: micemob_room
     name: "Micemob Room"
-    state_topic: "espresense/devices/iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5_100_40004"
+    state_topic: "espresense/devices/iBeacon:a697d849-30ca-4bb0-8caa-ab489c4fd5c5-100-40004"
     timeout: 5
     away_timeout: 30
 

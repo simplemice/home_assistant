@@ -16,7 +16,10 @@
           "start_time": "Starttijd",
           "start_entity": "Entiteit die starttijd aangeeft",
           "manual_override_duration": "Duur van handmatige overschrijving",
-          "manual_override_reset": "Reset handmatige overschrijvingsduur"
+          "manual_override_reset": "Reset handmatige overschrijvingsduur",
+          "end_time": "Eindtijd",
+          "end_entity": "Entiteit die eindtijd aangeeft",
+          "return_sunset": "Zorg ervoor dat de positie altijd wordt aangepast naar de standaard zonsonderganginstelling tegen het eindtijdstip. Dit is vooral handig wanneer het eindtijdstip voor de daadwerkelijke zonsondergang valt."
         },
         "data_description": {
           "delta_position": "Minimale verandering in positie vereist voordat de positie van de bekleding wordt aangepast",
@@ -24,7 +27,9 @@
           "start_time": "Starttijd voor elke dag; voor deze tijd blijft de bekleding stationair",
           "start_entity": "Entiteit die de status van de starttijd vertegenwoordigt, die de hierboven ingestelde statische starttijd overschrijft. Handig voor het automatiseren van de starttijd met een entiteit",
           "manual_override_duration": "De duur van handmatige bediening voordat wordt teruggekeerd naar automatische bediening",
-          "manual_override_reset": "Optie om de duur van handmatige overschrijving na elke handmatige aanpassing te resetten; als dit is uitgeschakeld, geldt de duur alleen voor de eerste handmatige aanpassing"
+          "manual_override_reset": "Optie om de duur van handmatige overschrijving na elke handmatige aanpassing te resetten; als dit is uitgeschakeld, geldt de duur alleen voor de eerste handmatige aanpassing",
+          "end_time": "Eindtijd voor elke dag; na deze tijd blijft de bekleding stationair",
+          "end_entity": "Entiteit die de status van de eindtijd vertegenwoordigt, die de hierboven ingestelde statische eindtijd overschrijft. Handig voor het automatiseren van de eindtijd met een entiteit"
         }
       },
       "vertical": {
@@ -40,7 +45,10 @@
           "inverse_state": "Draai de status om (nodig voor sommige covers die omgekeerde percentages hanteren)",
           "sunset_position": "Zonsondergang Posistie",
           "sunset_offset": "Afwijking Zonsondergang",
-          "climate_mode": "Klimaatmodus"
+          "climate_mode": "Klimaatmodus",
+          "blind_spot": "Configureer schaduwzone",
+          "min_elevation": "Minimale zonhoogte",
+          "max_elevation": "Maximale zonhoogte"
         },
         "data_description": {
           "set_azimuth": "Stel Azimuth in",
@@ -103,7 +111,10 @@
           "inverse_state": "Draai de status om (nodig voor sommige covers die omgekeerde percentages hanteren)",
           "sunset_position": "Zonsondergang Posistie",
           "sunset_offset": "Afwijking Zonsondergang",
-          "climate_mode": "Klimaat Modus"
+          "climate_mode": "Klimaat Modus",
+          "blind_spot": "Configureer schaduwzone",
+          "min_elevation": "Minimale zonhoogte",
+          "max_elevation": "Maximale zonhoogte"
         },
         "data_description": {
           "set_azimuth": "Stel Azimuth in",
@@ -139,7 +150,10 @@
           "sunset_position": "Zonsondergang Posistie",
           "sunset_offset": "Afwijking Zonsondergang",
           "climate_mode": "Klimaat Modus",
-          "tilt_mode": "Type beweging"
+          "tilt_mode": "Type beweging",
+          "blind_spot": "Configureer schaduwzone",
+          "min_elevation": "Minimale zonhoogte",
+          "max_elevation": "Maximale zonhoogte"
         },
         "data_description": {
           "set_azimuth": "Stel Azimuth in",
@@ -158,6 +172,20 @@
         },
         "description": "Voeg configuratie variabelen toe",
         "title": "Kantelbare Cover"
+      },
+      "blind_spot": {
+        "data": {
+          "blind_spot_left": "Start schaduwzone links",
+          "blind_spot_right": "Einde schaduwzone rechts",
+          "blind_spot_elevation": "Hoogte schaduwzone"
+        },
+        "data_description": {
+          "blind_spot_left": "Linker rand van de schaduwzone",
+          "blind_spot_right": "Rechter rand van de schaduwzone",
+          "blind_spot_elevation": "Elke waarde gelijk aan of minder wordt beschouwd binnen de schaduwzone. Handig als de zon over het object in de schaduwzone kan schijnen"
+        },
+        "title": "Schaduwzone",
+        "description": "Stel de schaduwzone in voor de afdekking. Deze waarden zijn relatieve graden tot de breedte van het gezichtsveld. Waar 0 de meest linkse positie is, genomen van de linkse parameter van het gezichtsveld."
       }
     }
   },
@@ -177,6 +205,8 @@
           "delta_time": "Minimale interval tussen positieveranderingen",
           "start_time": "Starttijd",
           "start_entity": "Entiteit die starttijd aangeeft",
+          "end_time": "Eindtijd",
+          "end_entity": "Entiteit die eindtijd aangeeft",
           "manual_override_duration": "Duur van handmatige overschrijving",
           "manual_override_reset": "Reset handmatige overschrijvingsduur"
         },
@@ -186,7 +216,10 @@
           "start_time": "Starttijd voor elke dag; voor deze tijd blijft de bekleding stationair",
           "start_entity": "Entiteit die de status van de starttijd vertegenwoordigt, die de hierboven ingestelde statische starttijd overschrijft. Handig voor het automatiseren van de starttijd met een entiteit",
           "manual_override_duration": "De duur van handmatige bediening voordat wordt teruggekeerd naar automatische bediening",
-          "manual_override_reset": "Optie om de duur van handmatige overschrijving na elke handmatige aanpassing te resetten; als dit is uitgeschakeld, geldt de duur alleen voor de eerste handmatige aanpassing"
+          "manual_override_reset": "Optie om de duur van handmatige overschrijving na elke handmatige aanpassing te resetten; als dit is uitgeschakeld, geldt de duur alleen voor de eerste handmatige aanpassing",
+          "return_sunset": "Zorg ervoor dat de positie altijd wordt aangepast naar de standaard zonsonderganginstelling tegen het eindtijdstip. Dit is vooral handig wanneer het eindtijdstip voor de daadwerkelijke zonsondergang valt.",
+          "end_time": "Eindtijd voor elke dag; na deze tijd blijft de bekleding stationair",
+          "end_entity": "Entiteit die de status van de eindtijd vertegenwoordigt, die de hierboven ingestelde statische eindtijd overschrijft. Handig voor het automatiseren van de eindtijd met een entiteit"
         }
       },
       "vertical": {
@@ -202,7 +235,10 @@
           "inverse_state": "Draai de status om (nodig voor sommige covers die omgekeerde percentages hanteren)",
           "sunset_position": "Zonsondergang Posistie",
           "sunset_offset": "Afwijking Zonsondergang",
-          "climate_mode": "Klimaatmodus"
+          "climate_mode": "Klimaatmodus",
+          "blind_spot": "Configureer schaduwzone",
+          "min_elevation": "Minimale zonhoogte",
+          "max_elevation": "Maximale zonhoogte"
         },
         "data_description": {
           "set_azimuth": "Stel Azimuth in",
@@ -265,7 +301,10 @@
           "inverse_state": "Draai de status om (nodig voor sommige covers die omgekeerde percentages hanteren)",
           "sunset_position": "Zonsondergang Posistie",
           "sunset_offset": "Afwijking Zonsondergang",
-          "climate_mode": "Klimaat Modus"
+          "climate_mode": "Klimaat Modus",
+          "blind_spot": "Configureer schaduwzone",
+          "min_elevation": "Minimale zonhoogte",
+          "max_elevation": "Maximale zonhoogte"
         },
         "data_description": {
           "set_azimuth": "Stel Azimuth in",
@@ -301,7 +340,10 @@
           "sunset_position": "Zonsondergang Posistie",
           "sunset_offset": "Afwijking Zonsondergang",
           "climate_mode": "Klimaat Modus",
-          "tilt_mode": "Type beweging"
+          "tilt_mode": "Type beweging",
+          "blind_spot": "Configureer schaduwzone",
+          "min_elevation": "Minimale zonhoogte",
+          "max_elevation": "Maximale zonhoogte"
         },
         "data_description": {
           "set_azimuth": "Stel Azimuth in",
@@ -320,6 +362,20 @@
         },
         "description": "Voeg configuratie variabelen toe",
         "title": "Kantelbare Cover"
+      },
+      "blind_spot": {
+        "data": {
+          "blind_spot_left": "Start schaduwzone links",
+          "blind_spot_right": "Einde schaduwzone rechts",
+          "blind_spot_elevation": "Hoogte schaduwzone"
+        },
+        "data_description": {
+          "blind_spot_left": "Linker rand van de schaduwzone",
+          "blind_spot_right": "Rechter rand van de schaduwzone",
+          "blind_spot_elevation": "Elke waarde gelijk aan of minder wordt beschouwd binnen de schaduwzone. Handig als de zon over het object in de schaduwzone kan schijnen"
+        },
+        "title": "Schaduwzone",
+        "description": "Stel de schaduwzone in voor de afdekking. Deze waarden zijn relatieve graden tot de breedte van het gezichtsveld. Waar 0 de meest linkse positie is, genomen van de linkse parameter van het gezichtsveld."
       }
     }
   },

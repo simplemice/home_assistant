@@ -13,56 +13,43 @@ image_processing:
     save_file_folder: /config/www/plates/
     save_timestamped_file: True
     always_save_latest_file: True
+    mmc: True
+    detection_rule: strict
+    region: strict
+    server: http://192.168.3.2:8080/v1/plate-reader/
     source:
       - entity_id: camera.garage
+
   - platform: doods
     url: http://192.168.3.2:8080
     detector: default
-    scan_interval: 2
+    scan_interval: 10800
     source:
       - entity_id: camera.garage
-    file_out: /config/www/doods/doods.jpg
-    confidence: 60
+      - entity_id: camera.backyard
+    file_out:
+      - "/config/www/doods/doods.jpg"
+      - "/confog/www/doods/{{ camera_entity.split('.')[1] }}_latest.jpg"
+      - "/confog/www/doods/{{ camera_entity.split('.')[1] }}_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg"
+    confidence: 50
     labels:
       - name: person
-      - name: car
+        confidence: 40
+      - car
+      - truck
+      - bird
+      - cat
+      - motorcycle
+
+camera:
+  - platform: local_file
+    name: Doods Camera
+    file_path: /config/www/doods/doods.jpg
+  - platform: local_file
+    name: Plate Camera
+    file_path: /config/www/plates/platerecognizer_garage_latest.png
 
 input_boolean:
   security_camera_notification:
-    name: "Backyard Camera Notification"
+    name: "Security Camera Notification"
     icon: mdi:cctv
-
-sensor:
-  - platform: template
-    sensors:
-      backcam_sensor:
-        friendly_name: "Backyard Camera"
-        value_template: >-
-          {%- if is_state("device_tracker.backyard_cam", "home" ) %}
-              Online
-          {%- else -%}
-              Offline
-          {%- endif %}
-        icon_template: >
-          {% if is_state("device_tracker.backyard_cam", "home") %}
-            mdi:cctv
-          {% else %}
-            mdi:cctv-off
-          {% endif %}
-
-  - platform: template
-    sensors:
-      garagecam_sensor:
-        friendly_name: "Garage Camera"
-        value_template: >-
-          {%- if is_state("device_tracker.garage_cam", "home" ) %}
-              Online
-          {%- else -%}
-              Offline
-          {%- endif %}
-        icon_template: >
-          {% if is_state("device_tracker.garage_cam", "home") %}
-            mdi:cctv
-          {% else %}
-            mdi:cctv-off
-          {% endif %}

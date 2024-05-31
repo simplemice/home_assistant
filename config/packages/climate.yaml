@@ -132,7 +132,7 @@ automation:
       - platform: numeric_state
         entity_id:
           - sensor.bedroom_temp_temperature
-        above: 28
+        above: 27
         id: temp_on
       - platform: numeric_state
         entity_id:
@@ -149,7 +149,7 @@ automation:
         conditions:
           - condition: time
             after: "20:00:00"
-            before: "10:05:00"
+            before: "09:05:00"
           - condition: state
             entity_id: input_boolean.climate_automation
             state: "on"

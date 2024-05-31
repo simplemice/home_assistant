@@ -30,11 +30,17 @@ from .const import (
     ATTR_TILT_POSITION,
     CONF_AWNING_ANGLE,
     CONF_AZIMUTH,
+    CONF_BLIND_SPOT_ELEVATION,
+    CONF_BLIND_SPOT_LEFT,
+    CONF_BLIND_SPOT_RIGHT,
     CONF_CLIMATE_MODE,
     CONF_DEFAULT_HEIGHT,
     CONF_DELTA_POSITION,
     CONF_DELTA_TIME,
     CONF_DISTANCE,
+    CONF_ENABLE_BLIND_SPOT,
+    CONF_END_ENTITY,
+    CONF_END_TIME,
     CONF_ENTITIES,
     CONF_FOV_LEFT,
     CONF_FOV_RIGHT,
@@ -43,7 +49,9 @@ from .const import (
     CONF_LENGTH_AWNING,
     CONF_MANUAL_OVERRIDE_DURATION,
     CONF_MANUAL_OVERRIDE_RESET,
+    CONF_MAX_ELEVATION,
     CONF_MAX_POSITION,
+    CONF_MIN_ELEVATION,
     CONF_OUTSIDETEMP_ENTITY,
     CONF_PRESENCE_ENTITY,
     CONF_START_ENTITY,
@@ -57,12 +65,13 @@ from .const import (
     CONF_TILT_DEPTH,
     CONF_TILT_DISTANCE,
     CONF_TILT_MODE,
+    CONF_TRANSPARENT_BLIND,
     CONF_WEATHER_ENTITY,
     CONF_WEATHER_STATE,
     DOMAIN,
     LOGGER,
 )
-from .helpers import get_datetime_from_state, get_last_updated, get_safe_state, get_time
+from .helpers import get_datetime_from_str, get_last_updated, get_safe_state
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,9 +106,9 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         self._climate_mode = self.config_entry.options.get(CONF_CLIMATE_MODE, False)
         self._switch_mode = True if self._climate_mode else False
         self._inverse_state = self.config_entry.options.get(CONF_INVERSE_STATE, False)
-        self._temp_toggle = False
-        self._control_toggle = True
-        self._manual_toggle = True
+        self._temp_toggle = None
+        self._control_toggle = None
+        self._manual_toggle = None
         self.manual_reset = self.config_entry.options.get(
             CONF_MANUAL_OVERRIDE_RESET, False
         )
@@ -109,6 +118,7 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         self.state_change = False
         self.cover_state_change = False
         self.first_refresh = False
+        self.timed_refresh = False
         self.state_change_data: StateChangedData | None = None
         self.manager = AdaptiveCoverManager(self.manual_duration)
         self.wait_for_target = {}
@@ -119,6 +129,21 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         self.first_refresh = True
         await super().async_config_entry_first_refresh()
         _LOGGER.debug("Config entry first refresh")
+
+    async def async_timed_refresh(self, event) -> None:
+        """Control state at end time."""
+
+        if self.end_time is not None:
+            time = self.end_time
+        if self.end_time_entity is not None:
+            time = get_safe_state(self.hass, self.end_time_entity)
+        time_check = dt.datetime.now() + dt.timedelta(hours=2) - get_datetime_from_str(time)
+        if time is not None and (time_check <= dt.timedelta(seconds=1)) :
+            self.timed_refresh = True
+            _LOGGER.debug("Timed refresh triggered")
+            await self.async_refresh()
+        else:
+            _LOGGER.debug("Time not equal to end time")
 
     async def async_check_entity_state_change(
         self, event: Event[EventStateChangedData]
@@ -134,6 +159,9 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         """Fetch and process state change event."""
         _LOGGER.debug("Cover state change")
         data = event.data
+        if data["old_state"] is None:
+            _LOGGER.debug("Old state is None")
+            return
         self.state_change_data = StateChangedData(
             data["entity_id"], data["old_state"], data["new_state"]
         )
@@ -163,6 +191,8 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         self.time_threshold = self.config_entry.options.get(CONF_DELTA_TIME, 2)
         self.start_time = self.config_entry.options.get(CONF_START_TIME)
         self.start_time_entity = self.config_entry.options.get(CONF_START_ENTITY)
+        self.end_time = self.config_entry.options.get(CONF_END_TIME)
+        self.end_time_entity = self.config_entry.options.get(CONF_END_ENTITY)
         self.manual_reset = self.config_entry.options.get(
             CONF_MANUAL_OVERRIDE_RESET, False
         )
@@ -193,6 +223,7 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
                 self.config_entry.options.get(CONF_OUTSIDETEMP_ENTITY),
                 self._temp_toggle,
                 self._cover_type,
+                self.config_entry.options.get(CONF_TRANSPARENT_BLIND),
             ]
             climate = ClimateCoverData(*climate_data_var)
             self.climate_state = round(
@@ -206,7 +237,7 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
 
         self.default_state = round(NormalCoverState(cover_data).get_state())
 
-        if self.cover_state_change and self._manual_toggle and self.control_toggle:
+        if self.cover_state_change and self.manual_toggle and self.control_toggle:
             self.manager.handle_state_change(
                 self.state_change_data,
                 self.state,
@@ -218,7 +249,7 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
 
         await self.manager.reset_if_needed()
 
-        if self.control_toggle and self.state_change:
+        if self.state_change and self.control_toggle:
             for cover in self.entities:
                 await self.async_handle_call_service(cover)
             self.state_change = False
@@ -226,12 +257,18 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         if self.first_refresh and self.control_toggle:
             for cover in self.entities:
                 if (
-                    self.after_start_time
+                    self.check_adaptive_time
                     and not self.manager.is_cover_manual(cover)
                     and self.check_position(cover)
                 ):
                     await self.async_set_position(cover)
             self.first_refresh = False
+
+        if self.timed_refresh and self.control_toggle:
+            for cover in self.entities:
+                await self.async_set_manual_position(cover, self.config_entry.options.get(CONF_SUNSET_POS))
+            self.timed_refresh = False
+
 
         return AdaptiveCoverData(
             climate_mode_toggle=self.switch_mode,
@@ -253,6 +290,7 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
                     self.config_entry.options.get(CONF_FOV_LEFT),
                     self.config_entry.options.get(CONF_FOV_RIGHT),
                 ],
+                "blind_spot": self.config_entry.options.get(CONF_BLIND_SPOT_ELEVATION),
             },
         )
 
@@ -261,12 +299,16 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         if (
             self.check_position(entity)
             and self.check_time_delta(entity)
-            and self.after_start_time
+            and self.check_adaptive_time
             and not self.manager.is_cover_manual(entity)
         ):
             await self.async_set_position(entity)
 
     async def async_set_position(self, entity):
+        """Call service to set cover position."""
+        await self.async_set_manual_position(entity, self.state)
+
+    async def async_set_manual_position(self, entity, position):
         """Call service to set cover position."""
         service = SERVICE_SET_COVER_POSITION
         service_data = {}
@@ -274,12 +316,13 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
 
         if self._cover_type == "cover_tilt":
             service = SERVICE_SET_COVER_TILT_POSITION
-            service_data[ATTR_TILT_POSITION] = self.state
+            service_data[ATTR_TILT_POSITION] = position
         else:
-            service_data[ATTR_POSITION] = self.state
+            service_data[ATTR_POSITION] = position
 
         self.wait_for_target[entity] = True
-        self.target_call[entity] = self.state
+        self.target_call[entity] = position
+        _LOGGER.debug("Set wait for target %s and target call %s", self.wait_for_target, self.target_call)
         await self.hass.services.async_call(COVER_DOMAIN, service, service_data)
         _LOGGER.debug("Run %s with data %s", service, service_data)
 
@@ -304,19 +347,38 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
         return cover_data
 
     @property
+    def check_adaptive_time(self):
+        """Check if time is within start and end times."""
+        return self.before_end_time and self.after_start_time
+
+    @property
     def after_start_time(self):
         """Check if time is after start time."""
         if self.start_time_entity is not None:
-            time = get_datetime_from_state(
+            time = get_datetime_from_str(
                 get_safe_state(self.hass, self.start_time_entity)
             )
-            now = dt.datetime.now(dt.UTC)
-            if now.date() == time.date():
-                return now >= time
+            now = dt.datetime.now()
+            return now >= time
         if self.start_time is not None:
-            time = get_time(self.start_time).time()
+            time = get_datetime_from_str(self.start_time).time()
             now = dt.datetime.now().time()
             return now >= time
+        return True
+
+    @property
+    def before_end_time(self):
+        """Check if time is after start time."""
+        if self.end_time_entity is not None:
+            time = get_datetime_from_str(
+                get_safe_state(self.hass, self.end_time_entity)
+            )
+            now = dt.datetime.now()
+            return now < time
+        if self.end_time is not None:
+            time = get_datetime_from_str(self.end_time).time()
+            now = dt.datetime.now().time()
+            return now < time
         return True
 
     def check_position(self, entity):
@@ -360,6 +422,12 @@ class AdaptiveDataUpdateCoordinator(DataUpdateCoordinator[AdaptiveCoverData]):
             self.config_entry.options.get(CONF_AZIMUTH),
             self.config_entry.options.get(CONF_DEFAULT_HEIGHT),
             self.config_entry.options.get(CONF_MAX_POSITION, 100),
+            self.config_entry.options.get(CONF_BLIND_SPOT_LEFT),
+            self.config_entry.options.get(CONF_BLIND_SPOT_RIGHT),
+            self.config_entry.options.get(CONF_BLIND_SPOT_ELEVATION),
+            self.config_entry.options.get(CONF_ENABLE_BLIND_SPOT, False),
+            self.config_entry.options.get(CONF_MIN_ELEVATION, None),
+            self.config_entry.options.get(CONF_MAX_ELEVATION, None),
         ]
 
     @property

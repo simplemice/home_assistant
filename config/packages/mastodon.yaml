@@ -120,7 +120,7 @@ script:
                 ] | random
               }}
               Birds detected list https://t.me/live_phuket
-            #birdnet #birds #phuket
+            #birdnet #birds #phuket #spotting #wildlife
           image: >-
             {{ [ "/config/www/tweet_images/bird.jpg",
                   "/config/www/tweet_images/bird1.jpg",

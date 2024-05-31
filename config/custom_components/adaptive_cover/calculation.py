@@ -31,6 +31,12 @@ class AdaptiveGeneralCover(ABC):
     win_azi: int
     h_def: int
     max_pos: int
+    blind_spot_left: int
+    blind_spot_right: int
+    blind_spot_elevation: int
+    blind_spot_on: bool
+    min_elevation: int
+    max_elevation: int
     sun_data: SunData = field(init=False)
 
     def __post_init__(self):
@@ -62,6 +68,23 @@ class AdaptiveGeneralCover(ABC):
             )
 
     @property
+    def _get_azimuth_edges(self) -> tuple[int,int]:
+        """Calculate azimuth edges."""
+        return self.fov_left + self.fov_right
+
+    @property
+    def is_sun_in_blind_spot(self) -> bool:
+        """Check if sun is in blind spot."""
+        if self.blind_spot_left is not None and self.blind_spot_right is not None and self.blind_spot_on:
+            left_edge = self.fov_left - self.blind_spot_left
+            right_edge = self.fov_left - self.blind_spot_right
+            blindspot = (self.gamma <= left_edge) & (self.gamma >= right_edge)
+            if self.blind_spot_elevation is not None:
+                blindspot = blindspot & (self.sol_elev <= self.blind_spot_elevation)
+            return blindspot
+        return False
+
+    @property
     def azi_min_abs(self) -> int:
         """Calculate min azimuth."""
         azi_min_abs = (self.win_azi - self.fov_left + 360) % 360
@@ -81,6 +104,17 @@ class AdaptiveGeneralCover(ABC):
         return gamma
 
     @property
+    def valid_elevation(self) -> bool:
+        """Check if elevation is within range."""
+        if self.min_elevation is None and self.max_elevation is None:
+            return self.sol_elev >= 0
+        if self.min_elevation is None:
+            return self.sol_elev <= self.max_elevation
+        if self.max_elevation is None:
+            return self.sol_elev >= self.min_elevation
+        return self.min_elevation <= self.sol_elev <= self.max_elevation
+
+    @property
     def valid(self) -> bool:
         """Determine if sun is in front of window."""
         # clip azi_min and azi_max to 90
@@ -88,7 +122,7 @@ class AdaptiveGeneralCover(ABC):
         azi_max = min(self.fov_right, 90)
 
         # valid sun positions are those within the blind's azimuth range and above the horizon (FOV)
-        valid = (self.gamma < azi_min) & (self.gamma > -azi_max) & (self.sol_elev >= 0)
+        valid = (self.gamma < azi_min) & (self.gamma > -azi_max) & (self.valid_elevation)
         return valid
 
     @property
@@ -132,7 +166,7 @@ class NormalCoverState:
     def get_state(self) -> int:
         """Return state."""
         state = np.where(
-            (self.cover.valid) & (not self.cover.sunset_valid),
+            (self.cover.valid) & (not self.cover.sunset_valid) & (not self.cover.is_sun_in_blind_spot),
             self.cover.calculate_percentage(),
             self.cover.default,
         )
@@ -156,18 +190,19 @@ class ClimateCoverData:
     outside_entity: str
     temp_switch: bool
     blind_type: str
+    transparent_blind: bool
 
     @property
     def outside_temperature(self):
         """Get outside temperature."""
         temp = None
-        if self.weather_entity:
-            temp = state_attr(self.hass, self.weather_entity, "temperature")
         if self.outside_entity:
             temp = get_safe_state(
                 self.hass,
                 self.outside_entity,
             )
+        if self.weather_entity:
+            temp = state_attr(self.hass, self.weather_entity, "temperature")
         return temp
 
     @property
@@ -243,13 +278,18 @@ class ClimateCoverState(NormalCoverState):
     def normal_type_cover(self) -> int:
         """Determine state for horizontal and vertical covers."""
         # glare does not matter
+        if (self.climate_data.is_presence is False or self.climate_data.transparent_blind) and self.cover.sol_elev > 0:
+            if self.climate_data.transparent_blind and self.climate_data.is_summer:
+                if not self.cover.valid:
+                    return self.cover.default
+                return 0
+            if self.climate_data.is_summer:
+                return 0
         if self.climate_data.is_presence is False and self.cover.sol_elev > 0:
             # allow maximum solar radiation
             if self.climate_data.is_winter:
                 return 100
             # don't allow solar radiation
-            if self.climate_data.is_summer:
-                return 0
             return self.cover.default
 
         # prefer glare reduction over climate control

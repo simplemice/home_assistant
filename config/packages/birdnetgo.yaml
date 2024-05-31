@@ -29,15 +29,28 @@ template:
               {{ current + [new] }}
             {% endif %}
 
+sensor:
+  - platform: template
+    sensors:
+      bird_wikipedia_page:
+        value_template: >
+          {% set last_bird_event = state_attr('sensor.birdnet_go_events', 'bird_events') | sort(attribute='time', reverse=true) | first %}
+          {{ 'https://en.wikipedia.org/wiki/' ~ last_bird_event.name | replace(' ', '_') }}
+  - platform: command_line
+    name: bird_image_url
+    command: "echo ''"
+
 automation:
-  - alias: Store Bird Data to Database
+  - alias: Fetch bird image
     trigger:
-      - platform: state
-        entity_id: sensor.birdnet_go_events
+      platform: state
+      entity_id: sensor.bird_wikipedia_page
     action:
-      service: python_script.store_bird_data
-      data:
-        time: "{{ state_attr('sensor.birdnet_go_events', 'time') }}"
-        birdName: "{{ state_attr('sensor.birdnet_go_events', 'name') }}"
-        eventCount: "{{ state_attr('sensor.birdnet_go_events', 'eventCount') }}"
-        confidence: "{{ state_attr('sensor.birdnet_go_events', 'confidence') }}"
+      - service: python_script.fetch_bird_image
+        data:
+          url: "{{ states('sensor.bird_wikipedia_page') }}"
+
+camera:
+  - platform: generic
+    still_image_url: "{{ states('sensor.bird_image_url') }}"
+    name: dynamic_bird_camera
