@@ -861,49 +861,17 @@ views:
   path: video
   sections:
   - cards:
-    - entities:
-      - sensor.plex_home_theater
-      title: Plex Home Theater
-      type: entities
-    type: grid
-  - cards:
     - cards:
-      - alignment: center
-        subtitle: Simplemice Youtube Player
-        title: ''
-        type: custom:mushroom-title-card
-      - artwork: cover
-        entity: media_player.simplemice_youtube
-        hide:
-          icon_state: false
-          shuffle: false
-        shortcuts:
-          buttons:
-          - id: micebook
-            name: Micebook
-            type: source
-          - id: micemob
-            name: Micemob
-            type: source
-          - id: PLcv3KSj3yK0a1R0vLv6Cg2HpQQpYltiKj
-            name: My Likes
-            type: channel
-          - id: PLcv3KSj3yK0a1R0vLv6Cg2HpQQpYltiKj
-            name: Test
-            type: playlist
-          columns: 6
-        type: custom:mini-media-player
-      - entities:
-        - entity: input_select.youtube_playlist
-        - entity: input_select.youtube_source
-        - entity: input_select.ytube_music_player_speakers
-        - entity: input_select.youtube_playmode
-        state_color: true
-        title: Youtube Control
-        type: entities
+      - entity_id: media_player.ytube_music_player
+        header: YouTube Music
+        type: custom:polr-ytube-playing-card
       type: vertical-stack
     type: grid
   - cards:
+    - entities:
+      - entity: sensor.home_theater
+      title: Plex Home Theater
+      type: entities
     - entities:
       - sensor.alex_kvazis_tekhnologii_umnogo_doma
       - sensor.everything_smart_home
@@ -922,65 +890,9 @@ views:
       title: New Video Posted on Youtube
       type: logbook
     type: grid
-  - cards:
-    - card:
-        cards:
-        - content: "{% if is_state('media_player.simplemice_youtube','playing')%}\
-            \ **Playback started via:** (Arguments for play_media)\n*_media_type*:\
-            \ {{state_attr(\"media_player.simplemice_youtube\",\"_media_type\")}}\
-            \ \n*_media_id*: {{state_attr(\"media_player.simplemice_youtube\", \"\
-            _media_id\")}}\n\n**Current Track Infos:** \n**Artist:** {{state_attr(\"\
-            media_player.simplemice_youtube\",\"media_artist\")}} \n**Track:** {{state_attr(\"\
-            media_player.simplemice_youtube\",\"media_title\")}}\n**videoId:** {{state_attr(\"\
-            media_player.simplemice_youtube\", \"videoId\")}}\n**Rating:** {{state_attr(\"\
-            media_player.simplemice_youtube\",\"likeStatus\")}}\n**Playing on:** {{state_attr(\"\
-            media_player.simplemice_youtube\",\"_player_id\")}}\n{% else %}Player\
-            \ off{% endif %}"
-          type: markdown
-        - content: "{% if is_state('media_player.simplemice_youtube','playing') %}{%\
-            \ for i in range(0,state_attr(\"sensor.ytube_music_player_extra\", \"\
-            total_tracks\")) %}\n {% if i == state_attr(\"media_player.simplemice_youtube\"\
-            ,\n\"current_track\") %}**{% endif %}\\[{{i+1}}] {{ state_attr(\"sensor.ytube_music_player_extra\"\
-            , \"tracks\")[i] }}{% if i == state_attr(\"media_player.simplemice_youtube\"\
-            , \"current_track\") %}**{% endif %}\n{%- endfor %}{% else %}Player off{%\
-            \ endif %}\n    "
-          type: markdown
-        - content: '{% if is_state(''media_player.simplemice_youtube'',''playing'')
-            %}{{ state_attr("sensor.simplemice_youtube_extra", "lyrics") }}{% else
-            %}Player off{% endif %}'
-          type: markdown
-        - cards:
-          - state:
-            - icon: mdi:thumb-up
-              operator: template
-              value: '[[[ return states[''media_player.simplemice_youtube''].attributes.likeStatus
-                == "LIKE"]]]
-
-                '
-            - icon: mdi:thumb-up-outline
-              operator: template
-              value: '[[[ return states[''media_player.simplemice_youtube''].attributes.likeStatus
-                == "INDIFFERENT"]]]
-
-                '
-            - icon: mdi:power-off
-              operator: default
-              value: false
-            tap_action:
-              action: call-service
-              service: ytube_music_player.call_method
-              service_data:
-                command: rate_track
-                entity_id: media_player.simplemice_youtube
-                parameters: thumb_toggle_up_middle
-            type: custom:button-card
-          type: horizontal-stack
-        type: vertical-stack
-      conditions:
-      - condition: state
-        entity: media_player.simplemice_youtube
-        state: playing
-      type: conditional
+  - cards: []
+    type: grid
+  - cards: []
     type: grid
   title: Video
   type: sections
