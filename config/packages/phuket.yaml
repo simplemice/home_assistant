@@ -200,23 +200,3 @@ script:
               ] | random }}
 
             #phuket #weather #gasoline #gasprice #spaceweather #information #status
-
-  telegram_auto_ad:
-    alias: "Telegram Phuket Ad"
-    sequence:
-      - service: script.telegram_phuket
-        data_template:
-          message: "Phuket Ads"
-          image: >
-            {{ [ "/config/www/tweet_images/holiday.jpg",
-                  "/config/www/tweet_images/holiday1.jpg",
-                  "/config/www/tweet_images/holiday2.jpg",
-                  "/config/www/tweet_images/holiday3.jpg"] | random }}
-          caption: >
-            Nightdestiny Phuket:
-              1
-              2
-              3
-              4
-              5
-            #ads #car #scooter #property #exchange #phuket

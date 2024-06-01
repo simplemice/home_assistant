@@ -11,14 +11,39 @@ script:
   telegram_auto_test:
     alias: "Telegram Phuket Test"
     sequence:
+      - service: camera.snapshot
+        metadata: {}
+        data:
+          filename: /config/www/tweet_images/output.jpg
+        target:
+          entity_id: camera.phuket_live
       - service: script.telegram_group_test
         data:
-          message: ""
           image: /config/www/tweet_images/output.jpg
           caption: >
             More Information about Phuket:
               Thailand News: https://t.me/thailand_news
             #about #ad #phuket
+
+  telegram_auto_ad:
+    alias: "Telegram Phuket Ad"
+    sequence:
+      - service: script.telegram_phuket
+        data_template:
+          message: "Phuket Ads"
+          image: >
+            {{ [ "/config/www/tweet_images/holiday.jpg",
+                  "/config/www/tweet_images/holiday1.jpg",
+                  "/config/www/tweet_images/holiday2.jpg",
+                  "/config/www/tweet_images/holiday3.jpg"] | random }}
+          caption: >
+            Nightdestiny Phuket:
+              1
+              2
+              3
+              4
+              5
+            #ads #car #scooter #property #exchange #phuket
 
   telegram_auto_news:
     alias: "Telegram Phuket News"
