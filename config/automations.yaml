@@ -430,7 +430,6 @@
     target:
       entity_id: light.wall_ambient
   - repeat:
-      count: 2
       sequence:
       - service: scene.turn_on
         data:
@@ -439,6 +438,7 @@
           entity_id:
           - scene.closet_on
           - scene.kitchen_ambient
+      count: 3
   mode: single
 - id: '1715521277578'
   alias: Test Light After Sunset

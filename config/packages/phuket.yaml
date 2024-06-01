@@ -163,8 +163,7 @@ script:
                   "/config/www/tweet_images/status_full2.jpg",
                   "/config/www/tweet_images/status_full3"] | random }}
           caption: >
-            Morning Phuket Information
-            Weather:
+            Morning Phuket Weather Information:
               Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
               Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
               Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
@@ -182,25 +181,25 @@ script:
               M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
             Gasoline Prices:
               {{ [
-                "Today, Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Remember, a journey of a thousand miles begins with a great gas price! #phuket #gasoline #gasstation",
-                "Hurry up! Today's prices for Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Who said laughter is the best fuel, clearly hasn't seen our prices! #phuket #gasoline #gasstation ",
-                "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Driving on empty? Fill up at PTT, where every liter counts, and so does every Baht. #phuket #gasoline #gasstation ",
-                "Today, fill up your tank with Gasohol 91 at {{ states('sensor.lowest_91_gas_price')}} or Gasohol 95 at {{ states('sensor.lowest_95_gas_price')}} Because the only thing better than our jokes is our fuel prices. #phuket #gasoline #gasstation ",
-                "Get Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} today. They say laughter is the best medicine, but with our fuel prices, you'll forget you were ever ailing! #phuket #gasoline #gasstation ",            
-                "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than your morning coffee! #phuket #gasoline #gasstation ",
-                "The price of Gasohol 91 today {{ states('sensor.lowest_91_gas_price')}}  and Gasohol 95 {{ states('sensor.lowest_95_gas_price')}}  #phuket #gasoline #gasstation ",
-                "The price of Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, it's not about the destination, but the journey and how much you saved on fuel at PTT! #phuket #gasoline #gasstation ",
-                "Gasohol 91 is cruising at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is burning rubber at {{ states('sensor.lowest_95_gas_price')}} Get a full tank without emptying your wallet at PTT! #phuket #gasoline #gasstation ",
-                "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} while Gasohol 95 is at {{ states('sensor.lowest_95_gas_price')}} With prices this low, your car's not the only thing that's going to be running! #phuket #gasoline #gasstation ",
-                "Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} giving you more miles per gallon and more smiles per gallon! #phuket #gasoline #gasstation ",
-                "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much! #phuket #gasoline #gasstation ",
-                "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate. #phuket #gasoline #gasstation ",
-                "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee? #phuket #gasoline #gasstation ",
-                "Today, Gasohol 91 is at {{ states('sensor.gas91priceptt')}} THB and Gasohol 95 is at {{ states('sensor.gas95priceptt')}} THB. Don't drive on fumes - get your fuel at PTT - where the only gas we pass are savings! #phuket #gasoline #gasstation ",
-                "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! #phuket #gasoline #gasstation "
+                "Today, Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, a journey of a thousand miles begins with a great gas price!",
+                "Hurry up! Today's prices for Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Who said laughter is the best fuel, clearly hasn't seen our prices!",
+                "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Driving on empty? Fill up at PTT, where every liter counts, and so does every Baht.",
+                "Today, fill up your tank with Gasohol 91 at {{ states('sensor.lowest_91_gas_price')}} or Gasohol 95 at {{ states('sensor.lowest_95_gas_price')}} Because the only thing better than our jokes is our fuel prices.",
+                "Get Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} today. They say laughter is the best medicine, but with our fuel prices, you'll forget you were ever ailing!",            
+                "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than your morning coffee!",
+                "The price of Gasohol 91 today {{ states('sensor.lowest_91_gas_price')}}  and Gasohol 95 {{ states('sensor.lowest_95_gas_price')}} ",
+                "The price of Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, it's not about the destination, but the journey and how much you saved on fuel at PTT!",
+                "Gasohol 91 is cruising at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is burning rubber at {{ states('sensor.lowest_95_gas_price')}} Get a full tank without emptying your wallet at PTT!",
+                "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} while Gasohol 95 is at {{ states('sensor.lowest_95_gas_price')}} With prices this low, your car's not the only thing that's going to be running!",
+                "Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} giving you more miles per gallon and more smiles per gallon! ",
+                "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much!",
+                "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate.",
+                "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee?",
+                "Today, Gasohol 91 is at {{ states('sensor.gas91priceptt')}} THB and Gasohol 95 is at {{ states('sensor.gas95priceptt')}} THB. Don't drive on fumes - get your fuel at PTT - where the only gas we pass are savings! ",
+                "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! "
               ] | random }}
 
-              #phuket #weather #gasoline #gasprice #spaceweather #information #status
+            #phuket #weather #gasoline #gasprice #spaceweather #information #status
 
   telegram_auto_ad:
     alias: "Telegram Phuket Ad"

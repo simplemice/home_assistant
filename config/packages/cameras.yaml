@@ -48,8 +48,19 @@ camera:
   - platform: local_file
     name: Plate Camera
     file_path: /config/www/plates/platerecognizer_garage_latest.png
+  - platform: local_file
+    name: my_stream_screenshot
+    file_path: /config/www/tweet_images/output.jpg
 
 input_boolean:
   security_camera_notification:
     name: "Security Camera Notification"
     icon: mdi:cctv
+
+automation:
+  - alias: Capture stream screenshot
+    trigger:
+      - platform: time_pattern
+        minutes: "/1" # This will capture a screenshot every 5 minutes
+    action:
+      - service: shell_command.capture_screenshot
