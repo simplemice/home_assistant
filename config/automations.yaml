@@ -278,136 +278,104 @@
   - platform: state
     entity_id:
     - input_boolean.work_mode
-    to: 'on'
     id: work_on
-  - platform: state
-    entity_id:
-    - input_boolean.work_mode
-    to: 'off'
-    id: work_off
   condition: []
   action:
-  - choose:
-    - conditions:
-      - condition: trigger
-        id:
-        - work_on
-      sequence:
-      - service: scene.create
-        metadata: {}
-        data:
-          scene_id: before_work_alarm
-          snapshot_entities:
-          - light.closet_lamp
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 2
-          milliseconds: 0
-      - service: light.turn_on
-        metadata: {}
-        data:
-          rgb_color:
-          - 255
-          - 0
-          - 0
-          brightness_pct: 100
-        target:
-          entity_id: light.closet_lamp
-      - repeat:
-          sequence:
-          - service: script.speech_engine
-            data:
-              message: "{{ [\n    \"Bright and Early Alert: Time to put on your work
-                hat. Remember, your cosy bed is anticipating your return later.\",\n
-                \   \"Go-Getter Reminder: It's your signal to get ready for work.
-                Your lazy morning routine is on a short hiatus.\",\n    \"Hustle Call:
-                From the comfort of home to the thrill of work, it's transition time.
-                Fear not, your favourite breakfast cereals will be safe.\",\n    \"Ready,
-                Steady, Work! Time to bring out your professional persona. Your yoga
-                mat is content and ready for some alone time.\",\n    \"Work Time
-                Alert: Your workspace misses you. The houseplants have agreed to keep
-                each other company.\",\n    \"Productivity Push: It's time to conquer
-                the workday. Your comfy slippers are planning a secret meeting with
-                the doormat.\",\n    \"Break Dawn, Make Haste: Time to exchange sweet
-                dreams for real achievements. Your home workout gear is looking forward
-                to a quiet morning.\",\n    \"Rise and Grind Notice: Time to swap
-                your bed for the desk. Meanwhile, your hobby supplies are negotiating
-                an extended break.\",\n    \"Action-Packed Day Ahead: Let's get you
-                prepared for work. Your favourite book promises not to reveal the
-                ending until you finish work.\",\n    \"Professional Pursuit Reminder:
-                Get set, work's awaiting. Your cosy throw blanket is planning to do
-                some self-care today.\",\n    \"Early Riser Alert: It's time to get
-                ready for work. Keep in mind, your dreams need timeout to plan your
-                success.\",\n    \"Saddle Up Reminder: Get ready to hustle, the office
-                chair is waiting for you. It's been reported missing your company.\",\n
-                \   \"Shift Swap Alert: Time to transfer from couch control to office
-                operations. Your living room confirmed it can handle absence management.\",\n
-                \   \"Wake Up Call: Rise and shine for work. Your pillow suggests
-                that it needs some 'me-time'.\",\n    \"Out of Comfort Zone Alert:
-                Time to swap pyjamas for work attire. Fasten your motivation seatbelts.\",\n
-                \   \"Morning Jumpstart: Let's put the home shenanigans on snooze
-                and launch the workday. Your cat promises some funny anecdotes later.\",\n
-                \   \"Get-Up Notification: Let's roll up your sleeves and dig into
-                the workday. Your pet plants requested a day of 'photosynthesis tranquility'.\",\n
-                \   \"Start of Connect: Time to plug in the workstation. Your favorite
-                TV show confirmed it won't start a new episode without you.\",\n    \"Operation
-                Start: Rise for another challenging yet exciting day at work. Your
-                morning newspaper wishes to read itself today.\",\n    \"Let's Hustle
-                Reminder: Time to dive into the work pool. Your home slippers decided
-                they need a spa day.\",\n    \"Reminder: It is time to get ready for
-                work. Donot forget to bid your coffee adieu\",\n    \"Attention: Time
-                to prepare for work. Leave your sense of humor at home it tends to
-                work overtime\",\n    \"It is time to swap the cozy couch for the
-                office chair. BTW, your cat is already eyeing your spot\",\n    \"Get-ready
-                alert Time to prep for work. Coffee into the thermos, and off you
-                go! Yes, your cat finds this amusing\",\n    \"Donot forget: It is
-                time for work. And yes, your coffee claims it doesnot know you\",\n
-                \   \"Maintenance reminder: Time to get ready for work. Your coffee
-                asked not to be disturbed until tomorrow\",\n    \"Consumable status:
-                It's time to head to work. Do recall that your coffee prefers to stay
-                home\"\n] | random }}\n"
-          - delay:
-              hours: 0
-              minutes: 1
-              seconds: 0
-              milliseconds: 0
-          while:
-          - condition: state
-            entity_id: input_boolean.work_mode
-            state: 'on'
-    - conditions:
-      - condition: trigger
-        id:
-        - work_off
-      sequence:
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 5
-          milliseconds: 0
-      - service: scene.turn_on
-        metadata: {}
-        target:
-          entity_id: scene.before_work_alarm
-      - delay:
-          hours: 0
-          minutes: 0
-          seconds: 5
-          milliseconds: 0
-      - service: light.turn_off
-        metadata: {}
-        data: {}
-        target:
-          entity_id: light.closet_lamp
-      - service: scene.reload
-        metadata: {}
-        data: {}
+  - if:
+    - condition: state
+      entity_id: input_boolean.work_mode
+      state: 'on'
+    then:
+    - service: light.turn_on
+      metadata: {}
+      data:
+        rgb_color:
+        - 255
+        - 0
+        - 0
+        brightness_pct: 100
+      target:
+        entity_id: light.closet_lamp
+    - repeat:
+        sequence:
+        - service: script.speech_engine
+          data:
+            message: "{{ [\n    \"Bright and Early Alert: Time to put on your work
+              hat. Remember, your cosy bed is anticipating your return later.\",\n
+              \   \"Go-Getter Reminder: It's your signal to get ready for work. Your
+              lazy morning routine is on a short hiatus.\",\n    \"Hustle Call: From
+              the comfort of home to the thrill of work, it's transition time. Fear
+              not, your favourite breakfast cereals will be safe.\",\n    \"Ready,
+              Steady, Work! Time to bring out your professional persona. Your yoga
+              mat is content and ready for some alone time.\",\n    \"Work Time Alert:
+              Your workspace misses you. The houseplants have agreed to keep each
+              other company.\",\n    \"Productivity Push: It's time to conquer the
+              workday. Your comfy slippers are planning a secret meeting with the
+              doormat.\",\n    \"Break Dawn, Make Haste: Time to exchange sweet dreams
+              for real achievements. Your home workout gear is looking forward to
+              a quiet morning.\",\n    \"Rise and Grind Notice: Time to swap your
+              bed for the desk. Meanwhile, your hobby supplies are negotiating an
+              extended break.\",\n    \"Action-Packed Day Ahead: Let's get you prepared
+              for work. Your favourite book promises not to reveal the ending until
+              you finish work.\",\n    \"Professional Pursuit Reminder: Get set, work's
+              awaiting. Your cosy throw blanket is planning to do some self-care today.\",\n
+              \   \"Early Riser Alert: It's time to get ready for work. Keep in mind,
+              your dreams need timeout to plan your success.\",\n    \"Saddle Up Reminder:
+              Get ready to hustle, the office chair is waiting for you. It's been
+              reported missing your company.\",\n    \"Shift Swap Alert: Time to transfer
+              from couch control to office operations. Your living room confirmed
+              it can handle absence management.\",\n    \"Wake Up Call: Rise and shine
+              for work. Your pillow suggests that it needs some 'me-time'.\",\n    \"Out
+              of Comfort Zone Alert: Time to swap pyjamas for work attire. Fasten
+              your motivation seatbelts.\",\n    \"Morning Jumpstart: Let's put the
+              home shenanigans on snooze and launch the workday. Your cat promises
+              some funny anecdotes later.\",\n    \"Get-Up Notification: Let's roll
+              up your sleeves and dig into the workday. Your pet plants requested
+              a day of 'photosynthesis tranquility'.\",\n    \"Start of Connect: Time
+              to plug in the workstation. Your favorite TV show confirmed it won't
+              start a new episode without you.\",\n    \"Operation Start: Rise for
+              another challenging yet exciting day at work. Your morning newspaper
+              wishes to read itself today.\",\n    \"Let's Hustle Reminder: Time to
+              dive into the work pool. Your home slippers decided they need a spa
+              day.\",\n    \"Reminder: It is time to get ready for work. Donot forget
+              to bid your coffee adieu\",\n    \"Attention: Time to prepare for work.
+              Leave your sense of humor at home it tends to work overtime\",\n    \"It
+              is time to swap the cozy couch for the office chair. BTW, your cat is
+              already eyeing your spot\",\n    \"Get-ready alert Time to prep for
+              work. Coffee into the thermos, and off you go! Yes, your cat finds this
+              amusing\",\n    \"Donot forget: It is time for work. And yes, your coffee
+              claims it doesnot know you\",\n    \"Maintenance reminder: Time to get
+              ready for work. Your coffee asked not to be disturbed until tomorrow\",\n
+              \   \"Consumable status: It's time to head to work. Do recall that your
+              coffee prefers to stay home\"\n] | random }}\n"
+        - delay:
+            hours: 0
+            minutes: 1
+            seconds: 0
+            milliseconds: 0
+        while:
+        - condition: state
+          entity_id: input_boolean.work_mode
+          state: 'on'
+    else:
+    - service: light.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.closet_lamp
   mode: single
 - id: '1715440619474'
   alias: Back Home Light On
   description: ''
   trigger:
+  - platform: numeric_state
+    entity_id:
+    - sensor.home_micemob_distance
+    below: 300
+  - platform: numeric_state
+    entity_id:
+    - sensor.travel_time_distance
+    below: 0.5
   - platform: state
     entity_id:
     - person.simplemice
@@ -425,7 +393,7 @@
   - service: light.turn_on
     metadata: {}
     data:
-      transition: 60
+      transition: 30
       brightness_pct: 5
     target:
       entity_id: light.wall_ambient
@@ -439,27 +407,6 @@
           - scene.closet_on
           - scene.kitchen_ambient
       count: 3
-  mode: single
-- id: '1715521277578'
-  alias: Test Light After Sunset
-  description: ''
-  trigger:
-  - platform: sun
-    event: sunset
-    offset: +0:10:00
-  condition:
-  - condition: state
-    entity_id: person.simplemice
-    state: home
-  action:
-  - service: scene.turn_on
-    metadata: {}
-    target:
-      entity_id: scene.kitchen_ambient
-  - service: scene.turn_on
-    metadata: {}
-    target:
-      entity_id: scene.lamp
   mode: single
 - id: '1715922054256'
   alias: Telegram Mastodon Phuket BirdNet

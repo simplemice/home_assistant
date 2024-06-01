@@ -5069,6 +5069,8 @@ views:
       type: custom:mushroom-template-card
     - entity: sensor.micemob_next_alarm
       type: tile
+    - entity: input_datetime.sleep_time_on
+      type: tile
     - entity: sensor.work_alarm
       type: tile
     - entity: input_datetime.mice_wakeup_alarm_time
