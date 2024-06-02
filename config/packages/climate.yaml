@@ -149,7 +149,7 @@ automation:
         conditions:
           - condition: time
             after: "20:00:00"
-            before: "09:05:00"
+            before: "08:30:00"
           - condition: state
             entity_id: input_boolean.climate_automation
             state: "on"

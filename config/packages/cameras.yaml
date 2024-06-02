@@ -53,3 +53,4 @@ input_boolean:
   security_camera_notification:
     name: "Security Camera Notification"
     icon: mdi:cctv
+

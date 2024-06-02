@@ -124,11 +124,22 @@ script:
               {% endfor %}
             #birds #phuket #wildlife #spotting
 
-  telegram_auto_msg_birdnet:
-    alias: "Telegram MSG Phuket Birdnet"
+  telegram_txt_birdnet:
+    alias: "Telegram Phuket TXT Birdnet"
     sequence:
-      - service: script.telegram_phuket
-        data_template:
+      - service: camera.snapshot
+        metadata: {}
+        data:
+          filename: /config/www/tweet_images/output.jpg
+        target:
+          entity_id: camera.phuket_live
+      - service: script.telegram_group_test
+        data:
+          image: /config/www/tweet_images/output.jpg
+          caption: "Patong Camera"
+      - service: script.telegram_group_txt
+        data:
+          title: ""
           message: >
             {% set bird_list = state_attr('sensor.birdnet_go_events','bird_events') | sort(attribute='time', reverse=true) | map(attribute='name') | unique | list %}
             {% set bird_objects = state_attr('sensor.birdnet_go_events','bird_events') | sort(attribute='time', reverse=true) %}
@@ -139,15 +150,6 @@ script:
               {% for bird_name in bird_list %} 
                 {{bird_name}} https://en.wikipedia.org/wiki/{{bird_name | replace(' ', '_')}}
               {% endfor %}
-            #birds #phuket #wildlife #spotting
-      - service: script.telegram_phuket
-        data_template:
-          message: "BirdNet Status"
-          image: >
-            {{ [ "/config/www/tweet_images/bird.jpg",
-                  "/config/www/tweet_images/bird1.jpg",
-                  "/config/www/tweet_images/bird2.jpg",
-                  "/config/www/tweet_images/bird3.jpg"] | random }}
             #birds #phuket #wildlife #spotting
 
   telegram_auto_full:

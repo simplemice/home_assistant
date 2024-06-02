@@ -40,7 +40,6 @@ input_select:
       - Kitchen
       - Bathroom
       - Backyard
-    initial: Livingroom
     icon: mdi:hue:room-attic
 
 input_boolean:

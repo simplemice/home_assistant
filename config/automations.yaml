@@ -200,27 +200,22 @@
     before: sunrise
     after: sunset
   action:
-  - choose:
-    - conditions:
-      - condition: state
-        entity_id: binary_sensor.porch_motion
-        state: 'on'
-      sequence:
-      - service: light.turn_on
-        metadata: {}
-        data: {}
-        target:
-          entity_id: light.porch_bulb
-    - conditions:
-      - condition: state
-        entity_id: binary_sensor.porch_motion
-        state: 'off'
-      sequence:
-      - service: light.turn_off
-        metadata: {}
-        data: {}
-        target:
-          entity_id: light.porch_bulb
+  - if:
+    - condition: state
+      entity_id: binary_sensor.porch_motion
+      state: 'on'
+    then:
+    - service: light.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.porch_bulb
+    else:
+    - service: light.turn_off
+      metadata: {}
+      data: {}
+      target:
+        entity_id: light.porch_bulb
   mode: single
 - id: '1715172273118'
   alias: Mastodon Gas Price Posting
@@ -364,50 +359,6 @@
       target:
         entity_id: light.closet_lamp
   mode: single
-- id: '1715440619474'
-  alias: Back Home Light On
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id:
-    - sensor.home_micemob_distance
-    below: 300
-  - platform: numeric_state
-    entity_id:
-    - sensor.travel_time_distance
-    below: 0.5
-  - platform: state
-    entity_id:
-    - person.simplemice
-    to: home
-  condition:
-  - condition: and
-    conditions:
-    - condition: state
-      entity_id: light.porch_bulb
-      state: 'on'
-    - condition: sun
-      before: sunrise
-      after: sunset
-  action:
-  - service: light.turn_on
-    metadata: {}
-    data:
-      transition: 30
-      brightness_pct: 5
-    target:
-      entity_id: light.wall_ambient
-  - repeat:
-      sequence:
-      - service: scene.turn_on
-        data:
-          transition: 120
-        target:
-          entity_id:
-          - scene.closet_on
-          - scene.kitchen_ambient
-      count: 3
-  mode: single
 - id: '1715922054256'
   alias: Telegram Mastodon Phuket BirdNet
   description: ''
@@ -523,4 +474,61 @@
           option: Bathroom
         target:
           entity_id: input_select.house_room
+  mode: single
+- id: '1717308234545'
+  alias: Home Lights On After Sunset
+  description: ''
+  trigger:
+  - platform: sun
+    event: sunset
+    offset: -00:20:00
+  condition:
+  - condition: state
+    entity_id: sensor.family_home
+    state: 'True'
+  action:
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.closet_on
+  - service: light.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: light.wall_ambient
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.kitchen_ambient
+  mode: single
+- id: '1717329466449'
+  alias: Back Home Night Lights On
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id:
+    - sensor.travel_time_distance
+    above: 0.1
+  - platform: numeric_state
+    entity_id:
+    - sensor.home_micemob_distance
+    below: 300
+  condition:
+  - condition: and
+    conditions:
+    - condition: sun
+      before: sunrise
+      after: sunset
+    - condition: state
+      entity_id: sensor.family_home
+      state: 'False'
+  action:
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.closet_on
+  - service: scene.turn_on
+    metadata: {}
+    target:
+      entity_id: scene.kitchen_ambient
   mode: single

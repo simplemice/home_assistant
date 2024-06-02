@@ -196,6 +196,22 @@ script:
               - file: "{{ image }}"
                 caption: "{{ caption }}"
 
+  telegram_phuket_txt:
+    alias: Telegram Phuket TXT Notification
+    sequence:
+      - service: notify.telegram_phuket
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+
+  telegram_group_txt:
+    alias: Telegram Test TXT Notification
+    sequence:
+      - service: notify.telegram_group
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+
   telegram_group_test:
     alias: Telegram Test Notification
     sequence:
