@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.5
-Total entity objects | 1697
+Total entity objects | 1746
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
 Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 107
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
-Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 143
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 949
+Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 144
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 961
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 15
 Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 4
@@ -50,7 +50,7 @@ Entities in the [`image`](https://www.home-assistant.io/components/image) domain
 Entities in the [`button`](https://www.home-assistant.io/components/button) domain | 82
 Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
 Entities in the [`wake_word`](https://www.home-assistant.io/components/wake_word) domain | 1
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 5
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 41
 Entities in the [`image_processing`](https://www.home-assistant.io/components/image_processing) domain | 3
 Entities in the [`stt`](https://www.home-assistant.io/components/stt) domain | 1
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2

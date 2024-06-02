@@ -133,7 +133,9 @@ automation:
         data:
           transition: 120
         target:
-          entity_id: light.all_ambient
+          entity_id:
+            - light.all_ambient
+            - light.all_lights
       - service: input_boolean.turn_off
         metadata: {}
         data: {}
