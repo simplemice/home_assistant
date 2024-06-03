@@ -127,17 +127,20 @@ script:
   telegram_txt_birdnet:
     alias: "Telegram Phuket TXT Birdnet"
     sequence:
-      - service: camera.snapshot
-        metadata: {}
+      - service: script.telegram_phuket
         data:
-          filename: /config/www/tweet_images/output.jpg
-        target:
-          entity_id: camera.phuket_live
-      - service: script.telegram_group_test
-        data:
-          image: /config/www/tweet_images/output.jpg
-          caption: "Patong Camera"
-      - service: script.telegram_group_txt
+          image: >
+            {{ [ "/config/www/tweet_images/bird.jpg",
+                  "/config/www/tweet_images/bird1.jpg",
+                  "/config/www/tweet_images/bird2.jpg",
+                  "/config/www/tweet_images/bird3.jpg"] | random }}
+          caption: ""
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 2
+          milliseconds: 0
+      - service: script.telegram_phuket_txt
         data:
           title: ""
           message: >
@@ -163,42 +166,55 @@ script:
             {{ [ "/config/www/tweet_images/status_full.jpg",
                   "/config/www/tweet_images/status_full1.jpg",
                   "/config/www/tweet_images/status_full2.jpg",
-                  "/config/www/tweet_images/status_full3"] | random }}
+                  "/config/www/tweet_images/status_full3.jpg"] | random }}
           caption: >
-            Morning Phuket Weather Information:
-              Forecast Condition: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
+            Weather Information:
+              Forecast: {{ states('sensor.openweathermap_condition') }} / {{ states('sensor.openweathermap_forecast_condition') }}
               Temp & Hum: {{ states('sensor.openweathermap_forecast_temperature') }} °C / {{ states('sensor.openweathermap_humidity') }} %
               Pressure: {{ states('sensor.openweathermap_pressure') }} mmHg
-              Dew Point: {{ states('sensor.outside_comfort_dew_point') }} °C / {{ states('sensor.outside_comfort_dew_point_perception') }}
-              Humidex Comfort: {{ states('sensor.outside_comfort_absolute_humidity') }} g/m³ and now is {{ states('sensor.outside_comfort_humidex_perception') }}
               Precipitation: {{ state_translated('binary_sensor.rain_drop') }} - {{ states('sensor.pirateweather_precip_probability') }} % with {{ states('sensor.pirateweather_precip_intensity') }} mm/h
-              AQI: {{ states('sensor.outside_aqi') }} µg/m³
               UV: {{ states('sensor.owm_ultraviolet_index') }} idx
-              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
               Wind speed: {{ states('sensor.pirateweather_wind_speed') }} m/s / {{ states('sensor.pirateweather_wind_bearing') }} °
               Visibility: {{ states('sensor.openweathermap_visibility') }} km
               Storm: {{ states('sensor.pirateweather_nearest_storm_distance') }} km / {{ states('sensor.pirateweather_nearest_storm_bearing') }} °
-              Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km distance
-            Space Weather:  
-              M-Class flare {{ states('sensor.m_class_1_day_probability') }} % / X-Class flare {{ states('sensor.x_class_1_day_probability') }} % / Solar Flux {{ states('sensor.solar_flux_index') }}
+              Lighting Strike: {{ states('sensor.lighting_detector_lightning_counter') }} ↯ at {{ states('sensor.lighting_detector_lightning_distance') }} km
+            Allergy:
+              AQI: {{ states('sensor.u_s_air_pollution_level') }} - {{ states('sensor.outside_aqi') }} µg/m³
+              SO2: {{ states('sensor.owm_pollution_sulphur_dioxide_so2') }} μg/m3
+              CO: {{ states('sensor.owm_pollution_carbon_monoxide_co') }} μg/m3
+              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
+              NO/NO2: {{ states('sensor.owm_pollution_nitrogen_dioxide_no') }} / {{ states('sensor.owm_pollution_nitrogen_dioxide_no2') }} μg/m3
+            Dew Condition:
+              Comfort Dew point: - {{ states('sensor.outside_comfort_dew_point_perception') }}
+              Comfort Humidex: - {{ states('sensor.outside_comfort_humidex_perception') }}
+              Humidex: {{ states('sensor.outside_comfort_humidex') }} °C
+              Humidex Comfort: {{ states('sensor.outside_comfort_absolute_humidity') }} g/m³
+              Heat Point: {{ states('sensor.outside_comfort_heat_index') }} °C
+              Dew Point: {{ states('sensor.outside_comfort_dew_point') }} °C
+              Frost Point: {{ states('sensor.outside_comfort_frost_point') }} °C
+            Space Weather:
+              A-Index: {{ states('sensor.a_index') }}
+              K-Index: {{ states('sensor.planetary_k_index') }}
+              M-Class flare: {{ states('sensor.m_class_1_day_probability') }} %
+              X-Class flare: {{ states('sensor.x_class_1_day_probability') }} %
+              Solar Flux: {{ states('sensor.solar_flux_index') }}
             Gasoline Prices:
-              {{ [
-                "Today, Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, a journey of a thousand miles begins with a great gas price!",
-                "Hurry up! Today's prices for Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Who said laughter is the best fuel, clearly hasn't seen our prices!",
-                "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Driving on empty? Fill up at PTT, where every liter counts, and so does every Baht.",
-                "Today, fill up your tank with Gasohol 91 at {{ states('sensor.lowest_91_gas_price')}} or Gasohol 95 at {{ states('sensor.lowest_95_gas_price')}} Because the only thing better than our jokes is our fuel prices.",
-                "Get Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} today. They say laughter is the best medicine, but with our fuel prices, you'll forget you were ever ailing!",            
-                "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than your morning coffee!",
-                "The price of Gasohol 91 today {{ states('sensor.lowest_91_gas_price')}}  and Gasohol 95 {{ states('sensor.lowest_95_gas_price')}} ",
-                "The price of Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, it's not about the destination, but the journey and how much you saved on fuel at PTT!",
-                "Gasohol 91 is cruising at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is burning rubber at {{ states('sensor.lowest_95_gas_price')}} Get a full tank without emptying your wallet at PTT!",
-                "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} while Gasohol 95 is at {{ states('sensor.lowest_95_gas_price')}} With prices this low, your car's not the only thing that's going to be running!",
-                "Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} giving you more miles per gallon and more smiles per gallon! ",
-                "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much!",
-                "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate.",
-                "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee?",
-                "Today, Gasohol 91 is at {{ states('sensor.gas91priceptt')}} THB and Gasohol 95 is at {{ states('sensor.gas95priceptt')}} THB. Don't drive on fumes - get your fuel at PTT - where the only gas we pass are savings! ",
-                "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! "
-              ] | random }}
+            {{ [
+              "Today, Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, a journey of a thousand miles begins with a great gas price!",
+              "Hurry up! Today's prices for Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} Who said laughter is the best fuel, clearly hasn't seen our prices!",
+              "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Driving on empty? Fill up at PTT, where every liter counts, and so does every Baht.",
+              "Today, fill up your tank with Gasohol 91 at {{ states('sensor.lowest_91_gas_price')}} or Gasohol 95 at {{ states('sensor.lowest_95_gas_price')}} Because the only thing better than our jokes is our fuel prices.",
+              "Get Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} today. They say laughter is the best medicine, but with our fuel prices, you'll forget you were ever ailing!",            
+              "Hold on tight! The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . That's more than your morning coffee!",
+              "The price of Gasohol 91 is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} today. Remember, it's not about the destination, but the journey and how much you saved on fuel at PTT!",
+              "Gasohol 91 is cruising at {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is burning rubber at {{ states('sensor.lowest_95_gas_price')}} Get a full tank without emptying your wallet at PTT!",
+              "Gasohol 91 is priced at {{ states('sensor.lowest_91_gas_price')}} while Gasohol 95 is at {{ states('sensor.lowest_95_gas_price')}} With prices this low, your car's not the only thing that's going to be running!",
+              "Gasohol 91 for {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 for {{ states('sensor.lowest_95_gas_price')}} giving you more miles per gallon and more smiles per gallon! ",
+              "Smile, at least for now. The price of Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . At least your wheels can't eat that much!",
+              "That is what I call climbing! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . We'll all be riding bicycles at this rate.",
+              "If you think coffee is too expensive - take a look at our petrol prices! Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . So, you're still complaining about the cost of coffee?",
+              "Today, Gasohol 91 is at {{ states('sensor.gas91priceptt')}} THB and Gasohol 95 is at {{ states('sensor.gas95priceptt')}} THB. Don't drive on fumes - get your fuel at PTT - where the only gas we pass are savings! ",
+              "Sure someone said petrol should be cheaper? Well, I've got news for you - Gasohol 91 today is {{ states('sensor.lowest_91_gas_price')}} and Gasohol 95 is {{ states('sensor.lowest_95_gas_price')}} . Looks like we all picked the wrong coin! "
+            ] | random }}
 
-            #phuket #weather #gasoline #gasprice #spaceweather #information #status
+            #phuket #weather #gasprice #spaceweather #information #status

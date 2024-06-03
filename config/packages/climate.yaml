@@ -131,19 +131,24 @@ automation:
     trigger:
       - platform: numeric_state
         entity_id:
+          - sensor.bedroom_temp_humidity
+        above: 65
+        id: hum_on
+      - platform: numeric_state
+        entity_id:
+          - sensor.bedroom_temp_humidity
+        below: 43
+        id: hum_off
+      - platform: numeric_state
+        entity_id:
           - sensor.bedroom_temp_temperature
-        above: 27
+        above: 28
         id: temp_on
       - platform: numeric_state
         entity_id:
           - sensor.bedroom_temp_temperature
         below: 26
         id: temp_off
-    #      - platform: state
-    #        entity_id:
-    #          - binary_sensor.bedroom_door_contact
-    #        to: "off"
-    #        id: door_closed
     condition:
       - condition: and
         conditions:
@@ -159,7 +164,6 @@ automation:
               - condition: trigger
                 id:
                   - temp_on
-                  - door_closed
             sequence:
               - service: climate.turn_on
                 metadata: {}
@@ -192,6 +196,40 @@ automation:
           - conditions:
               - condition: trigger
                 id:
+                  - hum_on
+            sequence:
+              - service: climate.turn_on
+                metadata: {}
+                data: {}
+                target:
+                  entity_id: climate.bedroom_aircon
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 2
+                  milliseconds: 0
+              - service: climate.set_hvac_mode
+                metadata: {}
+                data:
+                  hvac_mode: dry
+                target:
+                  entity_id: climate.bedroom_aircon
+              - delay:
+                  hours: 0
+                  minutes: 0
+                  seconds: 2
+                  milliseconds: 0
+              - service: remote.send_command
+                metadata: {}
+                data:
+                  command: >-
+                    mk0mswlk0mc0mEsms4mEsmM1m0wlk2mICJADkAhABHgRbNJyBDwCHgIQAP4JUTGazMBnwbfAigFXwkPAh8AcwAyAPcCjwEPCp8EHwMPAw8ChgwPDA8PXQAyAQgBnwB0msxGlOaTcaowHyEz8HLwe/GqgGiwrvD48CB4A
+                target:
+                  entity_id: remote.bedroom_remote_hub
+          - conditions:
+              - condition: trigger
+                id:
+                  - hum_off
                   - temp_off
             sequence:
               - service: climate.turn_off
