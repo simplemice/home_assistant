@@ -532,3 +532,11 @@
     target:
       entity_id: scene.kitchen_ambient
   mode: single
+- id: '1717434423474'
+  alias: Low battery level notification
+  description: ''
+  use_blueprint:
+    path: low-battery-level-detection-notification-for-all-battery-sensors.yaml
+    input:
+      threshold: 10
+      actions: []
