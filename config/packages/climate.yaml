@@ -137,7 +137,7 @@ automation:
       - platform: numeric_state
         entity_id:
           - sensor.bedroom_temp_humidity
-        below: 43
+        below: 41
         id: hum_off
       - platform: numeric_state
         entity_id:

@@ -15,12 +15,12 @@ This is my Home Assistant installation.
 Description | value
 --|--
 Installed version | 2024.5.5
-Total entity objects | 1704
+Total entity objects | 1748
 Entities in the [`person`](https://www.home-assistant.io/components/person) domain | 1
-Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 107
+Entities in the [`update`](https://www.home-assistant.io/components/update) domain | 108
 Entities in the [`group`](https://www.home-assistant.io/components/group) domain | 8
-Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 143
-Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 960
+Entities in the [`binary_sensor`](https://www.home-assistant.io/components/binary_sensor) domain | 144
+Entities in the [`sensor`](https://www.home-assistant.io/components/sensor) domain | 959
 Entities in the [`cover`](https://www.home-assistant.io/components/cover) domain | 1
 Entities in the [`scene`](https://www.home-assistant.io/components/scene) domain | 4
 Entities in the [`light`](https://www.home-assistant.io/components/light) domain | 15
@@ -53,7 +53,7 @@ Entities in the [`wake_word`](https://www.home-assistant.io/components/wake_word
 Entities in the [`stt`](https://www.home-assistant.io/components/stt) domain | 1
 Entities in the [`number`](https://www.home-assistant.io/components/number) domain | 9
 Entities in the [`text`](https://www.home-assistant.io/components/text) domain | 2
-Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 3
+Entities in the [`geo_location`](https://www.home-assistant.io/components/geo_location) domain | 46
 Entities in the [`todo`](https://www.home-assistant.io/components/todo) domain | 3
 Entities in the [`time`](https://www.home-assistant.io/components/time) domain | 1
 Entities in the [`automation`](https://www.home-assistant.io/components/automation) domain | 52
@@ -68,6 +68,7 @@ Entities in the [`event`](https://www.home-assistant.io/components/event) domain
 - [Atomic Calendar Revive](https://github.com/totaldebug/atomic-calendar-revive)
 - [Auto Entities](https://github.com/thomasloven/lovelace-auto-entities)
 - [Bar Card](https://github.com/custom-cards/bar-card)
+- [Battery State Card / Entity Row](https://github.com/maxwroc/battery-state-card)
 - [Bootstrap Grid Card](https://github.com/ownbee/bootstrap-grid-card)
 - [Bubble Card](https://github.com/Clooos/Bubble-Card)
 - [Button Card](https://github.com/custom-cards/button-card)
