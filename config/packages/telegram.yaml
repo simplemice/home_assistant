@@ -33,21 +33,25 @@ script:
   telegram_auto_ad:
     alias: "Telegram Phuket Ad"
     sequence:
-      - service: script.telegram_phuket
+      - service: script.telegram_group_test
         data_template:
           message: "Phuket Ads"
           image: >
             {{ [ "/config/www/tweet_images/nd.jpg",
                   "/config/www/tweet_images/nd1.jpg",
-                  "/config/www/tweet_images/holiday2.jpg",
-                  "/config/www/tweet_images/holiday3.jpg"] | random }}
+                  "/config/www/tweet_images/nd2.jpg",
+                  "/config/www/tweet_images/nd3.jpg"] | random }}
           caption: >
             Nightdestiny Phuket:
-              1
-              2
-              3
-              4
-              5
+              Explore the wonders of your destination with our comprehensive services!
+              Whether you're looking to rent a car for an epic road trip, zip through the city on a scooter, or find a homely property to stay in, we've got you covered.
+              Navigating through a foreign country has never been easier! And why not invest in a permanent piece of paradise by purchasing a villa?
+              But that's not all - we understand the hassle of handling foreign currencies. With our money exchange service, you'll always get the best rates.
+              Live the ultimate vacation dream with us - your satisfaction is our priority!
+            Manager: @simplephuket
+
+            Web: https://nightdestiny.com
+
             #ads #car #scooter #property #exchange #phuket
 
   telegram_auto_news:
