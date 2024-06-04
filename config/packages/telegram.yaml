@@ -37,8 +37,8 @@ script:
         data_template:
           message: "Phuket Ads"
           image: >
-            {{ [ "/config/www/tweet_images/holiday.jpg",
-                  "/config/www/tweet_images/holiday1.jpg",
+            {{ [ "/config/www/tweet_images/nd.jpg",
+                  "/config/www/tweet_images/nd1.jpg",
                   "/config/www/tweet_images/holiday2.jpg",
                   "/config/www/tweet_images/holiday3.jpg"] | random }}
           caption: >
