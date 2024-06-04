@@ -116,6 +116,14 @@
   - service: script.mastodon_space_weather
     metadata: {}
     data: {}
+  - delay:
+      hours: 0
+      minutes: 5
+      seconds: 0
+      milliseconds: 0
+  - service: script.mastodon_astma
+    metadata: {}
+    data: {}
   mode: restart
 - id: '1714358939598'
   alias: Climate Auto Control
@@ -597,8 +605,12 @@
   - service: notify.simplemice
     metadata: {}
     data:
-      message: Here is shopping list
-      title: Shop Here
+      message: 'There {% if states(''todo.shopping_list'') | int < 2 %} is {%else%}
+        are {%endif%} {{ states(''todo.shopping_list'')}} {% if states(''todo.shopping_list'')
+        | int < 2 %} product {%else%} products {%endif%} left on the grocery list.
+
+        '
+      title: Here your Shopping List
       data:
         clickAction: /shopping-list
         url: /shopping-list

@@ -197,6 +197,23 @@ script:
                   "/config/www/tweet_images/weather1.jpg",
                   "/config/www/tweet_images/weather2.jpg"] | random }}
 
+  mastodon_astma:
+    sequence:
+      - service: script.mastodon_notify_home
+        data:
+          message: >-
+            Allergy:
+              AQI: {{ states('sensor.u_s_air_pollution_level') }} - {{ states('sensor.outside_aqi') }} µg/m³
+              SO2: {{ states('sensor.owm_pollution_sulphur_dioxide_so2') }} μg/m3
+              CO: {{ states('sensor.owm_pollution_carbon_monoxide_co') }} μg/m3
+              O3: {{ states('sensor.pirateweather_ozone') }} Du
+              NO/NO2: {{ states('sensor.owm_pollution_nitrogen_dioxide_no') }} / {{ states('sensor.owm_pollution_nitrogen_dioxide_no2') }} μg/m3
+              #weather #allergy #pollution #meteo #phuket
+          image: >
+            {{ [ "/config/www/tweet_images/weather.jpg",
+                  "/config/www/tweet_images/weather1.jpg",
+                  "/config/www/tweet_images/weather2.jpg"] | random }}
+
   mastodon_snark:
     sequence:
       - service: script.mastodon_notify_home

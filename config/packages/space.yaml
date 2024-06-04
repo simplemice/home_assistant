@@ -78,7 +78,11 @@ automation:
         data_template:
           message: >-
             {{ [
-            "The #ISS is passing over. Wave. #Space #theycanseeourhouse ",
+            "The ISS just flew by where there are {{states.binarysensor.iss.attributes.numberofpeoplein_space}} people living in space. #Space #TheyCanSeeOurHouse",
+            "There goes the ISS! There are currently {{states.binarysensor.iss.attributes.numberofpeoplein_space}} astronauts onboard. #Space #OurHouseFromSpace",
+            "{{states.binarysensor.iss.attributes.numberofpeoplein_space}} people are fulfilling tasks on the ISS that is above us right now. #Space #OurHouseFromSpace",
+            "The ISS is flying over us with {{states.binarysensor.iss.attributes.numberofpeoplein_space}} astronauts on board. #Space #TheyCanSeeOurHouse",
+            "There are {{states.binarysensor.iss.attributes.numberofpeoplein_space}} people in space, working on the ISS that flew over us. #Space #TheyCanSeeOurHouse",
             "The #ISS just flew by with there are {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people doing cool stuff. #Space #theycanseeourhouse",
             "The #ISS just flew by with {{states.binary_sensor.iss.attributes.number_of_people_in_space}} people in it. #Space #theycanseeourhouse"
             ] | random }}
@@ -150,7 +154,7 @@ automation:
               "The moon has rounded up its act tonight! If your kid is bouncing off walls, can’t necessarily blame lunar gravity, can we?",
               "Catch the stunning full moon tonight! But don't fret, there's no alien invasion planned...as far as we know",
               "Tonight's full moon: a perfect excuse to gaze skyward and ponder life's big questions. Like, why did they open a salad place next to a donut shop?"
-            ] | random + "#space #fullmoon"}}
+            ] | random + "#space #fullmoon #phuket"}}
           image: >-
             {{ [ "/config/www/tweet_images/full_moon.jpg",
                 "/config/www/tweet_images/moon2.jpeg",
