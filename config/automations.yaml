@@ -540,3 +540,66 @@
     input:
       threshold: 10
       actions: []
+- id: '1717468240211'
+  alias: camera snapshot to telegram
+  description: ''
+  trigger:
+  - platform: sun
+    event: sunrise
+    offset: -0:10:00
+  - platform: sun
+    event: sunrise
+    offset: 0
+  - platform: sun
+    event: sunrise
+    offset: +0:10:00
+  - platform: sun
+    event: sunset
+    offset: -0:10:00
+  - platform: sun
+    event: sunset
+    offset: 0
+  - platform: sun
+    event: sunset
+    offset: +0:10:00
+  condition:
+  - condition: time
+    before: '19:00:00'
+    after: 05:00:00
+  action:
+  - service: camera.snapshot
+    metadata: {}
+    data:
+      filename: /config/www/tweet_images/phuket.jpg
+    target:
+      entity_id: camera.phuket_live
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 2
+      milliseconds: 0
+  - service: script.telegram_group_test
+    data_template:
+      message: ''
+      image: /config/www/tweet_images/phuket.jpg
+      caption: Hourly & Sunset/Sunrise Snapshots from Phuket101 Camera
+  mode: single
+- id: '1717482914493'
+  alias: Shopping List Automation
+  description: ''
+  trigger:
+  - platform: zone
+    entity_id: person.simplemice
+    zone: zone.scheap
+    event: enter
+  condition: []
+  action:
+  - service: notify.simplemice
+    metadata: {}
+    data:
+      message: Here is shopping list
+      title: Shop Here
+      data:
+        clickAction: /shopping-list
+        url: /shopping-list
+  mode: single

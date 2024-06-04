@@ -122,7 +122,7 @@ script:
               {% for bird_name in bird_list %} 
                 {{bird_name}} https://en.wikipedia.org/wiki/{{bird_name | replace(' ', '_')}}
               {% endfor %}
-            #birds #phuket #wildlife #spotting
+            #birds #phuket #wildlife #spotting #nature
 
   telegram_txt_birdnet:
     alias: "Telegram Phuket TXT Birdnet"
@@ -182,11 +182,11 @@ script:
               AQI: {{ states('sensor.u_s_air_pollution_level') }} - {{ states('sensor.outside_aqi') }} µg/m³
               SO2: {{ states('sensor.owm_pollution_sulphur_dioxide_so2') }} μg/m3
               CO: {{ states('sensor.owm_pollution_carbon_monoxide_co') }} μg/m3
-              Ozone: {{ states('sensor.pirateweather_ozone') }} Du
+              O3: {{ states('sensor.pirateweather_ozone') }} Du
               NO/NO2: {{ states('sensor.owm_pollution_nitrogen_dioxide_no') }} / {{ states('sensor.owm_pollution_nitrogen_dioxide_no2') }} μg/m3
             Dew Condition:
-              Comfort Dew point: - {{ states('sensor.outside_comfort_dew_point_perception') }}
-              Comfort Humidex: - {{ states('sensor.outside_comfort_humidex_perception') }}
+              Comfort Dew point: {{ states('sensor.outside_comfort_dew_point_perception') }}
+              Comfort Humidex: {{ states('sensor.outside_comfort_humidex_perception') }}
               Humidex: {{ states('sensor.outside_comfort_humidex') }} °C
               Humidex Comfort: {{ states('sensor.outside_comfort_absolute_humidity') }} g/m³
               Heat Point: {{ states('sensor.outside_comfort_heat_index') }} °C
