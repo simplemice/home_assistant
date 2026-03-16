@@ -1,6 +1,6 @@
 </p>
 <h1 align="center">
-  <a name="logo" href="http://nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshot/casa_de_ratton.png" alt="Casa de Ratón" width="500"></a>
+  <a name="logo" href="http://nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Ratón" width="500"></a>
   <br>
   Casa de Ratón
   <br>
