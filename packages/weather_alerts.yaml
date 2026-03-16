@@ -1,0 +1,481 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Weather
+#   @description    :   Weather automations.
+###############################################################################
+
+input_boolean:
+  awtrix_weather:
+    name: "Awtrix Weather"
+    icon: mdi:weather-partly-cloudy
+  awtrix_rain_forecast:
+    name: "Awtrix Rain Forecast"
+    icon: fas:cloud-sun-rain
+  home_aqi_alert:
+    name: "Home AQI Alert"
+    icon: mdi:air-filter
+
+sensor:
+  - platform: statistics
+    name: "Rain Last 24 Hours Sum"
+    entity_id: sensor.astroweather_home_precipitation_amount
+    state_characteristic: sum
+    max_age:
+      hours: 24
+
+  - platform: statistics
+    name: Monthly Rain Statistic
+    entity_id: sensor.astroweather_home_precipitation_amount
+    state_characteristic: sum
+    max_age:
+      days: 31
+
+  # === TEMPERATURE MAX ===
+  - platform: statistics
+    name: Daily Max Temperature
+    entity_id: sensor.porch_temp_temperature
+    state_characteristic: value_max
+    sampling_size: 5000
+    max_age:
+      hours: 24
+
+  - platform: statistics
+    name: Weekly Max Temperature
+    entity_id: sensor.porch_temp_temperature
+    state_characteristic: value_max
+    sampling_size: 15000
+    max_age:
+      days: 7
+
+  - platform: statistics
+    name: Monthly Max Temperature
+    entity_id: sensor.porch_temp_temperature
+    state_characteristic: value_max
+    sampling_size: 50000
+    max_age:
+      days: 31
+
+  # === HUMIDITY MAX ===
+  - platform: statistics
+    name: Daily Max Humidity
+    entity_id: sensor.porch_temp_humidity
+    state_characteristic: value_max
+    sampling_size: 5000
+    max_age:
+      hours: 24
+
+  - platform: statistics
+    name: Weekly Max Humidity
+    entity_id: sensor.porch_temp_humidity
+    state_characteristic: value_max
+    sampling_size: 15000
+    max_age:
+      days: 7
+
+  - platform: statistics
+    name: Monthly Max Humidity
+    entity_id: sensor.porch_temp_humidity
+    state_characteristic: value_max
+    sampling_size: 50000
+    max_age:
+      days: 31
+
+  # === WIND SPEED MAX ===
+  - platform: statistics
+    name: Daily Max Wind Speed
+    entity_id: sensor.astroweather_astroweather_10m_wind_speed
+    state_characteristic: value_max
+    sampling_size: 5000
+    max_age:
+      hours: 24
+
+  - platform: statistics
+    name: Weekly Max Wind Speed
+    entity_id: sensor.astroweather_astroweather_10m_wind_speed
+    state_characteristic: value_max
+    sampling_size: 15000
+    max_age:
+      days: 7
+
+  - platform: statistics
+    name: Monthly Max Wind Speed
+    entity_id: sensor.astroweather_astroweather_10m_wind_speed
+    state_characteristic: value_max
+    sampling_size: 50000
+    max_age:
+      days: 31
+
+  - platform: mold_indicator
+    name: "Livingroom Mold Indicator"
+    indoor_temp_sensor: sensor.livingroom_temp_temperature
+    indoor_humidity_sensor: sensor.livingroom_temp_humidity
+    outdoor_temp_sensor: sensor.porch_temp_temperature
+    calibration_factor: 2.0
+    unique_id: livingroom_mold_indicator
+  - platform: mold_indicator
+    name: "Bedroom Mold Indicator"
+    indoor_temp_sensor: sensor.bedroom_temp_temperature
+    indoor_humidity_sensor: sensor.bedroom_temp_humidity
+    outdoor_temp_sensor: sensor.porch_temp_temperature
+    calibration_factor: 2.0
+    unique_id: bedroom_mold_indicator
+  - platform: mold_indicator
+    name: "Kitchen Mold Indicator"
+    indoor_temp_sensor: sensor.kitchen_temp
+    indoor_humidity_sensor: sensor.kitchen_humidity
+    outdoor_temp_sensor: sensor.backyard_temp_temperature
+    calibration_factor: 2.0
+    unique_id: kitchen_mold_indicator
+  - platform: mold_indicator
+    name: "Bathroom Mold Indicator"
+    indoor_temp_sensor: sensor.bathroom_clock_temperature
+    indoor_humidity_sensor: sensor.bathroom_clock_humidity
+    outdoor_temp_sensor: sensor.backyard_temp_temperature
+    calibration_factor: 2.0
+    unique_id: bathroom_mold_indicator
+
+###########
+multiscrape:
+  - resource: "https://www.accuweather.com/en/th/mueang-phuket/320075/weather-today/320075"
+    scan_interval: 3600
+    headers:
+      User-Agent: Mozilla/5.0
+    sensor:
+      # 🌞 DAY VALUES
+      - unique_id: phuket_day_probability_precip
+        name: "Phuket Day Probability of Precipitation"
+        select: "body > div > div.two-column-page-content > div.page-column-1 > div.page-content.content-module > div:nth-child(2) > div.half-day-card-content > div.panels > div.right > p:nth-child(1) > span"
+        value_template: "{{ value | trim }}"
+      - unique_id: phuket_day_probability_thunder
+        name: "Phuket Day Probability of Thunderstorms"
+        select: "body > div > div.two-column-page-content > div.page-column-1 > div.page-content.content-module > div:nth-child(2) > div.half-day-card-content > div.panels > div.right > p:nth-child(2) > span"
+        value_template: "{{ value | trim }}"
+      # 🌙 NIGHT VALUES
+      - unique_id: phuket_night_pop
+        name: "Night Probability of Precipitation"
+        select: "body > div > div.two-column-page-content > div.page-column-1 > div.page-content.content-module > div:nth-child(4) > div.half-day-card-content > div.panels > div.left > p:nth-child(3) > span"
+        value_template: "{{ value | trim }}"
+      - unique_id: phuket_night_thunder
+        name: "Night Probability of Thunderstorms"
+        select: "div.half-day-card:nth-of-type(2) div.panels div.right p:nth-of-type(1) span"
+        value_template: "{{ value | trim }}"
+  - resource: "https://www.accuweather.com/en/th/mueang-phuket/320075/health-activities/320075"
+    scan_interval: 3600
+    headers:
+      User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+    sensor:
+      - unique_id: phuket_dust_status
+        name: "Phuket Dust Danger Level"
+        select: "body > div > div.two-column-page-content.single-column > div > div.page-content > div:nth-child(12) > div.lifestyle-index-list__cards > div.index-list-cards-container > a:nth-child(1) > div.index-status-text"
+        value_template: "{{ value | trim }}"
+  - resource: "https://www.accuweather.com/en/th/mueang-phuket/1-320075_1_al/health-activities/1-320075_1_al"
+    scan_interval: 3600
+    headers:
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9
+    sensor:
+      - unique_id: phuket_mosquito_activity
+        name: "Phuket Mosquito Activity"
+        select: "a[data-index-slug='mosquito-activity'] .index-status-text"
+        icon: mdi:mosquito
+        value_template: "{{ value.strip() }}"
+  - resource: "https://www.accuweather.com/en/th/mueang-phuket/1-320075_1_al/health-activities/1-320075_1_al"
+    scan_interval: 3600
+    headers:
+      User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9
+    sensor:
+      - unique_id: phuket_outdoor_pests_status
+        name: "Phuket Outdoor Pests Status"
+        select: "a[data-index-slug='outdoor-pests'] .index-status-text"
+        icon: mdi:bug-outline
+        value_template: "{{ value.strip() }}"
+
+geo_location:
+  - platform: usgs_earthquakes_feed
+    feed_type: "past_day_all_earthquakes"
+    radius: 2000
+    minimum_magnitude: 0.0
+
+template:
+  - trigger:
+      # Fire the trigger at 1 minute past midnight
+      - platform: time
+        at: "00:01:00"
+    sensor:
+      - name: "Yesterday Rain (mm)"
+        unit_of_measurement: "mm"
+        # Optional: Adds the sensor to the Long Term Statistics
+        state_class: measurement
+        # The state is the value of the 24-hour sum sensor at the time of the trigger.
+        # This will be the sum of rain from 00:01:00 the day before to 00:01:00 today.
+        state: "{{ states('sensor.rain_last_24_hours_sum') }}"
+
+  - sensor:
+      - name: rain_day_increment
+        state: >
+          {{ 1 if is_state('binary_sensor.rain_detector_rain', 'on') else 0 }}
+
+  - sensor:
+      - name: "Rainfall 24h Total (mm)"
+        unit_of_measurement: "mm"
+        state: >-
+          {{ (states('sensor.daily_rain_mm') | float +
+              states('sensor.yesterday_rain_mm') | float) | round(1) }}
+  - sensor:
+      - name: "Humidity Difference House vs Outside"
+        unique_id: humidity_difference_house_vs_outside
+        unit_of_measurement: "%"
+        state: >
+          {% set house_hum = states('sensor.house_humidity') | float(0) %}
+          {% set outside_hum = states('sensor.outside_humidity') | float(0) %}
+          {{ (house_hum - outside_hum) | round(1) }}
+  - sensor:
+      - name: "Temp Difference House vs Outside"
+        unique_id: temp_difference_house_vs_outside
+        unit_of_measurement: "°C"
+        state: >
+          {% set house_temp = states('sensor.house_temperature') | float(0) %}
+          {% set outside_temp = states('sensor.outside_temp') | float(0) %}
+          {{ (house_temp - outside_temp) | round(1) }}
+  - sensor:
+      - name: "Nearest Storm Bearing Human Readable"
+        state: >
+          {% set bearing = states('sensor.pirateweather_nearest_storm_bearing') | float %}
+          {% if bearing >= 337.5 or bearing < 22.5 %}
+            North
+          {% elif bearing >= 22.5 and bearing < 67.5 %}
+            Northeast
+          {% elif bearing >= 67.5 and bearing < 112.5 %}
+            East
+          {% elif bearing >= 112.5 and bearing < 157.5 %}
+            Southeast
+          {% elif bearing >= 157.5 and bearing < 202.5 %}
+            South
+          {% elif bearing >= 202.5 and bearing < 247.5 %}
+            Southwest
+          {% elif bearing >= 247.5 and bearing < 292.5 %}
+            West
+          {% else %}
+            Northwest
+          {% endif %}
+  - sensor:
+      - name: "Phuket Season"
+        unique_id: phuket_season
+        icon: >
+          {% if is_state('sensor.phuket_season', 'Dry Season') %}
+            mdi:weather-sunny
+          {% elif is_state('sensor.phuket_season', 'Hot Season') %}
+            mdi:weather-sunny-alert
+          {% else %}
+            mdi:weather-pouring
+          {% endif %}
+        state: >
+          {% set month = now().month %}
+          {% if month in [11, 12, 1, 2] %}
+            Hight Season
+          {% elif month in [3, 4, 5] %}
+            Hot Season
+          {% elif month in [6, 7, 8] %}
+            Wet Season
+          {% else %}
+            Monsoon Flood Peak
+          {% endif %}
+  - sensor:
+      - name: "Rain Intensity"
+        unique_id: rain_intensity_stat
+        state: >
+          {% set intensity = states('sensor.rain_detector_rain_intensity') | int %}
+          {% if intensity < 30 %}
+            No Rain
+          {% elif intensity <= 1000 %}
+            Light Rain
+          {% elif intensity <= 2000 %}
+            Moderate Rain
+          {% else %}
+            Heavy Rain
+          {% endif %}
+  - sensor:
+      - name: "Wind Direction (16-point)"
+        unique_id: wind_direction_16_point
+        state: >
+          {% set bearing_raw = states('sensor.pirateweather_wind_bearing') %}
+          {% if bearing_raw not in ['unknown', 'unavailable', 'none', None] %}
+            {% set bearing = bearing_raw | float(0) %}
+            {% set directions = [
+              'N', 'NNE', 'NE', 'ENE',
+              'E', 'ESE', 'SE', 'SSE',
+              'S', 'SSW', 'SW', 'WSW',
+              'W', 'WNW', 'NW', 'NNW'
+            ] %}
+            {% set index = (((bearing + 11.25) % 360) / 22.5) | round(0, 'floor') | int %}
+            {{ directions[index] }}
+          {% else %}
+            unknown
+          {% endif %}
+  - sensor:
+      - name: "Phuket Wind Type"
+        unique_id: phuket_wind_type
+        state: >
+          {% set bearing = states('sensor.openweathermap_wind_bearing') | float(0) %}
+          {% set month = now().month %}
+          {% set is_southwest = 200 <= bearing <= 260 %}
+          {% set is_northeast = 30 <= bearing <= 80 %}
+          {% if month in [5, 6, 7, 8, 9, 10] and is_southwest %}
+            Southwest Monsoon
+          {% elif month in [11, 12, 1, 2, 3, 4] and is_northeast %}
+            Northeast Monsoon
+          {% elif month in [5, 6, 7, 8, 9, 10] %}
+            Southwest Pattern (but weak)
+          {% elif month in [11, 12, 1, 2, 3, 4] %}
+            Northeast Pattern (but weak)
+          {% else %}
+            Variable Wind
+          {% endif %}
+  - sensor:
+      - name: Atmospheric Stability Condition
+        unique_id: astroweather_lifted_index_condition
+        icon: mdi:weather-cloudy-alert
+        state: >
+          {% set raw = states('sensor.astroweather_astroweather_lifted_index') | lower %}
+          {# Try direct float #}
+          {% set li = raw | float(default=None) %}
+          {# If float failed (because raw is text), extract number from string #}
+          {% if li is none %}
+            {% set nums = raw | regex_findall_index('-?[0-9]+\.?[0-9]*') %}
+            {% if nums %}
+              {% set li = nums | first | float %}
+            {% endif %}
+          {% endif %}
+          {% if li is none %}
+            Unknown
+          {% elif li > 6 %}
+            Extremely Stable — No Convection
+          {% elif li > 2 %}
+            Very Stable — No Thunderstorm Development
+          {% elif li >= 0 %}
+            Stable — Only Forced Convection Possible
+          {% elif li >= -2 %}
+            Slightly Unstable — Weak Storm Potential
+          {% elif li >= -6 %}
+            Moderately Unstable — Storms Possible with Trigger
+          {% else %}
+            Highly Unstable — *Tropics Normal*
+          {% endif %}
+  - sensor:
+      - name: "Outside Temp"
+        unique_id: outside_temp
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set temp1 = states('sensor.porch_temp_temperature') | float(0) %}
+          {% set temp2 = states('sensor.backyard_temp_temperature') | float(0) %}
+          {% if temp1 and temp2 %}
+            {{ ((temp1 + temp2) / 2) | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+      - name: "Outside Humidity"
+        unique_id: outside_humidity
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+        state: >
+          {% set temp1 = states('sensor.porch_temp_humidity') | float(0) %}
+          {% set temp2 = states('sensor.backyard_temp_humidity') | float(0) %}
+          {% if temp1 and temp2 %}
+            {{ ((temp1 + temp2) / 2) | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+
+      - name: "House Humidity"
+        unique_id: house_humidity
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+        state: >
+          {% set hum1 = states('sensor.livingroom_temp_humidity') | float(0) %}
+          {% set hum2 = states('sensor.bedroom_temp_humidity') | float(0) %}
+          {% set hum3 = states('sensor.kitchen_humidity') | float(0) %}
+          {% if hum1 != 0 and hum2 != 0 and hum3 != 0 %}
+            {{ ((hum1 + hum2 + hum3) / 3) | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+      - name: "Average Mold Data"
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+        state: >
+          {% set mold1 = states('sensor.livingroom_mold_indicator') | float(0) %}
+          {% set mold2 = states('sensor.bedroom_mold_indicator') | float(0) %}
+          {% set mold3 = states('sensor.kitchen_mold_indicator') | float(0) %}
+          {% if mold1 != 0 and mold2 != 0 and mold3 != 0 %}
+            {{ ((mold1 + mold2 + mold3) / 3) | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
+  - sensor:
+      - name: Rain Prediction Score
+        unique_id: rain_score
+        state: >
+          {% set score = 0 %}
+          {% set pop = states('sensor.pirateweather_precip_probability')|float(0) %}
+          {% set humidity = states('sensor.outside_humidity')|float(0) %}
+          {% set clouds = states('sensor.astroweather_home_cloudless')|float(0) %}
+          {% if pop > 60 %}{% set score = score + 2 %}
+          {% elif pop > 40 %}{% set score = score + 1 %}
+          {% endif %}
+          {% if humidity > 80 %}{% set score = score + 1 %}{% endif %}
+          {% if clouds > 80 %}{% set score = score + 1 %}{% endif %}
+          {{ score }}
+  - sensor:
+      - name: Rain Prediction Human
+        unique_id: rain_human
+        icon: mdi:weather-rainy
+        state: >
+          {% set score = states('sensor.rain_prediction_score') | int(0) %}
+          {% if score <= 0 %}
+            No Rain Possible
+          {% elif score == 1 %}
+            Slight chance of rain
+          {% elif score == 2 %}
+            Rain possible
+          {% elif score == 3 %}
+            Rain likely soon
+          {% elif score == 4 %}
+            Very likely rain
+          {% else %}
+            Rain almost certain
+          {% endif %}
+
+utility_meter:
+  ####### RAIN
+  hourly_rain_mm:
+    source: sensor.astroweather_home_precipitation_amount
+    cycle: hourly
+  daily_rain_mm:
+    source: sensor.astroweather_home_precipitation_amount
+    cycle: daily
+  weekly_rain_mm:
+    source: sensor.astroweather_home_precipitation_amount
+    cycle: weekly
+  monthly_rain_mm:
+    source: sensor.astroweather_home_precipitation_amount
+    cycle: monthly
+  yearly_rain_mm:
+    source: sensor.astroweather_home_precipitation_amount
+    cycle: yearly
+  days_with_rain_monthly:
+    source: sensor.rain_day_increment
+    cycle: monthly
+    net_consumption: true
+  days_with_rain_daily:
+    source: sensor.rain_day_increment
+    cycle: daily
+    net_consumption: true
+  days_with_rain_yearly:
+    source: sensor.days_with_rain_daily
+    cycle: yearly
+    net_consumption: true

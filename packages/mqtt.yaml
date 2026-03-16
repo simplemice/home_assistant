@@ -1,0 +1,21 @@
+#mqtt:
+#  sensor:
+#    - name: "Last Frigate Object"
+#      state_topic: "frigate/events"
+#      value_template: >
+#        {% if value_json['after'] is defined %}
+#          {{ value_json['after']['label'] }}
+#        {% else %}
+#          unknown
+#        {% endif %}
+#      json_attributes_topic: "frigate/events"
+#      json_attributes_template: "{{ value_json['after'] if value_json['after'] is defined else {} }}"
+
+#mqtt:
+#  sensor:
+#    - name: "Last Frigate Object"
+#      state_topic: "frigate/events"
+#      value_template: >
+#        {{ value_json.label if value_json.label is defined else 'unknown' }}
+#      json_attributes_topic: "frigate/events"
+#     json_attributes_template: "{{ value_json }}"

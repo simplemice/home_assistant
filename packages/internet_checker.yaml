@@ -1,0 +1,57 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Templates
+#   @description    :   internet checker
+###############################################################################
+
+input_datetime:
+  internet_outage_start:
+    name: Internet Outage Start
+    has_date: true
+    has_time: true
+  internet_alert_stop:
+    name: Internet Outage Finish
+    has_date: true
+    has_time: true
+    icon: mdi:clock-start
+
+input_text:
+  last_outage_readable:
+    name: Last Outage Duration (Readable)
+    initial: "N/A"
+    max: 50
+    icon: mdi:timer-sand
+
+input_number:
+  last_outage_duration_min:
+    name: Last Outage Duration (min)
+    min: 0
+    max: 1440
+    step: 0.1
+    mode: box
+    unit_of_measurement: min
+    icon: mdi:timer-off-outline
+
+input_boolean:
+  internet_alert:
+    name: "Internet Alert"
+    icon: mdi:alert
+
+template:
+  - sensor:
+      - name: "Last Outage Readable"
+        icon: mdi:timer
+        state: >
+          {% set mins = states('input_number.last_outage_duration_min') | float(0) %}
+          {% if mins == 0 %}
+            N/A
+          {% else %}
+            {% set h = (mins // 60) | int %}
+            {% set m = (mins % 60) | round(0) %}
+            {% if h > 0 %}
+              {{ h }} hours {{ m }} minutes
+            {% else %}
+              {{ m }} minutes
+            {% endif %}
+          {% endif %}

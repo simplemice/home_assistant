@@ -1,0 +1,3 @@
+download_bird_image: >
+  curl -s -o /config/www/bird_images/{{ bird_name | replace(' ', '_') }}.jpg
+  https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/{{ bird_name | replace(' ', '_') }}.jpg/640px-{{ bird_name | replace(' ', '_') }}.jpg

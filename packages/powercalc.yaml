@@ -1,0 +1,379 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   PowerCalc
+#   @description    :   PowerCalc
+###############################################################################
+sensor:
+  - platform: integration
+    source: sensor.total_lights_power
+    name: Total Lights Energy
+    unit_prefix: k
+    round: 3
+  - platform: integration
+    source: sensor.thinkpad_t580_power
+    name: ThinkPad T580 Energy
+    unit_prefix: k
+    round: 3
+    method: trapezoidal
+  - platform: integration
+    source: sensor.sim_home_power
+    name: Sim Home Energy
+    unit_prefix: k
+    round: 3
+  - platform: integration
+    source: sensor.kitchen_appliances_power
+    name: Kitchen Appliances Energy
+    unit_prefix: k
+    round: 3
+  - platform: integration
+    source: sensor.climate_power
+    name: Climate Energy
+    unit_prefix: k
+    round: 3
+  - platform: integration
+    source: sensor.lighting_power
+    name: Lighting Energy
+    unit_prefix: k
+    round: 3
+
+template:
+  - sensor:
+      - name: "Sim Home Power"
+        unique_id: sim_home_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:home-lightning-bolt
+        state: >
+          {{
+            states('sensor.home_office_power')|float(0) +
+            states('sensor.kitchen_appliances_power')|float(0) +
+            states('sensor.climate_power')|float(0) +
+            states('sensor.lighting_power')|float(0) +
+            states('sensor.media_power')|float(0)
+          }}
+  - sensor:
+      - name: "Media Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:speaker
+        state: >
+          {{
+            states('sensor.livingroom_player_power')|float(0) +
+            states('sensor.bedroom_player_power')|float(0) +
+            states('sensor.kitchen_player_power')|float(0) +
+            states('sensor.tv_box_outlet_power')|float(0) +
+            states('sensor.tv_outlet_power')|float(0)
+          }}
+  - sensor:
+      - name: "Lighting Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:lightbulb-group
+        state: "{{ states('sensor.total_lights_power')|float(0) }}"
+  - sensor:
+      - name: "Climate Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:air-conditioner
+        state: >
+          {{
+            states('sensor.eminent_ac_power_power')|float(0) +
+            states('sensor.smart_fan_power_power')|float(0) +
+            states('sensor.kitchen_fan_power')|float(0)
+          }}
+  - sensor:
+      - name: "Kitchen Appliances Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:chef-hat
+        state: >
+          {{
+            states('sensor.rice_cooker_power_power')|float(0) +
+            states('sensor.air_fryer_power_power')|float(0) +
+            states('sensor.kettle_power_power')|float(0) +
+            states('sensor.microwave_power_power')|float(0) +
+            states('sensor.fridge_power_power')|float(0)
+          }}
+  - sensor:
+      - name: "Home Office Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:laptop
+        state: >
+          {{
+            states('sensor.thinkpad_t580_power')|float(0)
+          }}
+
+  - sensor:
+      - name: "ThinkPad T580 Power"
+        unique_id: thinkpad_t580_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {% if is_state('sensor.micebook_idle', 'unknown') %}
+            0
+          {% elif states('sensor.micebook_idle')|float > 300 %}
+            2
+          {% else %}
+            {% set base = 6 %}
+            {% set cpu = states('sensor.micebook_cpu_usage')|float * 0.35 %}
+            {% set screen = 5 if is_state('switch.micebook_screen_onoff', 'on') else 0 %}
+            {% set charging = 30 if states('sensor.micebook_battery_ac')|float > 0 else 0 %}
+            {{ (base + cpu + screen + charging) | round(1) }}
+          {% endif %}
+
+  - sensor:
+      - name: "Sim Fridge Status"
+        state: >
+          {% set hour = now().hour %}
+          {% set minute_loop = (now().hour * 60 + now().minute) % 40 %}
+          {# 1. Check for Daily Defrost: Run only between 3:00 AM and 3:25 AM #}
+          {% if hour == 3 and now().minute < 25 %}
+            defrost
+          {# 2. Run the normal 40-minute cooling cycle for the rest of the day #}
+          {% elif minute_loop < 1 %}
+            startup
+          {% elif minute_loop < 20 %}
+            cooling
+          {% else %}
+            idle
+          {% endif %}
+
+  - sensor:
+      - name: "Total Lights Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:lightbulb-group
+        state: >
+          {{
+            states('sensor.wled_closet_strip_l_power') | float(0) +
+            states('sensor.wled_closet_strip_r_power') | float(0) +
+            states('sensor.wled_wall_light_power') | float(0) +
+            states('sensor.wled_table_power') | float(0) +
+            states('sensor.wled_thunderstorm_main_power') | float(0) +
+            states('sensor.wled_tv_power') | float(0) +
+            states('sensor.wled_panel_power') | float(0) +
+            states('sensor.porch_bulb_power') | float(0) +
+            states('sensor.closet_lamp_power_power') | float(0) +
+            states('sensor.kitchen_closet_ambient_power_power') | float(0) +
+            states('sensor.kitchen_wall_ambient_power_power') | float(0) +
+            states('sensor.closet_strip_1m_power_power') | float(0) +
+            states('sensor.awtrix_44dff8_power_power') | float(0) +
+            states('sensor.bedroom_alarm_gateway_power') | float(0) +
+            states('sensor.bedroom_bed_strip_power_power') | float(0)
+          }}
+  - binary_sensor:
+      - default_entity_id: binary_sensor.rice_cooker_cooking
+        name: Rice Cooker Cooking
+        state: "{{ states('sensor.chunmi_eh3_e09c_cooker') == 'cooking' }}"
+  - binary_sensor:
+      - default_entity_id: binary_sensor.rice_cooker_keepwarm
+        name: Rice Cooker KeepWarm
+        state: "{{ states('sensor.chunmi_eh3_e09c_cooker') == 'keepwarm' }}"
+  - binary_sensor:
+      - default_entity_id: binary_sensor.microwave_heating
+        name: Microwave Heating
+        state: "{{ states('sensor.chunmi_n23l01_bcf8_left_time') | int > 0 }}"
+
+powercalc:
+  sensors:
+    - entity_id: fan.livingroom_fan
+      name: "Livingroom Fan Power"
+      # 1. Standby Power (Top level, applies when fan is 'off')
+      standby_power: 0.5
+      # 2. Linear Model Definition (Only min and max required here)
+      linear:
+        min_power: 1.0
+        max_power: 24.0
+    # Kitchen Closet Ambient (2m LED strip)
+    - entity_id: light.kitchen_closet_ambient
+      name: "Kitchen Closet Ambient Power"
+      standby_power: 0.1
+      fixed:
+        power: 20
+    # Kitchen Wall Ambient (2m LED strip)
+    - entity_id: light.kitchen_wall_ambient
+      name: "Kitchen Wall Ambient Power"
+      standby_power: 0.1
+      fixed:
+        power: 20
+    # Closet Strip (1m LED strip)
+    - entity_id: light.closet_strip
+      name: "Closet Strip 1m Power"
+      standby_power: 0.05
+      fixed:
+        power: 10
+    - entity_id: light.gateway_light
+      name: "Bedroom Alarm Gateway Power"
+      standby_power: 2.8
+      fixed:
+        power: 3.5
+    - entity_id: light.awtrix_44dff8_matrix
+      name: "awtrix_44dff8 Power"
+      standby_power: 0.05
+      fixed:
+        states_power:
+          "on": 2.8
+          "off": 0.3
+    #### FRIDGE
+    - entity_id: sensor.sim_fridge_status
+      name: "Fridge Power"
+      manufacturer: "Generic"
+      model: "Cyclic Fridge"
+      standby_power: 1.8
+      fixed:
+        states_power:
+          idle: 1.8
+          cooling: 120
+          startup: 450
+          defrost: 240
+    # ----------------------------------------------------
+    # NEW: Mitsubishi R16-GA 16-inch Fan
+    # ----------------------------------------------------
+    - entity_id: fan.kitchen_fan # <-- Use your actual entity ID here
+      manufacturer: MITSUBISHI ELECTRIC
+      model: R16-GA
+      name: "Kitchen Fan Power"
+      # Standby power (power when off/plugged in)
+      standby_power: 0.5
+      fixed:
+        power: 34.0
+
+    # -------------------------------------------------------------------
+    # 1. Chunmi Cooker (Fixed Model) - FIX APPLIED
+    # Removed 'power_model:' and moved 'fixed:' up one level.
+    # -------------------------------------------------------------------
+    - entity_id: sensor.chunmi_eh3_e09c_cooker
+      manufacturer: Chunmi
+      model: chunmi.cooker.eh3
+      name: "Rice Cooker Power"
+      standby_power: 0.8 # Idle / Off
+      fixed:
+        states_power:
+          off: 0.8
+          idle: 0.8
+          cooking: 800 # When cooking
+          shutdown: 0.8
+          keepwarm: 350 # When keep-warm active
+        power: 800
+
+    # -------------------------------------------------------------------
+    # 2. Careli Air Fryer (Fixed Model) - FIX APPLIED
+    # Removed 'power_model:' and moved 'fixed:' up one level.
+    # -------------------------------------------------------------------
+    - entity_id: sensor.careli_maf01_68e5_air_fryer
+      manufacturer: Careli
+      model: careli.fryer.maf01
+      name: "Air Fryer Power"
+      standby_power: 0.8
+      fixed:
+        states_power:
+          off: 0.8
+          standby: 0.8
+          shutdown: 0.8
+          cooking: 1500
+          idle: 0.8
+          preheat: 1000
+          paused: 0.8
+        power: 1500
+
+    # -------------------------------------------------------------------
+    # 3. Eminent AC (Fixed + Template Conditional) - FIX APPLIED
+    # Removed 'power_model:', adjusted 'fixed:', and ensured 'template' is correct.
+    # -------------------------------------------------------------------
+    - entity_id: climate.aircon
+      manufacturer: Eminent
+      model: wfm12f
+      name: "Bedroom Aircon Power"
+      # A. Fixed Power: The entire logic is placed here using a conditional template.
+      fixed:
+        power: >
+          {% set ac_entity = 'climate.aircon' %}
+          {# Check if the AC is in a high-power mode (cool, dry, heat) #}
+          {% if is_state(ac_entity, 'cool') or is_state(ac_entity, 'dry') %}
+            965.00  {# High power when compressor is running #}
+          {% else %}
+            350.0    {# Low power when unit is on (fan only) or in another low-power mode #}
+          {% endif %}
+      # B. Standby Power: This is the power when the entity state is 'off'.
+      # Since we handle the 'on' state power inside the fixed: power: template,
+      # we set standby_power to a minimal/off value.
+      standby_power: 0.5 # Power when the entity state is explicitly 'off'
+
+    # -------------------------------------------------------------------
+    # 6. Smart Speaker (Fixed Consumption List Model)
+    # Uses discrete power levels for ON, IDLE, and OFF states.
+    # -------------------------------------------------------------------
+    - entity_id: media_player.kitchen_player
+      manufacturer: Xiaomi
+      model: Mi Smart Speaker (A113X)
+      name: "Kitchen Player Power"
+      # FIX: Using the 'fixed' wrapper with the 'states_power' dictionary nested inside.
+      fixed:
+        # This is the required nested key for per-state power definition
+        states_power:
+          "playing": 12.0
+          "idle": 3.0
+          "off": 1.0
+      # Standby power must remain outside the fixed block
+      standby_power: 0.5
+
+    - entity_id: binary_sensor.microwave_heating
+      manufacturer: Chunmi
+      model: chunmi.microwave.n23l01
+      name: "Microwave Power"
+      # Use the Fixed power model
+      fixed:
+        power: 1200.0 # Estimated active power (W) when heating
+      standby_power: 1.0 # Estimated power (W) when in standby/off
+
+    - entity_id: light.bedroom_strip # Change entity_id as needed
+      manufacturer: Yeelink
+      model: yeelink.light.strip2
+      name: "Bedroom Bed Strip Power"
+      # Use the Linear power model for lights with variable brightness
+      linear:
+        min_power: 1.0 # Power (W) at 1% brightness
+        max_power: 18.0 # Power (W) at 100% brightness
+      standby_power: 0.5 # Power (W) when light is OFF
+
+    - entity_id: light.closet_lamp # Change entity_id as needed
+      manufacturer: Yeelink
+      model: yeelink.light.bslamp2
+      name: "Closet Lamp Power"
+      # Use the Linear power model for lights with variable brightness
+      linear:
+        min_power: 0.5 # Power (W) at 1% brightness
+        max_power: 10.0 # Power (W) at 100% brightness
+      standby_power: 0.3 # Power (W) when light is OFF
+
+    - entity_id: switch.kettle # <-- Use your actual entity ID
+      manufacturer: Generic (Based on sticker type)
+      model: KP-19S
+      name: "Kettle Power"
+      # FIX: Using the 'fixed' wrapper with the correct nested key: states_power
+      fixed:
+        states_power:
+          "on": 610.0
+          "standby": 40.0
+      standby_power: 0.5
+
+    - entity_id: light.porch_bulb # <<< IMPORTANT: Replace with your actual light entity ID
+      manufacturer: Zemismart
+      model: ZML2 # Use the ZML2 model designation
+      standby_power: 0.5 # Estimated power (in Watts) when the light is OFF.
+      # Use the 'linear' strategy for dimmable bulbs
+      linear:
+        # Based on 9W maximum power:
+        max_power: 9.0 # Max power when at 100% brightness
+        min_power: 1.0 # Estimated power when at 1% brightness
+

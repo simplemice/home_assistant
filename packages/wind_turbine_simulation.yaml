@@ -1,0 +1,148 @@
+###############################################################################
+# @author      : Simplemice
+# @package     : Wind Turbine
+# @description : Rooftop 300W Wind Turbine Simulation (Urban, 24V Battery)
+#                Physics-based, storm-safe, battery-aware, NO helpers
+###############################################################################
+
+template:
+  ###############################################################################
+  # 1️⃣ AIR DENSITY (Temperature + Pressure + Humidity)
+  ###############################################################################
+  - sensor:
+      - name: "Air Density"
+        unique_id: air_density
+        unit_of_measurement: "kg/m³"
+        icon: mdi:cloud
+        state: >
+          {% set T = states('sensor.outside_temp') | float(25) + 273.15 %}
+          {% set P_mmHg = states('sensor.bedroom_temp_pressure') | float(760) %}
+          {% set P = P_mmHg * 133.322 %}
+          {{ (P / (287.05 * T)) | round(3) }}
+
+      ###############################################################################
+      # 2️⃣ HUB HEIGHT WIND SPEED (2m + 10m → 6m ROOF)
+      ###############################################################################
+      - name: "Wind Speed Hub"
+        unique_id: wind_speed_hub
+        unit_of_measurement: "m/s"
+        icon: mdi:weather-windy
+        state: >
+          {% set v2 = states('sensor.pirateweather_wind_speed') | float(0) %}
+          {% set v10 = states('sensor.astroweather_astroweather_10m_wind_speed') | float(0) %}
+          {% set h = 6 %}
+          {% set shear = 0.22 %}
+          {% if v2 > 0 and v10 > 0 %}
+            {{ ((v2 * (h/2)**shear) + (v10 * (h/10)**shear)) / 2 | round(2) }}
+          {% else %}
+            {{ [v2, v10] | max | round(2) }}
+          {% endif %}
+
+      ###############################################################################
+      # 3️⃣ YAW MISALIGNMENT EFFICIENCY (URBAN ROOF)
+      ###############################################################################
+      - name: "Wind Yaw Efficiency"
+        unique_id: wind_yaw_efficiency
+        icon: mdi:compass
+        state: >
+          {% set d1 = states('sensor.pirateweather_wind_bearing') | float(0) %}
+          {% set raw = states('sensor.astroweather_home_10m_wind_direction') %}
+          {% set map = {
+            'N': 0, 'NE': 45, 'E': 90, 'SE': 135,
+            'S': 180, 'SW': 225, 'W': 270, 'NW': 315
+          } %}
+          {% set d2 = raw | float(map.get(raw, 0)) %}
+          {% set diff = (d1 - d2) | abs %}
+          {% set angle = diff if diff <= 180 else 360 - diff %}
+          {{ [cos(angle * pi / 180) ** 1.8, 0] | max | round(3) }}
+
+      ###############################################################################
+      # 4️⃣ EFFECTIVE WIND SPEED (GUST INERTIA)
+      ###############################################################################
+      - name: "Effective Wind Speed"
+        unique_id: wind_speed_effective
+        unit_of_measurement: "m/s"
+        icon: mdi:weather-windy-variant
+        state: >
+          {% set v_base = states('sensor.wind_speed_hub') | float(0) %}
+          {% set v_gust = states('sensor.pirateweather_wind_gust') | float(v_base) %}
+          {{ [v_base + (v_gust - v_base) * 0.25, 0] | max | round(2) }}
+
+      ###############################################################################
+      # 5️⃣ WEATHER EFFICIENCY (RAIN DRAG + THUNDER BRAKE)
+      ###############################################################################
+      - name: "Weather Efficiency"
+        unique_id: weather_efficiency
+        icon: mdi:weather-lightning
+        state: >
+          {% set raining = is_state('binary_sensor.rain_detector_rain', 'on') %}
+          {% set rain_int = states('sensor.rain_detector_rain_intensity') | float(0) %}
+          {% set thunder = states('sensor.phuket_day_probability_thunder') | float(0) %}
+          {% if thunder > 60 %}
+            0
+          {% elif raining %}
+            {{ (1 - rain_int / 20) | max(0.7) | round(2) }}
+          {% else %}
+            1
+          {% endif %}
+
+      ###############################################################################
+      # 6️⃣ FINAL WIND TURBINE POWER (300W)
+      ###############################################################################
+      - name: "Wind Turbine Power (Simulated)"
+        unique_id: wind_turbine_power_simulated
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:wind-turbine
+        state: >
+          {% set v = states('sensor.wind_speed_effective') | float(0) %}
+          {% set rho = states('sensor.air_density') | float(1.225) %}
+          {% set yaw = states('sensor.wind_yaw_efficiency') | float(1) %}
+          {% set weather = states('sensor.weather_efficiency') | float(1) %}
+          {% set cut_in = 2.5 %}
+          {% set rated = 12 %}
+          {% set cut_out = 18 %}
+          {% set rated_power = 800 %}
+          {% if v < cut_in or v > cut_out %}
+            0
+          {% elif v >= rated %}
+            {{ (rated_power * yaw * weather * rho / 1.225) | round(1) }}
+          {% else %}
+            {% set r = (v - cut_in) / (rated - cut_in) %}
+            {{ (rated_power * (r ** 3) * yaw * weather * rho / 1.225) | round(1) }}
+          {% endif %}
+
+      ###############################################################################
+      # 8️⃣ WIND → BATTERY (24V LIMIT: 720W) — BATTERY ONLY
+      ###############################################################################
+      - name: "Wind Battery Charge Power"
+        unique_id: wind_battery_charge_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-up
+        state: >
+          {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
+          {{ [wind, 720] | min | round(1) }}
+
+###############################################################################
+# 9️⃣ ENERGY (kWh) — ENERGY DASHBOARD
+###############################################################################
+sensor:
+  - platform: integration
+    source: sensor.wind_turbine_power_simulated
+    name: "Wind Energy Production"
+    unit_prefix: k
+    round: 2
+
+###############################################################################
+# 8️⃣ UTILITY METERS
+###############################################################################
+utility_meter:
+  battery_charge_wind_daily:
+    source: sensor.wind_battery_charge_power
+    cycle: daily
+  battery_charge_wind_monthly:
+    source: sensor.wind_battery_charge_power
+    cycle: monthly

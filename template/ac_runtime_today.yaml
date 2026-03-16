@@ -1,0 +1,14 @@
+- sensor:
+    - unique_id: ac_runtime_today
+      unit_of_measurement: h
+      default_entity_id: sensor.ac_runtime_today
+      attributes:
+        minutes:
+          "{% set dry = states('sensor.ac_runtime_today_dry') | float(0) %}
+          {% set cool = states('sensor.ac_runtime_today_cool') | float(0) %} {{ ((dry
+          + cool) * 60) | int }}"
+      name: AC Runtime Today
+      state:
+        "{% set dry = states('sensor.ac_runtime_today_dry') | float(0) %} {%
+        set cool = states('sensor.ac_runtime_today_cool') | float(0) %} {{ (dry +
+        cool) | round(2) }}"

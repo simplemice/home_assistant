@@ -1,0 +1,51 @@
+# Ignore EVERYTHING
+*
+
+# Allow git control files
+!.gitignore
+!.gitattributes
+!.github/
+
+# ---- Allow selected Home Assistant config ----
+!configuration.yaml
+
+!blueprints/
+!blueprints/**
+
+!custom_sentences/
+!custom_sentences/**
+
+!custom_responses/
+!custom_responses/**
+
+!customize/
+!customize/**
+
+!packages/
+!packages/**
+
+!shell_commands/
+!shell_commands/**
+
+!template/
+!template/**
+
+# ---- Explicitly block sensitive or useless data ----
+secrets.yaml
+.storage/
+.cache/
+.cloud/
+
+home-assistant*.db*
+home-assistant.log*
+*.log
+*.lock
+
+tts/
+media/
+image/
+deps/
+ssh_keys/
+www/
+
+custom_components/

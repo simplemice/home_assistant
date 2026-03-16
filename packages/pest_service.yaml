@@ -1,0 +1,42 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/09/2025
+#   @package        :   Pest Service
+#   @description    :   Pest reminders.
+###############################################################################
+
+# ─── Inputs ────────────────────────────────────────────────────────────────
+input_datetime:
+  pest_service:
+    name: Pest Service
+    has_date: true
+    has_time: false
+    icon: mdi:shield-bug
+
+# ─── Sensors ───────────────────────────────────────────────────────────────
+template:
+  - sensor:
+      - name: "Next Pest Service Day"
+        unique_id: next_pest_service_day
+        unit_of_measurement: "days"
+        state: >-
+          {% set last_clean = states('input_datetime.pest_service') %}
+          {% if last_clean not in ['unknown','unavailable',''] %}
+            {% set last_ts = as_timestamp(last_clean) %}
+            {% if last_ts %}
+              {{ ((last_ts + 180*86400) - now().timestamp()) // 86400 }}
+            {% else %}
+              unknown
+            {% endif %}
+          {% else %}
+            unknown
+          {% endif %}
+        attributes:
+          next_clean_date: >-
+            {% set last_clean = states('input_datetime.pest_service') %}
+            {% if last_clean not in ['unknown','unavailable',''] %}
+              {% set last_ts = as_timestamp(last_clean) %}
+              {% if last_ts %}
+                {{ (last_ts + 60*86400) | timestamp_custom('%Y-%m-%d') }}
+              {% endif %}
+            {% endif %}

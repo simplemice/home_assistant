@@ -1,0 +1,9 @@
+- sensor:
+    - unique_id: simplemice_room
+      default_entity_id: sensor.simplemice_room
+      name: Simplemice Room
+      state:
+        "{% set area = states('sensor.micemob_area') %} {% set charging = states('sensor.micemob_battery_state')
+        %} {% if area not in ['not_home', 'Unknown', 'unknown', 'unavailable'] and charging
+        != 'charging' %}\n  {{ area }}\n{% else %}\n  Last seen in {{ states('sensor.simplemice_location')
+        }}\n{% endif %}"

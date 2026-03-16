@@ -1,0 +1,111 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/01/2024
+#   @package        :   Notify
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+group:
+  notification_group:
+    name: Notification Group
+    entities:
+      - input_boolean.audible_notifications
+      - input_boolean.text_notifications
+      - input_boolean.telegram_notifications
+      - input_boolean.persistent_notifications
+      - input_boolean.tv_notifications
+
+input_select:
+  jarvis_pipeline:
+    name: Jarvis Pipeline
+    icon: mdi:pipe
+    options:
+      - tts.piper
+      - tts.google_translate_en_com
+      - tts.home_assistant_cloud
+    initial: tts.home_assistant_cloud
+
+input_boolean:
+  audible_notifications:
+    name: Audible Notification
+    icon: mdi:cast-audio
+  text_notifications:
+    name: Text Notification
+    icon: mdi:message-text
+  telegram_notifications:
+    name: Telegram Notification
+    icon: fab:telegram
+  persistent_notifications:
+    name: Persistent Notification
+    icon: mdi:bell
+  tv_notifications:
+    name: TV Notification
+    icon: mdi:television-box
+  mastodon_notifications:
+    name: Mastodon Notification
+    icon: mdi:mastodon
+
+#tts:
+#  - platform: amazon_polly
+#    aws_access_key_id: !secret poly_id
+#    aws_secret_access_key: !secret poly_key
+#    text_type: ssml
+#    cache: True
+#    engine: neural
+
+notify:
+  - name: simplemice
+    platform: group
+    services:
+      - service: mobile_app_micemob
+      - service: telegram_logs
+  - name: telegram_mice
+    platform: telegram
+    chat_id: !secret tg_chat_me
+  - name: telegram_logs
+    platform: telegram
+    chat_id: !secret tg_group_logs
+
+  - name: TvOverlayNotify
+    platform: rest
+    method: POST_JSON
+    resource: http://192.168.3.43:5001/notify
+    verify_ssl: false
+    title_param_name: title
+    data:
+      id: "{{ data.id | default(null) }}" # string | main text | default: null
+      appTitle: "{{ data.appTitle  | default('Home Assistant') }}" # string | extra info text | default: null
+      color: "{{ data.color | default('#049cdb') }}" # string | color tint for smallIcon. accepts 6 or 8 digit color hex. the '#' is optional | default: null
+      image: "{{ data.image | default(null) }}" # string | accepts mdi icons, image urls and Bitmap encoded to Base64 | default: null
+      video: "{{ data.video | default(null) }}" # string | video url. supports rtps, hls, dash, smoothstreaming | default: null
+      smallIcon: "{{ data.smallIcon | default(null) }}" # string | accepts mdi icons, image urls and Bitmap encoded to Base64 | default: null
+      largeIcon: "{{ data.largeIcon | default(null) }}" # string | accepts mdi icons, image urls and Bitmap encoded to Base64 | default: null
+      corner: "{{ data.corner  | default(null) }}" # string | position on the screen. accept values: bottom_start, bottom_end, top_start, top_end | default: null (uses hot corner)
+      seconds: "{{ data.seconds | default(null) }}" # int | duration that the notification will stay visible in seconds | default: null (uses duration setting)
+
+  - name: TvOverlayNotifyFixed
+    platform: rest
+    method: POST_JSON
+    resource: http://192.168.3.43:5001/notify_fixed
+    verify_ssl: false
+    title_param_name: title
+    data:
+      id: "{{ data.id | default(null) }}" # string | can be used to edit or remove the fixed notification | default: [random]
+      text: "{{ data.text  | default(null) }}" # string | main text | default: null
+      icon: "{{ data.icon | default(null) }}" # string | accepts mdi icons, image urls and Bitmap encoded to Base64 | default: null
+      textColor: "{{ data.textColor | default(null) }}" # string | accepts 6 or 8 digit color hex. the '#' is optional | default: #FFFFFF
+      iconColor: "{{ data.iconColor | default(null) }}" # string | accepts 6 or 8 digit color hex. the '#' is optional | default: #FFFFFF
+      borderColor: "{{ data.borderColor | default(null) }}" # string | accepts 6 or 8 digit color hex. the '#' is optional | default: #FFFFFF
+      backgroundColor: "{{ data.backgroundColor | default(null) }}" # string | accepts 6 or 8 digit color hex. the '#' is optional | default: #66000000
+      shape: "{{ data.shape | default(null) }}" # string | frame style. accept values: circle, rounded, rectangular | default: "rounded"
+      visible: "{{ data.visible | default(true) }}" # boolean || if false, removes the fixed notification with matching id || default: true
+      expiration: "{{ data.expiration | default(null) }}" # string or int | when the notification will be removed. valid formats: 1695693410 (Epoch time), 1y2w3d4h5m6s (duration format) or 123 (for seconds) | default:  null
+
+rest_command:
+  tvoverlay:
+    url: http://192.168.3.43:5001/set/overlay
+    method: POST
+    verify_ssl: false
+    headers:
+      accept: "application/json"
+    content_type: "application/json; charset=utf-8"
+    payload: "{{ payload }}"

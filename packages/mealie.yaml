@@ -1,0 +1,27 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Mealie
+#   @description    :   A collection of Home Assistant Sensors
+###############################################################################
+
+input_boolean:
+  mealie_planner_status:
+    name: "Mealie Planner Status"
+    icon: mdi:food
+
+rest:
+  - resource: "http://192.168.3.39:9925/api/households/mealplans/today"
+    method: GET
+    headers:
+      Authorization: !secret mealie
+    scan_interval: 3600
+    sensor:
+      - name: Mealie todays meal
+        value_template: "{{ value_json[0]['recipe']['name'] }}"
+        force_update: true
+        unique_id: mealie_todays_meal
+      - name: Mealie todays meal ID
+        value_template: "{{ value_json[0]['recipe']['id'] }}"
+        force_update: true
+        unique_id: mealie_todays_meal_id

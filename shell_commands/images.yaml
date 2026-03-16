@@ -1,0 +1,1 @@
+delete_old_screenshots: "find /config/www/doods -type f -name 'garage_*.jpg' -mmin +60 -delete"

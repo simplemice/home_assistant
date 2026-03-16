@@ -1,0 +1,79 @@
+language: en
+responses:
+  intents:
+    HassTurnOff:
+      default: >-
+        {% set translations = {
+          "button": "button",
+          "camera": "camera",
+          "input_button": "button",
+          "alarm_control_panel": "alarm",
+          "automation": "automation",
+          "fan": "fan",
+          "climate": "thermostat",
+          "humidifier": "humidifier",
+          "input_boolean": "switch",
+          "siren": "siren",
+          "water_heater": "water heater",
+          "light": "light",
+          "switch": "switch",
+          "remote": "remote",
+          "vacuum": "vacuum cleaner",
+          "media_player": "media player",
+          "lawn_mower": "lawn mower"
+        } %}
+
+        {% set lines = [
+          "Done. The " ~ translations.get(state.domain) ~ " has been mercifully turned off.",
+          "As you wish. The " ~ translations.get(state.domain) ~ " is now off.",
+          "Powering down the " ~ translations.get(state.domain) ~ ". Try not to miss it too much.",
+          "The " ~ translations.get(state.domain) ~ " has been silenced. You're welcome.",
+          "Task completed. Chaos reduced slightly.",
+          "Off it goes. Another crisis successfully prevented."
+        ] %}
+        {{ lines | random }}
+
+      lights_area:
+        - "Lights off. Darkness restored."
+        - "The lights are now off. Atmosphere improved."
+        - "Illumination disabled. Drama enabled."
+
+      lights_floor:
+        - "All lights on this floor are now off."
+        - "Floor lights disabled. Electricity bill applauds you."
+        - "Darkness deployed across the floor."
+
+      fans_area:
+        - "Fans turned off. The air may now rest."
+        - "Fan activity terminated."
+        - "Cooling suspended. Brave choice."
+
+      cover:
+        - "Closing it now."
+        - "Cover closing. Privacy restored."
+        - "Sealing the outside world away."
+
+      light_all:
+        - "All lights are off. The void welcomes you."
+        - "Every light has been turned off. Finally."
+        - "Total darkness achieved."
+
+      fan_all:
+        - "All fans are now off."
+        - "Every fan has stopped spinning. Peace at last."
+        - "Fan operations fully suspended."
+
+      cover_device_class:
+        - "Closing the {{ slots.device_class }}."
+        - "The {{ slots.device_class }} is closing now."
+        - "Securing the {{ slots.device_class }}."
+
+      lock:
+        - "Unlocking. I trust you know what you're doing."
+        - "Lock disengaged."
+        - "Access granted."
+
+      valve:
+        - "Valve closing."
+        - "Flow stopped."
+        - "Closing the valve before things get exciting."

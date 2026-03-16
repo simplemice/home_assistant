@@ -1,0 +1,44 @@
+# Storage for Bubble Card Modules
+template:
+  - trigger:
+      - trigger: event
+        event_type: bubble_card_update_modules
+    sensor:
+      - name: "Bubble Card Modules"
+        state: "saved"
+        icon: "mdi:puzzle"
+        attributes:
+          modules: "{{ trigger.event.data.modules }}"
+          last_updated: "{{ trigger.event.data.last_updated }}"
+
+  - trigger:
+      - platform: state
+        entity_id: sensor.bedroom_temp_pressure
+    sensor:
+      - name: "Pressure Tendency"
+        state: >
+          {% set prev = trigger.from_state.state | float(0) %}
+          {% set current = trigger.to_state.state | float(0) %}
+          {% set diff = current - prev %}
+          {% if diff > 0.1 %}
+            rising
+          {% elif diff < -0.1 %}
+            falling
+          {% else %}
+            steady
+          {% endif %}
+        attributes:
+          previous_pressure: "{{ trigger.from_state.state | float(0) }}"
+          current_pressure: "{{ trigger.to_state.state | float(0) }}"
+          difference: "{{ (trigger.to_state.state | float(0)) - (trigger.from_state.state | float(0)) }}"
+
+  - sensor:
+      - name: "ThinkPad T580 Power State"
+        state: >
+          {% set p = states('sensor.thinkpad_t580_power')|float %}
+          {% if p == 0 %} off
+          {% elif p < 8 %} idle
+          {% elif p < 20 %} light
+          {% elif p < 35 %} work
+          {% else %} heavy
+          {% endif %}

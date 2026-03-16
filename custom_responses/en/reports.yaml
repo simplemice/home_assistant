@@ -1,0 +1,18 @@
+housemusic:
+  speech:
+    text: >
+      {% set raw = states('sensor.micemob_area') %}
+      {{ ["Yes, sure. ", "Okay. ", "Of course. "] | random }}
+      {% set display = raw if raw not in ['unknown','unavailable','','None'] else 'house' %}
+      Playing house music in the {{ display }}.
+
+checkwaterlevel:
+  speech:
+    text: >
+      {% set level = states('sensor.water_sensor_water_level') | float(0) | round(0) %}
+      {% set volume = states('sensor.water_sensor_water_volume') | float(0) | round(0) %}
+      {% if level > 0 and volume > 0 %}
+        The water level is {{ level | int }}% and the water volume is {{ volume | int }} liters.
+      {% else %}
+        I'm not sure about the current water level or volume.
+      {% endif %}

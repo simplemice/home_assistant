@@ -1,0 +1,153 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Presence
+#   @description    :   A Collection of Presence Related Trackers and Sensors
+###############################################################################
+
+group:
+  family:
+    name: Family
+    icon: mdi:human-female-female-child
+    entities:
+      - person.simplemice
+
+input_boolean:
+  house_sleep_mode:
+    name: House Sleep Mode
+    icon: mdi:bed-clock
+  family_home:
+    name: Family Home
+    icon: mdi:human-female-female-child
+
+input_datetime:
+  mice_wakeup_alarm_time:
+    name: WakeUp Alarm Time
+    has_date: false
+    has_time: true
+  mice_sleep_time:
+    name: Goodnight Time
+    has_date: false
+    has_time: true
+  simplemice_left_home_at:
+    name: Simplemice Left Home At
+    has_time: true
+    has_date: true
+  simplemice_return_home_at:
+    name: Simplemice Return Home At
+    has_time: true
+    has_date: true
+
+input_select:
+  simplemice_dashboard:
+    name: "Dashboard"
+    options:
+      - Auto
+      - Garage
+      - Livingroom
+      - Bedroom
+      - Kitchen
+      - Bathroom
+      - Backyard
+      - Information
+      - Statistic
+    icon: mdi:view-dashboard
+
+binary_sensor:
+  - platform: group
+    unique_id: bedroom_motion
+    name: "Bedroom Motion"
+    device_class: motion
+    entities:
+      - binary_sensor.bedroom_window_motion_occupancy
+      - binary_sensor.bedroom_motion_occupancy
+
+template:
+  - sensor:
+      - name: "Family Home Count"
+        unique_id: family_home_count
+        icon: mdi:account-group
+        state: >
+          {{ states.person
+              | selectattr('state','eq','home')
+              | list
+              | count }}
+
+  - sensor:
+      - name: "Simplemice Time Away Live"
+        state: >
+          {% set left = states('input_datetime.simplemice_left_home_at') %}
+          {% set returned = states('input_datetime.simplemice_return_home_at') %}
+          {% if left in ['unknown','unavailable'] or returned in ['unknown','unavailable'] %}
+            0h 0m 0s
+          {% else %}
+            {% set t1 = as_datetime(left) | as_local %}
+            {% set t2 = as_datetime(returned) | as_local %}
+            {% set seconds = (t2 - t1).total_seconds() | int %}
+            {% set h = seconds // 3600 %}
+            {% set m = (seconds % 3600) // 60 %}
+            {% set s = seconds % 60 %}
+            {{ h }}h {{ m }}m {{ s }}s
+          {% endif %}
+
+  - binary_sensor:
+      - name: "Sofa Presence"
+        unique_id: sofa_presence
+        device_class: occupancy
+        state: >-
+          {% if is_state("binary_sensor.sofa_presense_detector", "off") %}
+            on
+          {% else %}
+            off
+          {% endif %}
+        icon: >-
+          {% if is_state("binary_sensor.sofa_presense_detector", "off") %}
+            mdi:sofa-single
+          {% else %}
+            mdi:sofa-single-outline
+          {% endif %}
+
+  - sensor:
+      - unique_id: simplemice_room
+        default_entity_id: sensor.simplemice_room
+        name: Simplemice Room
+        state:
+          "{% set area = states('sensor.micemob_area') %} {% set charging = states('sensor.micemob_battery_state')
+          %} {% if area not in ['not_home', 'Unknown', 'unknown', 'unavailable'] and charging
+          != 'charging' %}\n  {{ area }}\n{% else %}\n  Last seen in {{ states('sensor.simplemice_location')
+          }}\n{% endif %}"
+
+  - sensor:
+      - unique_id: simplemice_location
+        default_entity_id: sensor.simplemice_location
+        name: Simplemice Location
+        state:
+          "{% set area = states('sensor.micemob_area') | trim %} {% set person_state
+          = states('person.simplemice') %} {% if area in ['unknown', 'unavailable', '',
+          None] %}\n  {% set person = person_state %}\n{% else %}\n  {% set person = area
+          %}\n{% endif %} {% if person == 'Bedroom' and (now().hour >= 22 or now().hour
+          < 8) %}\n  Sleep\n{% elif person in ['Bangtao Office', 'Maya Beach'] %}\n  At Work\n{%
+          elif person in ['SuperCheap', 'Tops Rawai', 'Makro Rawai', 'Makro Chalong']
+          %}\n  At Food Store\n{% elif person in ['unknown', 'Unknown', 'not_home', 'unavailable',
+          '', None] %}\n  {{ state_attr('sensor.micemob_location', 'sub_administrative_area')
+          }}\n  {{ state_attr('sensor.micemob_location', 'location') }}\n{% else %}\n
+          \ {{ person }}\n{% endif %}"
+
+  - sensor:
+      - unique_id: simplemice_speed
+        unit_of_measurement: km/h
+        default_entity_id: sensor.simplemice_speed
+        name: Simplemice Speed km/h
+        state:
+          "{% set speed = state_attr('device_tracker.micemob', 'speed') %} {{
+          (speed | float * 3.6) | round(1) }}"
+
+  - sensor:
+      - unique_id: family_home
+        default_entity_id: sensor.family_home
+        icon:
+          "{% if is_state('sensor.family_home','0') %} mdi:account-off {% elif
+          is_state('sensor.family_home','1') %} mdi:account {% elif is_state('sensor.family_home','2')
+          %} mdi:account-multiple {% else %} mdi:account-group {% endif %}"
+        name: Family Home
+        state: "{{ is_state('group.family', 'home') }}"

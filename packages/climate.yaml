@@ -1,0 +1,99 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/09/2025
+#   @package        :   Climate
+#   @description    :   Climate automation helpers, runtime tracking,
+#                       and consolidated climate sensors.
+###############################################################################
+
+smartir: # keep integration reference
+
+# ─── Controls ────────────────────────────────────────────────────────────────
+input_boolean:
+  climate_automation:
+    name: "House Climate Automation"
+    icon: mdi:air-conditioner
+
+input_datetime:
+  climate_on_time:
+    name: Climate Time On
+    has_date: false
+    has_time: true
+  climate_off_time:
+    name: Climate Time Off
+    has_date: false
+    has_time: true
+
+# ─── Devices ────────────────────────────────────────────────────────────────
+climate:
+  - platform: smartir
+    name: "Bedroom Aircon"
+    unique_id: aircon
+    device_code: 9991
+    controller_data: remote.bedroom_remote_hub
+    temperature_sensor: sensor.bedroom_temp_temperature
+    humidity_sensor: sensor.bedroom_temp_humidity
+
+fan:
+  - platform: group
+    name: "All Fans"
+    entities:
+      - fan.livingroom_fan
+      - fan.kitchen_fan
+
+# ─── Runtime Tracking ───────────────────────────────────────────────────────
+sensor:
+  # history_stats: Dry Mode runtime
+  - platform: history_stats
+    name: "AC Runtime Today (Dry)"
+    unique_id: ac_runtime_today_dry
+    entity_id: climate.aircon
+    state: "dry"
+    type: time
+    end: "{{ now() }}"
+    duration:
+      hours: 24
+
+  # history_stats: Cool Mode runtime
+  - platform: history_stats
+    name: "AC Runtime Today (Cool)"
+    unique_id: ac_runtime_today_cool
+    entity_id: climate.aircon
+    state: "cool"
+    type: time
+    end: "{{ now() }}"
+    duration:
+      hours: 24
+
+  # Average house temp
+  - platform: group
+    name: "House Temperature"
+    unique_id: house_temperature
+    type: mean
+    entities:
+      - sensor.livingroom_temp_temperature
+      - sensor.bedroom_temp_temperature
+
+# ─── Monthly Meter ──────────────────────────────────────────────────────────
+utility_meter:
+  monthly_climate:
+    source: sensor.ac_runtime_today
+    unique_id: monthly_climate
+    name: Monthly AC Runtime
+    cycle: monthly
+
+template:
+  - sensor:
+      - unique_id: ac_runtime_today
+        unit_of_measurement: h
+        default_entity_id: sensor.ac_runtime_today
+        attributes:
+          minutes:
+            "{% set dry = states('sensor.ac_runtime_today_dry') | float(0) %}
+            {% set cool = states('sensor.ac_runtime_today_cool') | float(0) %} {{ ((dry
+            + cool) * 60) | int }}"
+        name: AC Runtime Today
+        state:
+          "{% set dry = states('sensor.ac_runtime_today_dry') | float(0) %} {%
+          set cool = states('sensor.ac_runtime_today_cool') | float(0) %} {{ (dry +
+          cool) | round(2) }}"

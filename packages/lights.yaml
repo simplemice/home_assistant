@@ -1,0 +1,101 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Lights
+#   @description    :   A collection of Home Assistant Sensors
+###############################################################################
+
+input_boolean:
+  adaptive_lights_mode:
+    name: "Adaptive Lights Mode"
+    icon: mdi:lightbulb
+  tv_screensaver:
+    name: "TV Screensaver"
+    icon: mdi:television
+  mix_screensaver:
+    name: "MIX Screensaver"
+    icon: mdi:television
+
+light:
+  - platform: group
+    name: "Livingroom Ambient"
+    unique_id: livingroom_ambient
+    entities:
+      - light.closet_lamp
+      - light.wled_wall_light
+      - light.wled_closet_strip_l
+      - light.wled_closet_strip_r
+      - light.wled_table
+      - light.wled_undertv
+
+  - platform: group
+    unique_id: all_lights
+    name: "All Lights"
+    entities:
+      #      - light.bathroom_bulb
+      - light.gateway_light
+      - light.fridge_side_strip
+      - light.kitchen_closet_ambient
+      - light.kitchen_wall_ambient
+      - light.porch_bulb
+      - light.closet_lamp
+      - light.wled_wall_light
+      - light.bedroom_strip
+      - light.wled_closet_strip_l
+      - light.wled_closet_strip_l
+      - light.wled_table
+      - light.wled_panel
+      - light.wled_undertv
+      - light.backyard_light
+      - light.wled_tv_main
+
+  - platform: group
+    unique_id: lights
+    name: "Lights"
+    entities:
+      #      - light.bathroom_bulb
+      - light.gateway_light
+      - light.porch_bulb
+      - light.closet_lamp
+      - light.bedroom_strip
+      - light.backyard_light
+
+  - platform: group
+    unique_id: kitchen_ambient
+    name: "Kitchen Ambient"
+    entities:
+      - light.kitchen_closet_ambient
+      - light.kitchen_wall_ambient
+      - light.fridge_side_strip
+
+  - platform: group
+    unique_id: bedroom_ambient
+    name: "Bedroom Ambient"
+    entities:
+      - light.gateway_light
+      - light.bedroom_strip
+
+  - platform: group
+    unique_id: outside_lights
+    name: "Outside Lights"
+    entities:
+      - light.porch_bulb
+      - light.backyard_light
+
+  - platform: group
+    unique_id: wled_ambient
+    name: "WLED Ambient"
+    entities:
+      - light.wled_closet_strip_l
+      - light.wled_closet_strip_r
+      - light.wled_wall_light
+      - light.wled_table
+      - light.wled_undertv
+
+switch:
+  - platform: group
+    unique_id: camera_night_lights
+    name: Camera Night Lights
+    entities:
+      - switch.garage_camera_light
+      - switch.backyard_camera_light

@@ -1,0 +1,9 @@
+#suspend_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'sudo systemctl suspend'"
+#turn_off_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'sudo shutdown -h now'"
+#reboot_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'sudo reboot'"
+#screen_lock_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'DISPLAY=:0 xdg-screensaver lock'"
+
+suspend_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'sudo -n /usr/bin/systemctl suspend'"
+turn_off_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'sudo -n /usr/bin/systemctl poweroff'" # Changed to systemctl poweroff
+reboot_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'sudo -n /usr/bin/systemctl reboot'" # Changed to systemctl reboot
+screen_lock_micebook: "ssh -i /config/ssh_keys/id_rsa_homeassistant -o 'StrictHostKeyChecking=no' homeassistant@192.168.3.15 'DISPLAY=:0 xdg-screensaver lock'"

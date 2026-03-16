@@ -1,0 +1,104 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Water usage
+#   @description    :   Water consumption tracking & Energy Dashboard integration
+###############################################################################
+
+#############################################
+# 1) FILTERED RAW VOLUME SENSOR
+#############################################
+
+sensor:
+  - platform: filter
+    name: "Filtered Water Volume"
+    entity_id: sensor.water_sensor_water_volume
+    filters:
+      - filter: outlier
+        window_size: 4
+        radius: 0.05
+      - filter: lowpass
+        time_constant: 10
+
+#############################################
+# 2) TEMPLATE SENSORS (USAGE, COST, m³)
+#############################################
+
+template:
+  - sensor:
+      #####################################################
+      #  Water Usage Total (L) — total_increasing
+      #####################################################
+      - name: "Water Usage Total L"
+        unique_id: water_usage_total_l
+        unit_of_measurement: "L"
+        device_class: water
+        state_class: total_increasing
+        state: >-
+          {% set current = states('sensor.filtered_water_volume') | float(0) %}
+          {% set prev = state_attr('sensor.water_usage_total_l', 'last') | default(current) | float(0) %}
+          {% set total = states('sensor.water_usage_total_l') | float(0) %}
+          {% set delta = prev - current %}
+          {% set threshold = 0.05 %}
+
+          {# Count only water usage (drops), ignore refills #}
+          {% if delta > threshold %}
+            {{ (total + delta) | round(3) }}
+          {% else %}
+            {{ total }}
+          {% endif %}
+        attributes:
+          last: "{{ states('sensor.filtered_water_volume') | float(0) }}"
+
+      #####################################################
+      #  Water Usage in Cubic Meters (m³)
+      #####################################################
+      - name: "Water Usage Total m³"
+        unique_id: water_usage_total_m3
+        unit_of_measurement: "m³"
+        device_class: water
+        state_class: total_increasing
+        state: >-
+          {{ (states('sensor.water_usage_total_l') | float(0) / 1000) | round(4) }}
+
+      #####################################################
+      #  Water Cost (THB)
+      #####################################################
+      - name: "Water Cost"
+        unique_id: water_cost_total
+        unit_of_measurement: "THB"
+        device_class: monetary
+        state_class: total
+        state: >-
+          {% set price_per_liter = 1 %}
+          {% set liters = states('sensor.water_usage_total_l') | float(0) %}
+          {{ (liters * price_per_liter) | round(2) }}
+
+      #####################################################
+      #  Tariff Rate (static)
+      #####################################################
+      - name: "Water Tariff Rate"
+        unique_id: water_tariff_rate
+        unit_of_measurement: "THB/L"
+        state: "1"
+
+#############################################
+# 3) UTILITY METERS (Daily / Monthly / Yearly)
+#############################################
+
+utility_meter:
+  water_daily:
+    source: sensor.water_usage_total_l
+    cycle: daily
+
+  water_weekly:
+    source: sensor.water_usage_total_l
+    cycle: weekly
+
+  water_monthly:
+    source: sensor.water_usage_total_l
+    cycle: monthly
+
+  water_yearly:
+    source: sensor.water_usage_total_l
+    cycle: yearly

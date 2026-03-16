@@ -1,0 +1,124 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Telegram ChatBot
+#   @description    :   Telegram ChatBot Integration
+###############################################################################
+# =========================
+# MAIN MENU
+# =========================
+automation:
+  - alias: Telegram - Main Menu
+    mode: single
+    trigger:
+      - platform: event
+        event_type: telegram_command
+        event_data:
+          command: "/menu"
+    action:
+      - service: notify.telegram_logs
+        data:
+          message: "🤖 Jarvis Control Menu"
+          data:
+            inline_keyboard:
+              - "💡 Porch Light:/menu_porch, ❄️ Air Conditioner:/menu_ac"
+
+  # =========================
+  # PORCH LIGHT MENU
+  # =========================
+  - alias: Telegram - Porch Light Menu
+    mode: single
+    trigger:
+      - platform: event
+        event_type: telegram_callback
+        event_data:
+          data: "/menu_porch"
+    action:
+      - service: notify.telegram_logs
+        data:
+          message: "💡 Porch Light Control"
+          data:
+            inline_keyboard:
+              - "Turn On:/porch_on, Turn Off:/porch_off"
+              - "Status:/porch_status, 🔙 Back:/menu"
+
+  - alias: Telegram - Porch Light Actions
+    mode: single
+    trigger:
+      - platform: event
+        event_type: telegram_callback
+    action:
+      - choose:
+          - conditions: "{{ trigger.event.data.data == '/porch_on' }}"
+            sequence:
+              - service: light.turn_on
+                target:
+                  entity_id: light.porch_light
+              - service: notify.telegram_logs
+                data:
+                  message: "💡 Porch light is now *ON*"
+          - conditions: "{{ trigger.event.data.data == '/porch_off' }}"
+            sequence:
+              - service: light.turn_off
+                target:
+                  entity_id: light.porch_light
+              - service: notify.telegram_logs
+                data:
+                  message: "💡 Porch light is now *OFF*"
+          - conditions: "{{ trigger.event.data.data == '/porch_status' }}"
+            sequence:
+              - service: notify.telegram_logs
+                data:
+                  message: "💡 Porch light status: *{{ states('light.porch_light')|upper }}*"
+
+  # =========================
+  # AIR CONDITIONER MENU
+  # =========================
+  - alias: Telegram - Air Conditioner Menu
+    mode: single
+    trigger:
+      - platform: event
+        event_type: telegram_callback
+        event_data:
+          data: "/menu_ac"
+    action:
+      - service: notify.telegram_logs
+        data:
+          message: "❄️ Air Conditioner Control"
+          data:
+            inline_keyboard:
+              - "Turn On:/ac_on, Turn Off:/ac_off"
+              - "Status:/ac_status, 🔙 Back:/menu"
+
+  - alias: Telegram - Air Conditioner Actions
+    mode: single
+    trigger:
+      - platform: event
+        event_type: telegram_callback
+    action:
+      - choose:
+          - conditions: "{{ trigger.event.data.data == '/ac_on' }}"
+            sequence:
+              - service: climate.set_hvac_mode
+                target:
+                  entity_id: climate.aircone
+                data:
+                  hvac_mode: cool
+              - service: notify.telegram_logs
+                data:
+                  message: "❄️ Air Conditioner is now *ON* (cool mode)"
+          - conditions: "{{ trigger.event.data.data == '/ac_off' }}"
+            sequence:
+              - service: climate.set_hvac_mode
+                target:
+                  entity_id: climate.aircone
+                data:
+                  hvac_mode: "off"
+              - service: notify.telegram_logs
+                data:
+                  message: "❄️ Air Conditioner is now *OFF*"
+          - conditions: "{{ trigger.event.data.data == '/ac_status' }}"
+            sequence:
+              - service: notify.telegram_logs
+                data:
+                  message: "❄️ Air Conditioner status: *{{ states('climate.aircone') }}*"

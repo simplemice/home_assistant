@@ -1,0 +1,98 @@
+###############################################################################
+# Package: Home Assistant Startup & Update Detection
+# Author : Simplemice
+# Purpose:
+#   - Detect if HA reboot was caused by Core update
+#   - Store update versions
+#   - Provide clean startup reason for announcements (JARVIS)
+###############################################################################
+
+###############################################################################
+# Helpers
+###############################################################################
+input_boolean:
+  ha_reboot_after_update:
+    name: HA Reboot After Update
+    icon: mdi:update
+
+input_text:
+  ha_updated_from:
+    name: HA Updated From
+  ha_updated_to:
+    name: HA Updated To
+
+###############################################################################
+# Template sensors
+###############################################################################
+template:
+  - sensor:
+      - name: "HA Startup Reason"
+        icon: mdi:restart
+        state: >
+          {% if is_state('input_boolean.ha_reboot_after_update', 'on') %}
+            update
+          {% else %}
+            normal
+          {% endif %}
+
+      - name: "HA Startup Reason Text"
+        icon: mdi:information
+        state: >
+          {% if is_state('input_boolean.ha_reboot_after_update', 'on') %}
+            System upgraded from
+            {{ states('input_text.ha_updated_from') }}
+            to {{ states('input_text.ha_updated_to') }}
+          {% else %}
+            Manual restart or power recovery
+          {% endif %}
+
+###############################################################################
+# Automations
+###############################################################################
+automation:
+  ###########################################################################
+  # Store Core update info (runs BEFORE reboot)
+  ###########################################################################
+  - alias: HA Core Update Store Info
+    id: ha_core_update_store_info
+    trigger:
+      - platform: state
+        entity_id: update.home_assistant_core_update
+        from: "on"
+        to: "off"
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ha_reboot_after_update
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ha_updated_from
+        data:
+          value: "{{ trigger.from_state.attributes.installed_version }}"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ha_updated_to
+        data:
+          value: "{{ trigger.to_state.attributes.installed_version }}"
+      - delay:
+          hours: 0
+          minutes: 10
+          seconds: 0
+          milliseconds: 0
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ha_reboot_after_update
+
+  ###########################################################################
+  # Clear update flag AFTER HA startup notification runs
+  ###########################################################################
+  - alias: HA Clear Update Flag After Startup
+    id: ha_clear_update_flag_after_startup
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay: "00:01:00"
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ha_reboot_after_update

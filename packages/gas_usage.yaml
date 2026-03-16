@@ -1,0 +1,108 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   07/10/2025
+#   @package        :   Gas Usage
+#   @description    :   Smart gas tracking, cost, and Energy Dashboard integration.
+###############################################################################
+###############################################################################
+# 1) Filter incoming volume to reduce noise
+###############################################################################
+
+sensor:
+  - platform: filter
+    name: "Filtered Gas Volume"
+    entity_id: sensor.kitchen_gas_scale_volume
+    filters:
+      - filter: outlier
+        window_size: 5
+        radius: 0.3
+      - filter: lowpass
+        time_constant: 5
+
+###############################################################################
+# 2) Total Gas Usage – total_increasing
+###############################################################################
+
+template:
+  - sensor:
+      #########################################################################
+      # A) Gas Used (L) — Total Increasing
+      #########################################################################
+      - name: "Gas Used"
+        unique_id: gas_used_total
+        unit_of_measurement: "L"
+        device_class: gas
+        state_class: total_increasing
+        icon: mdi:fire
+        state: >-
+          {% set current = states('sensor.filtered_gas_volume') | float(0) %}
+          {% set last = state_attr('sensor.gas_used', 'last_level') | default(current) | float(0) %}
+          {% set total = states('sensor.gas_used') | float(0) %}
+          {% set threshold = 0.20 %}
+
+          {# Only count decreasing volume = usage #}
+          {% set delta = last - current %}
+
+          {% if delta > threshold %}
+            {{ (total + delta) | round(3) }}
+          {% else %}
+            {{ total }}
+          {% endif %}
+        attributes:
+          last_level: "{{ states('sensor.filtered_gas_volume') }}"
+
+      #########################################################################
+      # B) Gas Usage in Cubic Meters (m³)
+      #########################################################################
+      - name: "Gas Usage m³"
+        unique_id: gas_used_m3
+        unit_of_measurement: "m³"
+        device_class: gas
+        state_class: total_increasing
+        icon: mdi:meter-cubic
+        state: >-
+          {{ (states('sensor.gas_used') | float(0) / 1000) | round(4) }}
+
+      #########################################################################
+      # C) Gas Cost (THB)
+      #########################################################################
+      - name: "Gas Cost"
+        unique_id: gas_cost_total
+        unit_of_measurement: "THB"
+        device_class: monetary
+        state_class: total
+        icon: mdi:cash
+        state: >-
+          {% set price_per_liter = states('sensor.gas_tariff_rate') | float(1) %}
+          {% set used = states('sensor.gas_used') | float(0) %}
+          {{ (used * price_per_liter) | round(2) }}
+
+      #########################################################################
+      # D) Gas Tariff Rate (manual)
+      #########################################################################
+      - name: "Gas Tariff Rate"
+        unique_id: gas_tariff_rate
+        unit_of_measurement: "THB/L"
+        icon: mdi:currency-thb
+        state: "1"
+
+###############################################################################
+# 3) Utility Meters (Daily / Monthly / Session)
+###############################################################################
+
+utility_meter:
+  gas_daily:
+    source: sensor.gas_used
+    cycle: daily
+
+  gas_monthly:
+    source: sensor.gas_used
+    cycle: monthly
+
+  gas_yearly:
+    source: sensor.gas_used
+    cycle: yearly
+
+  gas_session:
+    source: sensor.kitchen_gas_scale_net_remaining
+    cycle: quarter-hourly

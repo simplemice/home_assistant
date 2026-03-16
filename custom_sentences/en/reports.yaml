@@ -1,0 +1,29 @@
+language: "en"
+
+intents:
+  checkwaterlevel:
+    data:
+      - sentences:
+          - "how full is the water tank"
+          - "what is the water tank level"
+          - "check the tank level"
+          - "tank level"
+
+  whattheweather:
+    data:
+      - sentences:
+          - "(what's | what is | tell me) [the] (weather | temperature) [outside | now]"
+
+  whatthetraffic:
+    data:
+      - sentences:
+          - "what is the traffic"
+          - "how is the traffic"
+          - "what's the traffic like"
+
+  housemusic:
+    data:
+      - sentences:
+          - "play music"
+          - "play some music"
+          - "start music"

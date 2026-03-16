@@ -1,0 +1,493 @@
+blueprint:
+  name: WLED Segmented Notifications
+  description: Control up to 4 segments on a single WLED strip for independent notifications.
+  domain: automation
+  input:
+    wled_device:
+      name: WLED Light Entity
+      selector:
+        entity:
+          integration: wled
+          domain:
+          - light
+          multiple: false
+          reorder: false
+    notification_preset_name:
+      name: Notification Preset Name
+      default: HA Notify
+      selector:
+        text:
+          multiline: false
+          multiple: false
+    default_preset_name:
+      name: Default Preset Name
+      default: Default
+      selector:
+        text:
+          multiline: false
+          multiple: false
+    number_of_segments:
+      name: Number of Notification Segments to Use
+      selector:
+        select:
+          options:
+          - label: 1 Segment
+            value: '1'
+          - label: 2 Segments
+            value: '2'
+          - label: 3 Segments
+            value: '3'
+          - label: 4 Segments
+            value: '4'
+          sort: false
+          custom_value: false
+          multiple: false
+      default: '1'
+    trigger_1:
+      name: Segment 1 Trigger Entity
+      selector:
+        entity:
+          multiple: false
+          reorder: false
+    color_1:
+      name: Segment 1 Color
+      selector:
+        color_rgb: {}
+      default:
+      - 255
+      - 0
+      - 0
+    effect_1:
+      name: Segment 1 Effect
+      selector:
+        text:
+          multiline: false
+          multiple: false
+      default: Solid
+    speed_1:
+      name: Segment 1 Effect Speed
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    intensity_1:
+      name: Segment 1 Effect Intensity
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    brightness_1:
+      name: Segment 1 Brightness
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 255
+    trigger_2:
+      name: Segment 2 Trigger Entity
+      selector:
+        entity:
+          multiple: false
+          reorder: false
+    color_2:
+      name: Segment 2 Color
+      selector:
+        color_rgb: {}
+      default:
+      - 0
+      - 0
+      - 255
+    effect_2:
+      name: Segment 2 Effect
+      selector:
+        text:
+          multiline: false
+          multiple: false
+      default: Blink
+    speed_2:
+      name: Segment 2 Effect Speed
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    intensity_2:
+      name: Segment 2 Effect Intensity
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    brightness_2:
+      name: Segment 2 Brightness
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 255
+    trigger_3:
+      name: Segment 3 Trigger Entity
+      selector:
+        entity:
+          multiple: false
+          reorder: false
+    color_3:
+      name: Segment 3 Color
+      selector:
+        color_rgb: {}
+      default:
+      - 0
+      - 255
+      - 0
+    effect_3:
+      name: Segment 3 Effect
+      selector:
+        text:
+          multiline: false
+          multiple: false
+      default: Solid
+    speed_3:
+      name: Segment 3 Effect Speed
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    intensity_3:
+      name: Segment 3 Effect Intensity
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    brightness_3:
+      name: Segment 3 Brightness
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 255
+    trigger_4:
+      name: Segment 4 Trigger Entity
+      selector:
+        entity:
+          multiple: false
+          reorder: false
+    color_4:
+      name: Segment 4 Color
+      selector:
+        color_rgb: {}
+      default:
+      - 255
+      - 255
+      - 0
+    effect_4:
+      name: Segment 4 Effect
+      selector:
+        text:
+          multiline: false
+          multiple: false
+      default: Heartbeat
+    speed_4:
+      name: Segment 4 Effect Speed
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    intensity_4:
+      name: Segment 4 Effect Intensity
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 128
+    brightness_4:
+      name: Segment 4 Brightness
+      selector:
+        number:
+          min: 0.0
+          max: 255.0
+          step: 1.0
+          mode: slider
+      default: 255
+  source_url: https://gist.githubusercontent.com/Anashost/af40136333f5b8e0f4edf5c6df52b011/raw/b65dec30e1cbc585794299ab71d5459b186d535e/wled_segmented_notifications.yaml
+mode: queued
+max_exceeded: silent
+variables:
+  wled_entity: !input wled_device
+  num_segments: !input number_of_segments
+  notification_preset: !input notification_preset_name
+  default_preset: !input default_preset_name
+  trigger_1_entity: !input trigger_1
+  trigger_2_entity: !input trigger_2
+  trigger_3_entity: !input trigger_3
+  trigger_4_entity: !input trigger_4
+  wled_name: '{{ wled_entity.split(''.'')[1] }}'
+  preset_select_entity: select.{{ wled_name }}_preset
+  is_on:
+  - 'on'
+  - open
+  - detected
+  - home
+  - unlocked
+  trigger_1_active: '{{ (trigger_1_entity | default('''')) != '''' and states(trigger_1_entity)
+    in is_on and num_segments | int >= 1 }}'
+  trigger_2_active: '{{ (trigger_2_entity | default('''')) != '''' and states(trigger_2_entity)
+    in is_on and num_segments | int >= 2 }}'
+  trigger_3_active: '{{ (trigger_3_entity | default('''')) != '''' and states(trigger_3_entity)
+    in is_on and num_segments | int >= 3 }}'
+  trigger_4_active: '{{ (trigger_4_entity | default('''')) != '''' and states(trigger_4_entity)
+    in is_on and num_segments | int >= 4 }}'
+  any_notification_active: '{{ trigger_1_active or trigger_2_active or trigger_3_active
+    or trigger_4_active }}'
+trigger:
+- platform: state
+  entity_id: !input trigger_1
+  not_to:
+  - unavailable
+  - unknown
+  for: 00:00:01
+- platform: state
+  entity_id: !input trigger_2
+  not_to:
+  - unavailable
+  - unknown
+  for: 00:00:01
+- platform: state
+  entity_id: !input trigger_3
+  not_to:
+  - unavailable
+  - unknown
+  for: 00:00:01
+- platform: state
+  entity_id: !input trigger_4
+  not_to:
+  - unavailable
+  - unknown
+  for: 00:00:01
+action:
+- choose:
+  - conditions:
+    - '{{ any_notification_active }}'
+    sequence:
+    - if:
+      - '{{ states(preset_select_entity) != notification_preset }}'
+      then:
+      - choose:
+        - conditions:
+          - '{{ states(''light.'' ~ wled_name ~ ''_segment_1'') != ''on'' and states(''light.''
+            ~ wled_name ~ ''_segment_2'') != ''on'' and states(''light.'' ~ wled_name
+            ~ ''_segment_3'') != ''on'' and states(''light.'' ~ wled_name ~ ''_segment_4'')
+            != ''on'' }}'
+          sequence:
+          - service: scene.create
+            data:
+              scene_id: wled_notification_snapshot_{{ wled_name }}
+              entities:
+                '{{ wled_entity }}':
+                  state: '{{ states(wled_entity) }}'
+                  brightness: '{{ state_attr(wled_entity, ''brightness'') | default(None)
+                    }}'
+                  effect: '{{ state_attr(wled_entity, ''effect'') | default(None)
+                    }}'
+                  rgb_color: '{{ state_attr(wled_entity, ''rgb_color'') | default(None)
+                    }}'
+                  hs_color: '{{ state_attr(wled_entity, ''hs_color'') | default(None)
+                    }}'
+                  color_temp: '{{ state_attr(wled_entity, ''color_temp'') | default(None)
+                    }}'
+                  xy_color: '{{ state_attr(wled_entity, ''xy_color'') | default(None)
+                    }}'
+                  color_mode: '{{ state_attr(wled_entity, ''color_mode'') | default(None)
+                    }}'
+                  white_value: '{{ state_attr(wled_entity, ''white_value'') | default(None)
+                    }}'
+                '{{ preset_select_entity }}':
+                  state: '{{ states(preset_select_entity) if states(preset_select_entity)
+                    not in [''unknown'',''unavailable''] else default_preset }}'
+          - service: select.select_option
+            target:
+              entity_id: '{{ preset_select_entity }}'
+            data:
+              option: '{{ notification_preset }}'
+          - wait_template: '{{ states(preset_select_entity) == notification_preset
+              }}'
+            timeout: 00:00:05
+            continue_on_timeout: true
+          - delay:
+              seconds: 0.6
+    - if:
+      - '{{ trigger_1_active }}'
+      then:
+      - service: light.turn_on
+        data:
+          rgb_color: !input color_1
+          effect: !input effect_1
+          brightness: !input brightness_1
+        target:
+          entity_id: light.{{ wled_name }}_segment_1
+      - delay:
+          seconds: 0.2
+      - service: number.set_value
+        data:
+          value: !input intensity_1
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_1_intensity'\n   if states('number.'
+            ~ wled_name ~ '_segment_1_intensity') != 'unknown'\n   else 'number.'
+            ~ wled_name ~ '_intensity' }}"
+      - delay:
+          seconds: 0.05
+      - service: number.set_value
+        data:
+          value: !input speed_1
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_1_speed'\n   if states('number.'
+            ~ wled_name ~ '_segment_1_speed') != 'unknown'\n   else 'number.' ~ wled_name
+            ~ '_speed' }}"
+      - delay:
+          seconds: 0.1
+      else:
+      - service: light.turn_off
+        target:
+          entity_id: light.{{ wled_name }}_segment_1
+    - if:
+      - '{{ trigger_2_active }}'
+      then:
+      - service: light.turn_on
+        data:
+          rgb_color: !input color_2
+          effect: !input effect_2
+          brightness: !input brightness_2
+        target:
+          entity_id: light.{{ wled_name }}_segment_2
+      - delay:
+          seconds: 0.2
+      - service: number.set_value
+        data:
+          value: !input intensity_2
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_2_intensity'\n   if states('number.'
+            ~ wled_name ~ '_segment_2_intensity') != 'unknown'\n   else 'number.'
+            ~ wled_name ~ '_intensity' }}"
+      - delay:
+          seconds: 0.05
+      - service: number.set_value
+        data:
+          value: !input speed_2
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_2_speed'\n   if states('number.'
+            ~ wled_name ~ '_segment_2_speed') != 'unknown'\n   else 'number.' ~ wled_name
+            ~ '_speed' }}"
+      - delay:
+          seconds: 0.1
+      else:
+      - service: light.turn_off
+        target:
+          entity_id: light.{{ wled_name }}_segment_2
+    - if:
+      - '{{ trigger_3_active }}'
+      then:
+      - service: light.turn_on
+        data:
+          rgb_color: !input color_3
+          effect: !input effect_3
+          brightness: !input brightness_3
+        target:
+          entity_id: light.{{ wled_name }}_segment_3
+      - delay:
+          seconds: 0.2
+      - service: number.set_value
+        data:
+          value: !input intensity_3
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_3_intensity'\n   if states('number.'
+            ~ wled_name ~ '_segment_3_intensity') != 'unknown'\n   else 'number.'
+            ~ wled_name ~ '_intensity' }}"
+      - delay:
+          seconds: 0.05
+      - service: number.set_value
+        data:
+          value: !input speed_3
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_3_speed'\n   if states('number.'
+            ~ wled_name ~ '_segment_3_speed') != 'unknown'\n   else 'number.' ~ wled_name
+            ~ '_speed' }}"
+      - delay:
+          seconds: 0.1
+      else:
+      - service: light.turn_off
+        target:
+          entity_id: light.{{ wled_name }}_segment_3
+    - if:
+      - '{{ trigger_4_active }}'
+      then:
+      - service: light.turn_on
+        data:
+          rgb_color: !input color_4
+          effect: !input effect_4
+          brightness: !input brightness_4
+        target:
+          entity_id: light.{{ wled_name }}_segment_4
+      - delay:
+          seconds: 0.2
+      - service: number.set_value
+        data:
+          value: !input intensity_4
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_4_intensity'\n   if states('number.'
+            ~ wled_name ~ '_segment_4_intensity') != 'unknown'\n   else 'number.'
+            ~ wled_name ~ '_intensity' }}"
+      - delay:
+          seconds: 0.05
+      - service: number.set_value
+        data:
+          value: !input speed_4
+        target:
+          entity_id: "{{ 'number.' ~ wled_name ~ '_segment_4_speed'\n   if states('number.'
+            ~ wled_name ~ '_segment_4_speed') != 'unknown'\n   else 'number.' ~ wled_name
+            ~ '_speed' }}"
+      - delay:
+          seconds: 0.1
+      else:
+      - service: light.turn_off
+        target:
+          entity_id: light.{{ wled_name }}_segment_4
+  default:
+  - service: select.select_option
+    target:
+      entity_id: '{{ preset_select_entity }}'
+    data:
+      option: '{{ default_preset }}'
+  - wait_template: '{{ states(preset_select_entity) == default_preset }}'
+    timeout: 00:00:08
+    continue_on_timeout: true
+  - delay:
+      seconds: 1
+  - service: scene.turn_on
+    target:
+      entity_id: scene.wled_notification_snapshot_{{ wled_name }}
