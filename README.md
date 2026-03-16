@@ -4,7 +4,7 @@
   <br>
   Casa de Ratón
   <br>
-  Simplemice Home Assistant Configuration
+  Home Assistant Configuration
 </h1>
 
 ***
