@@ -1,0 +1,172 @@
+# This package contains configuration to help play music using Music Assistant
+# It is written to work with the core Music Assistant integration
+# 0. Script for LLM:
+#    A script which guides an LLM to use the right data for Music Assistant.
+#    This script is removed and replaced with the MA Blueprint
+#    https://github.com/music-assistant/voice-support#option-2
+# 1. Intent Script for custom PlayMusic sentence (custom_sentences/nl/PlayMusic.yaml):
+#    An intent script which belongs to the PlayMusic custom sentence
+#    Using this is optional, but I added it to prevent usage of the LLM as much as possible
+#    The PlayMusic custom intent is created to be used for frequenctly issued music requests
+# 2. Automation for double press on Voice PE button:
+#    An automation to use the middle button on the Voice PE to resume playback
+#    or go the next track on double click. Make sure to adjust the entities in the trigger
+
+intent_script:
+  PlayMusic:
+    description: |
+      Play Music using Music Assistant, only use this intent_script in case the request is one of the following:
+        - Leuke Liedjes (van Pepijn en Floris)
+        - Studio Brussel
+        - Radio 2
+        - Papa is een pizza
+        - Baby Lasagna
+    action:
+      - alias: >
+          Create variables used to play media, the media_id is an uri which can be found using
+          music_assistant.search in developer tools > actions.
+          Name and icon are optional and only used in the Awtrix notifications.
+        variables:
+          map_to_data:
+            stubru:
+              name: Studio Brussel
+              icon: oldradioani
+              data:
+                media_id: Studio Brussel
+                media_type: radio
+            leuke_liedjes:
+              name: Leuke liedjes Pepijn en Floris
+              data:
+                media_id: library://playlist/130
+                media_type: playlist
+                radio_mode: true
+            radio_2:
+              icon: oldradioani
+              name: NPO Radio 2
+              data:
+                media_id: library://radio/1
+                media_type: radio
+            baby:
+              name: Baby Lasagna
+              icon: baby_ani
+              data:
+                media_id: spotify://artist/1ncWEkB4AQh1rxC8ObpBoH
+                media_type: artist
+            pizza:
+              name: M'n Papa is een Pizza
+              icon: pizza
+              data:
+                media_id: spotify://track/2YBb6mmNvCtjc5rLKrtS8k
+                media_type: track
+                radio_mode: true
+          players_area: >
+            {{
+              area_entities(area | default)
+                | select('in', integration_entities('music_assistant'))
+                | select('match', 'media_player')
+                | list
+            }}
+          players_entity: >
+            {{
+              integration_entities('music_assistant')
+                | select('match', 'media_player')
+                | select('is_state_attr', 'friendly_name', name)
+                | list
+            }}
+          players: "{{ players_area + players_entity }}"
+      - alias: Set shuffle in case media_type is playlist
+        if: >
+          {{
+            map_to_data.get(to_play|default, {}).get('data', {}).get('media_type') == 'playlist'
+            and players | count > 0
+          }}
+        then:
+          - alias: Enable shuffle for playlist
+            action: media_player.shuffle_set
+            data:
+              shuffle: "{{ map_to_data[to_play].data.media_type == 'playlist' }}"
+            target:
+              entity_id: "{{ players }}"
+      - alias: Play music using Music Assistant
+        action: music_assistant.play_media
+        data: "{{ map_to_data.get(to_play, {}).get('data', dict(media_id=to_play|default)) }}"
+        target:
+          entity_id: "{{ players }}"
+      # this part is only relevant in case you use Ulanzi TC100 displays running Awtrix 3
+      - alias: Define variables used to send notification to the right display
+        variables:
+          map_to_awtrix:
+            - area_name: Werkkamer Martijn
+              topic: awtrix_martijn/notify
+            - area_name: Pepijn
+              topic: awtrix_pepijn/notify
+            - area_name: Floris
+              topic: awtrix_floris/notify
+          topic: >
+            {{
+              map_to_awtrix
+                | selectattr('area_name', 'eq', area)
+                | map(attribute='topic')
+                | join
+                | default('unknown', true)
+            }}
+      - alias: Show on Ulanzi display in case there is one in the room
+        if: "{{ topic != 'unknown'}}"
+        then:
+          - alias: Send music notification to Ulanzi display
+            action: mqtt.publish
+            data:
+              qos: 0
+              retain: false
+              topic: "{{ topic }}"
+              payload: >
+                {%- set data = dict(
+                                  text = map_to_data[to_play].name,
+                                  icon = map_to_data[to_play].icon
+                                                | default('musicvisualisation')
+                                  )
+                %}
+                {{ data | to_json }}
+
+automation:
+  - alias: Voice - Resume or next track on double press
+    id: 34df8747-e2b0-48af-befa-f981660aba0c
+    mode: parallel
+    triggers:
+      - alias: Button press event of HA Voice device
+        trigger: state
+        entity_id:
+          - event.ha_voice_floris_button_press
+          - event.ha_voice_keuken_button_press
+          - event.ha_voice_pepijn_button_press
+          - event.ha_voice_werkkamer_martijn_button_press
+          - event.ha_voice_woonkamer_button_press
+        not_from: unavailable
+    conditions:
+      - alias: Double press event
+        condition: template
+        value_template: "{{ trigger.to_state.attributes.event_type == 'double_press' }}"
+    actions:
+      - variables:
+          player: >
+            {{
+              integration_entities('music_assistant')
+                | select('in', area_entities(area_id(trigger.entity_id)))
+                | list
+                | first
+                | default('unknown')
+            }}
+          player_state: "{{ states(player) }}"
+      - choose:
+          - conditions: "{{ player_state == 'paused' }}"
+            sequence:
+              - alias: Resume Playback
+                action: media_player.media_play
+                target:
+                  entity_id: "{{ player }}"
+          - conditions: "{{ player_state == 'playing' }}"
+            sequence:
+              - alias: Skip to next track
+                action: media_player.media_next_track
+                target:
+                  entity_id: "{{ player }}"

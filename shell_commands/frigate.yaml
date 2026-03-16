@@ -1,0 +1,3 @@
+download_frigate_snapshot: >-
+  curl -s -o /config/www/media/screenshots/garage_{{ snapshot_timestamp }}.jpg
+  "http://192.168.3.8:5000/api/events/{{ event_id }}/snapshot.jpg?bounding_box=1"

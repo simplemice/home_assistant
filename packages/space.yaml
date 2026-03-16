@@ -1,0 +1,108 @@
+###############################################################################
+# @author      : Simplemice
+# @package     : Space
+# @description : Space Package
+###############################################################################
+
+sensor:
+  #ISS Coordinates
+  - platform: rest
+    name: ISS Raw
+    resource: "http://api.open-notify.org/iss-now.json"
+    scan_interval: 30
+    value_template: "{{ value_json.message }}"
+    json_attributes:
+      - iss_position
+      - timestamp
+  - platform: rest
+    scan_interval: 1800
+    name: SpaceX Starman Raw
+    resource: "https://api.spacexdata.com/v2/info/roadster"
+    value_template: "{{ value_json.name }}"
+    json_attributes:
+      - speed_kph
+      - earth_distance_km
+      - mars_distance_km
+      - launch_mass_kg
+      - period_days
+      - apoapsis_au
+      - periapsis_au
+
+device_tracker:
+  - platform: mqtt_json
+    devices:
+      iss: location/iss
+
+template:
+  - sensor:
+      - name: "Starman Speed"
+        icon: mdi:rocket
+        unit_of_measurement: "km/h"
+        device_class: speed
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'speed_kph') | float | round(0) }}
+      - name: "Starman Distance from Earth"
+        icon: mdi:earth
+        unit_of_measurement: "km"
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'earth_distance_km') | float | round(0) }}
+      - name: "Starman Distance from Mars"
+        icon: mdi:planet
+        unit_of_measurement: "km"
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'mars_distance_km') | float | round(0) }}
+      - name: "Starman Orbital Period"
+        icon: mdi:calendar-sync
+        unit_of_measurement: "days"
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'period_days') | float | round(1) }}
+      - name: "Starman Launch Mass"
+        icon: mdi:weight
+        unit_of_measurement: "kg"
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'launch_mass_kg') | float | round(0) }}
+      - name: "Starman Apoapsis"
+        icon: mdi:orbit
+        unit_of_measurement: "AU"
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'apoapsis_au') | float | round(3) }}
+      - name: "Starman Periapsis"
+        icon: mdi:orbit
+        unit_of_measurement: "AU"
+        state: >
+          {{ state_attr('sensor.spacex_starman_raw', 'periapsis_au') | float | round(3) }}
+      - name: "ISS Latitude"
+        icon: mdi:latitude
+        unit_of_measurement: "°"
+        state: >
+          {{ state_attr('sensor.iss_raw', 'iss_position').latitude | float }}
+      - name: "ISS Longitude"
+        icon: mdi:longitude
+        unit_of_measurement: "°"
+        state: >
+          {{ state_attr('sensor.iss_raw', 'iss_position').longitude | float }}
+      - name: "ISS Timestamp"
+        icon: mdi:clock
+        state: >
+          {{ state_attr('sensor.iss_raw', 'timestamp') | int | timestamp_local }}
+
+automation:
+  #Publish ISS Location data to MQTT Topic
+  - id: iss_location_publish
+    alias: "ISS Location Publish"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id:
+          - sensor.iss_latitude
+          - sensor.iss_longitude
+    action:
+      - service: mqtt.publish
+        data:
+          topic: location/iss
+          retain: true
+          payload: >
+            {
+              "latitude": {{ states('sensor.iss_latitude') | float }},
+              "longitude": {{ states('sensor.iss_longitude') | float }}
+            }

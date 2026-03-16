@@ -1,0 +1,29 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/09/2025
+#   @package        :   Laundry
+#   @description    :   Laundry
+###############################################################################
+
+input_boolean:
+  laundry_pickup:
+    name: "Laundry PickUp"
+    icon: mdi:washing-machine-off
+  laundry_day:
+    name: "Laundry Day"
+    icon: mdi:washing-machine
+  awtrix_laundry_notify:
+    name: "Awtrix Laundry Notification"
+    icon: mdi:washing-machine-off
+
+input_text:
+  laundry_zone:
+    name: Laundry Zone
+    initial: None
+    icon: mdi:map-clock
+
+timer:
+  laundry_timer:
+    name: "Laundry Timer"
+    icon: mdi:washing-machine
+    duration: "00:02:30"

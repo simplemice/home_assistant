@@ -1,0 +1,113 @@
+###############################################################################
+# @author      : Simplemice
+# @package     : Energy
+# @description : Realistic Solar Simulation (Weather + Sun Angle, STABLE)
+###############################################################################
+
+template:
+  ###########################################################################
+  # 1️⃣ SOLAR LIVE POWER (WEATHER + SUN ANGLE)
+  ###########################################################################
+  - sensor:
+      - name: "Solar Live Power (Simulated)"
+        unique_id: solar_live_power_simulated
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-power
+        state: >
+          {% set panel_wp = 11200 %}
+          {% set sun_elev = state_attr('sun.sun', 'elevation') | float(0) %}
+          {% if sun_elev <= 0 %}
+            0
+          {% else %}
+            {% set clouds = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
+            {% set rain = states('sensor.phuket_day_probability_precip') | float(0) / 100 %}
+            {% set thunder = states('sensor.phuket_day_probability_thunder') | float(0) / 100 %}
+            {% set sun_factor = (sun_elev / 90) ** 1.35 %}
+            {% set cloud_loss = 1 - (clouds * 0.65) %}
+            {% set rain_loss = 1 - (rain * 0.55) %}
+            {% set thunder_loss = 1 - (thunder * 0.85) %}
+            {% set thermal_loss = 0.78 %}
+            {% set inverter_eff = 0.96 %}
+            {% set total_factor =
+              sun_factor *
+              cloud_loss *
+              rain_loss *
+              thunder_loss *
+              thermal_loss *
+              inverter_eff
+            %}
+            {{ (panel_wp * total_factor) | round(0) }}
+          {% endif %}
+
+      ###########################################################################
+      # 2️⃣ DAILY REALISM FACTOR
+      ###########################################################################
+      - name: "Solar Daily Realism Factor"
+        unique_id: solar_daily_realism_factor
+        icon: mdi:weather-cloudy
+        state: >
+          {% set clouds = states('sensor.pirateweather_cloud_coverage') | float(0) %}
+          {% set rain = states('sensor.phuket_day_probability_precip') | float(0) %}
+          {% set thunder = states('sensor.phuket_day_probability_thunder') | float(0) %}
+          {% set factor = 1 - (
+            (clouds * 0.004) +
+            (rain * 0.0035) +
+            (thunder * 0.006)
+          ) %}
+          {{ [factor, 0.25] | max | round(2) }}
+
+      ###########################################################################
+      # 3️⃣ SOLAR ENERGY TODAY (FINAL, USER-FRIENDLY)
+      ###########################################################################
+      - name: "Solar Energy Today (Final Realistic)"
+        unique_id: solar_energy_today_final
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:solar-power
+        state: >
+          {{
+            states('sensor.solar_energy_today_simulated') | float(0) *
+            states('sensor.solar_daily_realism_factor') | float(1)
+            | round(2)
+          }}
+
+      ###########################################################################
+      # 4️⃣ 24H AVERAGE SOLAR POWER (DISPLAY ONLY)
+      ###########################################################################
+      - name: "Net Solar Power (24h Avg)"
+        unique_id: net_solar_power_24h_avg
+        unit_of_measurement: "W"
+        device_class: power
+        icon: mdi:solar-power
+        state: >
+          {{ (states('sensor.solar_energy_daily') | float(0) * 1000 / 24) | round(0) }}
+
+###############################################################################
+# 5️⃣ ENERGY INTEGRATION (PHYSICS-CORRECT)
+###############################################################################
+sensor:
+  - platform: integration
+    source: sensor.solar_live_power_simulated
+    name: Solar Energy Today (Simulated)
+    unique_id: solar_energy_today_simulated
+    unit_prefix: k
+    round: 3
+
+###############################################################################
+# 6️⃣ UTILITY METERS (ENERGY DASHBOARD)
+###############################################################################
+utility_meter:
+  solar_energy_daily:
+    source: sensor.solar_energy_today_simulated
+    cycle: daily
+
+  solar_energy_monthly:
+    source: sensor.solar_energy_today_simulated
+    cycle: monthly
+
+  solar_energy_yearly:
+    source: sensor.solar_energy_today_simulated
+    cycle: yearly

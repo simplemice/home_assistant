@@ -1,0 +1,7 @@
+- sensor:
+    - unique_id: simplemice_speed
+      unit_of_measurement: km/h
+      default_entity_id: sensor.simplemice_speed
+      name: Simplemice Speed km/h
+      state: "{% set speed = state_attr('device_tracker.micemob', 'speed') %} {{
+        (speed | float * 3.6) | round(1) }}"

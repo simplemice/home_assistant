@@ -1,0 +1,40 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   19/08/2025 (updated 22/08/2025, revised 31/08/2025)
+#   @package        :   Recorder
+#   @description    :   Recorder Settings
+###############################################################################
+
+recorder:
+  purge_keep_days: 10
+  auto_purge: true
+  commit_interval: 10
+  exclude:
+    entity_globs:
+      - sensor.*_signal_strength
+      - sensor.*_rssi
+      - sensor.*_linkquality
+      - sensor.*_uptime
+      - sensor.*_last_seen
+      - sensor.*_battery_voltage
+      - sensor.*_free_memory
+      - sensor.*_heap*
+      - sensor.*_loop*
+      - sensor.*_internal*
+      - sensor.*_debug*
+      - binary_sensor.*_availability
+    domains:
+      - updater
+      - persistent_notification
+
+logger:
+  default: warning
+#  logs:
+#    homeassistant.core: debug
+#    homeassistant.helpers: debug
+#    homeassistant.components.recorder: debug
+#    sqlalchemy.engine: debug
+#    hacs: debug
+#    custom_components.hacs: debug
+#    supervisor: debug
+#    custom_components.supervisor: debug

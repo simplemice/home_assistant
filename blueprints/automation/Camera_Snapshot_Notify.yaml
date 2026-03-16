@@ -1,0 +1,182 @@
+blueprint:
+  name: Send a notification with camera snapshot when motion is detected with blocking
+    state and URL (or lovelace view) on click, critical or not, collapse or not.
+  description: "This automation blueprint creates a camera snapshot if motion is detected
+    \ and sends a notification to your phone with the picture.  Optionally you can
+    define a binary sensor that will block the automation from running when state
+    is ON. For Example do not run when somebody is home (you can use the people_home
+    template example). Furthermore you have the option to make the notification critical
+    or high priority and to collapse/overwrite or not.\n\nRequired entities:\n  -
+    Motion sensor (binary_sensor in motion class)\n  - Camera entity\n  - Notify device
+    entity (mobile_app).\n\n\nOptional entities:\n  - Blocking entity (any entity
+    with state on/off), example people home or not. Entity in state ON will block
+    the automation. If needed you can create a template sensor to inverse states.\n
+    \ - Delay before taking a snapshot. You can play with this a little see what values
+    shows the person best in the snapshot picture.\n  - Notification title & message\n
+    \ - URI for clickAction on the notification. For example a lovelace view such
+    as /lovelace/cctv, this will open in the app.\n  - Name for the channel, different
+    channels can have different notifications settings, such as sound etc.\n  - Name
+    for group (Android) or grouping name (iOS), to group similar notifications together\n
+    \ - Overwrite (collapse) similar notifications (iOS): Yes/No\n  - Should the notification
+    be critical (iOS) or High Priority / TTL 0 (Android)? Yes/No (However on iOS this
+    will defeat the collapse of grouping) \n"
+  domain: automation
+  input:
+    motion_sensor:
+      name: Motion sensor
+      description: The sensor wich triggers the snapshot creation (domain binary_sensor,
+        class motion).
+      selector:
+        entity:
+          domain:
+          - binary_sensor
+          device_class:
+          - motion
+          multiple: false
+    camera:
+      name: Camera
+      description: The camera to create the snapshot (domain camera).
+      selector:
+        entity:
+          domain:
+          - camera
+          multiple: false
+    notify_device:
+      name: Device to notify
+      description: Device that runs the official Home Assistant app to receive notifications.
+      selector:
+        device:
+          integration: mobile_app
+          multiple: false
+    is_ios:
+      name: Is it an iOS device?
+      description: Toggle if your selected device runs iOS, default is Android
+      selector:
+        boolean: {}
+      default: false
+    blocker_entity:
+      name: (OPTIONAL) Blocking entity
+      description: If this entity state is on, it will prevent the automation from
+        running. E.g. somebody is home (binary_sensor.people_home).
+      default:
+      selector:
+        entity: {}
+    delay:
+      name: Delay (Optional)
+      description: Wait before creating camera snapshot
+      default: 0
+      selector:
+        number:
+          min: 0.0
+          max: 60.0
+          unit_of_measurement: seconds
+          mode: slider
+          step: 1.0
+    notification_title:
+      name: Notification title (Optional)
+      description: 'Default: "Motion detected!"'
+      default: Motion detected!
+    notification_message:
+      name: Notification message (Optional)
+      description: 'Default: "{{ motion_sensor_name }} detected movement!"'
+      default: '{{ motion_sensor_name }} detected movement!'
+    clickAction:
+      name: ClickAction URI (Optional)
+      description: An URI to open when you click on the notification, can be an external
+        URI (https://www.google.com) or an internal URI to a lovelace dashboard or
+        view (/lovelace/cctv).
+      default: ''
+    group_name:
+      name: Name of the group
+      description: To group notifications together for 1 automation. For instance
+        if you want to have multiple automations but seperate them use unique names
+        per automation.
+      default: alarm_motion
+    channel_name:
+      name: Name of the channel
+      description: Different channels can have different notifications settings, such
+        as sound etc.
+      default: alarm_motion
+    overwrite_similar:
+      name: Overwrite similar
+      description: Toggle on if you want to a new notification in the same group to
+        overwrite the previous one (iOS).
+      selector:
+        boolean: {}
+      default: false
+    is_critical:
+      name: Should the notification be critical (iOS) or High Priority (Android)?
+      description: Toggle off it you don't want critical or high priority notifications.
+      selector:
+        boolean: {}
+      default: true
+  source_url: https://gist.github.com/Stan-Gobien/1d142c91dbddb47879a8b0cc29a2951f
+trigger:
+  platform: state
+  entity_id: !input motion_sensor
+  from: 'off'
+  to: 'on'
+variables:
+  motion_sensor: !input motion_sensor
+  motion_sensor_name: '{{ states[motion_sensor].name }}'
+  camera: !input camera
+  notify_device: !input notify_device
+  is_ios: !input is_ios
+  notification_title: !input notification_title
+  notification_message: !input notification_message
+  delay: !input delay
+  snapshot_create_file_path: /config/www/tmp/snapshot_{{ states[camera].object_id
+    }}.jpg
+  snapshot_access_file_path: '{{ snapshot_create_file_path | replace(''/config/www'',''/local'')
+    }}'
+  blocker_entity: !input blocker_entity
+  clickAction: !input clickAction
+  is_critical: !input is_critical
+  overwrite_similar: !input overwrite_similar
+  channel_name: !input channel_name
+  group_name: !input group_name
+condition:
+- condition: template
+  value_template: '{{ (blocker_entity == none) or (states[blocker_entity].state ==
+    ''off'') }}
+
+    '
+action:
+- delay: '{{ delay }}'
+- service: camera.snapshot
+  entity_id: !input camera
+  data:
+    filename: '{{ snapshot_create_file_path }}'
+- delay: 00:00:02
+- device_id: !input notify_device
+  domain: mobile_app
+  type: notify
+  title: '{{ notification_title }}'
+  message: '{{ notification_message }}'
+  data: "{% if is_ios %}\n  {% if is_critical %}\n    {% set platform_data = { \"channel\":
+    \"%s\", \"url\": \"%s\", \"attachment\": {\"url\": \"%s\", \"content_type\": \"JPEG\"},
+    \ \"push\": { \"category\": \"%s\", \"sound\": { \"name\": \"default\", \"critical\":
+    1, \"volume\": 1.0 } } } | format(channel_name, clickAction, snapshot_access_file_path,
+    group_name) %}\n  {% else %}\n    {% if overwrite_similar %}\n      {% set platform_data
+    = { \"channel\": \"%s\", \"url\": \"%s\", \"apns_headers\": { \"apns-collapse-id\":
+    \"%s\" }, \"attachment\": {\"url\": \"%s\", \"content_type\": \"JPEG\"},  \"push\":
+    { \"category\": \"%s\", \"sound\": { \"name\": \"default\", \"volume\": 1.0 }
+    } } | format(channel_name, clickAction, group_name, snapshot_access_file_path,
+    group_name) %}\n    {% else %}\n      {% set platform_data = { \"channel\": \"%s\",
+    \"url\": \"%s\", \"attachment\": {\"url\": \"%s\", \"content_type\": \"JPEG\"},
+    \ \"push\": { \"category\": \"%s\", \"sound\": { \"name\": \"default\", \"volume\":
+    1.0 } } } | format(channel_name, clickAction, snapshot_access_file_path, group_name)
+    %}\n    {% endif %}\n  {% endif %}\n{% else %}\n  {% if is_critical %}\n    {%
+    if overwrite_similar %}\n      {% set platform_data = { \"tag\": \"%s\", \"channel\":
+    \"%s\", \"group\": \"%s\", \"ttl\": 0, \"priority\": \"high\", \"clickAction\":
+    \"%s\", \"image\": \"%s\"} | format(group_name, channel_name, group_name, clickAction,
+    snapshot_access_file_path) %}\n    {% else %}\n      {% set platform_data = {
+    \"channel\": \"%s\", \"ttl\": 0, \"priority\": \"high\", \"clickAction\": \"%s\",
+    \"image\": \"%s\"} | format(channel_name, clickAction, snapshot_access_file_path)
+    %}\n    {% endif %}\n  {% else %}\n    {% if overwrite_similar %}\n      {% set
+    platform_data = { \"tag\": \"%s\", \"channel\": \"%s\", \"group\": \"%s\", \"clickAction\":
+    \"%s\", \"image\": \"%s\"} | format(group_name, channel_name, group_name, clickAction,
+    snapshot_access_file_path) %}\n    {% else %}\n      {% set platform_data = {
+    \"channel\": \"%s\", \"clickAction\": \"%s\", \"image\": \"%s\"} | format(channel_name,
+    clickAction, snapshot_access_file_path) %}\n    {% endif %}\n  {% endif %}\n{%
+    endif %} {{ platform_data }}\n"

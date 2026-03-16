@@ -1,0 +1,163 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   01/09/2025
+#   @package        :   Kitchen
+#   @description    :   Kitchen
+###############################################################################
+
+timer:
+  cooking_timer:
+    name: "Cooking Timer"
+    icon: hue:room-kitchen
+    duration: "00:30:00"
+  kitchen_timer:
+    name: Kitchen Timer
+
+input_number:
+  kitchen_timer_hours:
+    name: Kitchen Timer Hours
+    min: 0
+    max: 24
+    step: 1
+    unit_of_measurement: h
+  kitchen_timer_minutes:
+    name: Kitchen Timer Minutes
+    min: 0
+    max: 59
+    step: 1
+    unit_of_measurement: min
+
+input_boolean:
+  kitchen_timer_pause:
+    name: Pause Kitchen Timer
+
+template:
+  - trigger:
+      - platform: time_pattern
+        seconds: "/1"
+    sensor:
+      - name: "Kitchen Timer Remaining"
+        icon: mdi:timer-sand
+        state: >
+          {% set finish = state_attr('timer.kitchen_timer','finishes_at') %}
+          {% if finish %}
+            {% set remaining = (as_datetime(finish) - now()).total_seconds() | int %}
+            {% if remaining > 0 %}
+              {{ '%02d:%02d:%02d' | format(
+                (remaining // 3600),
+                ((remaining % 3600) // 60),
+                (remaining % 60)
+              ) }}
+            {% else %}
+              00:00:00
+            {% endif %}
+          {% else %}
+            00:00:00
+          {% endif %}
+
+  - trigger:
+      - platform: time_pattern
+        seconds: "/1"
+    sensor:
+      - name: "Cooking Timer Remaining"
+        icon: mdi:timer-sand
+        state: >
+          {% set finish = state_attr('timer.cooking_timer','finishes_at') %}
+          {% if finish %}
+            {% set remaining = (as_datetime(finish) - now()).total_seconds() | int %}
+            {% if remaining > 0 %}
+              {{ '%02d:%02d:%02d' | format(
+                (remaining // 3600),
+                ((remaining % 3600) // 60),
+                (remaining % 60)
+              ) }}
+            {% else %}
+              00:00:00
+            {% endif %}
+          {% else %}
+            00:00:00
+          {% endif %}
+
+automation:
+  ###########################################################################
+  # AUTO START / RESTART ON TIME CHANGE
+  ###########################################################################
+  - alias: "Kitchen Timer Auto Restart"
+    id: kitchen_timer_auto_restart
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id:
+          - input_number.kitchen_timer_hours
+          - input_number.kitchen_timer_minutes
+    condition:
+      - condition: state
+        entity_id: input_boolean.kitchen_timer_pause
+        state: "off"
+      - condition: template
+        value_template: >
+          {{
+            states('input_number.kitchen_timer_hours') | int
+            +
+            states('input_number.kitchen_timer_minutes') | int
+            > 0
+          }}
+    action:
+      - service: timer.start
+        target:
+          entity_id: timer.kitchen_timer
+        data:
+          duration: >
+            {{
+              states('input_number.kitchen_timer_hours') | int * 3600
+              +
+              states('input_number.kitchen_timer_minutes') | int * 60
+            }}
+
+  ###########################################################################
+  # PAUSE
+  ###########################################################################
+  - alias: "Kitchen Timer Pause"
+    id: kitchen_timer_pause
+    trigger:
+      - platform: state
+        entity_id: input_boolean.kitchen_timer_pause
+        to: "on"
+    action:
+      - service: timer.pause
+        target:
+          entity_id: timer.kitchen_timer
+
+  ###########################################################################
+  # RESUME
+  ###########################################################################
+  - alias: "Kitchen Timer Resume"
+    id: kitchen_timer_resume
+    trigger:
+      - platform: state
+        entity_id: input_boolean.kitchen_timer_pause
+        to: "off"
+    condition:
+      - condition: state
+        entity_id: timer.kitchen_timer
+        state: "paused"
+    action:
+      - service: timer.start
+        target:
+          entity_id: timer.kitchen_timer
+
+  ###########################################################################
+  # FINISHED
+  ###########################################################################
+  - alias: "Kitchen Timer Finished"
+    id: kitchen_timer_finished
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.kitchen_timer
+    action:
+      - service: notify.persistent_notification
+        data:
+          title: "🍳 Kitchen Timer"
+          message: "Kitchen timer finished!"

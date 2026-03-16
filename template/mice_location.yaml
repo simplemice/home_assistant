@@ -1,0 +1,15 @@
+- sensor:
+    - unique_id: simplemice_location
+      default_entity_id: sensor.simplemice_location
+      name: Simplemice Location
+      state:
+        "{% set area = states('sensor.micemob_area') | trim %} {% set person_state
+        = states('person.simplemice') %} {% if area in ['unknown', 'unavailable', '',
+        None] %}\n  {% set person = person_state %}\n{% else %}\n  {% set person = area
+        %}\n{% endif %} {% if person == 'Bedroom' and (now().hour >= 22 or now().hour
+        < 8) %}\n  Sleep\n{% elif person in ['Bangtao Office', 'Maya Beach'] %}\n  At Work\n{%
+        elif person in ['SuperCheap', 'Tops Rawai', 'Makro Rawai', 'Makro Chalong']
+        %}\n  At Food Store\n{% elif person in ['unknown', 'Unknown', 'not_home', 'unavailable',
+        '', None] %}\n  {{ state_attr('sensor.micemob_location', 'sub_administrative_area')
+        }}\n  {{ state_attr('sensor.micemob_location', 'location') }}\n{% else %}\n
+        \ {{ person }}\n{% endif %}"

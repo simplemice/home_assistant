@@ -1,0 +1,145 @@
+###############################################################################
+# @author      : Simplemice
+# @package     : Energy
+# @description : Realistic Grid Simulation (Hybrid Inverter Logic, STABLE)
+###############################################################################
+
+template:
+  ###########################################################################
+  # 1️⃣ GRID IMPORT (LAST RESORT ONLY)
+  ###########################################################################
+  - sensor:
+      - name: "Grid Power Import (Simulated)"
+        unique_id: grid_power_import_simulated
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:transmission-tower
+        state: >
+          {% set load  = states('sensor.sim_home_power') | float(0) %}
+          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set energy = states('sensor.battery_energy_remaining') | float(0) %}
+          {% set CAP = 50 %}
+          {% set MIN_ENERGY = CAP * 0.10 %}
+          {% if energy <= MIN_ENERGY %}
+            {{ [load - solar, 0] | max | round(0) }}
+          {% else %}
+            0
+          {% endif %}
+
+      ###########################################################################
+      # 2️⃣ GRID EXPORT (ONLY TRUE EXCESS)
+      ###########################################################################
+      - name: "Grid Power Export (Simulated)"
+        unique_id: grid_power_export_simulated
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:transmission-tower-export
+        state: >
+          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set load  = states('sensor.sim_home_power') | float(0) %}
+          {% set batt_charge = states('sensor.battery_charge_power_solar') | float(0) %}
+          {% set soc = states('sensor.battery_soc_simulated') | float(0) %}
+          {% set surplus = solar - load - batt_charge %}
+          {% if soc >= 98 and surplus > 0 %}
+            {{ surplus | round(0) }}
+          {% else %}
+            0
+          {% endif %}
+
+      ###########################################################################
+      # 3️⃣ 24H AVERAGE METRICS (DISPLAY ONLY)
+      ###########################################################################
+      - name: "Net Grid Power to Home (24h Avg)"
+        unique_id: net_grid_power_24h_avg
+        unit_of_measurement: "W"
+        device_class: power
+        icon: mdi:transmission-tower
+        state: >
+          {{ (states('sensor.grid_import_daily') | float(0) * 1000 / 24) | round(0) }}
+
+      - name: "Net Home Power (24h Avg)"
+        unique_id: net_home_power_24h_avg
+        unit_of_measurement: "W"
+        device_class: power
+        icon: mdi:home-lightning-bolt
+        state: >
+          {{ (states('sensor.home_energy_daily') | float(0) * 1000 / 24) | round(0) }}
+
+      - name: "Home Energy Total"
+        state: "{{ states('sensor.home_energy_consumed') }}"
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+
+      - name: "Hybrid Inverter Power"
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >
+          {{
+            states('sensor.solar_live_power_simulated') | float(0)
+            -
+            states('sensor.grid_power_export_simulated') | float(0)
+          }}
+###############################################################################
+# 4️⃣ ENERGY INTEGRATION (PHYSICS-CORRECT)
+###############################################################################
+sensor:
+  - platform: integration
+    source: sensor.grid_power_import_simulated
+    name: Grid Energy Imported
+    unique_id: grid_energy_imported
+    unit_prefix: k
+    round: 3
+  - platform: integration
+    source: sensor.grid_power_export_simulated
+    name: Grid Energy Exported
+    unique_id: grid_energy_exported
+    unit_prefix: k
+    round: 3
+    method: left
+  - platform: integration
+    source: sensor.sim_home_power
+    name: Home Energy Consumed
+    unique_id: home_energy_consumed
+    unit_prefix: k
+    round: 3
+
+###############################################################################
+# 5️⃣ UTILITY METERS (ENERGY DASHBOARD SAFE)
+###############################################################################
+utility_meter:
+  grid_import_daily:
+    source: sensor.grid_energy_imported
+    cycle: daily
+    tariffs:
+      - peak
+      - offpeak
+
+  grid_import_monthly:
+    source: sensor.grid_energy_imported
+    cycle: monthly
+    tariffs:
+      - peak
+      - offpeak
+
+  grid_import_yearly:
+    source: sensor.grid_energy_imported
+    cycle: yearly
+    tariffs:
+      - peak
+      - offpeak
+
+  home_energy_daily:
+    source: sensor.home_energy_consumed
+    cycle: daily
+
+  grid_export_daily:
+    source: sensor.grid_energy_exported
+    cycle: daily
+
+  grid_export_monthly:
+    source: sensor.grid_energy_exported
+    cycle: monthly

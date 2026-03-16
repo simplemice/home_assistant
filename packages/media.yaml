@@ -1,0 +1,88 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Media
+#   @description    :   A Collection of Notification Scripts and Configs.
+###############################################################################
+
+remote:
+  - platform: xiaomi_miio
+    name: "Bedroom Remote Hub"
+    host: 192.168.3.21
+    token: !secret bedroom_remote
+
+switch:
+  - platform: group
+    name: Music Assistant JukeBox Group
+    entities:
+      - switch.jukebox_allow_access
+      - switch.jukebox_play_music_on_start
+      - switch.music_assistant_jukebox_queue
+
+input_select:
+  house_playlist:
+    name: Playlist
+    options:
+      - None
+      - My Playlist
+      - Random 500
+      - From Youtube
+      - Random Album
+    initial: None
+    icon: mdi:playlist-star
+
+media_player:
+  - platform: group
+    name: All Players
+    entities:
+      - media_player.livingroom_player
+      - media_player.bedroom_player
+      - media_player.kitchen_player
+
+input_boolean:
+  follow_me_music:
+    name: "Follow Me Music Mode"
+    icon: mdi:cast-audio
+  tv_cheat:
+    name: "TV Auto Control"
+    icon: mdi:television-box
+
+input_number:
+  notify_low_volume:
+    name: Low Notify Volume
+    initial: 0.3
+    min: 0
+    max: 1
+    step: 0.05
+  notify_high_volume:
+    name: High Notify Volume
+    initial: 0.4
+    min: 0
+    max: 1
+    step: 0.05
+
+template:
+  - sensor:
+      - name: Current Music Speaker
+        unique_id: current_music_speaker
+        state: >-
+          {% if is_state('sensor.micemob_area','Bedroom') %}
+            media_player.bedroom_player
+          {% elif is_state('sensor.micemob_area','Livingroom') %}
+            media_player.livingroom_player
+          {% elif is_state('sensor.micemob_area','Kitchen') %}
+            media_player.kitchen_player
+          {% elif is_state('sensor.micemob_area','Garage') %}
+            media_player.garage_player
+          {% elif is_state('sensor.micemob_area','Backyard') %}
+            media_player.backyard_player
+          {% else %}
+            media_player.livingroom_player
+          {% endif %}
+      - name: Last Speaker
+        unique_id: last_speaker
+        state: >
+          {{ expand('media_player.all_players')
+          | sort(attribute='last_updated', reverse=true)
+          | map(attribute='entity_id')
+          | first }}

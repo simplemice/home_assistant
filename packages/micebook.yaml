@@ -1,0 +1,26 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   19/08/2025 (updated 22/08/2025, revised 31/08/2025)
+#   @package        :   Micebook
+#   @description    :   Micebook
+###############################################################################
+
+switch:
+  - platform: wake_on_lan
+    name: "Micebook WOL"
+    host: 192.168.3.15
+    mac: 48:2a:e3:10:f6:04
+    turn_off:
+      service: shell_command.suspend_micebook
+
+input_select:
+  micebook_control:
+    name: Micebook Control
+    options:
+      - None
+      - Reboot
+      - Shutdown
+      - Screen Off
+      - Suspend
+    initial: None
+    icon: mdi:controller

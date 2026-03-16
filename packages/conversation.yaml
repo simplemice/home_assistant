@@ -1,0 +1,41 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Reports
+#   @description    :   Daily Report Announcements.
+###############################################################################
+
+intent_script:
+  housemusic:
+    action:
+      - variables:
+          player: >
+            {% set room = states('sensor.micemob_area') | lower | trim %}
+            {% set mapping = {
+              'Livingroom': 'media_player.livingroom_player',
+              'Bedroom': 'media_player.bedroom_speaker',
+              'Kitchen': 'media_player.kitchen_speaker'
+            } %}
+            {{ mapping.get(room, 'media_player.livingroom_player') }}
+      - service: music_assistant.play_media
+        data:
+          media_id: "Liked Songs simplemice"
+          media_type: playlist
+          enqueue: replace
+          radio_mode: true
+          entity_id: "{{ player }}"
+
+  whattheweather:
+    action:
+      - service: script.jarvis_weather_forecast
+
+  whatthetraffic:
+    action:
+      - service: script.jarvis_weather_forecast
+
+  checkwaterlevel:
+    speech:
+      text: >
+        {% set level = states('sensor.water_sensor_water_level') | float(0) | round(0) %}
+        {% set volume = states('sensor.water_sensor_water_volume') | float(0) | round(1) %}
+        The water tank is {{ level }} percent full with {{ volume }} liters remaining.

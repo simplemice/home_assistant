@@ -1,0 +1,121 @@
+###############################################################################
+# Bathroom Light Package
+# - Motion + door based entry detection
+# - Smooth light on
+# - After 10 minutes → red flash warning
+# - After 2 minutes of no motion → turn off
+###############################################################################
+
+binary_sensor:
+  - platform: bayesian
+    unique_id: bathroom_occupied_hyman
+    name: "Bathroom Occupied by Humans"
+    prior: 0.3
+    probability_threshold: 0.5
+    observations:
+      - entity_id: "binary_sensor.bathroom_motion_occupancy"
+        prob_given_true: 0.95
+        prob_given_false: 0.33
+        platform: "state"
+        to_state: "on"
+
+input_boolean:
+  bathroom_occupied:
+    name: Bathroom Occupied
+    icon: mdi:account
+
+timer:
+  bathroom_long_occupancy:
+    name: Bathroom Long Occupancy
+    duration: "00:15:00"
+
+###############################################################################
+# Automation 1 - Start session (motion or door opens)
+###############################################################################
+automation:
+  - id: bathroom_start_session
+    alias: "Bathroom - Start Session"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.bathroom_door_contact
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: binary_sensor.bathroom_motion_occupancy
+        state: "off"
+    action:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.bathroom_occupied
+      - service: light.turn_on
+        target:
+          entity_id: light.bathroom_bulb
+        data:
+          brightness: 200
+      - service: timer.start
+        target:
+          entity_id: timer.bathroom_long_occupancy
+
+  ###############################################################################
+  # Automation 2 - End session (no motion 2 min)
+  ###############################################################################
+  - id: bathroom_end_session
+    alias: "Bathroom - End Session (no motion 2min)"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.bathroom_motion_occupancy
+        to: "off"
+        for: "00:02:00"
+    action:
+      - service: light.turn_off
+        target:
+          entity_id: light.bathroom_bulb
+
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.bathroom_occupied
+
+      - service: timer.cancel
+        target:
+          entity_id: timer.bathroom_long_occupancy
+
+  ###############################################################################
+  # Automation 3 - Long occupancy alert (10 min)
+  ###############################################################################
+  - id: bathroom_long_occupancy_alert
+    alias: "Bathroom - Long Occupancy Alert"
+    mode: restart
+    trigger:
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.bathroom_long_occupancy
+    condition:
+      - condition: state
+        entity_id: input_boolean.bathroom_occupied
+        state: "on"
+      - condition: state
+        entity_id: light.bathroom_bulb
+        state: "on"
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.bathroom_bulb
+        data:
+          color_name: "red"
+
+      - repeat:
+          count: 3
+          sequence:
+            - service: light.turn_on
+              target:
+                entity_id: light.bathroom_bulb
+              data:
+                flash: short
+            - delay: "00:00:02"
+
+      - service: timer.start
+        target:
+          entity_id: timer.bathroom_long_occupancy

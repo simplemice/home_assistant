@@ -1,0 +1,94 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Jarvis
+#   @description    :   Jarvis Voice to Home Assistant
+###############################################################################
+mqtt:
+  sensor:
+    - name: "Jarvis Last Msg"
+      state_topic: "house/polly/lastmsg"
+      unique_id: jarvis_last_msg
+    - name: "Jarvis Last Location"
+      state_topic: "house/polly/lastloc"
+      unique_id: jarvis_last_location
+    - name: "Jarvis Last Msg Time"
+      unique_id: jarvis_last_msg_time
+      state_topic: "house/polly/msgtime"
+
+template:
+  - binary_sensor:
+      - name: jarvis
+        unique_id: jarvis
+        delay_off:
+          seconds: 5
+        state: >
+          {{ (expand(label_entities('Jarvis')) | selectattr('state', 'eq', 'on') | sort(attribute='last_changed') |
+                  map(attribute='entity_id') | list| count) > 0
+                }}
+        attributes:
+          last_jarvis: >
+            {{ expand(label_entities('Jarvis')) | sort(attribute='last_changed') |
+                  map(attribute='entity_id') | list| last | area_id()
+                }}
+
+script:
+  speech_engine:
+    alias: TTS Jarvis Speech Engine
+    description: ""
+    variables:
+      speaker: >
+        {% set s = states('sensor.current_music_speaker') %}
+        {% if s in ['unknown', 'home', 'unavailable', '', none] %}
+          media_player.livingroom_player
+        {% elif s.startswith('media_player.') %}
+          {{ s }}
+        {% else %}
+          media_player.{{ s }}
+        {% endif %}
+    sequence:
+      - condition: state
+        entity_id: input_boolean.audible_notifications
+        state: "on"
+      - choose:
+          - conditions:
+              - condition: time
+                after: "21:00:00"
+                before: "07:30:00"
+            sequence:
+              - service: media_player.volume_set
+                data:
+                  entity_id: "{{ speaker }}"
+                  volume_level: "{{ states('input_number.notify_low_volume') | float }}"
+        default:
+          - service: media_player.volume_set
+            data:
+              entity_id: "{{ speaker }}"
+              volume_level: "{{ states('input_number.notify_high_volume') | float }}"
+      - service: tts.speak
+        target:
+          entity_id: "{{ states('input_select.jarvis_pipeline') }}"
+        data:
+          media_player_entity_id: "{{ speaker }}"
+          message: "{{ message }}"
+      - service: mqtt.publish
+        data:
+          topic: "house/polly/lastmsg"
+          payload: >
+            {% set msg = message %}
+            {% if msg_summary == 'recall' %}
+              {% set msg = states('sensor.jarvis_last_msg') %}
+            {% elif msg_summary %}
+              {% set msg = msg_summary %}
+            {% endif %}
+            {{ msg | striptags | replace('\n', ' ') | truncate(220) }}
+      - service: mqtt.publish
+        data:
+          topic: "house/polly/msgtime"
+          payload: "{{ now().strftime('%-I:%M %p') }}"
+          retain: true
+      - service: mqtt.publish
+        data:
+          topic: "house/polly/lastloc"
+          payload: "{{ states('sensor.last_speaker') }}"
+          retain: true
