@@ -7,6 +7,8 @@
   Home Assistant Configuration
 </h1>
 
+<h2>PLEASE READ LICENSE</h2>
+
 ***
 
 Like all other Home Assistant instances this is also a Work in Progress :D
