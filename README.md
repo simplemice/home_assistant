@@ -4,7 +4,7 @@
   <br>
   Casa de Rattón
   <br>
-  Home Assistant Configuration
+  Home Assistant Configuration (Testing Instance with Simulation Packages)
 </h1>
 
 <h2>PLEASE READ LICENSE</h2>
