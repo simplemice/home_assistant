@@ -1,6 +1,6 @@
 # Nightdestiny Group Proprietary License (NDGPL) v1.0
 
-Copyright (c) 2023 Nightdestiny Group
+Copyright (c) 2026 Nightdestiny Group
 
 All rights reserved.
 
@@ -22,20 +22,20 @@ The Software is provided for viewing and reference purposes only unless explicit
 
 You are permitted to:
 
-* View and read the Software.
-* Fork the repository for personal, non-operational reference only.
-* Study the implementation for educational purposes.
+- View and read the Software.
+- Fork the repository for personal, non-operational reference only.
+- Study the implementation for educational purposes.
 
 ## 4. Prohibited Use
 
 Without prior written permission from the Owner, you may NOT:
 
-* Copy or redistribute the Software or substantial portions of it.
-* Use the Software in production environments.
-* Modify and publish derived works.
-* Sell, sublicense, or commercially exploit the Software.
-* Use the Software to create competing products or services.
-* Deploy the Software in commercial, hosting, or client environments.
+- Copy or redistribute the Software or substantial portions of it.
+- Use the Software in production environments.
+- Modify and publish derived works.
+- Sell, sublicense, or commercially exploit the Software.
+- Use the Software to create competing products or services.
+- Deploy the Software in commercial, hosting, or client environments.
 
 ## 5. No Implied License
 
@@ -57,4 +57,17 @@ In no event shall Nightdestiny Group be liable for any damages arising from the 
 
 ## 9. Termination
 
-Any violation of this license automatically terminates granted permissions. Upon termination, the User mus
+Any violation of this license automatically terminates granted permissions. Upon termination, the User must cease all use and delete all copies of the Software.
+
+## 10. Governing Principle
+
+This license shall be interpreted to maximize protection of the Owner’s intellectual property while allowing public visibility for reference and educational purposes.
+
+## 11. Contact
+
+Permission requests and licensing inquiries:  
+contact@nightdestiny.group
+
+---
+
+Nightdestiny Group Proprietary License (NDGPL) v1.0
