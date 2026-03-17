@@ -15,7 +15,7 @@ Like all other Home Assistant instances this is also a Work in Progress :D
 
 ***
 
-This repo contains the working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Ratón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
+This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Ratón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
 
 #### Casa de Ratón's Three Laws of Home Automation:
 
