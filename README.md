@@ -1,6 +1,6 @@
 </p>
 <h1 align="center">
-  <a name="logo" href="http://nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Ratón" width="500"></a>
+  <a name="logo" href="http://nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Rattón" width="500"></a>
   <br>
   Casa de Rattón
   <br>
@@ -15,11 +15,11 @@ Like all other Home Assistant instances this is also a Work in Progress :D
 
 ***
 
-This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Ratón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
+This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Rattón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
 
-#### Casa de Ratón's Three Laws of Home Automation:
+#### Casa de Rattón's Three Laws of Home Automation:
 
-When designing Casa de Ratón's automations I have made every effort to prioritize the solution based on the following three laws. 
+When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
 
 **First Law: Every automation or action should be the result of a passive sensor or indirect action**.
 
