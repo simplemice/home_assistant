@@ -1,0 +1,269 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up TvOverlay UI",
+        "description": "Enter the connection details for your TvOverlay device.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "name": "Device Name",
+          "device_identifier": "Device Identifier"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the TvOverlay device",
+          "port": "Port number (default: 5001)",
+          "name": "Friendly name for this device",
+          "device_identifier": "A stable unique ID used in automations and service calls. This ID remains the same even if you delete and re-add the integration, preventing broken automations. Leave empty to auto-generate from device name. Only lowercase letters, numbers, and underscores allowed."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to TvOverlay device. Please check the host and port.",
+      "unknown": "An unexpected error occurred.",
+      "invalid_identifier": "Invalid identifier. Use only lowercase letters, numbers, and underscores."
+    },
+    "abort": {
+      "already_configured": "This device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TvOverlay UI Options",
+        "description": "Update the connection settings for your TvOverlay device.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "device_identifier": "Device Identifier"
+        },
+        "data_description": {
+          "device_identifier": "A stable unique ID used in automations and service calls. Changing this will break existing automations that reference this device. Only lowercase letters, numbers, and underscores allowed."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to TvOverlay device. Please check the host and port.",
+      "unknown": "An unexpected error occurred.",
+      "invalid_identifier": "Invalid identifier. Use only lowercase letters, numbers, and underscores."
+    }
+  },
+  "entity": {
+    "switch": {
+      "display_clock": {
+        "name": "Display Clock"
+      },
+      "display_notifications": {
+        "name": "Display Notifications"
+      },
+      "display_fixed_notifications": {
+        "name": "Display Fixed Notifications"
+      },
+      "pixel_shift": {
+        "name": "Pixel Shift"
+      },
+      "debug_mode": {
+        "name": "Debug Mode"
+      }
+    },
+    "number": {
+      "clock_visibility": {
+        "name": "Clock Visibility"
+      },
+      "overlay_visibility": {
+        "name": "Overlay Visibility"
+      },
+      "fixed_notifications_visibility": {
+        "name": "Fixed Notifications Visibility"
+      },
+      "notification_duration": {
+        "name": "Notification Duration"
+      }
+    },
+    "binary_sensor": {
+      "connectivity": {
+        "name": "Connectivity"
+      }
+    },
+    "sensor": {
+      "active_notification_ids": {
+        "name": "Active Fixed Notifications"
+      },
+      "hostname": {
+        "name": "Hostname"
+      },
+      "ip_address": {
+        "name": "IP Address"
+      }
+    },
+    "select": {
+      "hot_corner": {
+        "name": "Hot Corner",
+        "state": {
+          "top_start": "Top Left",
+          "top_end": "Top Right",
+          "bottom_start": "Bottom Left",
+          "bottom_end": "Bottom Right"
+        }
+      },
+      "default_shape": {
+        "name": "Default Shape",
+        "state": {
+          "circle": "Circle",
+          "rounded": "Rounded",
+          "rectangular": "Rectangular"
+        }
+      }
+    }
+  },
+  "services": {
+    "notify": {
+      "name": "Send Notification",
+      "description": "Send a notification to a TvOverlay device.",
+      "fields": {
+        "device_id": {
+          "name": "Device (Dropdown)",
+          "description": "Select a device from dropdown. Note: This ID changes if you delete and re-add the integration."
+        },
+        "target": {
+          "name": "Device Identifier (Stable)",
+          "description": "Enter your stable Device Identifier (e.g., living_room_tv). This stays the same even after re-adding the integration. Recommended for automations."
+        },
+        "host": {
+          "name": "Host",
+          "description": "Manual host:port (e.g., 192.168.1.100:5001). Use if device is not configured."
+        },
+        "title": {
+          "name": "Title",
+          "description": "The notification title."
+        },
+        "message": {
+          "name": "Message",
+          "description": "The notification message."
+        },
+        "small_icon": {
+          "name": "Small Icon",
+          "description": "MDI icon or image URL. Local paths not supported - must be full URL. Examples: mdi:bell, http://192.168.1.100:8123/local/icon.png"
+        },
+        "small_icon_color": {
+          "name": "Small Icon Color",
+          "description": "Color for the small icon. Use hex (#FF5500) or color name (red, blue, green, etc.)."
+        },
+        "large_icon": {
+          "name": "Large Icon",
+          "description": "MDI icon or image URL. Local paths not supported - must be full URL. Examples: mdi:account, http://192.168.1.100:8123/local/icon.png"
+        },
+        "media_type": {
+          "name": "Media Type",
+          "description": "Type of media to display."
+        },
+        "media_url": {
+          "name": "Media URL",
+          "description": "Local paths not supported - must be full URL. Image: http://192.168.1.100:8123/local/image.jpg. Video: rtsp://IP/stream or .m3u8/.mpd URL."
+        },
+        "corner": {
+          "name": "Corner",
+          "description": "Screen corner for the notification."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long to show the notification (in seconds)."
+        }
+      }
+    },
+    "notify_fixed": {
+      "name": "Send Fixed Notification",
+      "description": "Send a persistent fixed notification to a TvOverlay device.",
+      "fields": {
+        "device_id": {
+          "name": "Device (Dropdown)",
+          "description": "Select a device from dropdown. Note: This ID changes if you delete and re-add the integration."
+        },
+        "target": {
+          "name": "Device Identifier (Stable)",
+          "description": "Enter your stable Device Identifier (e.g., living_room_tv). This stays the same even after re-adding the integration. Recommended for automations."
+        },
+        "host": {
+          "name": "Host",
+          "description": "Manual host:port (e.g., 192.168.1.100:5001). Use if device is not configured."
+        },
+        "id": {
+          "name": "Notification ID",
+          "description": "Unique ID for this notification (for updates/clearing)."
+        },
+        "icon": {
+          "name": "Icon",
+          "description": "MDI icon or image URL. Local paths not supported - must be full URL. Examples: mdi:weather-sunny, http://192.168.1.100:8123/local/icon.png"
+        },
+        "message": {
+          "name": "Message",
+          "description": "The notification message."
+        },
+        "message_color": {
+          "name": "Message Color",
+          "description": "Color for the message text. Use hex (#FFFFFF) or color name (white, red, etc.)."
+        },
+        "icon_color": {
+          "name": "Icon Color",
+          "description": "Color for the icon. Use hex (#FFFFFF) or color name (white, red, etc.)."
+        },
+        "border_color": {
+          "name": "Border Color",
+          "description": "Color for the border. Use hex (#FFFFFF) or color name (white, red, etc.)."
+        },
+        "background_color": {
+          "name": "Background Color",
+          "description": "Color for the background. Use hex (#000000) or color name (black, gray, etc.)."
+        },
+        "background_opacity": {
+          "name": "Background Opacity",
+          "description": "Opacity for the background (0-100%)."
+        },
+        "shape": {
+          "name": "Shape",
+          "description": "Notification shape: circle, rounded, or rectangular."
+        },
+        "expiration": {
+          "name": "Expiration",
+          "description": "When to expire. Examples: 1h, 30m, 1h30m, 3600 (seconds)"
+        }
+      }
+    },
+    "clear_fixed": {
+      "name": "Clear Fixed Notification",
+      "description": "Clear a fixed notification by setting it invisible.",
+      "fields": {
+        "device_id": {
+          "name": "Device (Dropdown)",
+          "description": "Select a device from dropdown. Note: This ID changes if you delete and re-add the integration."
+        },
+        "target": {
+          "name": "Device Identifier (Stable)",
+          "description": "Enter your stable Device Identifier (e.g., living_room_tv). This stays the same even after re-adding the integration. Recommended for automations."
+        },
+        "host": {
+          "name": "Host",
+          "description": "Manual host:port (e.g., 192.168.1.100:5001). Use if device is not configured."
+        },
+        "id": {
+          "name": "Notification ID",
+          "description": "The ID of the fixed notification to clear."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "id_required": {
+      "message": "Notification ID is required. Please provide a unique ID to identify this notification."
+    },
+    "device_not_found": {
+      "message": "Device not found. Please select a configured device or provide a valid host."
+    },
+    "notification_failed": {
+      "message": "Failed to send notification to the device."
+    },
+    "clear_failed": {
+      "message": "Failed to clear the notification."
+    }
+  }
+}

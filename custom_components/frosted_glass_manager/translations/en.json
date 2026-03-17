@@ -1,0 +1,28 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Frosted Glass Theme Manager",
+                "description": "Click Submit to set up the Theme Manager."
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "Only one instance of Frosted Glass Manager is allowed."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Customize Theme",
+                "description": "Change colors and backgrounds. Check 'Reset to Defaults' to revert changes.",
+                "data": {
+                    "light_primary_color": "Light Mode: Primary Color",
+                    "light_background_url": "Light Mode: Background Image URL",
+                    "dark_primary_color": "Dark Mode: Primary Color",
+                    "dark_background_url": "Dark Mode: Background Image URL",
+                    "reset_defaults": "RESET to Defaults (Check and Submit)"
+                }
+            }
+        }
+    }
+}

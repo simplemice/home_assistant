@@ -1,0 +1,250 @@
+notify:
+  name: Send Notification
+  description: Send a notification to a TvOverlay device.
+  fields:
+    device_id:
+      name: Device (Dropdown)
+      description: Select a device from dropdown. Note - this ID changes if you re-add the integration.
+      required: false
+      selector:
+        device:
+          integration: tvoverlay_ui
+    target:
+      name: Device Identifier (Stable)
+      description: Enter your stable Device Identifier (e.g., living_room_tv). This stays the same even after re-adding the integration. Recommended for automations.
+      required: false
+      example: "living_room_tv"
+      selector:
+        text:
+    host:
+      name: Host
+      description: Manual host:port (e.g., 192.168.1.100:5001). Use this if device is not configured.
+      required: false
+      example: "192.168.1.100:5001"
+      selector:
+        text:
+    id:
+      name: Notification ID
+      description: Optional unique ID for this notification.
+      example: "doorbell_1"
+      selector:
+        text:
+    title:
+      name: Title
+      description: The notification title.
+      example: "Doorbell"
+      selector:
+        text:
+    message:
+      name: Message
+      description: The notification message.
+      example: "Someone is at the door"
+      selector:
+        text:
+    source:
+      name: Source
+      description: The notification source.
+      example: "Home Assistant"
+      selector:
+        text:
+    small_icon:
+      name: Small Icon
+      description: "MDI icon or image URL. Local paths not supported - must be full URL. Examples: mdi:bell, http://192.168.1.100:8123/local/icon.png"
+      example: "mdi:doorbell"
+      selector:
+        text:
+    small_icon_color:
+      name: Small Icon Color
+      description: "Color for the small icon. Use hex (#FF5500) or color name (red, blue, green, etc.)."
+      example: "red"
+      selector:
+        text:
+    large_icon:
+      name: Large Icon
+      description: "MDI icon or image URL. Local paths not supported - must be full URL. Examples: mdi:account, http://192.168.1.100:8123/local/icon.png"
+      example: "mdi:account"
+      selector:
+        text:
+    media_type:
+      name: Media Type
+      description: Type of media to display.
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "None"
+              value: "none"
+            - label: "Image"
+              value: "image"
+            - label: "Video"
+              value: "video"
+    media_url:
+      name: Media URL
+      description: "Local paths not supported - must be full URL. Image: http://192.168.1.100:8123/local/image.jpg. Video: rtsp://IP/stream or .m3u8/.mpd URL."
+      example: "http://192.168.1.100:8123/local/images/snapshot.jpg"
+      selector:
+        text:
+    corner:
+      name: Corner
+      description: Screen corner for the notification.
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "Top Left"
+              value: "top_start"
+            - label: "Top Right"
+              value: "top_end"
+            - label: "Bottom Left"
+              value: "bottom_start"
+            - label: "Bottom Right"
+              value: "bottom_end"
+    duration:
+      name: Duration
+      description: How long to show the notification (in seconds).
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 300
+          step: 1
+          unit_of_measurement: seconds
+          mode: slider
+
+notify_fixed:
+  name: Send Fixed Notification
+  description: Send a persistent fixed notification to a TvOverlay device.
+  fields:
+    device_id:
+      name: Device (Dropdown)
+      description: Select a device from dropdown. Note - this ID changes if you re-add the integration.
+      required: false
+      selector:
+        device:
+          integration: tvoverlay_ui
+    target:
+      name: Device Identifier (Stable)
+      description: Enter your stable Device Identifier (e.g., living_room_tv). This stays the same even after re-adding the integration. Recommended for automations.
+      required: false
+      example: "living_room_tv"
+      selector:
+        text:
+    host:
+      name: Host
+      description: Manual host:port (e.g., 192.168.1.100:5001). Use this if device is not configured.
+      required: false
+      example: "192.168.1.100:5001"
+      selector:
+        text:
+    id:
+      name: Notification ID
+      description: Unique ID for this notification (required for updates/clearing).
+      required: true
+      example: "weather"
+      selector:
+        text:
+    visible:
+      name: Visible
+      description: Whether the notification is visible.
+      default: true
+      selector:
+        boolean:
+    icon:
+      name: Icon
+      description: "MDI icon or image URL. Local paths not supported - must be full URL. Examples: mdi:weather-sunny, http://192.168.1.100:8123/local/icon.png"
+      example: "mdi:weather-sunny"
+      selector:
+        text:
+    message:
+      name: Message
+      description: The notification message.
+      example: "72°F"
+      selector:
+        text:
+    message_color:
+      name: Message Color
+      description: "Color for the message text. Use hex (#FFFFFF) or color name (white, red, etc.)."
+      example: "white"
+      selector:
+        text:
+    icon_color:
+      name: Icon Color
+      description: "Color for the icon. Use hex (#FFFFFF) or color name (white, red, etc.)."
+      example: "white"
+      selector:
+        text:
+    border_color:
+      name: Border Color
+      description: "Color for the border. Use hex (#FFFFFF) or color name (white, red, etc.)."
+      example: "white"
+      selector:
+        text:
+    background_color:
+      name: Background Color
+      description: "Color for the background. Use hex (#000000) or color name (black, gray, etc.)."
+      example: "black"
+      selector:
+        text:
+    background_opacity:
+      name: Background Opacity
+      description: Opacity for the background.
+      default: 40
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    shape:
+      name: Shape
+      description: Notification shape.
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: "Circle"
+              value: "circle"
+            - label: "Rounded"
+              value: "rounded"
+            - label: "Rectangular"
+              value: "rectangular"
+    expiration:
+      name: Expiration
+      description: "When to expire. Examples: 1h, 30m, 1h30m, 3600 (seconds)"
+      example: "1h"
+      selector:
+        text:
+
+clear_fixed:
+  name: Clear Fixed Notification
+  description: Clear a fixed notification by setting it invisible.
+  fields:
+    device_id:
+      name: Device (Dropdown)
+      description: Select a device from dropdown. Note - this ID changes if you re-add the integration.
+      required: false
+      selector:
+        device:
+          integration: tvoverlay_ui
+    target:
+      name: Device Identifier (Stable)
+      description: Enter your stable Device Identifier (e.g., living_room_tv). This stays the same even after re-adding the integration. Recommended for automations.
+      required: false
+      example: "living_room_tv"
+      selector:
+        text:
+    host:
+      name: Host
+      description: Manual host:port (e.g., 192.168.1.100:5001). Use this if device is not configured.
+      required: false
+      example: "192.168.1.100:5001"
+      selector:
+        text:
+    id:
+      name: Notification ID
+      description: The ID of the fixed notification to clear.
+      required: true
+      example: "weather"
+      selector:
+        text:

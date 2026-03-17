@@ -1,0 +1,122 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Usługa jest już skonfigurowana",
+            "already_in_progress": "Konfiguracja jest już w toku",
+            "auth_new_token_not_granted_error": "Nowo utworzony token nie został zatwierdzony w interfejsie użytkownika HyperHDR",
+            "auth_new_token_not_work_error": "Nie udało się uwierzytelnić przy użyciu nowo utworzonego tokena",
+            "auth_required_error": "Nie udało się określić, czy wymagana jest autoryzacja",
+            "cannot_connect": "Nie można nawiązać połączenia",
+            "no_id": "Instancja HyperHDR Ambilight nie zgłosiła swojego identyfikatora",
+            "reauth_successful": "Ponowne uwierzytelnienie powiodło się"
+        },
+        "error": {
+            "cannot_connect": "Nie można nawiązać połączenia",
+            "invalid_access_token": "Niepoprawny token dostępu"
+        },
+        "step": {
+            "auth": {
+                "data": {
+                    "create_token": "Automatycznie utwórz nowy token",
+                    "token": "Lub podaj istniejący token"
+                },
+                "description": "Skonfiguruj autoryzację do serwera HyperHDR Ambilight"
+            },
+            "confirm": {
+                "description": "Czy chcesz dodać ten HyperHDR Ambilight do Home Assistanta? \n\n **Host:** {host}\n **Port:** {port}\n **ID**: {id}",
+                "title": "Potwierdzanie dodania usługi HyperHDR Ambilight"
+            },
+            "create_token": {
+                "description": "Naciśnij **Prześlij** poniżej, aby zażądać nowego tokena uwierzytelniania. Nastąpi przekierowanie do interfejsu użytkownika HyperHDR, aby zatwierdzić żądanie. Sprawdź, czy wyświetlany identyfikator to „ {auth_id} ”",
+                "title": "Automatyczne tworzenie nowego tokena uwierzytelniającego"
+            },
+            "create_token_external": {
+                "title": "Akceptowanie nowego tokena w interfejsie użytkownika HyperHDR"
+            },
+            "user": {
+                "data": {
+                    "host": "Nazwa hosta lub adres IP",
+                    "port": "Port",
+                    "port_ws": "Port WebSocket (do strumieniowania LED)"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "effect_show_list": "Efekty HyperHDRa do pokazania",
+                    "priority": "HyperHDR ma pierwszeństwo w użyciu dla kolorów i efektów",
+                    "port_ws": "Port WebSocket (do strumieniowania LED)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "all": {
+                "name": "Wszystkie"
+            },
+            "smoothing": {
+                "name": "Wygładzanie"
+            },
+            "blackbar_detection": {
+                "name": "Wykrywanie czarnych pasków"
+            },
+            "forwarder": {
+                "name": "Przekazywanie"
+            },
+            "boblight_server": {
+                "name": "Serwer Boblight"
+            },
+            "platform_capture": {
+                "name": "Przechwytywanie platformy"
+            },
+            "led_device": {
+                "name": "Urządzenie LED"
+            },
+            "usb_capture": {
+                "name": "Przechwytywanie USB"
+            },
+            "hdr_tone_mapping": {
+                "name": "Mapowanie tonów HDR"
+            }
+        },
+        "number": {
+            "smoothing_time": {
+                "name": "Czas wygładzania"
+            },
+            "smoothing_decay": {
+                "name": "Zanikanie wygładzania"
+            },
+            "smoothing_update_freq": {
+                "name": "Częstotliwość aktualizacji wygładzania"
+            },
+            "hdr_tone_mapping": {
+                "name": "Mapowanie tonów HDR"
+            }
+        },
+        "select": {
+            "smoothing_type": {
+                "name": "Typ wygładzania"
+            }
+        },
+        "sensor": {
+            "visible_priority": {
+                "name": "Visible Priority"
+            },
+            "average_color": {
+                "name": "Średni kolor"
+            }
+        },
+        "light": {
+            "hyperhdr_light": {
+                "name": "Światło"
+            },
+            "hyperhdr_priority_light": {
+                "name": "Światło priorytetowe"
+            }
+        }
+    }
+}

@@ -1,0 +1,122 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Эта служба уже добавлена в Home Assistant.",
+            "already_in_progress": "Процесс настройки уже выполняется.",
+            "auth_new_token_not_granted_error": "Созданный токен не был одобрен в пользовательском интерфейсе HyperHDR.",
+            "auth_new_token_not_work_error": "Не удалось пройти аутентификацию с использованием созданного токена.",
+            "auth_required_error": "Не удалось определить, требуется ли авторизация.",
+            "cannot_connect": "Не удалось подключиться.",
+            "no_id": "HyperHDR Ambilight не сообщил свой идентификатор.",
+            "reauth_successful": "Повторная аутентификация выполнена успешно."
+        },
+        "error": {
+            "cannot_connect": "Не удалось подключиться.",
+            "invalid_access_token": "Неверный токен доступа."
+        },
+        "step": {
+            "auth": {
+                "data": {
+                    "create_token": "Автоматически создать новый токен",
+                    "token": "Или предоставить существующий токен"
+                },
+                "description": "Авторизация на сервере HyperHDR Ambilight."
+            },
+            "confirm": {
+                "description": "Вы уверены, что хотите добавить HyperHDR Ambilight?\n\n**Хост:** {host}\n**Порт:** {port}\n**ID**: {id}",
+                "title": "Подтвердите добавление службы HyperHDR Ambilight"
+            },
+            "create_token": {
+                "description": "Нажмите **Подтвердить** ниже, чтобы запросить новый токен аутентификации. Вы будете перенаправлены в пользовательский интерфейс HyperHDR для подтверждения запроса. Убедитесь, что показанный идентификатор - \"{auth_id}\"",
+                "title": "Автоматически создать новый токен аутентификации"
+            },
+            "create_token_external": {
+                "title": "Принять новый токен в пользовательском интерфейсе HyperHDR"
+            },
+            "user": {
+                "data": {
+                    "host": "Хост",
+                    "port": "Порт",
+                    "port_ws": "Порт WebSocket (для потоковой передачи LED)"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "effect_show_list": "Эффекты HyperHDR",
+                    "priority": "Приоритет HyperHDR для цветов и эффектов",
+                    "port_ws": "Порт WebSocket (для потоковой передачи LED)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "all": {
+                "name": "Все"
+            },
+            "smoothing": {
+                "name": "Сглаживание"
+            },
+            "blackbar_detection": {
+                "name": "Обнаружение чёрных полос"
+            },
+            "forwarder": {
+                "name": "Пересылка"
+            },
+            "boblight_server": {
+                "name": "Сервер Boblight"
+            },
+            "platform_capture": {
+                "name": "Захват платформы"
+            },
+            "led_device": {
+                "name": "LED-устройство"
+            },
+            "usb_capture": {
+                "name": "Захват USB"
+            },
+            "hdr_tone_mapping": {
+                "name": "Тон-маппинг HDR"
+            }
+        },
+        "number": {
+            "smoothing_time": {
+                "name": "Время сглаживания"
+            },
+            "smoothing_decay": {
+                "name": "Затухание сглаживания"
+            },
+            "smoothing_update_freq": {
+                "name": "Частота обновления сглаживания"
+            },
+            "hdr_tone_mapping": {
+                "name": "Тон-маппинг HDR"
+            }
+        },
+        "select": {
+            "smoothing_type": {
+                "name": "Тип сглаживания"
+            }
+        },
+        "sensor": {
+            "visible_priority": {
+                "name": "Visible Priority"
+            },
+            "average_color": {
+                "name": "Средний цвет"
+            }
+        },
+        "light": {
+            "hyperhdr_light": {
+                "name": "Свет"
+            },
+            "hyperhdr_priority_light": {
+                "name": "Приоритетный свет"
+            }
+        }
+    }
+}

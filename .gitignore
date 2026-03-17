@@ -9,6 +9,8 @@
 # ---- Allow selected Home Assistant config ----
 !configuration.yaml
 
+!scenes.yaml
+
 !blueprints/
 !blueprints/**
 
@@ -17,6 +19,12 @@
 
 !custom_responses/
 !custom_responses/**
+
+!custom_components/
+!custom_components/**
+
+!themes/
+!themes/**
 
 !customize/
 !customize/**
@@ -35,6 +43,9 @@ secrets.yaml
 .storage/
 .cache/
 .cloud/
+automations.yaml
+scripts.yaml
+git_backup.sh
 
 home-assistant*.db*
 home-assistant.log*
@@ -48,4 +59,3 @@ deps/
 ssh_keys/
 www/
 
-custom_components/

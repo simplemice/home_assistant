@@ -1,0 +1,10 @@
+{
+  "domain": "youtube",
+  "name": "Youtube Sensor",
+  "version": "0.9.1",
+  "documentation": "https://github.com/custom-components/youtube",
+  "dependencies": [],
+  "codeowners": ["@pinkywafer"],
+  "requirements": [],
+  "iot_class": "cloud_polling"
+}

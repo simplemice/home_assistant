@@ -1,0 +1,17 @@
+{
+  "domain": "windy_webcams",
+  "name": "Windy Webcams",
+  "codeowners": [
+    "@earendil06"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/earendil06/Windy-Webcams",
+  "homekit": {},
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/earendil06/Windy-Webcams/issues",
+  "requirements": [],
+  "ssdp": [],
+  "version": "1.3.1",
+  "zeroconf": []
+}

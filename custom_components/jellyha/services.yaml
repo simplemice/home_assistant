@@ -1,0 +1,229 @@
+play_on_chromecast:
+  name: Play on Chromecast
+  description: Play a Jellyfin item on a Chromecast device
+  fields:
+    entity_id:
+      name: Media Player
+      description: The Chromecast media player entity
+      required: true
+      selector:
+        entity:
+          domain: media_player
+    item_id:
+      name: Item ID
+      description: Jellyfin item ID to play
+      required: true
+      selector:
+        text:
+
+refresh_library:
+  name: Refresh Library
+  description: Force refresh library data from Jellyfin
+
+delete_item:
+  name: Delete Item
+  description: Delete an item from Jellyfin library
+  fields:
+    item_id:
+      name: Item ID
+      description: Jellyfin item ID to delete
+      required: true
+      selector:
+        text:
+
+mark_watched:
+  name: Mark Watched
+  description: Mark an item as watched or unwatched
+  fields:
+    item_id:
+      name: Item ID
+      description: Jellyfin item ID to mark
+      required: true
+      selector:
+        text:
+    is_played:
+      name: Is Played
+      description: True to mark as played/watched, False to mark as unplayed
+      required: true
+      selector:
+        boolean:
+
+update_favorite:
+  name: Update Favorite
+  description: Mark an item as favorite or remove from favorites
+  fields:
+    item_id:
+      name: Item ID
+      description: Jellyfin item ID to update
+      required: true
+      selector:
+        text:
+    is_favorite:
+      name: Is Favorite
+      description: True to add to favorites, False to remove
+      required: true
+      selector:
+        boolean:
+
+session_control:
+  name: Session Control
+  description: Send a control command to a Jellyfin playback session (Pause, Unpause, Stop).
+  fields:
+    session_id:
+      name: Session ID
+      description: The ID of the Jellyfin session to control.
+      required: true
+      selector:
+        text:
+    command:
+      name: Command
+      description: The control command to send.
+      required: true
+      selector:
+        select:
+          options:
+            - label: Pause
+              value: Pause
+            - label: Unpause
+              value: Unpause
+            - label: TogglePause
+              value: TogglePause
+            - label: Stop
+              value: Stop
+
+session_seek:
+  name: Session Seek
+  description: Seek to a specific position in a Jellyfin playback session.
+  fields:
+    session_id:
+      name: Session ID
+      description: The ID of the Jellyfin session to control.
+      required: true
+      selector:
+        text:
+    position_ticks:
+      name: Position Ticks
+      description: The position in ticks (1 second = 10,000,000 ticks).
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+
+search:
+  name: Search
+  description: Search for media in Jellyfin library and return Item IDs.
+  fields:
+    query:
+      name: Search Query
+      description: The text to search for (e.g. "Matrix", "Batman").
+      required: false
+      selector:
+        text:
+    media_type:
+      name: Media Type
+      description: Filter by media type (Movie or Series).
+      required: false
+      selector:
+        select:
+          options:
+            - label: Movie
+              value: Movie
+            - label: Series
+              value: Series
+            - label: Episode
+              value: Episode
+    is_played:
+      name: Is Watched
+      description: Filter by watched status.
+      required: false
+      selector:
+        boolean:
+    is_favorite:
+      name: Is Favorite
+      description: Filter by favorite status.
+      required: false
+      selector:
+        boolean:
+    genre:
+      name: Genre
+      description: Filter by genre (e.g. "Action", "Comedy").
+      required: false
+      selector:
+        text:
+    year:
+      name: Year
+      description: Filter by release year.
+      required: false
+      selector:
+        number:
+          min: 1900
+          max: 2030
+          mode: box
+    min_rating:
+      name: Min Rating
+      description: Filter by minimum community rating (0-10).
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.1
+          mode: box
+    season:
+      name: Season Number
+      description: Filter by season number (ParentIndexNumber).
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    episode:
+      name: Episode Number
+      description: Filter by episode number (IndexNumber).
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
+    limit:
+      name: Limit
+      description: Maximum number of results to return (default 5).
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+
+get_recommendations:
+  name: Get Recommendations
+  description: Get similar items for a specific media item.
+  fields:
+    item_id:
+      name: Item ID
+      description: The Jellyfin Item ID to get recommendations for.
+      required: true
+      selector:
+        text:
+    limit:
+      name: Limit
+      description: Maximum number of results to return (default 5).
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: box
+
+get_item:
+  name: Get Item Details
+  description: Get full details for a specific media item.
+  fields:
+    item_id:
+      name: Item ID
+      description: The Jellyfin Item ID to retrieve.
+      required: true
+      selector:
+        text:
+

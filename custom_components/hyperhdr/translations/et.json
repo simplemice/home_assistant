@@ -1,0 +1,122 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Teenus on juba seadistatud",
+            "already_in_progress": "Seadistamine on juba käimas",
+            "auth_new_token_not_granted_error": "Äsja loodud juurdepääsutõend ei ole HyperHDRi oma",
+            "auth_new_token_not_work_error": "Loodud juurdepääsutõendiga autentimine nurjus",
+            "auth_required_error": "Autoriseerimise vajalikkuse tuvastamine nurjus",
+            "cannot_connect": "Ühendamine nurjus",
+            "no_id": "HyperHDR Ambilighti eksemplar ei teatanud oma ID-d",
+            "reauth_successful": "Taastuvastamine õnnestus"
+        },
+        "error": {
+            "cannot_connect": "Ühendamine nurjus",
+            "invalid_access_token": "Vigane juurdepääsutõend"
+        },
+        "step": {
+            "auth": {
+                "data": {
+                    "create_token": "Loo automaatselt uus juurdepääsutõend",
+                    "token": "Või kasuta juba olemasolevat juurdepääsutõendit"
+                },
+                "description": "Seadista oma HyperHDR Ambilighti serveri tuvastamine"
+            },
+            "confirm": {
+                "description": "Kas soovid selle HyperHDR Ambilighti lisada Home Assistanti?\n\n**Host:** {host}\n**Port:** {port}\n**ID**: {id}",
+                "title": "Kinnita HyperHDR Ambilight teenuse lisamine"
+            },
+            "create_token": {
+                "description": "Uue juurdepääsutõendi taotlemiseks vali allpool ** Esita **. Taotluse kinnitamiseks suunatakse HyperHDRi kasutajaliidesesse. Palun kontrolli kas kuvatud ID on \" {auth_id} \"",
+                "title": "Loo automaatselt uus juurdepääsutõend"
+            },
+            "create_token_external": {
+                "title": "Nõustu uue juurdepääsutõendiga HyperHDR UI-s"
+            },
+            "user": {
+                "data": {
+                    "host": "",
+                    "port": "",
+                    "port_ws": "WebSocket port (LED-voogedastuseks)"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "effect_show_list": "Kuvatavad HyperHDRi efektid",
+                    "priority": "Värvide ja efektide puhul on kasutatavad HyperHDRi eelistused",
+                    "port_ws": "WebSocket port (LED-voogedastuseks)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "all": {
+                "name": "Kõik"
+            },
+            "smoothing": {
+                "name": "Silumine"
+            },
+            "blackbar_detection": {
+                "name": "Mustade ribade tuvastus"
+            },
+            "forwarder": {
+                "name": "Edastamine"
+            },
+            "boblight_server": {
+                "name": "Boblight server"
+            },
+            "platform_capture": {
+                "name": "Platvormi jäädvustamine"
+            },
+            "led_device": {
+                "name": "LED-seade"
+            },
+            "usb_capture": {
+                "name": "USB-jäädvustus"
+            },
+            "hdr_tone_mapping": {
+                "name": "HDR toonikaardistus"
+            }
+        },
+        "number": {
+            "smoothing_time": {
+                "name": "Silumise aeg"
+            },
+            "smoothing_decay": {
+                "name": "Silumise hääbumine"
+            },
+            "smoothing_update_freq": {
+                "name": "Silumise uuendussagedus"
+            },
+            "hdr_tone_mapping": {
+                "name": "HDR toonikaardistus"
+            }
+        },
+        "select": {
+            "smoothing_type": {
+                "name": "Silumise tüüp"
+            }
+        },
+        "sensor": {
+            "visible_priority": {
+                "name": "Visible Priority"
+            },
+            "average_color": {
+                "name": "Keskmine värv"
+            }
+        },
+        "light": {
+            "hyperhdr_light": {
+                "name": "Valgus"
+            },
+            "hyperhdr_priority_light": {
+                "name": "Prioriteedi valgus"
+            }
+        }
+    }
+}

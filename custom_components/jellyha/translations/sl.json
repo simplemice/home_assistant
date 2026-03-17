@@ -1,0 +1,312 @@
+{
+    "title": "JellyHA",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Poveži se z Jellyfin",
+                "description": "Vnesite URL strežnika Jellyfin in izberite način preverjanja pristnosti",
+                "data": {
+                    "server_url": "URL strežnika",
+                    "auth_method": "Način preverjanja pristnosti"
+                },
+                "data_description": {
+                    "server_url": "Celoten URL vašega Jellyfin strežnika (npr. http://192.168.1.100:8096)"
+                }
+            },
+            "auth_api_key": {
+                "title": "Preverjanje z API ključem",
+                "description": "Vnesite svoj Jellyfin API ključ",
+                "data": {
+                    "api_key": "API ključ"
+                },
+                "data_description": {
+                    "api_key": "API ključ iz nadzorne plošče Jellyfin → API ključi"
+                }
+            },
+            "auth_login": {
+                "title": "Prijava v Jellyfin",
+                "description": "Vnesite svoje Jellyfin poverilnice",
+                "data": {
+                    "username": "Uporabniško ime",
+                    "password": "Geslo"
+                }
+            },
+            "user_select": {
+                "title": "Izberi uporabnika",
+                "description": "Izberite uporabnika Jellyfin, ki ga želite uporabiti",
+                "data": {
+                    "user_id": "Uporabnik"
+                }
+            },
+            "library_select": {
+                "title": "Izberi knjižnice",
+                "description": "Izberite knjižnice, ki jih želite vključiti (pustite prazno za vse)",
+                "data": {
+                    "libraries": "Knjižnice",
+                    "refresh_interval": "Interval osveževanja knjižnice"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Ponovno preverjanje pristnosti Jellyfin",
+                "description": "Posodobite svoje poverilnice za Jellyfin",
+                "data": {
+                    "server_url": "URL strežnika",
+                    "auth_method": "Način preverjanja pristnosti"
+                },
+                "data_description": {
+                    "server_url": "Celoten URL vašega Jellyfin strežnika (npr. http://192.168.1.100:8096)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Povezava s strežnikom Jellyfin ni uspela",
+            "invalid_auth": "Neveljaven API ključ ali poverilnice",
+            "unknown": "Prišlo je do nepričakovane napake"
+        },
+        "abort": {
+            "already_configured": "Ta strežnik Jellyfin je že konfiguriran",
+            "reauth_successful": "Ponovno preverjanje pristnosti uspešno",
+            "reauth_failed": "Ponovno preverjanje pristnosti ni uspelo",
+            "single_instance_allowed": "Dovoljena je le ena konfiguracija JellyHA."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Nastavitve strežnika",
+                "data": {
+                    "server_url": "URL strežnika",
+                    "refresh_interval": "Interval osveževanja knjižnice",
+                    "update_credentials": "Posodobi poverilnice / Zamenjaj uporabnika"
+                }
+            },
+            "auth_method": {
+                "title": "Način preverjanja pristnosti",
+                "description": "Izberite način preverjanja pristnosti",
+                "data": {
+                    "auth_method": "Način"
+                }
+            },
+            "auth_api_key": {
+                "title": "Preverjanje z API ključem",
+                "description": "Vnesite svoj Jellyfin API ključ",
+                "data": {
+                    "api_key": "API ključ"
+                }
+            },
+            "auth_login": {
+                "title": "Prijava v Jellyfin",
+                "description": "Vnesite svoje Jellyfin poverilnice",
+                "data": {
+                    "username": "Uporabniško ime",
+                    "password": "Geslo"
+                }
+            }
+        },
+        "error": {
+            "invalid_auth": "Neveljaven API ključ ali poverilnice",
+            "cannot_connect": "Povezava s strežnikom Jellyfin ni uspela",
+            "unknown": "Prišlo je do nepričakovane napake"
+        },
+        "abort": {
+            "configuration_saved": "Konfiguracija uspešno shranjena."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "library": {
+                "name": "Knjižnica"
+            },
+            "favorites_count": {
+                "name": "Priljubljeno"
+            },
+            "unwatched_count": {
+                "name": "Nepregledano"
+            },
+            "unwatched_movies": {
+                "name": "Nepregledani filmi"
+            },
+            "unwatched_series": {
+                "name": "Nepregledane serije"
+            },
+            "unwatched_episodes": {
+                "name": "Nepregledane epizode"
+            },
+            "last_refresh": {
+                "name": "Zadnja osvežitev"
+            },
+            "last_data_change": {
+                "name": "Zadnja posodobitev knjižnice"
+            },
+            "websocket_status": {
+                "name": "Stanje WebSocket"
+            },
+            "version": {
+                "name": "Različica Jellyfin"
+            },
+            "active_sessions": {
+                "name": "Aktivne seje"
+            },
+            "watched_count": {
+                "name": "Ogledano"
+            },
+            "watched_episodes": {
+                "name": "Ogledane epizode"
+            },
+            "watched_series": {
+                "name": "Ogledane serije"
+            },
+            "watched_movies": {
+                "name": "Ogledani filmi"
+            },
+            "refresh_duration": {
+                "name": "Trajanje osvežitve"
+            }
+        },
+        "media_player": {
+            "library_browser": {
+                "name": "Brskalnik knjižnice"
+            }
+        }
+    },
+    "services": {
+        "play_on_chromecast": {
+            "name": "Predvajaj na Chromecast-u",
+            "description": "Predvajaj Jellyfin element na napravi Chromecast",
+            "fields": {
+                "entity_id": {
+                    "name": "Predvajalnik medijev",
+                    "description": "Entiteta predvajalnika medijev Chromecast"
+                },
+                "item_id": {
+                    "name": "ID elementa",
+                    "description": "Jellyfin ID elementa za predvajanje"
+                }
+            }
+        },
+        "refresh_library": {
+            "name": "Osveži knjižnico",
+            "description": "Prisili osvežitev podatkov knjižnice iz Jellyfina"
+        },
+        "delete_item": {
+            "name": "Izbriši element",
+            "description": "Izbriši element iz knjižnice Jellyfin",
+            "fields": {
+                "item_id": {
+                    "name": "ID elementa",
+                    "description": "Jellyfin ID elementa za brisanje"
+                }
+            }
+        },
+        "mark_watched": {
+            "name": "Označi kot ogledano",
+            "description": "Označi element kot ogledan ali neogledan.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elementa",
+                    "description": "Jellyfin ID elementa."
+                },
+                "is_played": {
+                    "name": "Je ogledano",
+                    "description": "Nastavite na true za ogledano, false za neogledano."
+                }
+            }
+        },
+        "update_favorite": {
+            "name": "Posodobi priljubljeno",
+            "description": "Označi element kot priljubljen ali ga odstrani.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elementa",
+                    "description": "Jellyfin ID elementa."
+                },
+                "is_favorite": {
+                    "name": "Je priljubljen",
+                    "description": "Nastavite na true za priljubljeno, false za odstranitev."
+                }
+            }
+        },
+        "session_control": {
+            "name": "Nadzor seje",
+            "description": "Pošlji ukaz za nadzor aktivni seji.",
+            "fields": {
+                "session_id": {
+                    "name": "ID seje",
+                    "description": "ID aktivne seje."
+                },
+                "command": {
+                    "name": "Ukaz",
+                    "description": "Ukaz za pošiljanje (Pause, Unpause, TogglePause, Stop)."
+                }
+            }
+        },
+        "session_seek": {
+            "name": "Iskanje po seji",
+            "description": "Premakni se na določen položaj v seji.",
+            "fields": {
+                "session_id": {
+                    "name": "ID seje",
+                    "description": "ID aktivne seje."
+                },
+                "position_ticks": {
+                    "name": "Položaj (Ticks)",
+                    "description": "Položaj v ticks (1 sekunda = 10,000,000 ticks)."
+                }
+            }
+        },
+        "search": {
+            "name": "Iskanje",
+            "description": "Išči medijske elemente v knjižnici.",
+            "fields": {
+                "query": {
+                    "name": "Iskalna poizvedba",
+                    "description": "Besedilo za iskanje."
+                },
+                "media_type": {
+                    "name": "Vrsta medija",
+                    "description": "Filtriraj po filmu, seriji ali epizodi."
+                },
+                "limit": {
+                    "name": "Omejitev",
+                    "description": "Največje število rezultatov."
+                },
+                "is_played": {
+                    "name": "Je ogledano",
+                    "description": "Filtriraj po statusu ogleda."
+                },
+                "min_rating": {
+                    "name": "Najnižja ocena",
+                    "description": "Filtriraj po najnižji oceni (0-10)."
+                },
+                "year": {
+                    "name": "Leto",
+                    "description": "Filtriraj po letu izdaje."
+                }
+            }
+        },
+        "get_recommendations": {
+            "name": "Pridobi priporočila",
+            "description": "Pridobi podobne elemente za določen medijski element.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elementa",
+                    "description": "ID elementa, na katerem temeljijo priporočila."
+                },
+                "limit": {
+                    "name": "Omejitev",
+                    "description": "Največje število rezultatov."
+                }
+            }
+        },
+        "get_item": {
+            "name": "Pridobi podrobnosti elementa",
+            "description": "Pridobi vse podrobnosti, vključno s povzetkom in metapodatki za element.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elementa",
+                    "description": "Jellyfin ID elementa."
+                }
+            }
+        }
+    }
+}

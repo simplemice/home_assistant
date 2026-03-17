@@ -1,0 +1,36 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Audiobookshelf",
+                "data": {
+                    "url": "API URL (starting with http:// or https://)",
+                    "api_key": "API Key",
+                    "scan_interval": "Update interval in seconds (defaults to 300s/5min)"
+                }
+            }
+        },
+        "error": {
+            "api_auth_error": "Invalid authentication",
+            "api_key_invalid": "API key is missing or invalid",
+            "url_invalid": "URL is missing or invalid",
+            "scan_interval_invalid": "Scan interval is missing or invalid",
+            "url_protocol_missing": "URL must start with http:// or https://"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    },
+    "services": {
+        "remove_my_progress": {
+            "name": "Remove My Progress",
+            "description": "Remove listening progress for library items.",
+            "fields": {
+                "series_name": {
+                    "name": "series name to match for removal",
+                    "description": ""
+                }
+            }
+        }
+    }
+}

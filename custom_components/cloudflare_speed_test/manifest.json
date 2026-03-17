@@ -1,0 +1,15 @@
+{
+  "domain": "cloudflare_speed_test",
+  "name": "Cloudflare Speed Test",
+  "codeowners": [
+    "@DigitallyRefined"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/DigitallyRefined/ha-cloudflare-speed-test",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/DigitallyRefined/ha-cloudflare-speed-test/issues",
+  "requirements": [
+    "cloudflarepycli@git+https://github.com/DigitallyRefined/cloudflarepycli.git@v2.1.5-rc"
+  ],
+  "version": "0.0.14"
+}

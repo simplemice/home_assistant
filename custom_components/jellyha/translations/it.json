@@ -1,0 +1,312 @@
+{
+    "title": "JellyHA",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Connetti a Jellyfin",
+                "description": "Inserisci l'URL del server Jellyfin e scegli il metodo di autenticazione",
+                "data": {
+                    "server_url": "URL del server",
+                    "auth_method": "Metodo di autenticazione"
+                },
+                "data_description": {
+                    "server_url": "URL completo del server Jellyfin (es: http://192.168.1.100:8096)"
+                }
+            },
+            "auth_api_key": {
+                "title": "Autenticazione con Chiave API",
+                "description": "Inserisci la tua chiave API Jellyfin",
+                "data": {
+                    "api_key": "Chiave API"
+                },
+                "data_description": {
+                    "api_key": "Chiave API da Dashboard Jellyfin → Chiavi API"
+                }
+            },
+            "auth_login": {
+                "title": "Login Jellyfin",
+                "description": "Inserisci le tue credenziali Jellyfin",
+                "data": {
+                    "username": "Nome utente",
+                    "password": "Password"
+                }
+            },
+            "user_select": {
+                "title": "Seleziona utente",
+                "description": "Scegli quale utente Jellyfin utilizzare",
+                "data": {
+                    "user_id": "Utente"
+                }
+            },
+            "library_select": {
+                "title": "Seleziona librerie",
+                "description": "Scegli quali librerie includere (lascia vuoto per tutte)",
+                "data": {
+                    "libraries": "Librerie",
+                    "refresh_interval": "Intervallo di aggiornamento"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Riautentica Jellyfin",
+                "description": "Aggiorna le tue credenziali per Jellyfin",
+                "data": {
+                    "server_url": "URL del server",
+                    "auth_method": "Metodo di autenticazione"
+                },
+                "data_description": {
+                    "server_url": "URL completo del server Jellyfin (es: http://192.168.1.100:8096)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Impossibile connettersi al server Jellyfin",
+            "invalid_auth": "Chiave API o credenziali non valide",
+            "unknown": "Si è verificato un errore imprevisto"
+        },
+        "abort": {
+            "already_configured": "Questo server Jellyfin è già configurato",
+            "reauth_successful": "Riautenticazione riuscita",
+            "reauth_failed": "Riautenticazione fallita",
+            "single_instance_allowed": "È consentita una sola configurazione di JellyHA."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Impostazioni Server",
+                "data": {
+                    "server_url": "URL del server",
+                    "refresh_interval": "Intervallo di aggiornamento libreria",
+                    "update_credentials": "Aggiorna credenziali / Cambia utente"
+                }
+            },
+            "auth_method": {
+                "title": "Metodo di autenticazione",
+                "description": "Scegli come autenticarti",
+                "data": {
+                    "auth_method": "Metodo"
+                }
+            },
+            "auth_api_key": {
+                "title": "Autenticazione con Chiave API",
+                "description": "Inserisci la tua chiave API Jellyfin",
+                "data": {
+                    "api_key": "Chiave API"
+                }
+            },
+            "auth_login": {
+                "title": "Login Jellyfin",
+                "description": "Inserisci le tue credenziali Jellyfin",
+                "data": {
+                    "username": "Nome utente",
+                    "password": "Password"
+                }
+            }
+        },
+        "error": {
+            "invalid_auth": "Chiave API o credenziali non valide",
+            "cannot_connect": "Impossibile connettersi al server Jellyfin",
+            "unknown": "Si è verificato un errore imprevisto"
+        },
+        "abort": {
+            "configuration_saved": "Configurazione salvata con successo."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "library": {
+                "name": "Libreria JellyHA"
+            },
+            "favorites_count": {
+                "name": "Preferiti"
+            },
+            "unwatched_count": {
+                "name": "Non visti"
+            },
+            "unwatched_movies": {
+                "name": "Film non visti"
+            },
+            "unwatched_series": {
+                "name": "Serie non viste"
+            },
+            "unwatched_episodes": {
+                "name": "Episodi non visti"
+            },
+            "last_refresh": {
+                "name": "Ultimo aggiornamento"
+            },
+            "last_data_change": {
+                "name": "Ultimo caricamento libreria"
+            },
+            "websocket_status": {
+                "name": "Stato WebSocket"
+            },
+            "version": {
+                "name": "Versione Jellyfin"
+            },
+            "active_sessions": {
+                "name": "Sessioni attive"
+            },
+            "watched_count": {
+                "name": "Visti"
+            },
+            "watched_episodes": {
+                "name": "Episodi visti"
+            },
+            "watched_series": {
+                "name": "Serie viste"
+            },
+            "watched_movies": {
+                "name": "Film visti"
+            },
+            "refresh_duration": {
+                "name": "Durata dell'aggiornamento"
+            }
+        },
+        "media_player": {
+            "library_browser": {
+                "name": "Browser libreria"
+            }
+        }
+    },
+    "services": {
+        "play_on_chromecast": {
+            "name": "Riproduci su Chromecast",
+            "description": "Riproduci un elemento Jellyfin su un dispositivo Chromecast",
+            "fields": {
+                "entity_id": {
+                    "name": "Lettore multimediale",
+                    "description": "L'entità del lettore multimediale Chromecast"
+                },
+                "item_id": {
+                    "name": "ID elemento",
+                    "description": "ID dell'elemento Jellyfin da riprodurre"
+                }
+            }
+        },
+        "refresh_library": {
+            "name": "Aggiorna libreria",
+            "description": "Forza l'aggiornamento dei dati della libreria da Jellyfin"
+        },
+        "delete_item": {
+            "name": "Elimina elemento",
+            "description": "Elimina un elemento dalla libreria Jellyfin",
+            "fields": {
+                "item_id": {
+                    "name": "ID elemento",
+                    "description": "ID dell'elemento Jellyfin da eliminare"
+                }
+            }
+        },
+        "mark_watched": {
+            "name": "Segna come visto",
+            "description": "Segna un elemento come visto o non visto.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elemento",
+                    "description": "L'ID dell'elemento Jellyfin."
+                },
+                "is_played": {
+                    "name": "È visto",
+                    "description": "Imposta su true per visto, false per non visto."
+                }
+            }
+        },
+        "update_favorite": {
+            "name": "Aggiorna preferiti",
+            "description": "Segna un elemento come preferito o rimuovilo.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elemento",
+                    "description": "L'ID dell'elemento Jellyfin."
+                },
+                "is_favorite": {
+                    "name": "È preferito",
+                    "description": "Imposta su true per preferito, false per rimuovere."
+                }
+            }
+        },
+        "session_control": {
+            "name": "Controllo sessione",
+            "description": "Invia un comando di controllo a una sessione di riproduzione.",
+            "fields": {
+                "session_id": {
+                    "name": "ID sessione",
+                    "description": "L'ID della sessione attiva."
+                },
+                "command": {
+                    "name": "Comando",
+                    "description": "Il comando da inviare (Pause, Unpause, TogglePause, Stop)."
+                }
+            }
+        },
+        "session_seek": {
+            "name": "Cerca nella sessione",
+            "description": "Salta a una posizione specifica in una sessione di riproduzione.",
+            "fields": {
+                "session_id": {
+                    "name": "ID sessione",
+                    "description": "L'ID della sessione attiva."
+                },
+                "position_ticks": {
+                    "name": "Posizione (Ticks)",
+                    "description": "Posizione in tick (1 secondo = 10.000.000 tick)."
+                }
+            }
+        },
+        "search": {
+            "name": "Cerca",
+            "description": "Cerca elementi multimediali nella tua libreria.",
+            "fields": {
+                "query": {
+                    "name": "Query di ricerca",
+                    "description": "Testo da cercare."
+                },
+                "media_type": {
+                    "name": "Tipo di media",
+                    "description": "Filtra per Film, Serie o Episodio."
+                },
+                "limit": {
+                    "name": "Limite",
+                    "description": "Numero massimo di risultati."
+                },
+                "is_played": {
+                    "name": "È visto",
+                    "description": "Filtra per stato di visione."
+                },
+                "min_rating": {
+                    "name": "Valutazione minima",
+                    "description": "Filtra per valutazione minima (0-10)."
+                },
+                "year": {
+                    "name": "Anno",
+                    "description": "Filtra per anno di rilascio."
+                }
+            }
+        },
+        "get_recommendations": {
+            "name": "Ottieni raccomandazioni",
+            "description": "Ottieni elementi simili per un elemento multimediale specifico.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elemento",
+                    "description": "L'ID dell'elemento su cui basare le raccomandazioni."
+                },
+                "limit": {
+                    "name": "Limite",
+                    "description": "Numero massimo di risultati."
+                }
+            }
+        },
+        "get_item": {
+            "name": "Ottieni dettagli",
+            "description": "Ottieni tutti i dettagli inclusi panoramica e metadati per un elemento.",
+            "fields": {
+                "item_id": {
+                    "name": "ID elemento",
+                    "description": "L'ID dell'elemento Jellyfin."
+                }
+            }
+        }
+    }
+}
