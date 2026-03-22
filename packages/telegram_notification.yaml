@@ -25,7 +25,7 @@ script:
             #birds #phuket #wildlife #spotting
       - service: script.mastodon_send
         data:
-          account: micehome
+          account: house
           visibility: public
           status: >
             {% set bird_list = state_attr('sensor.birdnet_go_events','bird_events') |
