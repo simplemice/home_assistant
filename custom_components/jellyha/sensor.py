@@ -62,7 +62,8 @@ async def async_setup_entry(
                     session_coordinator, 
                     entry, 
                     user_id, 
-                    username
+                    username,
+                    device_name
                 )
             )
 
@@ -129,6 +130,7 @@ class JellyHALibrarySensor(JellyHABaseSensor):
         items = self.coordinator.data.get("items", [])
         movies = [i for i in items if i.get("type") == "Movie"]
         series = [i for i in items if i.get("type") == "Series"]
+        videos = [i for i in items if i.get("type") in ("Video", "MusicVideo")]
         # Sum up all episode counts from series items (unplayed + watched)
         total_episodes = sum(
             (i.get("unplayed_count") or 0) for i in series
@@ -140,7 +142,11 @@ class JellyHALibrarySensor(JellyHABaseSensor):
             "last_updated": self.coordinator.last_refresh_time,
             "movies": len(movies),
             "series": len(series),
+            "videos": len(videos),
             "episodes": total_episodes,
+            "config_external_url": self._entry.options.get(
+                "external_url", self._entry.data.get("external_url", "")
+            ),
         }
 
 
@@ -361,11 +367,13 @@ class JellyHAUserSensor(CoordinatorEntity[JellyHASessionCoordinator], SensorEnti
         entry: ConfigEntry,
         user_id: str,
         username: str,
+        device_name: str,
     ) -> None:
         """Initialize the user sensor."""
         super().__init__(coordinator)
         self._user_id = user_id
         self._username = username
+        self._device_name = device_name
         self._entry = entry
         
         # Unique ID specifically for this user's viewing state
@@ -380,7 +388,7 @@ class JellyHAUserSensor(CoordinatorEntity[JellyHASessionCoordinator], SensorEnti
     @property
     def device_info(self) -> DeviceInfo:
         """Return device info."""
-        return get_device_info(self._entry.entry_id, "JellyHA")
+        return get_device_info(self._entry.entry_id, self._device_name)
 
     @property
     def native_value(self) -> str:
@@ -409,10 +417,11 @@ class JellyHAUserSensor(CoordinatorEntity[JellyHASessionCoordinator], SensorEnti
         """Return additional state attributes."""
         session = self._get_active_session()
         if not session:
-             return {"user_id": self._user_id}
+             return {"user_id": self._user_id, "user_name": self._username}
 
         attributes = {
             "user_id": self._user_id,
+            "user_name": self._username,
             "session_id": session.get("Id"),
             "device_name": session.get("DeviceName"),
             "client": session.get("Client"),
@@ -424,6 +433,9 @@ class JellyHAUserSensor(CoordinatorEntity[JellyHASessionCoordinator], SensorEnti
             "backdrop_url": None,
             "media_type": None,
             "is_paused": False,
+            "config_external_url": self._entry.options.get(
+                "external_url", self._entry.data.get("external_url", "")
+            ),
         }
 
         if "NowPlayingItem" in session:
@@ -450,6 +462,13 @@ class JellyHAUserSensor(CoordinatorEntity[JellyHASessionCoordinator], SensorEnti
                 attributes["season"] = item.get("ParentIndexNumber")
                 attributes["episode"] = item.get("IndexNumber")
                 attributes["series_image_url"] = session.get("jellyha_series_poster_url")
+            elif item_type == "Audio":
+                attributes["title"] = item.get("Name")
+                # Extract artist name from AlbumArtist or Artists array
+                album_artist = item.get("AlbumArtist")
+                artists = item.get("Artists", [])
+                attributes["artist_name"] = album_artist or (artists[0] if artists else None)
+                attributes["year"] = item.get("ProductionYear")
             else:
                 # Movie, etc.
                 attributes["title"] = item.get("Name")
@@ -463,8 +482,13 @@ class JellyHAUserSensor(CoordinatorEntity[JellyHASessionCoordinator], SensorEnti
             
             attributes["is_paused"] = play_state.get("IsPaused", False)
             attributes["position_ticks"] = position_ticks
+            attributes["duration_ticks"] = duration_ticks
             if duration_ticks and duration_ticks > 0:
                 attributes["progress_percent"] = int((position_ticks / duration_ticks) * 100)
+
+            attributes["repeat_mode"] = play_state.get("RepeatMode", "RepeatNone")
+            attributes["shuffle_mode"] = "Shuffle" if play_state.get("ShuffleMethod") == "Shuffle" or play_state.get("ShuffleMode") == "Shuffle" else "Sorted"
+            attributes["is_favorite"] = item.get("UserData", {}).get("IsFavorite", False)
 
             # Image Proxy URL (Signed URL from coordinator)
             attributes["image_url"] = session.get("jellyha_poster_url")
@@ -519,7 +543,6 @@ class JellyHAWebSocketStatusSensor(CoordinatorEntity[JellyHALibraryCoordinator],
         self._ws_client = ws_client
         self._device_name = device_name
         self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_websocket_status"
         self._attr_unique_id = f"{entry.entry_id}_websocket_status"
         # self.entity_id = f"sensor.{device_name}_websocket"
 
@@ -577,7 +600,6 @@ class JellyHAActiveSessionsSensor(CoordinatorEntity[JellyHASessionCoordinator], 
         super().__init__(coordinator)
         self._device_name = device_name
         self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_active_sessions"
         self._attr_unique_id = f"{entry.entry_id}_active_sessions"
         # self.entity_id = f"sensor.{device_name}_active_sessions"
 

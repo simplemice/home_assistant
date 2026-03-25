@@ -7,6 +7,7 @@
                 "description": "Entrez l'URL de votre serveur Jellyfin et choisissez la méthode d'authentification",
                 "data": {
                     "server_url": "URL du serveur",
+                    "external_url": "URL externe (Optionnel, pour les liens de l'interface)",
                     "auth_method": "Méthode d'authentification"
                 },
                 "data_description": {
@@ -43,7 +44,11 @@
                 "description": "Choisissez les bibliothèques à inclure (laisser vide pour toutes)",
                 "data": {
                     "libraries": "Bibliothèques",
-                    "refresh_interval": "Intervalle de rafraîchissement"
+                    "refresh_interval": "Intervalle de rafraîchissement",
+                    "instance_label": "Étiquette d'instance"
+                },
+                "data_description": {
+                    "instance_label": "Ajoutez une étiquette pour distinguer cette instance (par exemple, Films, Musique, Vidéos personnelles). Votre appareil sera nommé 'JellyHA Films', 'JellyHA Musique', etc. Laissez vide pour la valeur par défaut 'JellyHA'."
                 }
             },
             "reauth_confirm": {
@@ -66,8 +71,7 @@
         "abort": {
             "already_configured": "Ce serveur Jellyfin est déjà configuré",
             "reauth_successful": "Réauthentification réussie",
-            "reauth_failed": "Échec de la réauthentification",
-            "single_instance_allowed": "Une seule configuration de JellyHA est autorisée."
+            "reauth_failed": "Échec de la réauthentification"
         }
     },
     "options": {
@@ -76,8 +80,10 @@
                 "title": "Paramètres du serveur",
                 "data": {
                     "server_url": "URL du serveur",
+                    "external_url": "URL externe (Optionnel, pour les liens de l'interface)",
                     "refresh_interval": "Intervalle de rafraîchissement de la bibliothèque",
-                    "update_credentials": "Mettre à jour les identifiants / Changer d'utilisateur"
+                    "update_credentials": "Mettre à jour les informations / Changer d'utilisateur",
+                    "libraries": "Bibliothèques"
                 }
             },
             "auth_method": {
@@ -100,6 +106,20 @@
                 "data": {
                     "username": "Nom d'utilisateur",
                     "password": "Mot de passe"
+                }
+            },
+            "user_select": {
+                "title": "Sélectionner un utilisateur",
+                "description": "Choisissez l'utilisateur Jellyfin vers lequel basculer",
+                "data": {
+                    "user_id": "Utilisateur"
+                }
+            },
+            "library_select": {
+                "title": "Sélectionner des bibliothèques",
+                "description": "Choisissez les bibliothèques à inclure (laissez vide pour toutes)",
+                "data": {
+                    "libraries": "Bibliothèques"
                 }
             }
         },

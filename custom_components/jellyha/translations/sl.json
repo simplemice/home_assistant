@@ -7,6 +7,7 @@
                 "description": "Vnesite URL strežnika Jellyfin in izberite način preverjanja pristnosti",
                 "data": {
                     "server_url": "URL strežnika",
+                    "external_url": "Zunanji URL (Neobvezno, za UI povezave)",
                     "auth_method": "Način preverjanja pristnosti"
                 },
                 "data_description": {
@@ -43,7 +44,11 @@
                 "description": "Izberite knjižnice, ki jih želite vključiti (pustite prazno za vse)",
                 "data": {
                     "libraries": "Knjižnice",
-                    "refresh_interval": "Interval osveževanja knjižnice"
+                    "refresh_interval": "Interval osveževanja knjižnice",
+                    "instance_label": "Oznaka instance"
+                },
+                "data_description": {
+                    "instance_label": "Dodajte oznako, po kateri se bo ta instanca razlikovala (npr. Filmi, Glasba, Domači videi). Vaša naprava bo poimenovana 'JellyHA Filmi', 'JellyHA Glasba' itd. Pustite prazno za privzeto ime 'JellyHA'."
                 }
             },
             "reauth_confirm": {
@@ -66,8 +71,7 @@
         "abort": {
             "already_configured": "Ta strežnik Jellyfin je že konfiguriran",
             "reauth_successful": "Ponovno preverjanje pristnosti uspešno",
-            "reauth_failed": "Ponovno preverjanje pristnosti ni uspelo",
-            "single_instance_allowed": "Dovoljena je le ena konfiguracija JellyHA."
+            "reauth_failed": "Ponovno preverjanje pristnosti ni uspelo"
         }
     },
     "options": {
@@ -76,6 +80,7 @@
                 "title": "Nastavitve strežnika",
                 "data": {
                     "server_url": "URL strežnika",
+                    "external_url": "Zunanji URL (Neobvezno, za UI povezave)",
                     "refresh_interval": "Interval osveževanja knjižnice",
                     "update_credentials": "Posodobi poverilnice / Zamenjaj uporabnika"
                 }

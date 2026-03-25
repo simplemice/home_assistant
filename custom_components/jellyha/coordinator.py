@@ -44,6 +44,7 @@ from .const import (
     RATING_SOURCE_IMDB,
     RATING_SOURCE_TMDB,
     TICKS_PER_MINUTE,
+    migrate_refresh_interval,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,16 +77,20 @@ class JellyHALibraryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Cache signed URLs by (item_id, image_type, tag) -> (url, monotonic timestamp)
         self._url_cache: dict[tuple[str, str, str], tuple[str, float]] = {}
 
-        refresh_interval = entry.options.get(
+        raw_interval = entry.options.get(
             CONF_REFRESH_INTERVAL,
             entry.data.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
         )
+        # Migrate legacy raw-seconds values to nearest valid dropdown option
+        interval_seconds = migrate_refresh_interval(int(raw_interval))
+        # 0 = Off: disable polling entirely
+        update_interval = timedelta(seconds=interval_seconds) if interval_seconds > 0 else None
 
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=refresh_interval),
+            update_interval=update_interval,
             always_update=False,
         )
 
@@ -202,7 +207,6 @@ class JellyHALibraryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "count": len(items),
                 "server_name": self._server_name,
                 "last_refresh": self.last_refresh_time.isoformat(),
-                "last_refresh": self.last_refresh_time.isoformat(),
                 "last_data_change": self.last_data_change_time.isoformat() if self.last_data_change_time else None,
                 "next_up_items": next_up_items,
             }
@@ -305,6 +309,16 @@ class JellyHALibraryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     series_poster_url = async_sign_path(self.hass, series_path, expiration)
                     self._url_cache[series_cache_key] = (series_poster_url, now)
 
+        # Build music-specific fields conditionally
+        artist_name = None
+        album_artist = None
+        album = None
+        if item_type in ("Audio", "MusicAlbum", "MusicVideo"):
+            album_artist = item.get("AlbumArtist")
+            artists = item.get("Artists", [])
+            artist_name = album_artist or (artists[0] if artists else None)
+            album = item.get("Album")
+
         return {
             "id": item_id,
             "name": item.get("Name", ""),
@@ -313,23 +327,24 @@ class JellyHALibraryCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "runtime_minutes": runtime_minutes,
             "genres": item.get("Genres", []),
             "rating": rating,
-            # Removed separate provider ratings to save memory
             "description": item.get("Overview", ""),
             "poster_url": poster_url,
             "series_poster_url": series_poster_url,
-            #"backdrop_url": backdrop_url, # Now available if uncommented, but keeping optimizing
             "date_added": item.get("DateCreated"),
             "jellyfin_url": self._api.get_jellyfin_url(item_id),
             "is_played": item.get("UserData", {}).get("Played", False),
             "unplayed_count": item.get("UserData", {}).get("UnplayedItemCount"),
             "is_favorite": item.get("UserData", {}).get("IsFavorite", False),
-            #"media_streams": item.get("MediaStreams", []), # Removed for optimization
             "official_rating": item.get("OfficialRating"),
             "trailer_url": next((t["Url"] for t in item.get("RemoteTrailers", []) if t.get("Url")), None),
             "last_played_date": item.get("UserData", {}).get("LastPlayedDate"),
             "community_rating": rating,
             "season_name": item.get("SeasonName"),
             "index_number": item.get("IndexNumber"),
+            # Music-specific fields (None for non-music items)
+            "artist_name": artist_name,
+            "album_artist": album_artist,
+            "album": album,
         }
 
 
@@ -388,6 +403,21 @@ class JellyHASessionCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         try:
             sessions = await self._api.get_sessions()
+            
+            # Fetch UserData for playing items since /Sessions endpoint omits it
+            for s in sessions:
+                user_id = s.get("UserId")
+                if user_id and "NowPlayingItem" in s:
+                    item_id = s["NowPlayingItem"].get("Id")
+                    if item_id:
+                        try:
+                            item_details = await self._api.get_item(user_id, item_id)
+                            user_data = item_details.get("UserData")
+                            if user_data:
+                                s["NowPlayingItem"]["UserData"] = user_data
+                        except JellyfinApiError as err:
+                            _LOGGER.debug("Failed to fetch UserData for item %s: %s", item_id, err)
+
             self._enrich_sessions(sessions)
             
             # Fire events even during polling to ensure automation triggers work
@@ -455,6 +485,20 @@ class JellyHASessionCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         """Handle session updates from WebSocket."""
         _LOGGER.debug("Coordinator received %d sessions from WS", len(sessions))
         
+        # Fetch UserData for playing items since WS sessions payload omits it
+        for s in sessions:
+            user_id = s.get("UserId")
+            if user_id and "NowPlayingItem" in s:
+                item_id = s["NowPlayingItem"].get("Id")
+                if item_id:
+                    try:
+                        item_details = await self._api.get_item(user_id, item_id)
+                        user_data = item_details.get("UserData")
+                        if user_data:
+                            s["NowPlayingItem"]["UserData"] = user_data
+                    except JellyfinApiError as err:
+                        _LOGGER.debug("Failed to fetch UserData for WS item %s: %s", item_id, err)
+
         # Enrich with signed URLs (same as polling path)
         self._enrich_sessions(sessions)
         

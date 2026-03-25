@@ -77,7 +77,7 @@ class JellyHAMediaPlayer(CoordinatorEntity[JellyHALibraryCoordinator], MediaPlay
         super().__init__(coordinator)
         self._entry = entry
         self._device_name = device_name
-        self._attr_unique_id = f"{device_name}_media_browser"
+        self._attr_unique_id = f"{entry.entry_id}_media_browser"
         # self.entity_id = f"media_player.{device_name}_browser"
         self._current_item: dict[str, Any] | None = None
 
@@ -137,6 +137,20 @@ class JellyHAMediaPlayer(CoordinatorEntity[JellyHALibraryCoordinator], MediaPlay
         # Find the item in coordinator data
         items = self.coordinator.data.get("items", []) if self.coordinator.data else []
         item = next((i for i in items if i.get("id") == item_id), None)
+
+        if not item:
+            # Item might be a music track or other item not in the sync cache —
+            # fall back to a direct API call
+            _LOGGER.debug("Item %s not in cache, fetching from API", item_id)
+            try:
+                api = self.coordinator._api
+                user_id = self._entry.data.get("user_id")
+                if api and user_id:
+                    raw = await api.get_item(user_id, item_id)
+                    item = await self.coordinator._async_transform_item(raw)
+            except Exception:
+                _LOGGER.warning("Item not found in cache or API: %s", item_id)
+                return
 
         if not item:
             _LOGGER.warning("Item not found: %s", item_id)
@@ -428,6 +442,10 @@ class JellyHAUserMediaPlayer(
             attrs["progress_percent"] = int((position_ticks / duration_ticks) * 100)
         else:
             attrs["progress_percent"] = 0
+
+        attrs["config_external_url"] = self._entry.options.get(
+            "external_url", self._entry.data.get("external_url", "")
+        )
 
         return attrs
 

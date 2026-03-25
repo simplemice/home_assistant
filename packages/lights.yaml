@@ -36,7 +36,7 @@ light:
       - light.gateway_light
       - light.fridge_side_strip
       - light.kitchen_closet_ambient
-      - light.kitchen_wall_ambient
+      - light.kitchen_closet_ambient_wall
       - light.porch_bulb
       - light.closet_lamp
       - light.wled_wall_light
@@ -65,7 +65,7 @@ light:
     name: "Kitchen Ambient"
     entities:
       - light.kitchen_closet_ambient
-      - light.kitchen_wall_ambient
+      - light.kitchen_closet_ambient_wall
       - light.fridge_side_strip
 
   - platform: group
