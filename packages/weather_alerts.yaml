@@ -137,29 +137,6 @@ sensor:
 
 ###########
 multiscrape:
-  - resource: "https://www.accuweather.com/en/th/mueang-phuket/320075/weather-today/320075"
-    scan_interval: 3600
-    headers:
-      User-Agent: Mozilla/5.0
-    sensor:
-      # 🌞 DAY VALUES
-      - unique_id: phuket_day_probability_precip
-        name: "Phuket Day Probability of Precipitation"
-        select: "body > div > div.two-column-page-content > div.page-column-1 > div.page-content.content-module > div:nth-child(2) > div.half-day-card-content > div.panels > div.right > p:nth-child(1) > span"
-        value_template: "{{ value | trim }}"
-      - unique_id: phuket_day_probability_thunder
-        name: "Phuket Day Probability of Thunderstorms"
-        select: "body > div > div.two-column-page-content > div.page-column-1 > div.page-content.content-module > div:nth-child(2) > div.half-day-card-content > div.panels > div.right > p:nth-child(2) > span"
-        value_template: "{{ value | trim }}"
-      # 🌙 NIGHT VALUES
-      - unique_id: phuket_night_pop
-        name: "Night Probability of Precipitation"
-        select: "body > div > div.two-column-page-content > div.page-column-1 > div.page-content.content-module > div:nth-child(4) > div.half-day-card-content > div.panels > div.left > p:nth-child(3) > span"
-        value_template: "{{ value | trim }}"
-      - unique_id: phuket_night_thunder
-        name: "Night Probability of Thunderstorms"
-        select: "div.half-day-card:nth-of-type(2) div.panels div.right p:nth-of-type(1) span"
-        value_template: "{{ value | trim }}"
   - resource: "https://www.accuweather.com/en/th/mueang-phuket/320075/health-activities/320075"
     scan_interval: 3600
     headers:

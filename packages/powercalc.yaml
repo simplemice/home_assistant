@@ -201,7 +201,7 @@ powercalc:
       fixed:
         power: 20
     # Kitchen Wall Ambient (2m LED strip)
-    - entity_id: light.kitchen_wall_ambient
+    - entity_id: light.kitchen_closet_ambient_wall
       name: "Kitchen Wall Ambient Power"
       standby_power: 0.1
       fixed:
