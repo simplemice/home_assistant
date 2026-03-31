@@ -34,8 +34,16 @@ Description | value
 Number of entities | {{states | count}}
 Number of sensors | {{states.sensor | count}}
 Current Version | {{ states('sensor.current_version') }}
+Total Automations | {{ states('sensor.automations_count') }}
+Total Scripts | {{ states('sensor.scripts_count') }}
+Total Lights | {{ states('sensor.lights_count') }}
+Total Switches | {{ states('sensor.switches_count') }}
+Total Scenes | {{ states('sensor.scenes') }}
 
-## My installed extensions:
+## Music Assistant Integration Around House
+Total Players | {{ states('sensor.media_players') }}
+
+## Current installed extensions:
 
 ### Add-ons
 {%- for addon in addons | sort(attribute='name') %}
@@ -63,3 +71,4 @@ Current Version | {{ states('sensor.current_version') }}
 Copyright @2026 [Nightdestiny Group](https://nightdestiny.com)
 
 This README.md generated automaticaly after each update, by the [custom readme integration](https://github.com/custom-components/readme)
+
