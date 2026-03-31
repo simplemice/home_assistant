@@ -34,8 +34,16 @@ Description | value
 Number of entities | 2968
 Number of sensors | 1675
 Current Version | 2026.3.4
+Total Automations | 116
+Total Scripts | 30
+Total Lights | 39
+Total Switches | 206
+Total Scenes | 14
 
-## My installed extensions:
+## Music Assistant Integration Around House
+Total Players | 19
+
+## Current installed extensions:
 
 ### Add-ons
 - Advanced SSH & Web Terminal
