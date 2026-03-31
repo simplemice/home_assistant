@@ -156,4 +156,4 @@ Total Players | 19
 
 Copyright @2026 [Nightdestiny Group](https://nightdestiny.com)
 
-This README.md generated automaticaly after each update, by the [custom readme integration](https://github.com/custom-components/readme)
+This README.md generated automaticaly after each update, by the [custom readme integration](https://github.com/custom-components/readme) and [Casa De Ratton](https://social.nightdestiny.com/@house)
