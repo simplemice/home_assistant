@@ -39,8 +39,6 @@ Total Scripts | 30
 Total Lights | 39
 Total Switches | 206
 Total Scenes | 14
-
-## Music Assistant Integration Around House
 Total Players | 19
 
 ## Current installed extensions:
