@@ -19,6 +19,7 @@
   Some screenshots about test instalation
   
   <a name="logo" href="https://estate.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" alt="Casa de Rattón Main Window" width="500"></a>
+  <a name="logo" href="https://estate.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" alt="Casa de Rattón Energy Window" width="500"></a>
 </details>
 
 ***
