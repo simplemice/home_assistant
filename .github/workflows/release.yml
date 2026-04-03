@@ -1,22 +1,25 @@
-name: "Configuration Release"
-
+name: Configuration Release
 on:
   push:
     tags:
-      - "v*" # Triggers when you push a tag like v2024.1.0
-
+      - "v*"
+permissions:
+  contents: write
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Triggered Tag
+      - name: Checkout repository (full history)
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0
+      - name: Fetch all tags
+        run: git fetch --tags --force
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Casa De Ratton HA Config Release ${{ github.ref_name }}"
-          # This automatically lists your commits/changes since the last tag
+          tag_name: ${{ github.ref_name }}
+          name: Casa De Ratton HA Config Release ${{ github.ref_name }}
           generate_release_notes: true
           draft: false
           prerelease: false
