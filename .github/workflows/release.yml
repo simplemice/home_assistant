@@ -9,19 +9,23 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository (full history)
+      - name: Checkout full repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Fetch all tags
         run: git fetch --tags --force
+      - name: Create backup package
+        run: |
+          zip -r casa-de-ratton-config-${{ github.ref_name }}.zip . \
+          -x ".git/*" ".github/*"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Casa De Ratton HA Config Release ${{ github.ref_name }}
+          name: Casa De Ratton HA Config ${{ github.ref_name }}
           generate_release_notes: true
-          draft: false
-          prerelease: false
+          make_latest: true
+          files: casa-de-ratton-config-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
