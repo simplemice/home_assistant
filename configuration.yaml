@@ -1,7 +1,7 @@
 homeassistant:
   debug: true
-  #internal_url: http://192.168.3.2:8123
-  #external_url: !secret ext_url
+  internal_url: !secret int_url
+  external_url: !secret ext_url
   customize: !include_dir_named customize/
   packages: !include_dir_named packages/
   media_dirs:
