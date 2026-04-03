@@ -18,8 +18,8 @@
   
   Some screenshots about test instalation
   
-  <a name="logo" href="https://estate.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" alt="Casa de Rattón Main Window" width="500"></a>
-  <a name="logo" href="https://rent.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" alt="Casa de Rattón Energy Window" width="500"></a>
+  <a name="logo" href="https://estate.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" alt="Casa de Rattón Main Window" width="500">Main Window</a>
+  <a name="logo" href="https://rent.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" alt="Casa de Rattón Energy Window" width="500">Energy Window</a>
 </details>
 
 ***
@@ -30,6 +30,11 @@ Like all other Home Assistant instances this is also a Work in Progress :D
 
 This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Rattón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
 
+### Contributions
+This is primarily a private configuration project. External inspiration is welcome, but direct pull requests may not be accepted unless aligned with Casa de Rattón architecture principles.
+
+***
+
 #### Casa de Rattón's Three Laws of Home Automation:
 
 When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
@@ -39,6 +44,37 @@ When designing Casa de Rattón's automations I have made every effort to priorit
 **Second Law: An automation can be triggered by voice command only when Law 1 cannot be achieved**.
 
 **Third Law: An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
+
+## GitHub Repository Information
+
+This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
+
+### Repository Purpose
+- Maintain a fully working Home Assistant configuration
+- Provide reproducible testing environment packages
+- Track configuration evolution via Git history
+- Publish tagged releases for stable configuration snapshots
+- Serve as disaster recovery backup
+
+### Branch Strategy
+- `main` — active live configuration and development
+- tagged releases (`v*`) — stable snapshots used for restore or deployment
+
+### Releases & Packages
+Each tagged release contains:
+- validated configuration state
+- automation and script updates
+- simulation package changes
+- compatibility adjustments for new Home Assistant versions
+
+Releases are automatically generated using GitHub Actions workflows after version tagging.
+
+### Backup Philosophy
+This repository is treated as:
+- configuration source of truth
+- versioned automation history
+- rapid recovery mechanism
+- experimentation sandbox without risking production stability
 
 ## Some statistics about Test Installation:
 
