@@ -31,13 +31,13 @@ When designing Casa de Rattón's automations I have made every effort to priorit
 
 Description | value
 -- | --
-Number of entities | 2968
-Number of sensors | 1675
-Current Version | 2026.3.4
-Total Automations | 116
+Number of entities | 2861
+Number of sensors | 1677
+Current Version | 2026.4.0
+Total Automations | 118
 Total Scripts | 30
-Total Lights | 39
-Total Switches | 206
+Total Lights | 41
+Total Switches | 207
 Total Scenes | 14
 Total Players | 19
 
@@ -141,8 +141,8 @@ Total Players | 19
 - [Trend Analysis Card](https://github.com/Riscue/trend-analysis-card)
 - [Tv Remote Card](https://github.com/marrobHD/tv-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
-- [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
 - [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
+- [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
 - [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 - [Weather Alerts Card](https://github.com/seevee/weather_alerts_card)
