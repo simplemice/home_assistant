@@ -11,6 +11,18 @@
 
 ***
 
+<details>
+  <summary>Screenshots</summary>
+  
+  Some screenshots about test instalation
+  
+  ```javascript
+  console.log("I'm a code block!");
+  ```
+</details>
+
+***
+
 Like all other Home Assistant instances this is also a Work in Progress :D
 
 ***
