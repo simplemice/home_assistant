@@ -1,5 +1,5 @@
 blueprint:
-  name: Frigate Notifications (0.14.0.3j)
+  name: Frigate Notifications (0.14.0.3l)
   author: SgtBatten
   homeassistant:
     min_version: 2024.11.0
@@ -162,8 +162,8 @@ blueprint:
                   after_zones | join('', '') | replace(''_'', '' '' ) | title }} at
                   {{event[''after''][''start_time'']|timestamp_custom(''%H:%M'')}}.'
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         update_sub_label:
           name: Update Sub Labels (Advanced)
           description: 'Update the title and/or message with the matched face name
@@ -203,8 +203,8 @@ blueprint:
                 }}'
               - '{{ event[''after''][''top_score''] |float(0) > 0.8 }}'
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         interruption_level:
           name: Interruption Level (iOS)
           description: 'Set the interruption level on iOS devices. This can be templated.
@@ -228,9 +228,9 @@ blueprint:
                 else ''active''}}'
               - '{{''time-sensitive'' if is_state(''sun.sun'', ''above_horizon'')
                 else ''passive'' }}'
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         tts:
           name: Use TTS to override silent/dnd modes on specific phones.
           description: 'Some phones (the Samsung galaxy line, in particular,) disable
@@ -255,8 +255,8 @@ blueprint:
             entity:
               filter:
               - integration: input_text
-              multiple: false
               reorder: false
+              multiple: false
         alert_once:
           name: Alert Once (Optional)
           description: Only the first notification for each event will play a sound.
@@ -302,9 +302,9 @@ blueprint:
               - label: Snapshot cropped with bounding box (2:1)
                 value: '{{base_url}}/api/frigate{{client_id}}/notifications/{{id}}/snapshot.jpg?bbox=1&crop=1&format=android'
               mode: dropdown
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         attachment_2:
           name: Subsequent Attachment (Optional)
           description: "Choose which image or GIF to attach to the notification for
@@ -342,9 +342,9 @@ blueprint:
               - label: Snapshot cropped with bounding box (2:1)
                 value: '{{base_url}}/api/frigate{{client_id}}/notifications/{{id}}/snapshot.jpg?bbox=1&crop=1&format=android'
               mode: dropdown
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         video:
           name: Video (Optional)
           description: You can optionally attach the clip to the notification which
@@ -364,9 +364,9 @@ blueprint:
               - label: Clip m3u8 (IOS)
                 value: '{{base_url}}/api/frigate{{client_id}}/notifications/{{id}}/{{camera}}/master.m3u8'
               mode: dropdown
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         final_update:
           name: Final update (Optional)
           description: Update the notification at the end of the event. Used to ensure
@@ -432,9 +432,9 @@ blueprint:
                 value: '#000000'
               - label: White
                 value: '#ffffff'
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         icon:
           name: Notification Icon (Optional)
           description: Change the icon that displays on the notification. You can
@@ -450,8 +450,8 @@ blueprint:
                 'Dog' else 'cat' if label == 'Cat' else 'car' if label == 'Car' else
                 'paw' if label == 'Animal' else 'home-assistant'}}
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         group:
           name: Group
           description: The group name that will determine if notifications are grouped
@@ -475,8 +475,8 @@ blueprint:
               - default
               - none
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         volume:
           name: Volume Sound - iOS only (Optional)
           description: You can specify a sound level between 0 and 100
@@ -498,8 +498,8 @@ blueprint:
               filter:
               - domain:
                 - camera
-              multiple: false
               reorder: false
+              multiple: false
         android_auto:
           name: Android Auto
           description: Show the notification on Android Auto if the receiving device
@@ -547,8 +547,8 @@ blueprint:
               - label: Detections
                 value: detection
               multiple: true
-              custom_value: false
               sort: false
+              custom_value: false
         master_condition:
           name: Master Condition (Optional)
           description: Set conditions that will stop the automation from running if
@@ -645,8 +645,8 @@ blueprint:
           default: ''
           selector:
             entity:
-              multiple: false
               reorder: false
+              multiple: false
         state_filter_states:
           name: State Filter States (Optional)
           description: Enter the states that the above entity must be in, one at a
@@ -715,8 +715,8 @@ blueprint:
                 value: '22'
               - label: 23:00 - 23:59
                 value: '23'
-              custom_value: false
               sort: false
+              custom_value: false
         custom_filter:
           name: Custom Filter (Optional - Advanced)
           description: A filter that must result in true or false but can be templated
@@ -862,8 +862,8 @@ blueprint:
               - label: Notification History (Android)
                 value: settings://notification_history
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         button_1:
           name: Action Button 1 Text
           description: The text used on the first Action button at the bottom of the
@@ -907,8 +907,8 @@ blueprint:
               - label: Custom Action (Manual Trigger)
                 value: custom-{{ this.entity_id }}
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         icon_1:
           name: Action Button 1 icon - iOS Only
           description: Customise the Icon on the first Action Button. Only the iOS
@@ -955,8 +955,8 @@ blueprint:
               - label: Custom Action (Manual Trigger)
                 value: custom-{{ this.entity_id }}
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         icon_2:
           name: Action Button 2 icon - iOS Only
           description: Customise the Icon on the second Action Button. Only the iOS
@@ -1003,8 +1003,8 @@ blueprint:
               - label: Custom Action (Manual Trigger)
                 value: custom-{{ this.entity_id }}
               custom_value: true
-              multiple: false
               sort: false
+              multiple: false
         icon_3:
           name: Action Button 3 icon - iOS Only
           description: Customise the Icon on the third Action Button. Only the iOS
@@ -1070,9 +1070,9 @@ blueprint:
               - top-right
               - top-left
               - center
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         tv_size:
           name: TV Notification Size (Optional)
           description: Set the size of the notification on your TV.
@@ -1085,9 +1085,9 @@ blueprint:
               - medium
               - large
               - max
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         tv_duration:
           name: TV Notification Duration (Optional)
           description: The duration (in seconds) that the notification will display
@@ -1113,9 +1113,9 @@ blueprint:
               - 50%
               - 75%
               - 100%
+              sort: false
               multiple: false
               custom_value: false
-              sort: false
         tv_interrupt:
           name: TV Notification Interrupt (Optional)
           description: If set to true the notification is interactive and can be dismissed
@@ -1154,6 +1154,11 @@ triggers:
   payload: !input mqtt_payload
   value_template: '{{value_json[''type'']}}'
   id: frigate-event
+- trigger: mqtt
+  topic: '{{mqtt_topic}}'
+  payload: genai
+  value_template: '{{value_json[''type'']}}'
+  id: genai-event
 - trigger: event
   event_type: mobile_app_notification_action
   event_data:
@@ -1178,11 +1183,13 @@ variables:
   input_camera: !input camera
   input_camera_name: '{{input_camera|expand|map(attribute=''attributes.camera_name'',
     default=''none'')|list}}'
-  camera: '{{trigger.payload_json[''after''][''camera''] if trigger.id == ''frigate-event''}}'
+  camera: '{{trigger.payload_json[''after''][''camera''] if trigger.id in [''frigate-event'',
+    ''genai-event'']}}'
   camera_name: '{{ camera | replace(''_'', '' '') | title }}'
   input_severity: !input review_severity
-  severity: '{{trigger.payload_json[''after''][''severity''] if trigger.id == ''frigate-event''}}'
-  type: '{{trigger.payload_json[''type''] if trigger.id == ''frigate-event''}}'
+  severity: '{{trigger.payload_json[''after''][''severity''] if trigger.id in [''frigate-event'',
+    ''genai-event'']}}'
+  type: '{{trigger.payload_json[''type''] if trigger.id in [''frigate-event'', ''genai-event'']}}'
   input_base_url: !input base_url
   base_url: '{{ input_base_url.rstrip(''/'')}}'
   input_telegram_base_url: !input telegram_base_url
@@ -1237,21 +1244,24 @@ variables:
   redacted: !input redacted
   master_condition: !input master_condition
   severity_satisfied: '{{input_severity|select(''in'', severity)|list|length > 0 if
-    trigger.id == ''frigate-event''}}'
+    trigger.id in [''frigate-event'', ''genai-event'']}}'
   objects: '{{ trigger.payload_json[''after''][''data''][''objects''] if trigger.id
-    == ''frigate-event'' }}'
+    in [''frigate-event'', ''genai-event''] }}'
   objects_satisfied: '{{ not labels|length or labels|select(''in'', objects)|list|length
-    > 0 or (''person-verified'' in objects and ''person'' in labels) }}'
+    > 0 or objects|map(''regex_replace'', ''-verified$'', '''')|select(''in'', labels)|list|length
+    > 0 }}'
   initial_home: '{{ presence_entity != '''' and presence_entity|expand|selectattr(''state'',''eq'',''home'')|list|length
     != 0 }}'
   state_satisfied: '{{ not state_only or states(input_entity)|lower in states_filter
     }}'
   before_zones: '{{ trigger.payload_json[''before''][''data''][''zones''] | list |
-    lower if trigger.id == ''frigate-event'' }}'
+    lower if trigger.id in [''frigate-event'', ''genai-event''] }}'
   after_zones: '{{ trigger.payload_json[''after''][''data''][''zones''] | list | lower
-    if trigger.id == ''frigate-event'' }}'
+    if trigger.id in [''frigate-event'', ''genai-event''] }}'
   zone_multi_filter: '{{zone_only and zone_multi and after_zones|length and zones
     and zones |reject(''in'', after_zones) |list |length == 0 }}'
+  filters_satisfied: '{{ severity_satisfied and objects_satisfied and not initial_home
+    and state_satisfied and custom_filter }}'
 conditions:
   condition: or
   conditions:
@@ -1262,7 +1272,9 @@ conditions:
   - condition: and
     conditions:
     - condition: trigger
-      id: frigate-event
+      id:
+      - frigate-event
+      - genai-event
     - alias: Camera Match
       condition: template
       value_template: '{{ input_camera_name|select(''equalto'', camera)|list|length>0
@@ -1271,8 +1283,8 @@ conditions:
       condition: !input master_condition
     - alias: Cooldown
       condition: template
-      value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds
-        > cooldown }}'
+      value_template: "{{ trigger.id == 'genai-event' or\n   not this.attributes.last_triggered
+        or\n   (now() - this.attributes.last_triggered).seconds > cooldown }}\n"
     - alias: Disable Times
       condition: template
       value_template: '{{ not disable_times|length or not now().hour in disable_times|map(''int'')|list
@@ -1302,14 +1314,20 @@ actions:
   - alias: GenAI Summary
     conditions:
     - condition: trigger
-      id: frigate-event
+      id: genai-event
     - condition: template
-      value_template: '{{ trigger.payload_json[''type''] == ''genai'' }}'
+      value_template: '{{ filters_satisfied }}'
+    - alias: Zone Filter
+      condition: template
+      value_template: '{{ not zone_only or after_zones | select(''in'', zones) | list
+        | length > 0 }}'
     sequence:
     - variables:
         event: '{{ trigger.payload_json }}'
-        metadata: '{{ event[''after''][''data''][''metadata''] | default({}) }}'
+        detections: '{{ event[''after''][''data''][''detections''] }}'
         review_id: '{{ event[''after''][''id''] }}'
+        id: '{{ detections[0] }}'
+        metadata: '{{ event[''after''][''data''][''metadata''] | default({}) }}'
         genai_title: '{{ metadata.title | default('''') }}'
         genai_shortSummary: '{{ metadata.shortSummary | default('''') }}'
         genai_threat_level: '{{ metadata.potential_threat_level | int(0) }}'
@@ -1318,17 +1336,13 @@ actions:
           else %}\n  {{ genai_title }}\n{% endif %}"
         message: '{{ genai_shortSummary }}'
         subtitle: !input subtitle
-        critical_input: !input critical
-        critical: '{{ true if critical_input == ''true'' else true if critical_input
-          == True else false }}'
-        interruption_level: !input interruption_level
-        icon: !input icon
         group: !input group
         tag: '{{ review_id }}'
         channel: !input channel
-        color: !input color
-        sticky: !input sticky
-        sound: !input sound
+        sticky: false
+        sound: none
+        critical: false
+        interruption_level: active
         tap_action: !input tap_action
         button_1: !input button_1
         button_2: !input button_2
@@ -1356,7 +1370,7 @@ actions:
           sequence:
           - action: telegram_bot.send_photo
             data:
-              target: '{{telegram_chat_id}}'
+              chat_id: '{{telegram_chat_id}}'
               caption: '{{message}}'
               url: '{{attachment|replace( base_url, telegram_base_url )}}'
         - conditions: '{{ not notify_group_target }}'
@@ -1369,14 +1383,12 @@ actions:
             data:
               tag: '{{ tag }}'
               group: '{{ group }}'
-              color: '{{color}}'
               subject: '{{subtitle}}'
               image: '{{attachment}}'
               video: '{{video}}'
               clickAction: '{{tap_action}}'
               ttl: 0
               priority: high
-              notification_icon: '{{icon}}'
               sticky: '{{sticky}}'
               channel: '{{''alarm_stream'' if critical else channel}}'
               car_ui: '{{android_auto}}'
@@ -1418,12 +1430,10 @@ actions:
               data:
                 tag: '{{ tag }}'
                 group: '{{ group }}'
-                color: '{{color}}'
                 subject: '{{subtitle}}'
                 clickAction: '{{tap_action}}'
                 ttl: 0
                 priority: high
-                notification_icon: '{{icon}}'
                 sticky: '{{sticky}}'
                 channel: '{{''alarm_stream'' if critical else channel}}'
                 car_ui: '{{android_auto}}'
@@ -1473,14 +1483,12 @@ actions:
             data:
               tag: '{{ tag }}'
               group: '{{ group }}'
-              color: '{{color}}'
               subject: '{{subtitle}}'
               image: '{{attachment}}'
               video: '{{video}}'
               clickAction: '{{tap_action}}'
               ttl: 0
               priority: high
-              notification_icon: '{{icon}}'
               sticky: '{{sticky}}'
               channel: '{{''alarm_stream'' if critical else channel}}'
               car_ui: '{{android_auto}}'
@@ -1679,7 +1687,7 @@ actions:
               sequence:
               - action: telegram_bot.send_photo
                 data:
-                  target: '{{telegram_chat_id}}'
+                  chat_id: '{{telegram_chat_id}}'
                   caption: '{{message}}'
                   url: '{{attachment|replace( base_url, telegram_base_url )}}'
                   inline_keyboard:
@@ -1907,7 +1915,8 @@ actions:
               | list | length) > 0) }}'
             objects: '{{ event[''after''][''data''][''objects''] }}'
             objects_satisfied: '{{ not labels|length or labels|select(''in'', objects)|list|length
-              > 0 or (''person-verified'' in objects and ''person'' in labels) }}'
+              > 0 or objects|map(''regex_replace'', ''-verified$'', '''')|select(''in'',
+              labels)|list|length > 0 }}'
             home: '{{presence_entity |reject(''in'', '''') |select(''is_state'', ''home'')
               |list |length != 0 }}'
             presence_changed: '{{ presence_entity |reject(''in'', '''') |expand |map(attribute=''last_changed'')
@@ -2095,7 +2104,7 @@ actions:
                       sequence:
                       - action: telegram_bot.send_video
                         data:
-                          target: '{{telegram_chat_id}}'
+                          chat_id: '{{telegram_chat_id}}'
                           caption: '{{message}}'
                           url: '{{ video | replace(base_url, telegram_base_url) }}'
                           inline_keyboard:
@@ -2108,7 +2117,7 @@ actions:
                     default:
                     - action: telegram_bot.send_photo
                       data:
-                        target: '{{telegram_chat_id}}'
+                        chat_id: '{{telegram_chat_id}}'
                         caption: '{{message}}'
                         url: '{{attachment | replace(base_url,telegram_base_url)}}'
                         inline_keyboard:
