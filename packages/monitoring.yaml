@@ -67,6 +67,15 @@ template:
         unique_id: total_climate_on_count
         state: >
           {{ states.climate | rejectattr('state','eq','off') | list | count }}
+      - name: "Total Unavailable Entities"
+        unique_id: total_unavailable_entities_count
+        icon: mdi:alert-circle-outline
+        state: >
+          {% set ignore_domains = ['group', 'scene', 'automation'] %}
+          {{ states 
+            | selectattr('state', 'in', ['unavailable', 'unknown'])
+            | rejectattr('domain', 'in', ignore_domains)
+            | list | count }}
 
 utility_meter:
   daily_sleep_duration:

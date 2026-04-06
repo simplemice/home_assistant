@@ -6,44 +6,6 @@
 ###############################################################################
 
 script:
-  social_auto_birds:
-    alias: "Phuket Birds Social Information"
-    sequence:
-      - service: script.tts_jarvis_telegram_notify
-        data:
-          title: ""
-          message: >
-            {% set bird_list = state_attr('sensor.birdnet_go_events','bird_events') | sort(attribute='time', reverse=true) | map(attribute='name') | unique | list %}
-            {% set bird_objects = state_attr('sensor.birdnet_go_events','bird_events') | sort(attribute='time', reverse=true) %}
-            Today Birds Detected Information:
-              Total bird events: {{ bird_objects | length }}
-              Total different birds: {{ bird_list | length }}
-            Birds detected: 
-              {% for bird_name in bird_list %} 
-                {{bird_name}} https://en.wikipedia.org/wiki/{{bird_name | replace(' ', '_')}}
-              {% endfor %}
-            #birds #phuket #wildlife #spotting
-      - service: script.mastodon_send
-        data:
-          account: house
-          visibility: public
-          status: >
-            {% set bird_list = state_attr('sensor.birdnet_go_events','bird_events')
-              | sort(attribute='time', reverse=true)
-              | map(attribute='name')
-              | unique
-              | list
-            %}
-            {% set bird_objects =
-              state_attr('sensor.birdnet_go_events','bird_events')
-              | sort(attribute='time', reverse=true)
-            %}
-            Today Birds Detected Information:
-              Total bird events: {{ bird_objects | length }}
-              Total different birds: {{ bird_list | length }}
-              Birds detected: {{ bird_list | join(', ') }}
-              #birds #phuket #wildlife #spotting
-
   telegram_auto_ad:
     alias: "Telegram Phuket Ad"
     sequence:
