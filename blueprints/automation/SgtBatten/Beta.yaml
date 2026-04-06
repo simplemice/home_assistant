@@ -16,7 +16,7 @@ blueprint:
     Support\nGo to https://github.com/SgtBatten/HA_blueprints to report bugs, request
     new features, or get support with your configuration.\n"
   domain: automation
-  source_url: https://raw.githubusercontent.com/SgtBatten/HA_blueprints/main/Frigate_Camera_Notifications/Beta.yaml
+  source_url: https://raw.githubusercontent.com/SgtBatten/HA_blueprints/refs/heads/main/Frigate_Camera_Notifications/Beta.yaml
   input:
     camera:
       name: Frigate Cameras
