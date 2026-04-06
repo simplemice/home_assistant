@@ -43,15 +43,13 @@ template:
       ###########################################################################
       # 2️⃣ DERIVED SENSORS (SPLIT FOR RIEMANN SUM)
       ###########################################################################
-      - name: "Battery Charge Power (Total)"
-        unique_id: battery_charge_power_total
+      - name: "Battery Charge Power (Solar)"
+        unique_id: battery_charge_power_solar
         unit_of_measurement: "W"
         device_class: power
-        icon: mdi:battery-arrow-up
         state: >
           {% set p = states('sensor.battery_power_simulated') | float(0) %}
-          {% set wind = states('sensor.wind_battery_charge_power') | float(0) %}
-          {{ (p if p > 0 else 0) + wind | round(1) }}
+          {{ p if p > 0 else 0 }}
 
       - name: "Battery Discharge Power (Home)"
         unique_id: battery_discharge_power_home
