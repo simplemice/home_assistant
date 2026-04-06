@@ -35,7 +35,7 @@ template:
             {% set thermal_loss = 0.78 %}
             {% set inverter_eff = 0.96 %}
             {# Realism Adjustment (Integrated directly into live power) #}
-            {% set realism = 1 - ((clouds * 0.4) + (rain * 0.35) + (thunder * 0.6)) %}
+            {% set realism = 1 - ((clouds * 0.4) + (rain * 0.35)) %}
             {% set realism_clamped = [realism, 0.25] | max %}
             {% set total_factor =
               sun_factor *
