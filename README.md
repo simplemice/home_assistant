@@ -35,6 +35,10 @@ This is primarily a private configuration project. External inspiration is welco
 
 ***
 
+## GitHub Repository Information
+
+This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
+
 #### Casa de Rattón's Three Laws of Home Automation:
 
 When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
@@ -44,10 +48,6 @@ When designing Casa de Rattón's automations I have made every effort to priorit
 **Second Law: An automation can be triggered by voice command only when Law 1 cannot be achieved**.
 
 **Third Law: An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
-
-## GitHub Repository Information
-
-This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
 
 ### Repository Purpose
 - Maintain a fully working Home Assistant configuration
@@ -80,13 +80,13 @@ This repository is treated as:
 
 Description | value
 -- | --
-Number of entities | 2861
-Number of sensors | 1677
-Current Version | 2026.4.0
+Number of entities | 2952
+Number of sensors | 1671
+Current Version | 2026.4.1
 Total Automations | 118
 Total Scripts | 30
-Total Lights | 41
-Total Switches | 207
+Total Lights | 36
+Total Switches | 203
 Total Scenes | 14
 Total Players | 19
 
@@ -205,4 +205,4 @@ Total Players | 19
 
 Copyright @2026 [Nightdestiny Group](https://nightdestiny.com) and [Casa De Ratton](https://social.nightdestiny.com/@house)
 
-This README.md generated automaticaly after each update, by the [custom readme integration](https://github.com/custom-components/readme)
+This README.md generated automaticaly after each git update, by the [custom readme integration](https://github.com/custom-components/readme)
