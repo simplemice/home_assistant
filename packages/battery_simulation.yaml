@@ -131,7 +131,7 @@ template:
 ###############################################################################
 sensor:
   - platform: integration
-    source: sensor.battery_charge_power_total
+    source: sensor.battery_charge_power_solar
     name: "Total Battery Energy In"
     unique_id: total_battery_energy_in
     method: left

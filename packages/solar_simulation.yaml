@@ -27,7 +27,7 @@ template:
           {% else %}
             {# Weather Inputs #}
             {% set clouds = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
-            {% set rain = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
+            {% set rain = states('sensor.pirateweather_precip_probability') | float(0) / 100 %}
             {# Physics Factors #}
             {% set sun_factor = (sun_elev / 90) ** 1.35 %}
             {% set cloud_loss = 1 - (clouds * 0.65) %}

@@ -57,13 +57,7 @@ notify:
     platform: group
     services:
       - service: mobile_app_micemob
-      - service: telegram_logs
-  - name: telegram_mice
-    platform: telegram
-    chat_id: !secret tg_chat_me
-  - name: telegram_logs
-    platform: telegram
-    chat_id: !secret tg_group_logs
+      - service: telegram_log_channel
 
   - name: TvOverlayNotify
     platform: rest
