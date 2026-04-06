@@ -22,15 +22,12 @@ template:
           {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
           {% set load  = states('sensor.sim_home_power') | float(0) %}
           {% set energy = states('sensor.battery_energy_remaining') | float(0) %}
-
           {% set CAP = 50.0 %}
           {% set MIN_SOC_LIMIT = CAP * 0.10 %}
           {% set MAX_CHARGE = 5800 %}
           {% set MAX_DISCHARGE = 6700 %}
-
           {# NET Power: Positive = Surplus (Charge), Negative = Deficit (Discharge) #}
           {% set net_flow = solar - load %}
-
           {% if net_flow > 0 %}
             {# Charging: Block if battery full #}
             {% if energy >= (CAP * 0.99) %} 0
@@ -82,19 +79,14 @@ template:
         state: >
           {% set CAP = 50.0 %}
           {% set EFFICIENCY = 0.94 %} {# 6% loss during round-trip #}
-
           {# Get last known state or default to 50% capacity on first run #}
           {% set last = states('sensor.battery_energy_remaining') | float(CAP * 0.5) %}
-
           {% set charge_w = states('sensor.battery_charge_power_total') | float(0) %}
           {% set discharge_w = states('sensor.battery_discharge_power_home') | float(0) %}
-
           {# Convert Watts/Minute to kWh: (W / 1000) / 60 minutes #}
           {% set delta_charge = (charge_w * EFFICIENCY) / 60000 %}
           {% set delta_discharge = (discharge_w) / 60000 %}
-
           {% set new_level = last + delta_charge - delta_discharge %}
-
           {# Clamp between 0 and CAP #}
           {{ [ [new_level, CAP] | min, 0 ] | max | round(4) }}
 
@@ -146,14 +138,12 @@ sensor:
     unique_id: total_battery_energy_in
     method: left
     unit_prefix: k
-
   - platform: integration
     source: sensor.battery_discharge_power_home
     name: "Total Battery Energy Out"
     unique_id: total_battery_energy_out
     method: left
     unit_prefix: k
-
 utility_meter:
   battery_usage_daily_in:
     source: sensor.total_battery_energy_in

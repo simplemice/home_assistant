@@ -22,32 +22,25 @@ template:
         state: >
           {% set panel_wp = 11200 %}
           {% set sun_elev = state_attr('sun.sun', 'elevation') | float(0) %}
-
           {% if sun_elev <= 0 %}
             0
           {% else %}
             {# Weather Inputs #}
             {% set clouds = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
             {% set rain = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
-            {% set thunder = states('sensor.phuket_day_probability_thunder') | float(0) / 100 %}
-            
             {# Physics Factors #}
             {% set sun_factor = (sun_elev / 90) ** 1.35 %}
             {% set cloud_loss = 1 - (clouds * 0.65) %}
             {% set rain_loss = 1 - (rain * 0.55) %}
-            {% set thunder_loss = 1 - (thunder * 0.85) %}
             {% set thermal_loss = 0.78 %}
             {% set inverter_eff = 0.96 %}
-            
             {# Realism Adjustment (Integrated directly into live power) #}
             {% set realism = 1 - ((clouds * 0.4) + (rain * 0.35) + (thunder * 0.6)) %}
             {% set realism_clamped = [realism, 0.25] | max %}
-
             {% set total_factor =
               sun_factor *
               cloud_loss *
               rain_loss *
-              thunder_loss *
               thermal_loss *
               inverter_eff *
               realism_clamped
@@ -87,12 +80,10 @@ utility_meter:
     source: sensor.solar_energy_accumulated_simulated
     name: "Solar Energy Today"
     cycle: daily
-
   solar_energy_monthly:
     source: sensor.solar_energy_accumulated_simulated
     name: "Solar Energy Monthly"
     cycle: monthly
-
   solar_energy_yearly:
     source: sensor.solar_energy_accumulated_simulated
     name: "Solar Energy Yearly"
