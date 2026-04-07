@@ -47,7 +47,7 @@ light:
       - light.wled_panel
       - light.wled_undertv
       - light.backyard_light
-      - light.wled_tv_main
+      - light.wled_tv
 
   - platform: group
     unique_id: lights
