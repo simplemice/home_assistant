@@ -24,11 +24,11 @@
       xy_color:
       - 0.202
       - 0.07
-      light.color_temperature: 2288
       light.on: true
+      light.color_temperature: 2288
+      light.mode: 1
       light.brightness: 5
       light.color: 7471359
-      light.mode: 1
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'on'
@@ -62,10 +62,170 @@
       - Zen Garden
       friendly_name: WLED-Table Preset
       state: Witching Hour
+    select.wled_strip_r_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip-R Preset
+      state: Witching Hour
+    select.wled_closet_strip_l_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip L Preset
+      state: Witching Hour
+    select.wled_tv_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-UnderTV Preset
+      state: Witching Hour
+    select.wled_tv_preset_2:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-TV Preset
+      state: Witching Hour
+    select.wled_wall_light_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Wall-Light Preset
+      state: Witching Hour
   metadata:
     light.closet_lamp:
       entity_only: true
     select.wled_table_preset:
+      entity_only: true
+    select.wled_strip_r_preset:
+      entity_only: true
+    select.wled_closet_strip_l_preset:
+      entity_only: true
+    select.wled_tv_preset:
+      entity_only: true
+    select.wled_tv_preset_2:
+      entity_only: true
+    select.wled_wall_light_preset:
       entity_only: true
   icon: mdi:palette
 - id: '1753409469589'
@@ -94,11 +254,11 @@
       xy_color:
       - 0.144
       - 0.176
-      light.color_temperature: 2288
       light.on: true
+      light.color_temperature: 2288
+      light.mode: 1
       light.brightness: 5
       light.color: 694783
-      light.mode: 1
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'on'
@@ -132,10 +292,170 @@
       - Zen Garden
       friendly_name: WLED-Table Preset
       state: Zen Garden
+    select.wled_strip_r_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip-R Preset
+      state: Zen Garden
+    select.wled_wall_light_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Wall-Light Preset
+      state: Zen Garden
+    select.wled_tv_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-UnderTV Preset
+      state: Zen Garden
+    select.wled_closet_strip_l_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip L Preset
+      state: Zen Garden
+    select.wled_tv_preset_2:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-TV Preset
+      state: Zen Garden
   metadata:
     light.closet_lamp:
       entity_only: true
     select.wled_table_preset:
+      entity_only: true
+    select.wled_strip_r_preset:
+      entity_only: true
+    select.wled_wall_light_preset:
+      entity_only: true
+    select.wled_tv_preset:
+      entity_only: true
+    select.wled_closet_strip_l_preset:
+      entity_only: true
+    select.wled_tv_preset_2:
       entity_only: true
 - id: '1753410274596'
   name: Livingroom  Sunset
@@ -163,11 +483,11 @@
       xy_color:
       - 0.6
       - 0.383
-      light.color_temperature: 2288
       light.on: true
+      light.color_temperature: 2288
+      light.mode: 1
       light.brightness: 5
       light.color: 16746506
-      light.mode: 1
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'on'
@@ -201,10 +521,138 @@
       - Zen Garden
       friendly_name: WLED-Table Preset
       state: Sunset
+    select.wled_strip_r_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip-R Preset
+      state: Sunset
+    select.wled_tv_preset_2:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-TV Preset
+      state: Sunset
+    select.wled_tv_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-UnderTV Preset
+      state: Sunset
+    select.wled_closet_strip_l_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip L Preset
+      state: Sunset
   metadata:
     light.closet_lamp:
       entity_only: true
     select.wled_table_preset:
+      entity_only: true
+    select.wled_strip_r_preset:
+      entity_only: true
+    select.wled_tv_preset_2:
+      entity_only: true
+    select.wled_tv_preset:
+      entity_only: true
+    select.wled_closet_strip_l_preset:
       entity_only: true
 - id: '1753421987920'
   name: Kitchen Purple Ocean
@@ -414,11 +862,11 @@
       hs_color:
       rgb_color:
       xy_color:
-      light.color_temperature: 2288
       light.on: false
+      light.color_temperature: 2288
+      light.mode: 1
       light.brightness: 5
       light.color: 16746506
-      light.mode: 1
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'off'
@@ -622,10 +1070,616 @@
       friendly_name: WLED-Table
       supported_features: 36
       state: 'off'
+    light.wled_closet_strip_r:
+      effect_list:
+      - Solid
+      - Blink
+      - Breathe
+      - Wipe
+      - Wipe Random
+      - Random Colors
+      - Sweep
+      - Dynamic
+      - Colorloop
+      - Rainbow
+      - Scan
+      - Scan Dual
+      - Fade
+      - Theater
+      - Theater Rainbow
+      - Running
+      - Saw
+      - Twinkle
+      - Dissolve
+      - Dissolve Rnd
+      - Sparkle
+      - Sparkle Dark
+      - Sparkle+
+      - Strobe
+      - Strobe Rainbow
+      - Strobe Mega
+      - Blink Rainbow
+      - Android
+      - Chase
+      - Chase Random
+      - Chase Rainbow
+      - Chase Flash
+      - Chase Flash Rnd
+      - Rainbow Runner
+      - Colorful
+      - Traffic Light
+      - Sweep Random
+      - Chase 2
+      - Aurora
+      - Stream
+      - Scanner
+      - Lighthouse
+      - Fireworks
+      - Rain
+      - Tetrix
+      - Fire Flicker
+      - Gradient
+      - Loading
+      - Rolling Balls
+      - Fairy
+      - Two Dots
+      - Fairytwinkle
+      - Running Dual
+      - RSVD
+      - Chase 3
+      - Tri Wipe
+      - Tri Fade
+      - Lightning
+      - ICU
+      - Multi Comet
+      - Scanner Dual
+      - Stream 2
+      - Oscillate
+      - Pride 2015
+      - Juggle
+      - Palette
+      - Fire 2012
+      - Colorwaves
+      - Bpm
+      - Fill Noise
+      - Noise 1
+      - Noise 2
+      - Noise 3
+      - Noise 4
+      - Colortwinkles
+      - Lake
+      - Meteor
+      - Meteor Smooth
+      - Railway
+      - Ripple
+      - Twinklefox
+      - Twinklecat
+      - Halloween Eyes
+      - Solid Pattern
+      - Solid Pattern Tri
+      - Spots
+      - Spots Fade
+      - Glitter
+      - Candle
+      - Fireworks Starburst
+      - Fireworks 1D
+      - Bouncing Balls
+      - Sinelon
+      - Sinelon Dual
+      - Sinelon Rainbow
+      - Popcorn
+      - Drip
+      - Plasma
+      - Percent
+      - Ripple Rainbow
+      - Heartbeat
+      - Pacifica
+      - Candle Multi
+      - Solid Glitter
+      - Sunrise
+      - Phased
+      - Twinkleup
+      - Noise Pal
+      - Sine
+      - Phased Noise
+      - Flow
+      - Chunchun
+      - Dancing Shadows
+      - Washing Machine
+      - Rotozoomer
+      - Blends
+      - TV Simulator
+      - Dynamic Smooth
+      - Spaceships
+      - Crazy Bees
+      - Ghost Rider
+      - Blobs
+      - Scrolling Text
+      - Drift Rose
+      - Distortion Waves
+      - Soap
+      - Octopus
+      - Waving Cell
+      - Pixels
+      - Pixelwave
+      - Juggles
+      - Matripix
+      - Gravimeter
+      - Plasmoid
+      - Puddles
+      - Midnoise
+      - Noisemeter
+      - Freqwave
+      - Freqmatrix
+      - GEQ
+      - Waterfall
+      - Freqpixels
+      - RSVD
+      - Noisefire
+      - Puddlepeak
+      - Noisemove
+      - Noise2D
+      - Perlin Move
+      - Ripple Peak
+      - Firenoise
+      - Squared Swirl
+      - RSVD
+      - DNA
+      - Matrix
+      - Metaballs
+      - Freqmap
+      - Gravcenter
+      - Gravcentric
+      - Gravfreq
+      - DJ Light
+      - Funky Plank
+      - RSVD
+      - Pulser
+      - Blurz
+      - Drift
+      - Waverly
+      - Sun Radiation
+      - Colored Bursts
+      - Julia
+      - RSVD
+      - RSVD
+      - RSVD
+      - Game Of Life
+      - Tartan
+      - Polar Lights
+      - Swirl
+      - Lissajous
+      - Frizzles
+      - Plasma Ball
+      - Flow Stripe
+      - Hiphotic
+      - Sindots
+      - DNA Spiral
+      - Black Hole
+      - Wavesins
+      - Rocktaves
+      - Akemi
+      supported_color_modes:
+      - rgb
+      effect:
+      color_mode:
+      brightness:
+      hs_color:
+      rgb_color:
+      xy_color:
+      friendly_name: WLED-Closet-Strip-R
+      supported_features: 36
+      state: 'off'
+    light.wled_wall_light:
+      effect_list:
+      - Solid
+      - Blink
+      - Breathe
+      - Wipe
+      - Wipe Random
+      - Random Colors
+      - Sweep
+      - Dynamic
+      - Colorloop
+      - Rainbow
+      - Scan
+      - Scan Dual
+      - Fade
+      - Theater
+      - Theater Rainbow
+      - Running
+      - Saw
+      - Twinkle
+      - Dissolve
+      - Dissolve Rnd
+      - Sparkle
+      - Sparkle Dark
+      - Sparkle+
+      - Strobe
+      - Strobe Rainbow
+      - Strobe Mega
+      - Blink Rainbow
+      - Android
+      - Chase
+      - Chase Random
+      - Chase Rainbow
+      - Chase Flash
+      - Chase Flash Rnd
+      - Rainbow Runner
+      - Colorful
+      - Traffic Light
+      - Sweep Random
+      - Chase 2
+      - Aurora
+      - Stream
+      - Scanner
+      - Lighthouse
+      - Fireworks
+      - Rain
+      - Tetrix
+      - Fire Flicker
+      - Gradient
+      - Loading
+      - Rolling Balls
+      - Fairy
+      - Two Dots
+      - Fairytwinkle
+      - Running Dual
+      - RSVD
+      - Chase 3
+      - Tri Wipe
+      - Tri Fade
+      - Lightning
+      - ICU
+      - Multi Comet
+      - Scanner Dual
+      - Stream 2
+      - Oscillate
+      - Pride 2015
+      - Juggle
+      - Palette
+      - Fire 2012
+      - Colorwaves
+      - Bpm
+      - Fill Noise
+      - Noise 1
+      - Noise 2
+      - Noise 3
+      - Noise 4
+      - Colortwinkles
+      - Lake
+      - Meteor
+      - Meteor Smooth
+      - Railway
+      - Ripple
+      - Twinklefox
+      - Twinklecat
+      - Halloween Eyes
+      - Solid Pattern
+      - Solid Pattern Tri
+      - Spots
+      - Spots Fade
+      - Glitter
+      - Candle
+      - Fireworks Starburst
+      - Fireworks 1D
+      - Bouncing Balls
+      - Sinelon
+      - Sinelon Dual
+      - Sinelon Rainbow
+      - Popcorn
+      - Drip
+      - Plasma
+      - Percent
+      - Ripple Rainbow
+      - Heartbeat
+      - Pacifica
+      - Candle Multi
+      - Solid Glitter
+      - Sunrise
+      - Phased
+      - Twinkleup
+      - Noise Pal
+      - Sine
+      - Phased Noise
+      - Flow
+      - Chunchun
+      - Dancing Shadows
+      - Washing Machine
+      - Rotozoomer
+      - Blends
+      - TV Simulator
+      - Dynamic Smooth
+      - Spaceships
+      - Crazy Bees
+      - Ghost Rider
+      - Blobs
+      - Scrolling Text
+      - Drift Rose
+      - Distortion Waves
+      - Soap
+      - Octopus
+      - Waving Cell
+      - Pixels
+      - Pixelwave
+      - Juggles
+      - Matripix
+      - Gravimeter
+      - Plasmoid
+      - Puddles
+      - Midnoise
+      - Noisemeter
+      - Freqwave
+      - Freqmatrix
+      - GEQ
+      - Waterfall
+      - Freqpixels
+      - RSVD
+      - Noisefire
+      - Puddlepeak
+      - Noisemove
+      - Noise2D
+      - Perlin Move
+      - Ripple Peak
+      - Firenoise
+      - Squared Swirl
+      - RSVD
+      - DNA
+      - Matrix
+      - Metaballs
+      - Freqmap
+      - Gravcenter
+      - Gravcentric
+      - Gravfreq
+      - DJ Light
+      - Funky Plank
+      - RSVD
+      - Pulser
+      - Blurz
+      - Drift
+      - Waverly
+      - Sun Radiation
+      - Colored Bursts
+      - Julia
+      - RSVD
+      - RSVD
+      - RSVD
+      - Game Of Life
+      - Tartan
+      - Polar Lights
+      - Swirl
+      - Lissajous
+      - Frizzles
+      - Plasma Ball
+      - Flow Stripe
+      - Hiphotic
+      - Sindots
+      - DNA Spiral
+      - Black Hole
+      - Wavesins
+      - Rocktaves
+      - Akemi
+      supported_color_modes:
+      - rgb
+      effect:
+      color_mode:
+      brightness:
+      hs_color:
+      rgb_color:
+      xy_color:
+      friendly_name: WLED-Wall-Light
+      supported_features: 36
+      state: 'off'
+    light.wled_closet_strip_l:
+      effect_list:
+      - Solid
+      - Blink
+      - Breathe
+      - Wipe
+      - Wipe Random
+      - Random Colors
+      - Sweep
+      - Dynamic
+      - Colorloop
+      - Rainbow
+      - Scan
+      - Scan Dual
+      - Fade
+      - Theater
+      - Theater Rainbow
+      - Running
+      - Saw
+      - Twinkle
+      - Dissolve
+      - Dissolve Rnd
+      - Sparkle
+      - Sparkle Dark
+      - Sparkle+
+      - Strobe
+      - Strobe Rainbow
+      - Strobe Mega
+      - Blink Rainbow
+      - Android
+      - Chase
+      - Chase Random
+      - Chase Rainbow
+      - Chase Flash
+      - Chase Flash Rnd
+      - Rainbow Runner
+      - Colorful
+      - Traffic Light
+      - Sweep Random
+      - Chase 2
+      - Aurora
+      - Stream
+      - Scanner
+      - Lighthouse
+      - Fireworks
+      - Rain
+      - Tetrix
+      - Fire Flicker
+      - Gradient
+      - Loading
+      - Rolling Balls
+      - Fairy
+      - Two Dots
+      - Fairytwinkle
+      - Running Dual
+      - RSVD
+      - Chase 3
+      - Tri Wipe
+      - Tri Fade
+      - Lightning
+      - ICU
+      - Multi Comet
+      - Scanner Dual
+      - Stream 2
+      - Oscillate
+      - Pride 2015
+      - Juggle
+      - Palette
+      - Fire 2012
+      - Colorwaves
+      - Bpm
+      - Fill Noise
+      - Noise 1
+      - Noise 2
+      - Noise 3
+      - Noise 4
+      - Colortwinkles
+      - Lake
+      - Meteor
+      - Meteor Smooth
+      - Railway
+      - Ripple
+      - Twinklefox
+      - Twinklecat
+      - Halloween Eyes
+      - Solid Pattern
+      - Solid Pattern Tri
+      - Spots
+      - Spots Fade
+      - Glitter
+      - Candle
+      - Fireworks Starburst
+      - Fireworks 1D
+      - Bouncing Balls
+      - Sinelon
+      - Sinelon Dual
+      - Sinelon Rainbow
+      - Popcorn
+      - Drip
+      - Plasma
+      - Percent
+      - Ripple Rainbow
+      - Heartbeat
+      - Pacifica
+      - Candle Multi
+      - Solid Glitter
+      - Sunrise
+      - Phased
+      - Twinkleup
+      - Noise Pal
+      - Sine
+      - Phased Noise
+      - Flow
+      - Chunchun
+      - Dancing Shadows
+      - Washing Machine
+      - Rotozoomer
+      - Blends
+      - TV Simulator
+      - Dynamic Smooth
+      - Spaceships
+      - Crazy Bees
+      - Ghost Rider
+      - Blobs
+      - Scrolling Text
+      - Drift Rose
+      - Distortion Waves
+      - Soap
+      - Octopus
+      - Waving Cell
+      - Pixels
+      - Pixelwave
+      - Juggles
+      - Matripix
+      - Gravimeter
+      - Plasmoid
+      - Puddles
+      - Midnoise
+      - Noisemeter
+      - Freqwave
+      - Freqmatrix
+      - GEQ
+      - Waterfall
+      - Freqpixels
+      - RSVD
+      - Noisefire
+      - Puddlepeak
+      - Noisemove
+      - Noise2D
+      - Perlin Move
+      - Ripple Peak
+      - Firenoise
+      - Squared Swirl
+      - RSVD
+      - DNA
+      - Matrix
+      - Metaballs
+      - Freqmap
+      - Gravcenter
+      - Gravcentric
+      - Gravfreq
+      - DJ Light
+      - Funky Plank
+      - RSVD
+      - Pulser
+      - Blurz
+      - Drift
+      - Waverly
+      - Sun Radiation
+      - Colored Bursts
+      - Julia
+      - RSVD
+      - RSVD
+      - RSVD
+      - Game Of Life
+      - Tartan
+      - Polar Lights
+      - Swirl
+      - Lissajous
+      - Frizzles
+      - Plasma Ball
+      - Flow Stripe
+      - Hiphotic
+      - Sindots
+      - DNA Spiral
+      - Black Hole
+      - Wavesins
+      - Rocktaves
+      - Akemi
+      supported_color_modes:
+      - rgb
+      effect:
+      color_mode:
+      brightness:
+      hs_color:
+      rgb_color:
+      xy_color:
+      friendly_name: WLED-Closet-Strip L
+      supported_features: 36
+      state: 'off'
   metadata:
     light.closet_lamp:
       entity_only: true
     light.wled_table:
+      entity_only: true
+    light.wled_closet_strip_r:
+      entity_only: true
+    light.wled_wall_light:
+      entity_only: true
+    light.wled_closet_strip_l:
       entity_only: true
   icon: mdi:television-ambient-light
 - id: '1760502062742'
