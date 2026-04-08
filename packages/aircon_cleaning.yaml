@@ -40,26 +40,6 @@ template:
               {% endif %}
             {% endif %}
 
-# ─── Scripts ───────────────────────────────────────────────────────────────
-script:
-  aircon_cleaned_now:
-    alias: "Aircon Cleaned Now"
-    mode: single
-    icon: mdi:air-conditioner
-    sequence:
-      - service: input_datetime.set_datetime
-        target:
-          entity_id: input_datetime.aircon_last_cleaned
-        data:
-          date: "{{ now().date() }}"
-      - service: calendar.create_event
-        target:
-          entity_id: calendar.house_planner
-        data:
-          summary: "Service Day"
-          start: "{{ as_local((now() + timedelta(days=120)).replace(hour=9, minute=0)) }}"
-          end: "{{ as_local((now() + timedelta(days=120)).replace(hour=10, minute=0)) }}"
-
 # ─── Automations ───────────────────────────────────────────────────────────
 automation:
   - id: remind_aircon_clean
