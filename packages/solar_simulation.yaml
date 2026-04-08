@@ -1,21 +1,16 @@
 ###############################################################################
-# @author      : Simplemice
-# @package     : Energy
-# @description : High-Precision Solar Simulation with Riemann Sum correction
+# @package     : Solar
+# @description : High-Precision Solar Simulation
 ###############################################################################
 
 template:
   - sensor:
-      ###########################################################################
-      # 1️⃣ SOLAR LIVE POWER (SIMULATED WITH WEATHER & SUN ANGLE)
-      ###########################################################################
       - name: "Solar Live Power (Simulated)"
         unique_id: solar_live_power_simulated
         unit_of_measurement: "W"
         device_class: power
         state_class: measurement
         icon: mdi:solar-power
-        # Availability ensures we don't calculate based on 'unknown' states
         availability: >
           {{ is_number(states('sensor.pirateweather_cloud_coverage')) and 
              is_number(state_attr('sun.sun', 'elevation')) }}
@@ -25,66 +20,28 @@ template:
           {% if sun_elev <= 0 %}
             0
           {% else %}
-            {# Weather Inputs #}
             {% set clouds = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
             {% set rain = states('sensor.pirateweather_precip_probability') | float(0) / 100 %}
-            {# Physics Factors #}
             {% set sun_factor = (sun_elev / 90) ** 1.35 %}
             {% set cloud_loss = 1 - (clouds * 0.65) %}
             {% set rain_loss = 1 - (rain * 0.55) %}
             {% set thermal_loss = 0.78 %}
             {% set inverter_eff = 0.96 %}
-            {# Realism Adjustment (Integrated directly into live power) #}
-            {% set realism = 1 - ((clouds * 0.4) + (rain * 0.35)) %}
-            {% set realism_clamped = [realism, 0.25] | max %}
-            {% set total_factor =
-              sun_factor *
-              cloud_loss *
-              rain_loss *
-              thermal_loss *
-              inverter_eff *
-              realism_clamped
-            %}
+            {% set realism = [1 - ((clouds * 0.4) + (rain * 0.35)), 0.25] | max %}
+            {% set total_factor = sun_factor * cloud_loss * rain_loss * thermal_loss * inverter_eff * realism %}
             {{ (panel_wp * total_factor) | round(1) }}
           {% endif %}
 
-      ###########################################################################
-      # 2️⃣ 24H AVERAGE SOLAR POWER (DECORATIVE)
-      ###########################################################################
-      - name: "Net Solar Power (24h Avg)"
-        unique_id: net_solar_power_24h_avg
-        unit_of_measurement: "W"
-        device_class: power
-        icon: mdi:solar-power-variant
-        state: >
-          {% set daily_kwh = states('sensor.solar_energy_daily') | float(0) %}
-          {{ (daily_kwh * 1000 / 24) | round(0) }}
-
-###############################################################################
-# 3️⃣ PHYSICS-CORRECT ENERGY ACCUMULATION
-###############################################################################
 sensor:
   - platform: integration
     source: sensor.solar_live_power_simulated
     name: "Solar Energy Accumulated (Simulated)"
     unique_id: solar_energy_accumulated_simulated
     unit_prefix: k
-    method: left # CRITICAL: 'left' is more accurate for power-to-energy sensors
+    method: left
     round: 3
 
-###############################################################################
-# 4️⃣ UTILITY METERS (FOR ENERGY DASHBOARD & LONG-TERM STATS)
-###############################################################################
 utility_meter:
   solar_energy_daily:
     source: sensor.solar_energy_accumulated_simulated
-    name: "Solar Energy Today"
     cycle: daily
-  solar_energy_monthly:
-    source: sensor.solar_energy_accumulated_simulated
-    name: "Solar Energy Monthly"
-    cycle: monthly
-  solar_energy_yearly:
-    source: sensor.solar_energy_accumulated_simulated
-    name: "Solar Energy Yearly"
-    cycle: yearly

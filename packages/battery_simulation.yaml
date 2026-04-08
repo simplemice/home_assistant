@@ -1,14 +1,20 @@
 ###############################################################################
-# @author      : Simplemice
-# @package     : Energy - Battery Simulation
-# @description : Stateful Battery Logic with Efficiency & BMS Protection
+# @package     : Battery Simulation
+# @description : Stateful Battery Logic (Charges from Solar + Wind)
 ###############################################################################
 
 template:
   - sensor:
-      ###########################################################################
-      # 1️⃣ BATTERY POWER FLOW (CENTRAL LOGIC)
-      ###########################################################################
+      # Combine Solar and Wind for the Battery logic
+      - name: "Battery Charge Power Total"
+        unique_id: battery_charge_power_total
+        unit_of_measurement: "W"
+        device_class: power
+        state: >
+          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
+          {{ (solar + wind) | round(1) }}
+
       - name: "Battery Power (Simulated)"
         unique_id: battery_power_simulated
         unit_of_measurement: "W"
@@ -16,53 +22,45 @@ template:
         state_class: measurement
         icon: mdi:battery-sync
         availability: >
-          {{ is_number(states('sensor.solar_live_power_simulated')) and 
+          {{ is_number(states('sensor.battery_charge_power_total')) and 
              is_number(states('sensor.battery_energy_remaining')) }}
         state: >
-          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
-          {% set load  = states('sensor.sim_home_power') | float(0) %}
+          {% set generation = states('sensor.battery_charge_power_total') | float(0) %}
+          {% set load = states('sensor.sim_home_power') | float(0) %}
           {% set energy = states('sensor.battery_energy_remaining') | float(0) %}
           {% set CAP = 50.0 %}
-          {% set MIN_SOC_LIMIT = CAP * 0.10 %}
           {% set MAX_CHARGE = 5800 %}
           {% set MAX_DISCHARGE = 6700 %}
-          {# NET Power: Positive = Surplus (Charge), Negative = Deficit (Discharge) #}
-          {% set net_flow = solar - load %}
+
+          {% set net_flow = generation - load %}
           {% if net_flow > 0 %}
-            {# Charging: Block if battery full #}
+            {# Charge: limit by max rate and capacity #}
             {% if energy >= (CAP * 0.99) %} 0
             {% else %} {{ [net_flow, MAX_CHARGE] | min | round(0) }}
             {% endif %}
           {% else %}
-            {# Discharging: Block if battery empty #}
-            {% if energy <= MIN_SOC_LIMIT %} 0
+            {# Discharge: limit by max rate and SoC limit #}
+            {% if energy <= (CAP * 0.1) %} 0
             {% else %} {{ [net_flow, -MAX_DISCHARGE] | max | round(0) }}
             {% endif %}
           {% endif %}
 
-      ###########################################################################
-      # 2️⃣ DERIVED SENSORS (SPLIT FOR RIEMANN SUM)
-      ###########################################################################
-      - name: "Battery Charge Power (Solar)"
-        unique_id: battery_charge_power_solar
+      - name: "Battery Discharge Power (Home)"
+        unique_id: battery_discharge_power_home
+        unit_of_measurement: "W"
+        device_class: power
+        state: >
+          {% set p = states('sensor.battery_power_simulated') | float(0) %}
+          {{ p | abs if p < 0 else 0 }}
+
+      - name: "Battery Charge Power (Actual)"
+        unique_id: battery_charge_power_actual
         unit_of_measurement: "W"
         device_class: power
         state: >
           {% set p = states('sensor.battery_power_simulated') | float(0) %}
           {{ p if p > 0 else 0 }}
 
-      - name: "Battery Discharge Power (Home)"
-        unique_id: battery_discharge_power_home
-        unit_of_measurement: "W"
-        device_class: power
-        icon: mdi:battery-arrow-down
-        state: >
-          {% set p = states('sensor.battery_power_simulated') | float(0) %}
-          {{ p | abs if p < 0 else 0 }}
-
-  ###########################################################################
-  # 3️⃣ STATEFUL ENERGY STORAGE (THE "FUEL GAUGE")
-  ###########################################################################
   - trigger:
       - platform: time_pattern
         minutes: "/1"
@@ -73,25 +71,16 @@ template:
         unique_id: battery_energy_remaining
         unit_of_measurement: "kWh"
         device_class: energy
-        icon: mdi:battery
         state: >
           {% set CAP = 50.0 %}
-          {% set EFFICIENCY = 0.94 %} {# 6% loss during round-trip #}
-          {# Get last known state or default to 50% capacity on first run #}
+          {% set EFF = 0.94 %}
           {% set last = states('sensor.battery_energy_remaining') | float(CAP * 0.5) %}
-          {% set charge_w = states('sensor.battery_charge_power_total') | float(0) %}
-          {% set discharge_w = states('sensor.battery_discharge_power_home') | float(0) %}
-          {# Convert Watts/Minute to kWh: (W / 1000) / 60 minutes #}
-          {% set delta_charge = (charge_w * EFFICIENCY) / 60000 %}
-          {% set delta_discharge = (discharge_w) / 60000 %}
-          {% set new_level = last + delta_charge - delta_discharge %}
-          {# Clamp between 0 and CAP #}
-          {{ [ [new_level, CAP] | min, 0 ] | max | round(4) }}
+          {% set charge = states('sensor.battery_charge_power_actual') | float(0) %}
+          {% set discharge = states('sensor.battery_discharge_power_home') | float(0) %}
+          {# (W / 1000) / 60 = kWh per minute #}
+          {% set delta = ((charge * EFF) - discharge) / 60000 %}
+          {{ [[(last + delta), CAP] | min, 0] | max | round(4) }}
 
-  ###########################################################################
-  # 4️⃣ UI & MONITORING SENSORS
-  ###########################################################################
-  - sensor:
       - name: "Battery SOC (Simulated)"
         unique_id: battery_soc_simulated
         unit_of_measurement: "%"
@@ -100,38 +89,9 @@ template:
           {% set e = states('sensor.battery_energy_remaining') | float(0) %}
           {{ (e / 50 * 100) | round(1) }}
 
-      - name: "Battery BMS State"
-        unique_id: battery_bms_state
-        icon: mdi:battery-check
-        state: >
-          {% set soc = states('sensor.battery_soc_simulated') | float(0) %}
-          {% set p = states('sensor.battery_power_simulated') | float(0) %}
-          {% if soc <= 10.5 %} "Protection: Low SoC"
-          {% elif soc >= 98.5 and p >= 0 %} "Standby: Full"
-          {% elif p > 10 %} "Charging"
-          {% elif p < -10 %} "Discharging"
-          {% else %} "Idle"
-          {% endif %}
-
-      - name: "Battery Runtime Remaining"
-        unique_id: battery_runtime_remaining
-        unit_of_measurement: "h"
-        icon: mdi:timer-outline
-        state: >
-          {% set e = states('sensor.battery_energy_remaining') | float(0) %}
-          {% set load = states('sensor.battery_discharge_power_home') | float(0) %}
-          {% if load > 50 %}
-            {{ (e / (load / 1000)) | round(1) }}
-          {% else %}
-            --
-          {% endif %}
-
-###############################################################################
-# 5️⃣ ENERGY DASHBOARD INTEGRATION
-###############################################################################
 sensor:
   - platform: integration
-    source: sensor.battery_charge_power_solar
+    source: sensor.battery_charge_power_actual
     name: "Total Battery Energy In"
     unique_id: total_battery_energy_in
     method: left
@@ -142,10 +102,3 @@ sensor:
     unique_id: total_battery_energy_out
     method: left
     unit_prefix: k
-utility_meter:
-  battery_usage_daily_in:
-    source: sensor.total_battery_energy_in
-    cycle: daily
-  battery_usage_daily_out:
-    source: sensor.total_battery_energy_out
-    cycle: daily
