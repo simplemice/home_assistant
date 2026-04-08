@@ -4,55 +4,80 @@
 #   @package        :   Gas Usage
 #   @description    :   Smart gas tracking, cost, and Energy Dashboard integration.
 ###############################################################################
+
 ###############################################################################
-# 1) Filter incoming volume to reduce noise
+# 1) USER CONFIGURATION
+###############################################################################
+
+input_number:
+  gas_tariff_rate:
+    name: Gas Tariff Rate
+    icon: mdi:currency-thb
+    min: 0
+    max: 100
+    step: 0.01
+    mode: box
+    unit_of_measurement: "THB/L"
+
+###############################################################################
+# 2) FILTER RAW SENSOR (Noise + HX711 drift smoothing)
 ###############################################################################
 
 sensor:
   - platform: filter
     name: "Filtered Gas Volume"
-    entity_id: sensor.kitchen_gas_scale_volume
+    unique_id: filtered_gas_volume
+    entity_id: sensor.kitchen_gas_scale_gas_volume
+
     filters:
       - filter: outlier
         window_size: 5
         radius: 0.3
+
       - filter: lowpass
-        time_constant: 5
+        time_constant: 8
+
 
 ###############################################################################
-# 2) Total Gas Usage – total_increasing
+# 3) CONVERT LEVEL → CONSUMPTION SIGNAL
+# Tank decreases when gas is used.
+# We invert the value so HA integration sensor can accumulate usage.
 ###############################################################################
 
 template:
   - sensor:
-      #########################################################################
-      # A) Gas Used (L) — Total Increasing
-      #########################################################################
-      - name: "Gas Used"
-        unique_id: gas_used_total
+      - name: "Gas Consumption Signal"
+        unique_id: gas_consumption_signal
         unit_of_measurement: "L"
         device_class: gas
-        state_class: total_increasing
+        state_class: measurement
         icon: mdi:fire
-        state: >-
-          {% set current = states('sensor.filtered_gas_volume') | float(0) %}
-          {% set last = state_attr('sensor.gas_used', 'last_level') | default(current) | float(0) %}
-          {% set total = states('sensor.gas_used') | float(0) %}
-          {% set threshold = 0.20 %}
+        state: >
+          {{ -1 * (states('sensor.filtered_gas_volume') | float(0)) }}
 
-          {# Only count decreasing volume = usage #}
-          {% set delta = last - current %}
+###############################################################################
+# 4) TOTAL GAS USED (RESTART SAFE)
+# Official HA method using integration sensor
+###############################################################################
 
-          {% if delta > threshold %}
-            {{ (total + delta) | round(3) }}
-          {% else %}
-            {{ total }}
-          {% endif %}
-        attributes:
-          last_level: "{{ states('sensor.filtered_gas_volume') }}"
+sensor:
+  - platform: integration
+    source: sensor.gas_consumption_signal
+    name: "Gas Used"
+    unique_id: gas_used_total
+    unit_prefix: none
+    round: 3
+    method: trapezoidal
+
+###############################################################################
+# 5) DERIVED SENSORS
+###############################################################################
+
+template:
+  - sensor:
 
       #########################################################################
-      # B) Gas Usage in Cubic Meters (m³)
+      # Gas usage in cubic meters
       #########################################################################
       - name: "Gas Usage m³"
         unique_id: gas_used_m3
@@ -60,11 +85,11 @@ template:
         device_class: gas
         state_class: total_increasing
         icon: mdi:meter-cubic
-        state: >-
+        state: >
           {{ (states('sensor.gas_used') | float(0) / 1000) | round(4) }}
 
       #########################################################################
-      # C) Gas Cost (THB)
+      # Total Cost
       #########################################################################
       - name: "Gas Cost"
         unique_id: gas_cost_total
@@ -72,37 +97,49 @@ template:
         device_class: monetary
         state_class: total
         icon: mdi:cash
-        state: >-
-          {% set price_per_liter = states('sensor.gas_tariff_rate') | float(1) %}
-          {% set used = states('sensor.gas_used') | float(0) %}
-          {{ (used * price_per_liter) | round(2) }}
-
-      #########################################################################
-      # D) Gas Tariff Rate (manual)
-      #########################################################################
-      - name: "Gas Tariff Rate"
-        unique_id: gas_tariff_rate
-        unit_of_measurement: "THB/L"
-        icon: mdi:currency-thb
-        state: "1"
+        state: >
+          {{
+            states('sensor.gas_used') | float(0)
+            *
+            states('input_number.gas_tariff_rate') | float(0)
+          }}
 
 ###############################################################################
-# 3) Utility Meters (Daily / Monthly / Session)
+# 6) UTILITY METERS (AUTOMATIC PERIOD TRACKING)
 ###############################################################################
 
 utility_meter:
+
   gas_daily:
+    name: Gas Daily
     source: sensor.gas_used
     cycle: daily
 
   gas_monthly:
+    name: Gas Monthly
     source: sensor.gas_used
     cycle: monthly
 
   gas_yearly:
+    name: Gas Yearly
     source: sensor.gas_used
     cycle: yearly
 
-  gas_session:
-    source: sensor.kitchen_gas_scale_net_remaining
-    cycle: quarter-hourly
+###############################################################################
+# 7) OPTIONAL — REFILL DETECTION (SMART QUALITY OF LIFE)
+###############################################################################
+
+binary_sensor:
+  - platform: template
+    sensors:
+      gas_tank_refilled:
+        friendly_name: "Gas Tank Refilled"
+        value_template: >
+          {% set delta =
+            states('sensor.filtered_gas_volume')|float(0)
+            -
+            states('sensor.filtered_gas_volume', 2)|float(0)
+          %}
+          {{ delta > 2 }}
+        delay_off:
+          minutes: 2
