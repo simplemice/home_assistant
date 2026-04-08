@@ -78,6 +78,17 @@ template:
             {{ (rated_power * (r ** 3) * yaw * weather * rho / 1.225) | round(1) }}
           {% endif %}
 
+      - name: "Wind Battery Charge Power"
+        unique_id: wind_battery_charge_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:battery-arrow-up
+        state: >
+          {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
+          {# Limit to 24V system constraints (~720W) #}
+          {{ [wind, 720] | min | round(1) }}
+
 sensor:
   - platform: integration
     source: sensor.wind_turbine_power_simulated

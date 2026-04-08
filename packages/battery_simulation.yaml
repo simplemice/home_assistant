@@ -89,6 +89,43 @@ template:
           {% set e = states('sensor.battery_energy_remaining') | float(0) %}
           {{ (e / 50 * 100) | round(1) }}
 
+  - sensor:
+      - name: "Battery BMS State"
+        unique_id: battery_bms_state
+        icon: mdi:battery-check
+        state: >
+          {% set soc = states('sensor.battery_soc_simulated') | float(0) %}
+          {% set p = states('sensor.battery_power_simulated') | float(0) %}
+          {% if soc <= 10.5 %} "Protection: Low SoC"
+          {% elif soc >= 98.5 and p >= 0 %} "Standby: Full"
+          {% elif p > 10 %} "Charging"
+          {% elif p < -10 %} "Discharging"
+          {% else %} "Idle"
+          {% endif %}
+
+      - name: "Battery Runtime Remaining"
+        unique_id: battery_runtime_remaining
+        unit_of_measurement: "h"
+        icon: mdi:timer-outline
+        state: >
+          {% set e = states('sensor.battery_energy_remaining') | float(0) %}
+          {% set load = states('sensor.battery_discharge_power_home') | float(0) %}
+          {# Avoid division by zero, only calculate if discharging > 50W #}
+          {% if load > 50 %}
+            {{ (e / (load / 1000)) | round(1) }}
+          {% else %}
+            unknown
+          {% endif %}
+
+      - name: "Battery Charge Power Total"
+        unique_id: battery_charge_power_total
+        unit_of_measurement: "W"
+        device_class: power
+        state: >
+          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set wind = states('sensor.wind_battery_charge_power') | float(0) %}
+          {{ (solar + wind) | round(1) }}
+
 sensor:
   - platform: integration
     source: sensor.battery_charge_power_actual
