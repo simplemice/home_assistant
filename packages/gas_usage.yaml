@@ -105,6 +105,17 @@ template:
           }}
 
 ###############################################################################
+# 7) OPTIONAL — REFILL DETECTION (SMART QUALITY OF LIFE)
+###############################################################################
+
+- binary_sensor:
+  - delay_off: 0:02:00
+    default_entity_id: binary_sensor.gas_tank_refilled
+    name: Gas Tank Refilled
+    state: "{% set delta =\n  states('sensor.filtered_gas_volume')|float(0)\n  -\n
+      \ states('sensor.filtered_gas_volume', 2)|float(0)\n%} {{ delta > 2 }}"
+
+###############################################################################
 # 6) UTILITY METERS (AUTOMATIC PERIOD TRACKING)
 ###############################################################################
 
@@ -125,21 +136,4 @@ utility_meter:
     source: sensor.gas_used
     cycle: yearly
 
-###############################################################################
-# 7) OPTIONAL — REFILL DETECTION (SMART QUALITY OF LIFE)
-###############################################################################
 
-binary_sensor:
-  - platform: template
-    sensors:
-      gas_tank_refilled:
-        friendly_name: "Gas Tank Refilled"
-        value_template: >
-          {% set delta =
-            states('sensor.filtered_gas_volume')|float(0)
-            -
-            states('sensor.filtered_gas_volume', 2)|float(0)
-          %}
-          {{ delta > 2 }}
-        delay_off:
-          minutes: 2
