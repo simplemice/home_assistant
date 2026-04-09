@@ -5,6 +5,15 @@
 #   @description    :   A collection of Home Assistant Sensors
 ###############################################################################
 
+###############################################################################
+#   @author         :   Simplemice
+#   @package        :   Multiroom Music (Stable Resume Fix)
+###############################################################################
+
+###############################################################################
+# TEMPLATE
+###############################################################################
+
 template:
   - trigger:
       - platform: homeassistant
@@ -18,42 +27,69 @@ template:
             'media_player.kitchen_player'
           ] | join(',') }}
 
+###############################################################################
+# SCRIPTS
+###############################################################################
+
 script:
+  ###############################################################################
+  # JOIN ROOMS
+  ###############################################################################
   ma_join_rooms:
     alias: MA Join Rooms
     mode: restart
     fields:
       master:
-        description: Master player
-        example: "media_player.livingroom_player"
+        description: Master player entity
+        example: media_player.livingroom_player
       members:
-        description: Players to join (comma separated)
-        example: "media_player.kitchen_player,media_player.bedroom_player"
+        description: Players to join
+        example: media_player.kitchen_player,media_player.bedroom_player
     sequence:
       - service: media_player.join
         target:
           entity_id: "{{ master }}"
         data:
           group_members: >
-            {{ members.split(',') | map('trim') | list }}
+            {% if members is string %}
+              {{ members.split(',') | map('trim') | list }}
+            {% else %}
+              {{ members }}
+            {% endif %}
 
+  ###############################################################################
+  # UNJOIN ROOMS
+  ###############################################################################
   ma_unjoin_rooms:
     alias: MA Unjoin Rooms
     mode: parallel
     fields:
       members:
-        description: Players to remove
-        example: "media_player.kitchen_player"
+        description: Players to unjoin
+        example: media_player.kitchen_player
     sequence:
       - service: media_player.unjoin
         target:
           entity_id: >
-            {{ members.split(',') | map('trim') | list }}
+            {% if members is string %}
+              {{ members.split(',') | map('trim') | list }}
+            {% else %}
+              {{ members }}
+            {% endif %}
 
+  ###############################################################################
+  # PLAY EVERYWHERE
+  ###############################################################################
   ma_play_everywhere:
     alias: Music Everywhere
     mode: restart
     sequence:
+      - service: script.ma_unjoin_rooms
+        data:
+          members:
+            - media_player.bedroom_player
+            - media_player.kitchen_player
+      - delay: 1
       - service: script.ma_join_rooms
         data:
           master: media_player.livingroom_player
@@ -68,13 +104,16 @@ script:
           media_content_type: music
           media_content_id: "library://favorites"
 
+  ###############################################################################
+  # TOGGLE ROOM
+  ###############################################################################
   ma_toggle_room:
     alias: Toggle Room Audio
     mode: queued
     fields:
       room:
-        description: Room player
-        example: "media_player.kitchen_player"
+        description: Room player entity
+        example: media_player.kitchen_player
     sequence:
       - choose:
           - conditions: >
@@ -91,6 +130,31 @@ script:
             data:
               group_members:
                 - "{{ room }}"
+
+  ###############################################################################
+  # RESTORE MASTER ONLY (KEY FIX)
+  ###############################################################################
+  ma_restore_master_only:
+    alias: Restore Master Playback Only
+    mode: restart
+    sequence:
+      - delay: 2
+      - service: script.ma_unjoin_rooms
+        data:
+          members:
+            - media_player.bedroom_player
+            - media_player.kitchen_player
+      - delay: 1
+      - condition: template
+        value_template: >
+          {{ is_state('media_player.livingroom_player','paused') }}
+      - service: media_player.media_play
+        target:
+          entity_id: media_player.livingroom_player
+
+###############################################################################
+# AUTOMATIONS
+###############################################################################
 
 automation:
   - alias: Join kitchen when occupied
@@ -116,3 +180,16 @@ automation:
             - media_player.kitchen_player
         data:
           volume_level: 0.35
+
+  ###############################################################################
+  # AUTO FIX AFTER ANNOUNCEMENT
+  ###############################################################################
+  - alias: Fix Resume After Announcement
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: media_player.livingroom_player
+        attribute: media_content_type
+        from: "announcement"
+    action:
+      - service: script.ma_restore_master_only
