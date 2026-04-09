@@ -1807,16 +1807,48 @@
       - 0.314
       - 0.494
       light.color_temperature: 2288
-      light.mode: 1
+      light.color: 12255113
       light.on: true
       light.brightness: 5
-      light.color: 12255113
+      light.mode: 1
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'on'
+    select.wled_strip_r_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Closet-Strip-R Preset
+      state: Forest Magic
   icon: fas:cloud-rain
   metadata:
     light.closet_lamp:
+      entity_only: true
+    select.wled_strip_r_preset:
       entity_only: true
 - id: '1763554202209'
   name: Kitchen Alarm Scene
