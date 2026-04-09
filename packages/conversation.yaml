@@ -28,11 +28,11 @@ intent_script:
 
   whattheweather:
     action:
-      - service: script.jarvis_weather_forecast
+      - service: script.tts_jarvis_weather_forecast
 
   whatthetraffic:
     action:
-      - service: script.jarvis_weather_forecast
+      - service: script.tts_jarvis_traffic_forecast
 
   checkwaterlevel:
     action:
@@ -43,6 +43,10 @@ intent_script:
             {{ states('sensor.water_sensor_water_volume') | float(0) | round(1) }}
     response:
       speech:
-        text: >
-          The water tank is {{ level }} percent full with
-          {{ volume }} liters remaining.
+      text: >
+        {% if level|int < 20 %}
+        Warning. Water level is low at {{ level }} percent.
+        {% else %}
+        Water tank level is {{ level }} percent,
+        approximately {{ volume }} liters remaining.
+        {% endif %}
