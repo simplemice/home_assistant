@@ -1,30 +1,58 @@
 name: Configuration Release
+
 on:
   push:
     tags:
       - "v*"
+
 permissions:
   contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout full repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Fetch all tags
         run: git fetch --tags --force
+
+      #######################################################################
+      # Extract changelog section for THIS version
+      #######################################################################
+      - name: Prepare changelog
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+
+          awk "/^## ${VERSION}/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md > RELEASE_CHANGELOG.md
+
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          cat RELEASE_CHANGELOG.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      #######################################################################
+      # Create backup archive
+      #######################################################################
       - name: Create backup package
         run: |
           zip -r casa-de-ratton-config-${{ github.ref_name }}.zip . \
           -x ".git/*" ".github/*"
+
+      #######################################################################
+      # Create GitHub Release USING YOUR CHANGELOG
+      #######################################################################
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Casa De Ratton HA Config ${{ github.ref_name }}
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
+          generate_release_notes: false
           make_latest: true
           files: casa-de-ratton-config-${{ github.ref_name }}.zip
         env:
