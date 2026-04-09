@@ -20,32 +20,42 @@ input_number:
     unit_of_measurement: "THB/L"
 
 ###############################################################################
-# 2) FILTER RAW SENSOR (Noise + HX711 drift smoothing)
+# 2) FILTER SENSOR
 ###############################################################################
 
 sensor:
+
   - platform: filter
     name: "Filtered Gas Volume"
     unique_id: filtered_gas_volume
     entity_id: sensor.kitchen_gas_scale_gas_volume
-
     filters:
       - filter: outlier
         window_size: 5
         radius: 0.3
-
       - filter: lowpass
         time_constant: 8
 
+  ###########################################################################
+  # 3) INTEGRATION SENSOR (TOTAL GAS USED)
+  ###########################################################################
+
+  - platform: integration
+    source: sensor.gas_consumption_signal
+    name: "Gas Used"
+    unique_id: gas_used_total
+    unit_prefix: none
+    round: 3
+    method: trapezoidal
+
 
 ###############################################################################
-# 3) CONVERT LEVEL → CONSUMPTION SIGNAL
-# Tank decreases when gas is used.
-# We invert the value so HA integration sensor can accumulate usage.
+# 4) TEMPLATE SENSORS
 ###############################################################################
 
 template:
   - sensor:
+
       - name: "Gas Consumption Signal"
         unique_id: gas_consumption_signal
         unit_of_measurement: "L"
@@ -55,30 +65,6 @@ template:
         state: >
           {{ -1 * (states('sensor.filtered_gas_volume') | float(0)) }}
 
-###############################################################################
-# 4) TOTAL GAS USED (RESTART SAFE)
-# Official HA method using integration sensor
-###############################################################################
-
-sensor:
-  - platform: integration
-    source: sensor.gas_consumption_signal
-    name: "Gas Used"
-    unique_id: gas_used_total
-    unit_prefix: none
-    round: 3
-    method: trapezoidal
-
-###############################################################################
-# 5) DERIVED SENSORS
-###############################################################################
-
-template:
-  - sensor:
-
-      #########################################################################
-      # Gas usage in cubic meters
-      #########################################################################
       - name: "Gas Usage m³"
         unique_id: gas_used_m3
         unit_of_measurement: "m³"
@@ -88,9 +74,6 @@ template:
         state: >
           {{ (states('sensor.gas_used') | float(0) / 1000) | round(4) }}
 
-      #########################################################################
-      # Total Cost
-      #########################################################################
       - name: "Gas Cost"
         unique_id: gas_cost_total
         unit_of_measurement: "THB"
@@ -105,7 +88,7 @@ template:
           }}
 
 ###############################################################################
-# 7) OPTIONAL — REFILL DETECTION (SMART QUALITY OF LIFE)
+# 5) OPTIONAL — REFILL DETECTION (SMART QUALITY OF LIFE)
 ###############################################################################
 
 - binary_sensor:
