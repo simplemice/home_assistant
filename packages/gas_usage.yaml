@@ -5,28 +5,27 @@
 #   @description    :   Smart gas tracking, cost, and Energy Dashboard integration.
 ###############################################################################
 
-###############################################################################
-# 1) USER CONFIGURATION
-###############################################################################
+############################
+# INPUT
+############################
 
 input_number:
   gas_tariff_rate:
     name: Gas Tariff Rate
-    icon: mdi:currency-thb
     min: 0
     max: 100
     step: 0.01
     mode: box
     unit_of_measurement: "THB/L"
+    icon: mdi:currency-thb
 
-###############################################################################
-# 2) FILTER SENSOR
-###############################################################################
+############################
+# FILTER + INTEGRATION
+############################
 
 sensor:
-
   - platform: filter
-    name: "Filtered Gas Volume"
+    name: Filtered Gas Volume
     unique_id: filtered_gas_volume
     entity_id: sensor.kitchen_gas_scale_gas_volume
     filters:
@@ -36,74 +35,63 @@ sensor:
       - filter: lowpass
         time_constant: 8
 
-  ###########################################################################
-  # 3) INTEGRATION SENSOR (TOTAL GAS USED)
-  ###########################################################################
-
   - platform: integration
     source: sensor.gas_consumption_signal
-    name: "Gas Used"
+    name: Gas Used
     unique_id: gas_used_total
-    unit_prefix: none
-    round: 3
     method: trapezoidal
+    round: 3
 
-
-###############################################################################
-# 4) TEMPLATE SENSORS
-###############################################################################
+############################
+# TEMPLATE (SAFE MODE)
+############################
 
 template:
-  - sensor:
-
-      - name: "Gas Consumption Signal"
+  - trigger:
+      - platform: state
+        entity_id: sensor.filtered_gas_volume
+    sensor:
+      - name: Gas Consumption Signal
         unique_id: gas_consumption_signal
         unit_of_measurement: "L"
         device_class: gas
         state_class: measurement
         icon: mdi:fire
         state: >
-          {{ -1 * (states('sensor.filtered_gas_volume') | float(0)) }}
+          {{ states('sensor.filtered_gas_volume')|float(0) * -1 }}
 
-      - name: "Gas Usage m³"
+      - name: Gas Usage m3
         unique_id: gas_used_m3
         unit_of_measurement: "m³"
         device_class: gas
         state_class: total_increasing
         icon: mdi:meter-cubic
         state: >
-          {{ (states('sensor.gas_used') | float(0) / 1000) | round(4) }}
+          {{ (states('sensor.gas_used')|float(0) / 1000) | round(4) }}
 
-      - name: "Gas Cost"
+      - name: Gas Cost
         unique_id: gas_cost_total
         unit_of_measurement: "THB"
         device_class: monetary
         state_class: total
         icon: mdi:cash
         state: >
-          {{
-            states('sensor.gas_used') | float(0)
-            *
-            states('input_number.gas_tariff_rate') | float(0)
-          }}
+          {{ states('sensor.gas_used')|float(0)
+             * states('input_number.gas_tariff_rate')|float(0) }}
+
+  - binary_sensor:
+      - delay_off: 0:02:00
+        default_entity_id: binary_sensor.gas_tank_refilled
+        name: Gas Tank Refilled
+        state:
+          "{% set delta =\n  states('sensor.filtered_gas_volume')|float(0)\n  -\n
+          \ states('sensor.filtered_gas_volume', 2)|float(0)\n%} {{ delta > 2 }}"
 
 ###############################################################################
-# 5) OPTIONAL — REFILL DETECTION (SMART QUALITY OF LIFE)
-###############################################################################
-
-- binary_sensor:
-  - delay_off: 0:02:00
-    default_entity_id: binary_sensor.gas_tank_refilled
-    name: Gas Tank Refilled
-    state: "{% set delta =\n  states('sensor.filtered_gas_volume')|float(0)\n  -\n
-      \ states('sensor.filtered_gas_volume', 2)|float(0)\n%} {{ delta > 2 }}"
-
-###############################################################################
-# 6) UTILITY METERS (AUTOMATIC PERIOD TRACKING)
+# UTILITY METERS (AUTOMATIC PERIOD TRACKING)
 ###############################################################################
 
 utility_meter:
-
   gas_daily:
     name: Gas Daily
     source: sensor.gas_used
@@ -118,5 +106,3 @@ utility_meter:
     name: Gas Yearly
     source: sensor.gas_used
     cycle: yearly
-
-

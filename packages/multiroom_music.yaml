@@ -24,27 +24,31 @@ script:
     mode: restart
     fields:
       master:
-        example: media_player.livingroom_player
+        description: Master player
+        example: "media_player.livingroom_player"
       members:
-        example:
-          - media_player.kitchen_player
-          - media_player.bedroom_player
+        description: Players to join (comma separated)
+        example: "media_player.kitchen_player,media_player.bedroom_player"
     sequence:
       - service: media_player.join
         target:
           entity_id: "{{ master }}"
         data:
-          group_members: "{{ members }}"
+          group_members: >
+            {{ members.split(',') | map('trim') | list }}
 
   ma_unjoin_rooms:
     alias: MA Unjoin Rooms
     mode: parallel
     fields:
       members:
+        description: Players to remove
+        example: "media_player.kitchen_player"
     sequence:
       - service: media_player.unjoin
         target:
-          entity_id: "{{ members }}"
+          entity_id: >
+            {{ members.split(',') | map('trim') | list }}
 
   ma_play_everywhere:
     alias: Music Everywhere
@@ -69,10 +73,13 @@ script:
     mode: queued
     fields:
       room:
+        description: Room player
+        example: "media_player.kitchen_player"
     sequence:
       - choose:
           - conditions: >
-              {{ state_attr(room, 'group_members') is not none }}
+              {{ state_attr('media_player.livingroom_player','group_members')
+                 and room in state_attr('media_player.livingroom_player','group_members') }}
             sequence:
               - service: media_player.unjoin
                 target:
