@@ -6,9 +6,17 @@
 ###############################################################################
 
 ###############################################################################
-#   @author         :   Simplemice
-#   @package        :   Multiroom Music (Stable Resume Fix)
+# HELPERS (REQUIRED FOR TTS CONTROL)
 ###############################################################################
+
+input_text:
+  ma_saved_group:
+    name: MA Saved Group
+    max: 255
+
+input_boolean:
+  ma_was_playing:
+    name: MA Was Playing Before TTS
 
 ###############################################################################
 # TEMPLATE
@@ -130,6 +138,43 @@ script:
             data:
               group_members:
                 - "{{ room }}"
+
+  ###############################################################################
+  # ===== TTS PREPARE
+  ###############################################################################
+  ma_prepare_tts:
+    alias: MA Prepare TTS
+    mode: restart
+    fields:
+      speaker:
+        description: Speaker used for TTS
+        example: media_player.livingroom_player
+    sequence:
+      - variables:
+          followers: >
+            {{ state_attr(speaker,'group_members') or [] }}
+          was_playing: >
+            {{ is_state(speaker,'playing') }}
+      # Save followers
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ma_saved_group
+        data:
+          value: "{{ followers | join(',') }}"
+      # Save play state
+      - choose:
+          - conditions: "{{ was_playing }}"
+            sequence:
+              - service: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.ma_was_playing
+      # Ungroup speakers
+      - choose:
+          - conditions: "{{ followers | length > 0 }}"
+            sequence:
+              - service: media_player.unjoin
+                target:
+                  entity_id: "{{ followers }}"
 
   ###############################################################################
   # RESTORE MASTER ONLY (KEY FIX)
