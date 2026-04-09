@@ -38,6 +38,12 @@
 !template/
 !template/**
 
+!docs/
+!docs/**
+
+!CHANGELOG.md
+
+
 # ---- Explicitly block sensitive or useless data ----
 secrets.yaml
 .storage/
