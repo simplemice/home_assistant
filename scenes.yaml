@@ -1844,11 +1844,43 @@
       - Zen Garden
       friendly_name: WLED-Closet-Strip-R Preset
       state: Forest Magic
+    select.wled_table_preset:
+      options:
+      - Aurora Dreams
+      - Autumn Forest
+      - Cosmic Nebula
+      - Crystal Heights
+      - Deep Sea
+      - Depth Tranquility
+      - Desert Sky
+      - Digital Rain
+      - Enchanted Garden
+      - Fiery Sky
+      - Fireflies
+      - Forest Magic
+      - Galactic Train
+      - Lava Stream
+      - Moonlight Clarity
+      - Mystical Twilight
+      - Northern Lights
+      - Northern Lights 2
+      - Ocean Breeze
+      - Sparkling Vineyard
+      - Spring Meadow
+      - Starry Night
+      - Sunset
+      - Valentinesday
+      - Witching Hour
+      - Zen Garden
+      friendly_name: WLED-Table Preset
+      state: Forest Magic
   icon: fas:cloud-rain
   metadata:
     light.closet_lamp:
       entity_only: true
     select.wled_strip_r_preset:
+      entity_only: true
+    select.wled_table_preset:
       entity_only: true
 - id: '1763554202209'
   name: Kitchen Alarm Scene

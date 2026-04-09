@@ -80,11 +80,11 @@ This repository is treated as:
 
 Description | value
 -- | --
-Number of entities | 2934
-Number of sensors | 1671
+Number of entities | 2938
+Number of sensors | 1672
 Current Version | 2026.4.1
-Total Automations | 123
-Total Scripts | 35
+Total Automations | 124
+Total Scripts | 37
 Total Lights | 39
 Total Switches | 205
 Total Scenes | 13
