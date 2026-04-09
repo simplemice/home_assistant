@@ -1,0 +1,111 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   27/01/2024
+#   @package        :   Multiroom Music
+#   @description    :   A collection of Home Assistant Sensors
+###############################################################################
+
+template:
+  - trigger:
+      - platform: homeassistant
+        event: start
+    sensor:
+      - name: ma_all_rooms
+        state: >
+          {{ [
+            'media_player.livingroom_player',
+            'media_player.bedroom_player',
+            'media_player.kitchen_player'
+          ] | join(',') }}
+
+script:
+  ma_join_rooms:
+    alias: MA Join Rooms
+    mode: restart
+    fields:
+      master:
+        example: media_player.livingroom_player
+      members:
+        example:
+          - media_player.kitchen_player
+          - media_player.bedroom_player
+    sequence:
+      - service: media_player.join
+        target:
+          entity_id: "{{ master }}"
+        data:
+          group_members: "{{ members }}"
+
+  ma_unjoin_rooms:
+    alias: MA Unjoin Rooms
+    mode: parallel
+    fields:
+      members:
+    sequence:
+      - service: media_player.unjoin
+        target:
+          entity_id: "{{ members }}"
+
+  ma_play_everywhere:
+    alias: Music Everywhere
+    mode: restart
+    sequence:
+      - service: script.ma_join_rooms
+        data:
+          master: media_player.livingroom_player
+          members:
+            - media_player.bedroom_player
+            - media_player.kitchen_player
+      - delay: 2
+      - service: media_player.play_media
+        target:
+          entity_id: media_player.livingroom_player
+        data:
+          media_content_type: music
+          media_content_id: "library://favorites"
+
+  ma_toggle_room:
+    alias: Toggle Room Audio
+    mode: queued
+    fields:
+      room:
+    sequence:
+      - choose:
+          - conditions: >
+              {{ state_attr(room, 'group_members') is not none }}
+            sequence:
+              - service: media_player.unjoin
+                target:
+                  entity_id: "{{ room }}"
+        default:
+          - service: media_player.join
+            target:
+              entity_id: media_player.livingroom_player
+            data:
+              group_members:
+                - "{{ room }}"
+
+automation:
+  - alias: Join kitchen when occupied
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.kitchen_presence
+        to: "on"
+    action:
+      - service: script.ma_toggle_room
+        data:
+          room: media_player.kitchen_player
+
+  - alias: Normalize joined volume
+    trigger:
+      - platform: state
+        entity_id: media_player.livingroom_player
+        attribute: group_members
+    action:
+      - service: media_player.volume_set
+        target:
+          entity_id:
+            - media_player.bedroom_player
+            - media_player.kitchen_player
+        data:
+          volume_level: 0.35

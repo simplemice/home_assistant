@@ -15,7 +15,7 @@ input_boolean:
     name: HA Reboot After Update
     icon: mdi:update
 
-input_text:
+input_text:   
   ha_updated_from:
     name: HA Updated From
   ha_updated_to:
