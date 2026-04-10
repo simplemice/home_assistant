@@ -69,21 +69,19 @@ script:
   # UNJOIN ROOMS
   ###############################################################################
   ma_unjoin_rooms:
-    alias: MA Unjoin Rooms
+    alias: "MA Unjoin Rooms"
     mode: parallel
     fields:
       members:
-        description: Players to unjoin
-        example: media_player.kitchen_player
+        description: "Players to unjoin"
     sequence:
-      - service: media_player.unjoin
+      - filter_entities: # Guard against empty lists
+        condition: template
+        value_template: "{{ members | length > 0 }}"
+      - action: media_player.unjoin
         target:
           entity_id: >
-            {% if members is string %}
-              {{ members.split(',') | map('trim') | list }}
-            {% else %}
-              {{ members }}
-            {% endif %}
+            {% if members is string %}{{ members.split(',') | map('trim') | list }}{% else %}{{ members }}{% endif %}
 
   ###############################################################################
   # PLAY EVERYWHERE
@@ -143,38 +141,37 @@ script:
   # ===== TTS PREPARE
   ###############################################################################
   ma_prepare_tts:
-    alias: MA Prepare TTS
+    alias: "MA Prepare TTS"
     mode: restart
     fields:
       speaker:
-        description: Speaker used for TTS
-        example: media_player.livingroom_player
+        description: "Speaker used for TTS"
     sequence:
       - variables:
-          followers: >
-            {{ state_attr(speaker,'group_members') or [] }}
-          was_playing: >
-            {{ is_state(speaker,'playing') }}
-      # Save followers
-      - service: input_text.set_value
+          # Get actual group members from the master
+          followers: "{{ state_attr(speaker, 'group_members') | default([], true) }}"
+          # Check if actually playing
+          was_playing: "{{ is_state(speaker, 'playing') }}"
+      # Save followers to text helper
+      - action: input_text.set_value
         target:
           entity_id: input_text.ma_saved_group
         data:
-          value: "{{ followers | join(',') }}"
-      # Save play state
-      - choose:
-          - conditions: "{{ was_playing }}"
-            sequence:
-              - service: input_boolean.turn_on
-                target:
-                  entity_id: input_boolean.ma_was_playing
-      # Ungroup speakers
-      - choose:
-          - conditions: "{{ followers | length > 0 }}"
-            sequence:
-              - service: media_player.unjoin
-                target:
-                  entity_id: "{{ followers }}"
+          value: "{{ followers | join(',') if followers else '' }}"
+      # Save state to boolean
+      - action: >
+          {% if was_playing %} input_boolean.turn_on {% else %} input_boolean.turn_off {% endif %}
+        target:
+          entity_id: input_boolean.ma_was_playing
+      # FIX: Use a more robust unjoin approach for MA
+      - if:
+          - condition: template
+            value_template: "{{ followers | length > 0 }}"
+        then:
+          - action: media_player.unjoin
+            target:
+              entity_id: "{{ followers }}"
+          - delay: 0.5 # Give MA a moment to re-route audio streams
 
   ###############################################################################
   # RESTORE MASTER ONLY (KEY FIX)
