@@ -75,15 +75,10 @@ script:
       members:
         description: "Players to unjoin"
     sequence:
-      # Logic: Only proceed if 'members' is not empty
       - condition: template
-        value_template: >
-          {% if members is string %}
-            {{ members | length > 0 }}
-          {% else %}
-            {{ members | count > 0 }}
-          {% endif %}
-      - action: media_player.unjoin
+        value_template: "{{ members is not none and members | length > 0 }}"
+      # Instead of 'unjoin', we use 'stop' which breaks the sync in MA
+      - action: media_player.media_stop
         target:
           entity_id: >
             {% if members is string %}
@@ -157,30 +152,28 @@ script:
         description: "Speaker used for TTS"
     sequence:
       - variables:
-          # Get actual group members from the master
           followers: "{{ state_attr(speaker, 'group_members') | default([], true) }}"
-          # Check if actually playing
           was_playing: "{{ is_state(speaker, 'playing') }}"
-      # Save followers to text helper
+      # Save followers
       - action: input_text.set_value
         target:
           entity_id: input_text.ma_saved_group
         data:
           value: "{{ followers | join(',') if followers else '' }}"
-      # Save state to boolean
+      # Save state
       - action: >
           {% if was_playing %} input_boolean.turn_on {% else %} input_boolean.turn_off {% endif %}
         target:
           entity_id: input_boolean.ma_was_playing
-      # FIX: Use a more robust unjoin approach for MA
+      # Use the 'stop' method to break the group
       - if:
           - condition: template
             value_template: "{{ followers | length > 0 }}"
         then:
-          - action: media_player.unjoin
-            target:
-              entity_id: "{{ followers }}"
-          - delay: 0.5 # Give MA a moment to re-route audio streams
+          - action: script.ma_unjoin_rooms
+            data:
+              members: "{{ followers }}"
+          - delay: 1 # Give the MA server time to process the group break
 
   ###############################################################################
   # RESTORE MASTER ONLY (KEY FIX)
