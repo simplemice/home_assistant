@@ -75,13 +75,22 @@ script:
       members:
         description: "Players to unjoin"
     sequence:
-      - filter_entities: # Guard against empty lists
-        condition: template
-        value_template: "{{ members | length > 0 }}"
+      # Logic: Only proceed if 'members' is not empty
+      - condition: template
+        value_template: >
+          {% if members is string %}
+            {{ members | length > 0 }}
+          {% else %}
+            {{ members | count > 0 }}
+          {% endif %}
       - action: media_player.unjoin
         target:
           entity_id: >
-            {% if members is string %}{{ members.split(',') | map('trim') | list }}{% else %}{{ members }}{% endif %}
+            {% if members is string %}
+              {{ members.split(',') | map('trim') | list }}
+            {% else %}
+              {{ members }}
+            {% endif %}
 
   ###############################################################################
   # PLAY EVERYWHERE
