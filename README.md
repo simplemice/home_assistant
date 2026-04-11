@@ -1,158 +1,263 @@
+<p align="center">
+  <a name="logo" href="http://nightdestiny.com">
+    <img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Rattón" width="500">
+  </a>
 </p>
+
 <h1 align="center">
-  <a name="logo" href="http://nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Rattón" width="500"></a>
+  Casa de Rattón 🏠🐭  
+  Home Assistant Configuration  
   <br>
-  Casa de Rattón
-  <br>
-  Home Assistant Configuration
-  
-  (Testing Instance with Fully Realistic Simulation Packages)
+  <sub>(Testing Instance with Fully Realistic Simulation Packages)</sub>
 </h1>
 
-<h2>PLEASE READ LICENSE</h2>
+<p align="center">
+  <img src="https://img.shields.io/badge/Home%20Assistant-Config-blue?logo=home-assistant">
+  <img src="https://img.shields.io/badge/status-WIP-orange">
+  <img src="https://img.shields.io/github/last-commit/simplemice/home_assistant">
+  <img src="https://img.shields.io/github/repo-size/simplemice/home_assistant">
+</p>
 
-***
+---
+
+## ⚠️ PLEASE READ LICENSE
+
+---
+
+## 📸 Screenshots
 
 <details>
-  <summary>Screenshots</summary>
-  
-  Some screenshots about test instalation
-  
-  <a name="logo" href="https://estate.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" alt="Casa de Rattón Main Window" width="500">Main Window</a>
-  <a name="logo" href="https://rent.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" alt="Casa de Rattón Energy Window" width="500">Energy Window</a>
+  <summary>Some screenshots about test instalation</summary>
+
+  <br>
+
+  <a href="https://estate.nightdestiny.com">
+    <img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" width="500">
+  </a>  
+  <b>Main Window</b>
+
+  <br><br>
+
+  <a href="https://rent.nightdestiny.com">
+    <img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" width="500">
+  </a>  
+  <b>Energy Window</b>
+
 </details>
 
-***
+---
 
 Like all other Home Assistant instances this is also a Work in Progress :D
 
-***
+---
 
 This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Rattón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
 
-### Contributions
+---
+
+## 🤝 Contributions
+
 This is primarily a private configuration project. External inspiration is welcome, but direct pull requests may not be accepted unless aligned with Casa de Rattón architecture principles.
 
-***
+---
 
-## GitHub Repository Information
+# 📦 GitHub Repository Information
 
 This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
 
-#### Casa de Rattón's Three Laws of Home Automation:
+---
+
+## ⚖️ Casa de Rattón's Three Laws of Home Automation
 
 When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
 
-**First Law: Every automation or action should be the result of a passive sensor or indirect action**.
+### 🥇 First Law
+**Every automation or action should be the result of a passive sensor or indirect action**.
 
-**Second Law: An automation can be triggered by voice command only when Law 1 cannot be achieved**.
+### 🥈 Second Law
+**An automation can be triggered by voice command only when Law 1 cannot be achieved**.
 
-**Third Law: An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
+### 🥉 Third Law
+**An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
 
-### Repository Purpose
-- Maintain a fully working Home Assistant configuration
-- Provide reproducible testing environment packages
-- Track configuration evolution via Git history
-- Publish tagged releases for stable configuration snapshots
-- Serve as disaster recovery backup
+---
 
-### Branch Strategy
-- `main` — active live configuration and development
-- tagged releases (`v*`) — stable snapshots used for restore or deployment
+## 🎯 Repository Purpose
 
-### Releases & Packages
+- Maintain a fully working Home Assistant configuration  
+- Provide reproducible testing environment packages  
+- Track configuration evolution via Git history  
+- Publish tagged releases for stable configuration snapshots  
+- Serve as disaster recovery backup  
+
+---
+
+## 🌿 Branch Strategy
+
+- `main` — active live configuration and development  
+- tagged releases (`v*`) — stable snapshots used for restore or deployment  
+
+---
+
+## 🚀 Releases & Packages
+
 Each tagged release contains:
-- validated configuration state
-- automation and script updates
-- simulation package changes
-- compatibility adjustments for new Home Assistant versions
+
+- validated configuration state  
+- automation and script updates  
+- simulation package changes  
+- compatibility adjustments for new Home Assistant versions  
 
 Releases are automatically generated using GitHub Actions workflows after version tagging.
 
-### Backup Philosophy
+---
+
+## 💾 Backup Philosophy
+
 This repository is treated as:
-- configuration source of truth
-- versioned automation history
-- rapid recovery mechanism
-- experimentation sandbox without risking production stability
 
-## Some statistics about Test Installation:
+- configuration source of truth  
+- versioned automation history  
+- rapid recovery mechanism  
+- experimentation sandbox without risking production stability  
 
-Description | value
--- | --
-Number of entities | 2938
-Number of sensors | 1672
-Current Version | 2026.4.1
-Total Automations | 124
-Total Scripts | 37
-Total Lights | 39
-Total Switches | 205
-Total Scenes | 13
-Total Players | 19
+---
 
-## Current installed extensions:
+# 📊 Some statistics about Test Installation
 
-### Add-ons
+| Description | value |
+|------------|------|
+| Number of entities | 2951 |
+| Number of sensors | 1671 |
+| Current Version | 2026.4.1 |
+| Total Automations | 124 |
+| Total Scripts | 38 |
+| Total Lights | 39 |
+| Total Switches | 205 |
+| Total Scenes | 13 |
+| Total Players | 19 |
+
+---
+
+## 🧩 Add-ons
+
 - Advanced SSH & Web Terminal
+
 - Matter Server
+
 - Matterbridge
+
 - Music Assistant
+
 - Network UPS Tools
+
 - openWakeWord
+
 - Piper
+
 - Samba share
+
 - Studio Code Server
+
 - Whisper
+
 - Zircon3D Proxy
 
-### Custom integrations
+
+## 🔗 Custom integrations
+
 - [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting)
+
 - [Alarmo](https://github.com/nielsfaber/alarmo)
+
 - [Astroweather](https://github.com/mawinkler/astroweather)
+
 - [Audiobookshelf](https://github.com/wolffshots/hass-audiobookshelf)
+
 - [Bermuda Ble Trilateration](https://github.com/agittins/bermuda)
+
 - [Better Thermostat](https://github.com/KartoffelToby/better_thermostat)
+
 - [Blitzortung.Org Lightning Detector](https://github.com/mrk-its/homeassistant-blitzortung)
+
 - [Browser Mod](https://github.com/thomasloven/hass-browser_mod)
+
 - [Chime Tts](https://github.com/nimroddolev/chime_tts)
+
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test)
+
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
+
 - [Fontawesome](https://github.com/thomasloven/hass-fontawesome)
+
 - [Frigate](https://github.com/blakeblackshear/frigate-hass-integration)
+
 - [Frosted Glass Theme Manager](https://github.com/wessamlauf/frosted-glass-manager)
+
 - [Generate Readme](https://github.com/custom-components/readme)
+
 - [HACS](https://github.com/hacs/integration)
+
 - [Hass Favicon](https://github.com/thomasloven/hass-favicon)
+
 - [Hyperhdr](https://github.com/mjoshd/hyperhdr-ha)
+
 - [Ing Stocks Plus](https://github.com/Sundancer78/hacs_ingstocksplus)
+
 - [Jellyha](https://github.com/zupancicmarko/JellyHA)
+
 - [Llm Vision](https://github.com/valentinfrlch/ha-llmvision)
+
 - [Mikrotik Router](https://github.com/tomaae/homeassistant-mikrotik_router)
+
 - [Mqtt Media Player](https://github.com/bkbilly/mqtt_media_player)
+
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape)
+
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox)
+
 - [Noaa Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather)
+
 - [Node Red Companion](https://github.com/zachowj/hass-node-red)
+
 - [Passive Ble Monitor Integration](https://github.com/custom-components/ble_monitor)
+
 - [Pirate Weather](https://github.com/Pirate-Weather/pirate-weather-ha)
+
 - [Powercalc](https://github.com/bramstroker/homeassistant-powercalc)
+
 - [Proxmoxve](https://github.com/dougiteixeira/proxmoxve)
+
 - [Radarr Upcoming Media](https://github.com/custom-components/sensor.radarr_upcoming_media)
+
 - [Remote Home Assistant](https://github.com/custom-components/remote_homeassistant)
+
 - [Smartir](https://github.com/smartHomeHub/SmartIR)
+
 - [Sonarr Upcoming Media](https://github.com/custom-components/sensor.sonarr_upcoming_media)
+
 - [Spook 👻 Your Homie](https://github.com/frenck/spook)
+
 - [Sun2](https://github.com/pnbruckner/ha-sun2)
+
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort)
+
 - [Tvoverlay Ui](https://github.com/manjotsc/ha-tvoverlay_ui)
+
 - [Watchman](https://github.com/dummylabs/thewatchman)
+
 - [Windy Webcams](https://github.com/earendil06/Windy-Webcams)
+
 - [Xai Grok Conversation](https://github.com/braytonstafford/grok_conversation)
+
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3)
+
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot)
+
 - [Youtube](https://github.com/custom-components/youtube)
 
-### Lovelace plugins
+
+## 🎛️ Lovelace plugins
 - [Adguard Card](https://github.com/homeassistant-extras/adguard-card)
 - [Advanced Camera Card](https://github.com/dermotduffy/advanced-camera-card)
 - [Apexcharts Card](https://github.com/RomRider/apexcharts-card)
@@ -190,19 +295,25 @@ Total Players | 19
 - [Trend Analysis Card](https://github.com/Riscue/trend-analysis-card)
 - [Tv Remote Card](https://github.com/marrobHD/tv-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
-- [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
 - [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
+- [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
 - [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 - [Weather Alerts Card](https://github.com/seevee/weather_alerts_card)
 - [Wind Rose Card](https://github.com/aukedejong/lovelace-windrose-card)
 
-### Themes
+## 🎨 Themes
 - [Frosted Glass Theme](https://github.com/wessamlauf/homeassistant-frosted-glass-themes)
 
+---
 
-***
+## 📜 License & Credits
 
-Copyright @2026 [Nightdestiny Group](https://nightdestiny.com) and [Casa De Ratton](https://social.nightdestiny.com/@house)
+Copyright @2026  
+[Nightdestiny Group](https://nightdestiny.com)  
+[Casa De Ratton](https://social.nightdestiny.com/@house)
 
-This README.md generated automaticaly after each git update, by the [custom readme integration](https://github.com/custom-components/readme)
+---
+
+🛠️ This README.md generated automaticaly after each git update, by the  
+[custom readme integration](https://github.com/custom-components/readme)
