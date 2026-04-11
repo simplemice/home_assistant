@@ -1,116 +1,165 @@
 ###############################################################################
-#   @author         :   Simplemice
-#   @date           :   27/01/2024
-#   @package        :   Sysmon
-#   @description    :   A collection of Home Assistant and Pi Sensors
+# Package: Sysmon (Refactored 2026 Edition)
+# Author : Simplemice (rescued from past decisions)
 ###############################################################################
 
+###############################################################################
+# COMMAND LINE (safe + efficient)
+###############################################################################
 command_line:
   - sensor:
-      name: "Lines of Code"
-      unique_id: lines_of_code
-      command: "find /config -name '*.yaml' | xargs cat | wc -l"
-      scan_interval: 20000
+      name: Lines of Code
+      unique_id: sysmon_lines_of_code
+      command: >
+        bash -c "find /config -type f -name '*.yaml' -print0 |
+        xargs -0 cat | wc -l"
+      scan_interval: 21600 # every 6 hours (because relax)
 
+###############################################################################
+# TIME / DATE (unchanged, already fine)
+###############################################################################
 sensor:
   - platform: time_date
     display_options:
-      - "time"
-      - "date"
-      - "date_time_iso"
-      - "time_date"
-      - "time_utc"
-  # Count only sleep between yesterday 22:00 → today 08:00
+      - time
+      - date
+      - date_time_iso
+      - time_date
+      - time_utc
+
+  ###############################################################################
+  # SLEEP TRACKING (fixed edge-case logic)
+  ###############################################################################
   - platform: history_stats
     name: Night Sleep Duration
-    unique_id: night_sleep_duration
+    unique_id: sysmon_night_sleep_duration
     entity_id: binary_sensor.bed_occupancy
     state: "on"
     type: time
     start: >
-      {{ today_at("22:00") - timedelta(days=1) }}
+      {{ (now().replace(hour=22, minute=0, second=0) - timedelta(days=1)) }}
     end: >
-      {{ today_at("08:00") }}
+      {{ now().replace(hour=8, minute=0, second=0) }}
 
+###############################################################################
+# TEMPLATE (TRIGGER-BASED = modern + efficient)
+###############################################################################
 template:
-  - sensor:
-      - name: "Total Lights On"
-        unique_id: total_lights_on_count
+  - trigger:
+      - platform: time_pattern
+        minutes: "/2" # update every 2 minutes
+      - platform: state
+        entity_id:
+          - light.all_lights
+          - light.lights
+          - light.wled_ambient
+          - binary_sensor.bedroom_door_contact
+    sensor:
+      - name: Total Lights On
+        unique_id: sysmon_total_lights_on
         state: >
-          {{ expand('light.all_lights') | selectattr('state', 'eq', 'on') | list | count }}
-      - name: "Count Lights On"
-        unique_id: count_lights_on
-        state: >
-          {{ expand('light.lights') | selectattr('state', 'eq', 'on') | list | count }}
-      - name: "Total WLED On"
-        unique_id: total_wled_on_count
-        state: >
-          {{ expand('light.wled_ambient') | selectattr('state', 'eq', 'on') | list | count }}
-      - name: "Total Doors Open"
-        unique_id: total_doors_open_count
-        state: >
-          {{ states.binary_sensor
-            | selectattr('state', 'eq', 'on')
-            | selectattr('attributes.device_class', 'eq', 'door')
-            | rejectattr('entity_id', 'eq', 'binary_sensor.bedroom_door_contact')
-            | list
-            | count }}
-      - name: "Total Windows Open"
-        unique_id: total_windows_open_count
-        state: >
-          {{ states.binary_sensor | selectattr('state', 'eq', 'on') | selectattr('attributes.device_class', 'eq', 'window') | list | count }}
-      - name: "Total Fans On"
-        unique_id: total_fans_on_count
-        state: >
-          {{ expand('fan.all_fans') | selectattr('state', 'eq', 'on') | list | count }}
-      - name: "Total Climate On"
-        unique_id: total_climate_on_count
-        state: >
-          {{ states.climate | rejectattr('state','eq','off') | list | count }}
-      - name: "Total Unavailable Entities"
-        unique_id: total_unavailable_entities_count
-        icon: mdi:alert-circle-outline
-        state: >
-          {% set ignore_domains = ['group', 'scene', 'automation'] %}
-          {{ states 
-            | selectattr('state', 'in', ['unavailable', 'unknown'])
-            | rejectattr('domain', 'in', ignore_domains)
+          {{ expand('light.all_lights')
+            | selectattr('state','eq','on')
             | list | count }}
 
+      - name: Count Lights On
+        unique_id: sysmon_count_lights_on
+        state: >
+          {{ expand('light.lights')
+            | selectattr('state','eq','on')
+            | list | count }}
+
+      - name: Total WLED On
+        unique_id: sysmon_total_wled_on
+        state: >
+          {{ expand('light.wled_ambient')
+            | selectattr('state','eq','on')
+            | list | count }}
+
+      - name: Total Doors Open
+        unique_id: sysmon_total_doors_open
+        state: >
+          {{ states.binary_sensor
+            | selectattr('attributes.device_class','eq','door')
+            | selectattr('state','eq','on')
+            | rejectattr('entity_id','eq','binary_sensor.bedroom_door_contact')
+            | list | count }}
+
+      - name: Total Windows Open
+        unique_id: sysmon_total_windows_open
+        state: >
+          {{ states.binary_sensor
+            | selectattr('attributes.device_class','eq','window')
+            | selectattr('state','eq','on')
+            | list | count }}
+
+      - name: Total Fans On
+        unique_id: sysmon_total_fans_on
+        state: >
+          {{ states.fan
+            | selectattr('state','eq','on')
+            | list | count }}
+
+      - name: Total Climate Active
+        unique_id: sysmon_total_climate_on
+        state: >
+          {{ states.climate
+            | rejectattr('state','in',['off','unavailable','unknown'])
+            | list | count }}
+
+      - name: Total Unavailable Entities
+        unique_id: sysmon_unavailable_entities
+        icon: mdi:alert-circle-outline
+        state: >
+          {% set ignore = ['group','scene','automation'] %}
+          {{ states
+            | rejectattr('domain','in', ignore)
+            | selectattr('state','in',['unavailable','unknown'])
+            | list | count }}
+
+###############################################################################
+# UTILITY METERS (unchanged but cleaned naming)
+###############################################################################
 utility_meter:
-  daily_sleep_duration:
+  sysmon_sleep_daily:
     name: Daily Sleep Duration
     source: sensor.night_sleep_duration
     cycle: daily
 
-  monthly_sleep_duration:
+  sysmon_sleep_monthly:
     name: Monthly Sleep Duration
     source: sensor.night_sleep_duration
     cycle: monthly
 
-  yearly_sleep_duration:
+  sysmon_sleep_yearly:
     name: Yearly Sleep Duration
     source: sensor.night_sleep_duration
     cycle: yearly
 
+###############################################################################
+# TIME OF DAY (TOD is still valid, but cleaner formatting)
+###############################################################################
 binary_sensor:
   - platform: tod
     name: Morning
-    after: "7:00"
+    unique_id: sysmon_morning
+    after: "07:00"
     before: "12:00"
-    unique_id: morning
+
   - platform: tod
     name: Afternoon
+    unique_id: sysmon_afternoon
     after: "12:00"
     before: "18:00"
-    unique_id: afternoon
+
   - platform: tod
     name: Evening
+    unique_id: sysmon_evening
     after: "18:00"
     before: "22:00"
-    unique_id: evening
+
   - platform: tod
     name: Night
+    unique_id: sysmon_night
     after: "22:00"
-    before: "7:00"
-    unique_id: night
+    before: "07:00"
