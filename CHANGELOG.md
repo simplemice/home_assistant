@@ -33,3 +33,10 @@
 - refactoring Gas package
 - refactoring Readme
 
+
+## v2026.04.11-2313
+- Github Subtle enhancements deployed. You probably won’t notice.
+- change logo
+- Add files via upload
+- Delete screenshots/casa_de_ratton.png
+
