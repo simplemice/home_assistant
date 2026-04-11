@@ -1,98 +1,133 @@
 ###############################################################################
-# Package: Home Assistant Startup & Update Detection
+# Package: Home Assistant Startup & Update Detection (Modern Refactor)
 # Author : Simplemice
-# Purpose:
-#   - Detect if HA reboot was caused by Core update
-#   - Store update versions
-#   - Provide clean startup reason for announcements (JARVIS)
+#
+# Features:
+#   - Trigger-based detection (no helpers)
+#   - Persistent attributes (version tracking)
+#   - Clean startup reason detection
+#   - Optional safety recovery logic
 ###############################################################################
 
 ###############################################################################
-# Helpers
-###############################################################################
-input_boolean:
-  ha_reboot_after_update:
-    name: HA Reboot After Update
-    icon: mdi:update
-
-input_text:   
-  ha_updated_from:
-    name: HA Updated From
-  ha_updated_to:
-    name: HA Updated To
-
-###############################################################################
-# Template sensors
+# TEMPLATE SENSORS
 ###############################################################################
 template:
-  - sensor:
-      - name: "HA Startup Reason"
+  ###########################################################################
+  # Core Sensor (state + attributes storage)
+  ###########################################################################
+  - trigger:
+      # Detect Core Update installation
+      - platform: state
+        entity_id: update.home_assistant_core_update
+        from: "on"
+        to: "off"
+
+      # Detect HA startup
+      - platform: homeassistant
+        event: start
+
+    sensor:
+      - name: HA Startup Reason
+        unique_id: ha_startup_reason
         icon: mdi:restart
+
         state: >
-          {% if is_state('input_boolean.ha_reboot_after_update', 'on') %}
+          {% if trigger.platform == 'state' %}
             update
+          {% elif trigger.platform == 'homeassistant' %}
+            {{ this.attributes.reason if this.attributes.reason is defined else 'normal' }}
           {% else %}
             normal
           {% endif %}
 
-      - name: "HA Startup Reason Text"
+        attributes:
+          reason: >
+            {% if trigger.platform == 'state' %}
+              update
+            {% elif trigger.platform == 'homeassistant' %}
+              {{ this.attributes.reason if this.attributes.reason is defined else 'normal' }}
+            {% else %}
+              normal
+            {% endif %}
+
+          from_version: >
+            {% if trigger.platform == 'state' %}
+              {{ trigger.from_state.attributes.installed_version }}
+            {% else %}
+              {{ this.attributes.from_version if this.attributes.from_version is defined else '' }}
+            {% endif %}
+
+          to_version: >
+            {% if trigger.platform == 'state' %}
+              {{ trigger.from_state.attributes.latest_version }}
+            {% else %}
+              {{ this.attributes.to_version if this.attributes.to_version is defined else '' }}
+            {% endif %}
+
+          last_event: >
+            {{ now().isoformat() }}
+
+  ###########################################################################
+  # Human-readable text sensor
+  ###########################################################################
+  - sensor:
+      - name: HA Startup Reason Text
+        unique_id: ha_startup_reason_text
         icon: mdi:information
+
         state: >
-          {% if is_state('input_boolean.ha_reboot_after_update', 'on') %}
-            System upgraded from
-            {{ states('input_text.ha_updated_from') }}
-            to {{ states('input_text.ha_updated_to') }}
+          {% set reason = state_attr('sensor.ha_startup_reason','reason') %}
+          {% set from_v = state_attr('sensor.ha_startup_reason','from_version') %}
+          {% set to_v = state_attr('sensor.ha_startup_reason','to_version') %}
+
+          {% if reason == 'update' and from_v and to_v %}
+            System upgraded from {{ from_v }} to {{ to_v }}
           {% else %}
             Manual restart or power recovery
           {% endif %}
 
 ###############################################################################
-# Automations
+# AUTOMATIONS
 ###############################################################################
 automation:
   ###########################################################################
-  # Store Core update info (runs BEFORE reboot)
+  # Safety: Reset stale update flag (edge-case protection)
   ###########################################################################
-  - alias: HA Core Update Store Info
-    id: ha_core_update_store_info
-    trigger:
-      - platform: state
-        entity_id: update.home_assistant_core_update
-        from: "on"
-        to: "off"
-    action:
-      - service: input_boolean.turn_on
-        target:
-          entity_id: input_boolean.ha_reboot_after_update
-      - service: input_text.set_value
-        target:
-          entity_id: input_text.ha_updated_from
-        data:
-          value: "{{ trigger.from_state.attributes.installed_version }}"
-      - service: input_text.set_value
-        target:
-          entity_id: input_text.ha_updated_to
-        data:
-          value: "{{ trigger.to_state.attributes.installed_version }}"
-      - delay:
-          hours: 0
-          minutes: 10
-          seconds: 0
-          milliseconds: 0
-      - service: input_boolean.turn_off
-        target:
-          entity_id: input_boolean.ha_reboot_after_update
+  - alias: HA Startup Reason Safety Reset
+    id: ha_startup_reason_safety_reset
+    mode: single
 
-  ###########################################################################
-  # Clear update flag AFTER HA startup notification runs
-  ###########################################################################
-  - alias: HA Clear Update Flag After Startup
-    id: ha_clear_update_flag_after_startup
     trigger:
       - platform: homeassistant
         event: start
+
+    condition:
+      - condition: template
+        value_template: >
+          {{ state_attr('sensor.ha_startup_reason','reason') == 'update' }}
+
     action:
-      - delay: "00:01:00"
-      - service: input_boolean.turn_off
+      - delay: "00:05:00"
+
+      - service: homeassistant.update_entity
         target:
-          entity_id: input_boolean.ha_reboot_after_update
+          entity_id: sensor.ha_startup_reason
+
+###############################################################################
+# OPTIONAL SCRIPT (for announcements / TTS / logging)
+###############################################################################
+script:
+  ha_announce_startup:
+    alias: HA Announce Startup Reason
+    mode: single
+
+    sequence:
+      - variables:
+          message: "{{ states('sensor.ha_startup_reason_text') }}"
+
+      # Example: replace with your TTS system (JARVIS, Chime TTS, etc.)
+      - service: logbook.log
+        data:
+          name: "Home Assistant"
+          message: "{{ message }}"

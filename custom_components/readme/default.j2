@@ -1,120 +1,175 @@
+<p align="center">
+  <a name="logo" href="http://nightdestiny.com">
+    <img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Rattón" width="500">
+  </a>
 </p>
+
 <h1 align="center">
-  <a name="logo" href="http://nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/casa_de_ratton.png" alt="Casa de Rattón" width="500"></a>
+  Casa de Rattón 🏠🐭  
+  Home Assistant Configuration  
   <br>
-  Casa de Rattón
-  <br>
-  Home Assistant Configuration
-  
-  (Testing Instance with Fully Realistic Simulation Packages)
+  <sub>(Testing Instance with Fully Realistic Simulation Packages)</sub>
 </h1>
 
-<h2>PLEASE READ LICENSE</h2>
+<p align="center">
+  <img src="https://img.shields.io/badge/Home%20Assistant-Config-blue?logo=home-assistant">
+  <img src="https://img.shields.io/badge/status-WIP-orange">
+  <img src="https://img.shields.io/github/last-commit/simplemice/home_assistant">
+  <img src="https://img.shields.io/github/repo-size/simplemice/home_assistant">
+</p>
 
-***
+---
+
+## ⚠️ PLEASE READ LICENSE
+
+---
+
+## 📸 Screenshots
 
 <details>
-  <summary>Screenshots</summary>
-  
-  Some screenshots about test instalation
-  
-  <a name="logo" href="https://estate.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" alt="Casa de Rattón Main Window" width="500">Main Window</a>
-  <a name="logo" href="https://rent.nightdestiny.com"><img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" alt="Casa de Rattón Energy Window" width="500">Energy Window</a>
+  <summary>Some screenshots about test instalation</summary>
+
+  <br>
+
+  <a href="https://estate.nightdestiny.com">
+    <img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/main_window.png" width="500">
+  </a>  
+  <b>Main Window</b>
+
+  <br><br>
+
+  <a href="https://rent.nightdestiny.com">
+    <img src="https://github.com/simplemice/home_assistant/blob/main/screenshots/energy_window.png" width="500">
+  </a>  
+  <b>Energy Window</b>
+
 </details>
 
-***
+---
 
 Like all other Home Assistant instances this is also a Work in Progress :D
 
-***
+---
 
 This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Rattón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
 
-### Contributions
+---
+
+## 🤝 Contributions
+
 This is primarily a private configuration project. External inspiration is welcome, but direct pull requests may not be accepted unless aligned with Casa de Rattón architecture principles.
 
-***
+---
 
-## GitHub Repository Information
+# 📦 GitHub Repository Information
 
 This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
 
-#### Casa de Rattón's Three Laws of Home Automation:
+---
+
+## ⚖️ Casa de Rattón's Three Laws of Home Automation
 
 When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
 
-**First Law: Every automation or action should be the result of a passive sensor or indirect action**.
+### 🥇 First Law
+**Every automation or action should be the result of a passive sensor or indirect action**.
 
-**Second Law: An automation can be triggered by voice command only when Law 1 cannot be achieved**.
+### 🥈 Second Law
+**An automation can be triggered by voice command only when Law 1 cannot be achieved**.
 
-**Third Law: An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
+### 🥉 Third Law
+**An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
 
-### Repository Purpose
-- Maintain a fully working Home Assistant configuration
-- Provide reproducible testing environment packages
-- Track configuration evolution via Git history
-- Publish tagged releases for stable configuration snapshots
-- Serve as disaster recovery backup
+---
 
-### Branch Strategy
-- `main` — active live configuration and development
-- tagged releases (`v*`) — stable snapshots used for restore or deployment
+## 🎯 Repository Purpose
 
-### Releases & Packages
+- Maintain a fully working Home Assistant configuration  
+- Provide reproducible testing environment packages  
+- Track configuration evolution via Git history  
+- Publish tagged releases for stable configuration snapshots  
+- Serve as disaster recovery backup  
+
+---
+
+## 🌿 Branch Strategy
+
+- `main` — active live configuration and development  
+- tagged releases (`v*`) — stable snapshots used for restore or deployment  
+
+---
+
+## 🚀 Releases & Packages
+
 Each tagged release contains:
-- validated configuration state
-- automation and script updates
-- simulation package changes
-- compatibility adjustments for new Home Assistant versions
+
+- validated configuration state  
+- automation and script updates  
+- simulation package changes  
+- compatibility adjustments for new Home Assistant versions  
 
 Releases are automatically generated using GitHub Actions workflows after version tagging.
 
-### Backup Philosophy
+---
+
+## 💾 Backup Philosophy
+
 This repository is treated as:
-- configuration source of truth
-- versioned automation history
-- rapid recovery mechanism
-- experimentation sandbox without risking production stability
 
-## Some statistics about Test Installation:
+- configuration source of truth  
+- versioned automation history  
+- rapid recovery mechanism  
+- experimentation sandbox without risking production stability  
 
-Description | value
--- | --
-Number of entities | {{states | count}}
-Number of sensors | {{states.sensor | count}}
-Current Version | {{ states('sensor.current_version') }}
-Total Automations | {{ states('sensor.automations_count') }}
-Total Scripts | {{ states('sensor.scripts_count') }}
-Total Lights | {{ states('sensor.lights_count') }}
-Total Switches | {{ states('sensor.switches_count') }}
-Total Scenes | {{ states('sensor.scenes') }}
-Total Players | {{ states('sensor.media_players') }}
+---
 
-## Current installed extensions:
+# 📊 Some statistics about Test Installation
 
-### Add-ons
+| Description | value |
+|------------|------|
+| Number of entities | {{states \| count}} |
+| Number of sensors | {{states.sensor \| count}} |
+| Current Version | {{ states('sensor.current_version') }} |
+| Total Automations | {{ states('sensor.automations_count') }} |
+| Total Scripts | {{ states('sensor.scripts_count') }} |
+| Total Lights | {{ states('sensor.lights_count') }} |
+| Total Switches | {{ states('sensor.switches_count') }} |
+| Total Scenes | {{ states('sensor.scenes') }} |
+| Total Players | {{ states('sensor.media_players') }} |
+
+---
+
+# 🔌 Current installed extensions
+
+## 🧩 Add-ons
 {%- for addon in addons | sort(attribute='name') %}
 - {{addon.name}}
 {%- endfor %}
 
-### Custom integrations
+## 🔗 Custom integrations
 {%- for component in hacs_components | selectattr('category', 'equalto', 'integration') | sort(attribute='name') %}
 - [{{component.name}}]({{component.documentation}})
 {%- endfor %}
 
-### Lovelace plugins
+## 🎛️ Lovelace plugins
 {%- for component in hacs_components | selectattr('category', 'equalto', 'plugin') | sort(attribute='name') %}
 - [{{component.name}}]({{component.documentation}})
 {%- endfor %}
 
-### Themes
+## 🎨 Themes
 {%- for component in hacs_components | selectattr('category', 'equalto', 'theme') | sort(attribute='name') %}
 - [{{component.name}}]({{component.documentation}})
 {%- endfor %}
 
+---
 
-***
+## 📜 License & Credits
 
-Copyright @2026 [Nightdestiny Group](https://nightdestiny.com) and [Casa De Ratton](https://social.nightdestiny.com/@house)
+Copyright @2026  
+[Nightdestiny Group](https://nightdestiny.com)  
+[Casa De Ratton](https://social.nightdestiny.com/@house)
 
-This README.md generated automaticaly after each git update, by the [custom readme integration](https://github.com/custom-components/readme)
+---
+
+🛠️ This README.md generated automaticaly after each git update, by the  
+[custom readme integration](https://github.com/custom-components/readme)
