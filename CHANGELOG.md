@@ -26,3 +26,10 @@
 - fix music assistan package and refactoring master scripts
 - add some fixes for music package
 
+
+## v2026.04.11-1330
+- Github Adjustments complete. The house grows smarter.
+- add fixes to Gas package
+- refactoring Gas package
+- refactoring Readme
+
