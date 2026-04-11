@@ -127,11 +127,11 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2912 |
+| Number of entities | 2830 |
 | Number of sensors | 1638 |
 | Current Version | 2026.4.1 |
 | Total Automations | 121 |
-| Total Scripts | 39 |
+| Total Scripts | 38 |
 | Total Lights | 39 |
 | Total Switches | 205 |
 | Total Scenes | 13 |
