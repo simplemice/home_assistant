@@ -127,11 +127,11 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2951 |
-| Number of sensors | 1671 |
+| Number of entities | 2912 |
+| Number of sensors | 1638 |
 | Current Version | 2026.4.1 |
-| Total Automations | 124 |
-| Total Scripts | 38 |
+| Total Automations | 121 |
+| Total Scripts | 39 |
 | Total Lights | 39 |
 | Total Switches | 205 |
 | Total Scenes | 13 |
@@ -295,8 +295,8 @@ This repository is treated as:
 - [Trend Analysis Card](https://github.com/Riscue/trend-analysis-card)
 - [Tv Remote Card](https://github.com/marrobHD/tv-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
-- [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
 - [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
+- [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
 - [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 - [Weather Alerts Card](https://github.com/seevee/weather_alerts_card)
