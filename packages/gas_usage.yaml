@@ -5,12 +5,11 @@
 ###############################################################################
 
 ############################
-# INPUT
+# INPUTS
 ############################
-
 input_number:
   gas_tariff_rate:
-    name: Gas Tariff Rate
+    name: "Gas Tariff Rate"
     min: 0
     max: 100
     step: 0.01
@@ -21,10 +20,9 @@ input_number:
 ############################
 # FILTER (RAW SENSOR CLEANUP)
 ############################
-
 sensor:
   - platform: filter
-    name: Filtered Gas Volume
+    name: "Filtered Gas Volume"
     unique_id: filtered_gas_volume
     entity_id: sensor.kitchen_gas_scale_gas_volume
     filters:
@@ -35,43 +33,51 @@ sensor:
         time_constant: 8
 
   ###########################################################################
-  # INTEGRATION (ONLY ONE TOTAL SENSOR — NO HELPERS, NO DUPLICATES)
+  # INTEGRATION (RIEMANN SUM)
   ###########################################################################
   - platform: integration
     source: sensor.gas_consumption_signal
-    name: Gas Used Total
+    name: "Gas Used Total"
     unique_id: gas_used_total
     method: trapezoidal
     round: 3
 
 ############################
-# TEMPLATE SENSORS
+# TEMPLATE ENTITIES
 ############################
-
 template:
-  ###########################################################################
-  # GAS CONSUMPTION SIGNAL
-  ###########################################################################
+  # Trigger-based block for dynamic logic (Refills & Signal)
   - trigger:
       - platform: state
         entity_id: sensor.filtered_gas_volume
-
     sensor:
-      - name: Gas Consumption Signal
+      - name: "Gas Consumption Signal"
         unique_id: gas_consumption_signal
-        object_id: gas_consumption_signal
         unit_of_measurement: "L"
         device_class: gas
         state_class: measurement
         icon: mdi:fire
+        # We take the absolute change or invert the scale drop to show "usage"
         state: >
-          {{ states('sensor.filtered_gas_volume') | float(0) * -1 }}
+          {{ states('sensor.filtered_gas_volume') | float(0) }}
 
-  ###########################################################################
-  # DERIVED VALUES
-  ###########################################################################
+    binary_sensor:
+      - name: "Gas Tank Refilled"
+        unique_id: gas_tank_refilled
+        delay_off: "00:02:00"
+        device_class: update
+        state: >
+          {% if trigger.from_state is not none and trigger.to_state is not none %}
+            {% set current = trigger.to_state.state | float(0) %}
+            {% set previous = trigger.from_state.state | float(0) %}
+            {{ (current - previous) > 2.0 }}
+          {% else %}
+            false
+          {% endif %}
+
+  # Standard Sensors for derived values
   - sensor:
-      - name: Gas Usage m3
+      - name: "Gas Usage m3"
         unique_id: gas_used_m3
         unit_of_measurement: "m³"
         device_class: gas
@@ -80,45 +86,32 @@ template:
         state: >
           {{ (states('sensor.gas_used_total') | float(0) / 1000) | round(4) }}
 
-      - name: Gas Cost
+      - name: "Gas Cost"
         unique_id: gas_cost_total
         unit_of_measurement: "THB"
         device_class: monetary
         state_class: total
         icon: mdi:cash
         state: >
-          {{ states('sensor.gas_used_total') | float(0)
-             * states('input_number.gas_tariff_rate') | float(0) }}
-
-  ############################
-  # REFILL DETECTION
-  ############################
-
-  - binary_sensor:
-      - name: Gas Tank Refilled
-        unique_id: gas_tank_refilled
-        delay_off: "00:02:00"
-        state: >
-          {% set current = states('sensor.filtered_gas_volume') | float(0) %}
-          {% set previous = states('sensor.filtered_gas_volume') | float(0) %}
-          {{ (current - previous) > 2 }}
+          {% set usage = states('sensor.gas_used_total') | float(0) %}
+          {% set rate = states('input_number.gas_tariff_rate') | float(0) %}
+          {{ (usage * rate) | round(2) }}
 
 ############################
 # UTILITY METERS
 ############################
-
 utility_meter:
   gas_daily:
-    name: Gas Daily
     source: sensor.gas_used_total
+    name: "Gas Daily"
     cycle: daily
 
   gas_monthly:
-    name: Gas Monthly
     source: sensor.gas_used_total
+    name: "Gas Monthly"
     cycle: monthly
 
   gas_yearly:
-    name: Gas Yearly
     source: sensor.gas_used_total
+    name: "Gas Yearly"
     cycle: yearly
