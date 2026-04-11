@@ -1,8 +1,7 @@
 ###############################################################################
 #   @author         :   Simplemice
-#   @date           :   07/10/2025
-#   @package        :   Gas Usage
-#   @description    :   Smart gas tracking, cost, and Energy Dashboard integration.
+#   @package        :   Gas Usage (FINAL - Clean & Stable)
+#   @description    :   Smart gas tracking with filtering, integration, cost
 ###############################################################################
 
 ############################
@@ -20,7 +19,7 @@ input_number:
     icon: mdi:currency-thb
 
 ############################
-# FILTER + INTEGRATION
+# FILTER (RAW SENSOR CLEANUP)
 ############################
 
 sensor:
@@ -35,31 +34,43 @@ sensor:
       - filter: lowpass
         time_constant: 8
 
+  ###########################################################################
+  # INTEGRATION (ONLY ONE TOTAL SENSOR — NO HELPERS, NO DUPLICATES)
+  ###########################################################################
   - platform: integration
     source: sensor.gas_consumption_signal
-    name: Gas Used
+    name: Gas Used Total
     unique_id: gas_used_total
     method: trapezoidal
     round: 3
 
 ############################
-# TEMPLATE (SAFE MODE)
+# TEMPLATE SENSORS
 ############################
 
 template:
+  ###########################################################################
+  # GAS CONSUMPTION SIGNAL
+  ###########################################################################
   - trigger:
       - platform: state
         entity_id: sensor.filtered_gas_volume
+
     sensor:
       - name: Gas Consumption Signal
         unique_id: gas_consumption_signal
+        object_id: gas_consumption_signal
         unit_of_measurement: "L"
         device_class: gas
         state_class: measurement
         icon: mdi:fire
         state: >
-          {{ states('sensor.filtered_gas_volume')|float(0) * -1 }}
+          {{ states('sensor.filtered_gas_volume') | float(0) * -1 }}
 
+  ###########################################################################
+  # DERIVED VALUES
+  ###########################################################################
+  - sensor:
       - name: Gas Usage m3
         unique_id: gas_used_m3
         unit_of_measurement: "m³"
@@ -67,7 +78,7 @@ template:
         state_class: total_increasing
         icon: mdi:meter-cubic
         state: >
-          {{ (states('sensor.gas_used')|float(0) / 1000) | round(4) }}
+          {{ (states('sensor.gas_used_total') | float(0) / 1000) | round(4) }}
 
       - name: Gas Cost
         unique_id: gas_cost_total
@@ -76,33 +87,38 @@ template:
         state_class: total
         icon: mdi:cash
         state: >
-          {{ states('sensor.gas_used')|float(0)
-             * states('input_number.gas_tariff_rate')|float(0) }}
+          {{ states('sensor.gas_used_total') | float(0)
+             * states('input_number.gas_tariff_rate') | float(0) }}
+
+  ############################
+  # REFILL DETECTION
+  ############################
 
   - binary_sensor:
-      - delay_off: 0:02:00
-        default_entity_id: binary_sensor.gas_tank_refilled
-        name: Gas Tank Refilled
-        state:
-          "{% set delta =\n  states('sensor.filtered_gas_volume')|float(0)\n  -\n
-          \ states('sensor.filtered_gas_volume', 2)|float(0)\n%} {{ delta > 2 }}"
+      - name: Gas Tank Refilled
+        unique_id: gas_tank_refilled
+        delay_off: "00:02:00"
+        state: >
+          {% set current = states('sensor.filtered_gas_volume') | float(0) %}
+          {% set previous = states('sensor.filtered_gas_volume') | float(0) %}
+          {{ (current - previous) > 2 }}
 
-###############################################################################
-# UTILITY METERS (AUTOMATIC PERIOD TRACKING)
-###############################################################################
+############################
+# UTILITY METERS
+############################
 
 utility_meter:
   gas_daily:
     name: Gas Daily
-    source: sensor.gas_used
+    source: sensor.gas_used_total
     cycle: daily
 
   gas_monthly:
     name: Gas Monthly
-    source: sensor.gas_used
+    source: sensor.gas_used_total
     cycle: monthly
 
   gas_yearly:
     name: Gas Yearly
-    source: sensor.gas_used
+    source: sensor.gas_used_total
     cycle: yearly

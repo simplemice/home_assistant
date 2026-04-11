@@ -365,7 +365,21 @@ template:
           {% else %}
             unavailable
           {% endif %}
-
+      - name: "House Temperature"
+        unique_id: house_temperature
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set t1 = states('sensor.livingroom_temp_temperature') | float(0) %}
+          {% set t2 = states('sensor.bedroom_temp_temperature') | float(0) %}
+          {% set t3 = states('sensor.kitchen_temp_temperature') | float(0) %}
+          {% set values = [t1, t2, t3] | select('gt', 0) | list %}
+          {% if values | length > 0 %}
+            {{ (values | sum / values | length) | round(1) }}
+          {% else %}
+            unavailable
+          {% endif %}
       - name: "House Humidity"
         unique_id: house_humidity
         unit_of_measurement: "%"
