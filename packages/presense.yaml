@@ -93,24 +93,22 @@ template:
   # TIME AWAY (LIVE)
   ###########################################################################
 
-- trigger:
-    - platform: time_pattern
-      seconds: "/1"
-  sensor:
-    - name: Simplemice Time Away Live
-      unique_id: simplemice_time_away_live
-      icon: mdi:timer-outline
-      state: >
-        {% set ts = state_attr('input_datetime.simplemice_left_home_at', 'timestamp') %}
-        {% if ts is none %}
-          0h 0m 0s
-        {% else %}
-          {% set seconds = (as_timestamp(now()) - ts) | int %}
-          {% set h = seconds // 3600 %}
-          {% set m = (seconds % 3600) // 60 %}
-          {% set s = seconds % 60 %}
-          {{ h }}h {{ m }}m {{ s }}s
-        {% endif %}
+  - sensor:
+      - name: Simplemice Time Away Live
+        unique_id: simplemice_time_away_live
+        icon: mdi:timer-check
+        state: >
+          {% set left = state_attr('input_datetime.simplemice_left_home_at','timestamp') %}
+          {% set ret = state_attr('input_datetime.simplemice_return_home_at','timestamp') %}
+          {% if left is none or ret is none %}
+            0h 0m 0s
+          {% else %}
+            {% set diff = (ret - left) | int %}
+            {% set h = diff // 3600 %}
+            {% set m = (diff % 3600) // 60 %}
+            {% set s = diff % 60 %}
+            {{ h }}h {{ m }}m {{ s }}s
+          {% endif %}
 
   ###########################################################################
   # PRESENCE
