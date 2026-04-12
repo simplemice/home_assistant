@@ -5,85 +5,87 @@
 #   @description    :   Realistic Tariff Simulation
 ###############################################################################
 
+###############################################################################
+# ENERGY (Refactored 2026)
+###############################################################################
+
+input_number:
+  electricity_rate_peak:
+    name: Electricity Peak Rate
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 5.7982
+
+  electricity_rate_offpeak:
+    name: Electricity Offpeak Rate
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 2.6369
+
 input_select:
-  # Daily Tariff Selector
-  grid_energy_daily_tariff:
-    name: Grid Energy Daily Tariff
+  grid_energy_tariff:
+    name: Grid Energy Tariff
     options:
       - peak
       - offpeak
-    initial: offpeak
-    icon: mdi:calendar-day
-  # Monthly Tariff Selector
-  grid_energy_monthly_tariff:
-    name: Grid Energy Monthly Tariff
-    options:
-      - peak
-      - offpeak
-    initial: offpeak
-    icon: mdi:calendar-month
-  # Yearly Tariff Selector
-  grid_energy_yearly_tariff:
-    name: Grid Energy Yearly Tariff
-    options:
-      - peak
-      - offpeak
-    initial: offpeak
-    icon: mdi:calendar-account
+    icon: mdi:flash
+
+###############################################################################
+# TEMPLATE
+###############################################################################
 
 template:
-  - sensor:
-      - name: "Electricity Tariff"
+  # SINGLE SOURCE OF TRUTH (triggered)
+  - trigger:
+      - platform: time
+        at: "09:00:00"
+      - platform: time
+        at: "22:00:00"
+      - platform: time
+        at: "00:00:00"
+    sensor:
+      - name: Electricity Tariff
         unique_id: electricity_tariff_status
         state: >
           {% set now = now() %}
-          {% set weekday = now.isoweekday() | int %}
-          {% set on_peak_start = today_at("09:00") %}
-          {% set on_peak_end = today_at("22:00") %}
-          {% if weekday >= 1 and weekday <= 5 %}
-            {% if on_peak_start <= now < on_peak_end %}
-              peak
-            {% else %}
-              offpeak
-            {% endif %}
+          {% set weekday = now.isoweekday() %}
+          {% if weekday in [1,2,3,4,5] and (9 <= now.hour < 22) %}
+            peak
           {% else %}
             offpeak
           {% endif %}
 
-      - name: "Electricity Tariff Rate"
+  # RATE (depends on tariff sensor)
+  - sensor:
+      - name: Electricity Tariff Rate
         unique_id: electricity_tariff_rate
-        unit_of_measurement: "THB/kWh"
+        unit_of_measurement: THB/kWh
         state: >
-          {% set now = now() %}
-          {% set weekday = now.isoweekday() | int %}
-          {% set on_peak_start = today_at("09:00") %}
-          {% set on_peak_end = today_at("22:00") %}
-          {% if weekday >= 1 and weekday <= 5 %}
-            {% if on_peak_start <= now < on_peak_end %}
-              5.7982
-            {% else %}
-              2.6369
-            {% endif %}
+          {% if is_state('sensor.electricity_tariff','peak') %}
+            {{ states('input_number.electricity_rate_peak') }}
           {% else %}
-            2.6369
+            {{ states('input_number.electricity_rate_offpeak') }}
           {% endif %}
 
+###############################################################################
+# AUTOMATION
+###############################################################################
+
 automation:
-  - alias: Update Utility Meter Tariff
-    id: update_utility_meter_tariff
-    # Trigger uses your correctly defined template sensor
+  - alias: Sync Utility Meter Tariff
+    id: sync_utility_meter_tariff
+
     trigger:
       - platform: state
         entity_id: sensor.electricity_tariff
+
     action:
-      # FIX: Service must be input_select.select_option
       - service: input_select.select_option
         target:
-          entity_id:
-            # FIX: Targets must be the input_select entities we manually created
-            - input_select.grid_energy_daily_tariff
-            - input_select.grid_energy_monthly_tariff
-            - input_select.grid_energy_yearly_tariff
+          entity_id: input_select.grid_energy_tariff
         data:
-          # Use the state (peak or offpeak) from your template sensor
-          option: "{{ states('sensor.electricity_tariff') }}"
+          option: "{{ trigger.to_state.state }}"
