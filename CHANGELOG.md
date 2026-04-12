@@ -40,3 +40,10 @@
 - Add files via upload
 - Delete screenshots/casa_de_ratton.png
 
+
+## v2026.04.12-1453
+- Github System recalibrated. Everything is under control.
+- refactoring energy package
+- refactoring database package
+- refactoring presense package
+
