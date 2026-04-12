@@ -6,9 +6,29 @@
 ###############################################################################
 
 recorder:
-  purge_keep_days: 10
+  purge_keep_days: 7
   auto_purge: true
-  commit_interval: 10
+  purge_interval: 1
+  commit_interval: 30
+
+  # If you stay on SQLite, at least don’t abuse it
+  db_url: sqlite:////config/home-assistant_v2.db
+
+  include:
+    domains:
+      - sensor
+      - binary_sensor
+      - person
+      - device_tracker
+      - switch
+      - light
+
+    entity_globs:
+      - sensor.*_energy
+      - sensor.*_power
+      - sensor.*_temperature
+      - sensor.*_humidity
+
   exclude:
     entity_globs:
       - sensor.*_signal_strength
@@ -16,25 +36,22 @@ recorder:
       - sensor.*_linkquality
       - sensor.*_uptime
       - sensor.*_last_seen
-      - sensor.*_battery_voltage
+      - sensor.*_battery*
+      - sensor.*_voltage*
       - sensor.*_free_memory
       - sensor.*_heap*
       - sensor.*_loop*
       - sensor.*_internal*
       - sensor.*_debug*
+      - sensor.*_illuminance_raw
+      - sensor.*_pressure_raw
       - binary_sensor.*_availability
+
     domains:
       - updater
       - persistent_notification
+      - automation
+      - script
 
 logger:
   default: warning
-#  logs:
-#    homeassistant.core: debug
-#    homeassistant.helpers: debug
-#    homeassistant.components.recorder: debug
-#    sqlalchemy.engine: debug
-#    hacs: debug
-#    custom_components.hacs: debug
-#    supervisor: debug
-#    custom_components.supervisor: debug
