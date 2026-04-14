@@ -56,3 +56,8 @@
 - small fixes to presense package
 - small fixes to presense package
 
+
+## v2026.04.14-1741
+- Github Subtle enhancements deployed. You probably won’t notice.
+- fix mikrotik integration
+
