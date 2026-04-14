@@ -131,14 +131,14 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2890 |
-| Number of sensors | 1628 |
+| Number of entities | 2829 |
+| Number of sensors | 1637 |
 | Current Version | 2026.4.2 |
 | Total Automations | 121 |
 | Total Scripts | 38 |
 | Total Lights | 39 |
-| Total Switches | 184 |
-| Total Scenes | 13 |
+| Total Switches | 204 |
+| Total Scenes | 12 |
 | Total Players | 19 |
 
 ---
@@ -211,6 +211,8 @@ This repository is treated as:
 - [Jellyha](https://github.com/zupancicmarko/JellyHA)
 
 - [Llm Vision](https://github.com/valentinfrlch/ha-llmvision)
+
+- [Mikrotik Router](https://github.com/tomaae/homeassistant-mikrotik_router)
 
 - [Mqtt Media Player](https://github.com/bkbilly/mqtt_media_player)
 
