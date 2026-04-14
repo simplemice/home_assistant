@@ -131,13 +131,13 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2914 |
-| Number of sensors | 1638 |
+| Number of entities | 2890 |
+| Number of sensors | 1628 |
 | Current Version | 2026.4.2 |
 | Total Automations | 121 |
 | Total Scripts | 38 |
 | Total Lights | 39 |
-| Total Switches | 205 |
+| Total Switches | 184 |
 | Total Scenes | 13 |
 | Total Players | 19 |
 
@@ -186,7 +186,7 @@ This repository is treated as:
 
 - [Browser Mod](https://github.com/thomasloven/hass-browser_mod)
 
-- [Chime Tts](https://github.com/nimroddolev/chime_tts)
+- [C.A.F.E.](https://github.com/FezVrasta/cafe-hass)
 
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test)
 
@@ -211,8 +211,6 @@ This repository is treated as:
 - [Jellyha](https://github.com/zupancicmarko/JellyHA)
 
 - [Llm Vision](https://github.com/valentinfrlch/ha-llmvision)
-
-- [Mikrotik Router](https://github.com/tomaae/homeassistant-mikrotik_router)
 
 - [Mqtt Media Player](https://github.com/bkbilly/mqtt_media_player)
 
@@ -258,8 +256,6 @@ This repository is treated as:
 
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot)
 
-- [Youtube](https://github.com/custom-components/youtube)
-
 
 ## 🎛️ Lovelace plugins
 - [Adguard Card](https://github.com/homeassistant-extras/adguard-card)
@@ -299,8 +295,8 @@ This repository is treated as:
 - [Trend Analysis Card](https://github.com/Riscue/trend-analysis-card)
 - [Tv Remote Card](https://github.com/marrobHD/tv-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
-- [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
 - [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
+- [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
 - [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 - [Weather Alerts Card](https://github.com/seevee/weather_alerts_card)

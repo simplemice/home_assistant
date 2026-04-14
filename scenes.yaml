@@ -1806,11 +1806,11 @@
       xy_color:
       - 0.314
       - 0.494
-      light.on: true
-      light.color: 12255113
-      light.color_temperature: 2288
-      light.mode: 1
       light.brightness: 5
+      light.color_temperature: 2288
+      light.color: 12255113
+      light.on: true
+      light.mode: 1
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'on'
