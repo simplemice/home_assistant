@@ -47,3 +47,12 @@
 - refactoring database package
 - refactoring presense package
 
+
+## v2026.04.14-1251
+- Github Adjustments complete. The house grows smarter.
+- add media dir and fix scripts/automation
+- add media dir and fix scripts/automation
+- remove extensions
+- small fixes to presense package
+- small fixes to presense package
+
