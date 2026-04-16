@@ -1,7 +1,7 @@
 ###############################################################################
 #   @author         :   Simplemice
-#   @package        :   Gas Usage (FINAL - Clean & Stable)
-#   @description    :   Smart gas tracking with filtering, integration, cost
+#   @package        :   Gas Usage
+#   @description    :   Smart gas tracking with filtering, delta usage, cost
 ###############################################################################
 
 ############################
@@ -32,40 +32,42 @@ sensor:
       - filter: lowpass
         time_constant: 8
 
-  ###########################################################################
-  # INTEGRATION (RIEMANN SUM)
-  ###########################################################################
-  - platform: integration
-    source: sensor.gas_consumption_signal
-    name: "Gas Used Total"
-    unique_id: gas_used_total
-    method: trapezoidal
-    round: 3
-
 ############################
-# TEMPLATE ENTITIES
+# TEMPLATE (USAGE + REFILL LOGIC)
 ############################
 template:
-  # Trigger-based block for dynamic logic (Refills & Signal)
   - trigger:
       - platform: state
         entity_id: sensor.filtered_gas_volume
+
     sensor:
-      - name: "Gas Consumption Signal"
-        unique_id: gas_consumption_signal
+      - name: "Gas Used Total"
+        unique_id: gas_used_total
         unit_of_measurement: "L"
         device_class: gas
-        state_class: measurement
+        state_class: total_increasing
         icon: mdi:fire
-        # We take the absolute change or invert the scale drop to show "usage"
+
         state: >
-          {{ states('sensor.filtered_gas_volume') | float(0) }}
+          {% set current = trigger.to_state.state | float(0) %}
+          {% set previous = trigger.from_state.state | float(0) if trigger.from_state else current %}
+          {% set delta = previous - current %}
+          {% set total = states('sensor.gas_used_total') | float(0) %}
+
+          {% if delta < -2 %}
+            0
+          {% elif delta > 0 %}
+            {{ (total + delta) | round(3) }}
+          {% else %}
+            {{ total }}
+          {% endif %}
 
     binary_sensor:
       - name: "Gas Tank Refilled"
         unique_id: gas_tank_refilled
-        delay_off: "00:02:00"
         device_class: update
+        delay_off: "00:02:00"
+
         state: >
           {% if trigger.from_state is not none and trigger.to_state is not none %}
             {% set current = trigger.to_state.state | float(0) %}
@@ -75,7 +77,9 @@ template:
             false
           {% endif %}
 
-  # Standard Sensors for derived values
+  ############################
+  # DERIVED SENSORS
+  ############################
   - sensor:
       - name: "Gas Usage m3"
         unique_id: gas_used_m3
@@ -83,6 +87,7 @@ template:
         device_class: gas
         state_class: total_increasing
         icon: mdi:meter-cubic
+
         state: >
           {{ (states('sensor.gas_used_total') | float(0) / 1000) | round(4) }}
 
@@ -92,6 +97,7 @@ template:
         device_class: monetary
         state_class: total
         icon: mdi:cash
+
         state: >
           {% set usage = states('sensor.gas_used_total') | float(0) %}
           {% set rate = states('input_number.gas_tariff_rate') | float(0) %}
