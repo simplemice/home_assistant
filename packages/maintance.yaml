@@ -9,6 +9,9 @@ input_boolean:
   house_cleaning_mode:
     name: "House Cleaning Mode"
     icon: mdi:vacuum
+  house_cleaning_notify:
+    name: "House Cleaning Notification"
+    icon: mdi:vacuum
   guest_mode:
     name: "Guest Mode"
     icon: mdi:party-popper

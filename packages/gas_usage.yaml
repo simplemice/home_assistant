@@ -1,123 +1,36 @@
 ###############################################################################
 #   @author         :   Simplemice
 #   @package        :   Gas Usage
-#   @description    :   Smart gas tracking with filtering, delta usage, cost
+#   @description    :   Gas tracking with filtering, delta usage, cost
 ###############################################################################
 
-############################
-# INPUTS
-############################
-input_number:
-  gas_tariff_rate:
-    name: "Gas Tariff Rate"
-    min: 0
-    max: 20
-    step: 0.1
-    mode: box
-    unit_of_measurement: "THB/L"
-    icon: mdi:currency-thb
-
-############################
-# FILTER (RAW SENSOR CLEANUP)
-############################
-sensor:
-  - platform: filter
-    name: "Filtered Gas Volume"
-    unique_id: filtered_gas_volume
-    entity_id: sensor.kitchen_gas_scale_gas_volume
-    filters:
-      - filter: outlier
-        window_size: 5
-        radius: 0.3
-      - filter: lowpass
-        time_constant: 8
-
-############################
-# TEMPLATE (USAGE + REFILL LOGIC)
-############################
 template:
   - trigger:
       - platform: state
-        entity_id: sensor.filtered_gas_volume
-
+        entity_id: sensor.kitchen_gas_scale_gas_volume
+        not_to:
+          - "unknown"
+          - "unavailable"
     sensor:
       - name: "Gas Used Total"
         unique_id: gas_used_total
         unit_of_measurement: "L"
         device_class: gas
         state_class: total_increasing
-        icon: mdi:fire
-
         state: >
-          {% set current = trigger.to_state.state | float(0) %}
+          {% set current = states('sensor.kitchen_gas_scale_gas_volume') | float(0) %}
           {% set previous = trigger.from_state.state | float(0) if trigger.from_state else current %}
-          {% set delta = previous - current %}
-          {% set total = states('sensor.gas_used_total') | float(0) %}
-
-          {% if delta < -2 %}
-            0
-          {% elif delta > 0 %}
-            {{ (total + delta) | round(3) }}
+          {% set used = previous - current %}
+          {% if used > 0 %}
+            {{ (states('sensor.gas_used_total') | float(0) + used) | round(3) }}
           {% else %}
-            {{ total }}
+            {{ states('sensor.gas_used_total') | float(0) }}
           {% endif %}
 
+  - trigger:
+      - platform: state
+        entity_id: sensor.kitchen_gas_scale_gas_volume
     binary_sensor:
       - name: "Gas Tank Refilled"
-        unique_id: gas_tank_refilled
-        device_class: update
-        delay_off: "00:02:00"
-
         state: >
-          {% if trigger.from_state is not none and trigger.to_state is not none %}
-            {% set current = trigger.to_state.state | float(0) %}
-            {% set previous = trigger.from_state.state | float(0) %}
-            {{ (current - previous) > 2.0 }}
-          {% else %}
-            false
-          {% endif %}
-
-  ############################
-  # DERIVED SENSORS
-  ############################
-  - sensor:
-      - name: "Gas Usage m3"
-        unique_id: gas_used_m3
-        unit_of_measurement: "m³"
-        device_class: gas
-        state_class: total_increasing
-        icon: mdi:meter-cubic
-
-        state: >
-          {{ (states('sensor.gas_used_total') | float(0) / 1000) | round(4) }}
-
-      - name: "Gas Cost"
-        unique_id: gas_cost_total
-        unit_of_measurement: "THB"
-        device_class: monetary
-        state_class: total
-        icon: mdi:cash
-
-        state: >
-          {% set usage = states('sensor.gas_used_total') | float(0) %}
-          {% set rate = states('input_number.gas_tariff_rate') | float(0) %}
-          {{ (usage * rate) | round(2) }}
-
-############################
-# UTILITY METERS
-############################
-utility_meter:
-  gas_daily:
-    source: sensor.gas_used_total
-    name: "Gas Daily"
-    cycle: daily
-
-  gas_monthly:
-    source: sensor.gas_used_total
-    name: "Gas Monthly"
-    cycle: monthly
-
-  gas_yearly:
-    source: sensor.gas_used_total
-    name: "Gas Yearly"
-    cycle: yearly
+          {{ (trigger.to_state.state | float(0)) > (trigger.from_state.state | float(0) + 1) }}

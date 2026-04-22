@@ -4,6 +4,10 @@
 #   @package        :   Media
 #   @description    :   A Collection of Notification Scripts and Configs.
 ###############################################################################
+input_boolean:
+  house_cctv_mode:
+    name: "House CCTV Mode"
+    icon: mdi:cctv
 
 remote:
   - platform: xiaomi_miio
