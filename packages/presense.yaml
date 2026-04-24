@@ -100,10 +100,11 @@ template:
         state: >
           {% set left = state_attr('input_datetime.simplemice_left_home_at','timestamp') %}
           {% set ret = state_attr('input_datetime.simplemice_return_home_at','timestamp') %}
-          {% if left is none or ret is none %}
-            0h 0m 0s
+          {% if left is none %}
+            unknown
           {% else %}
-            {% set diff = (ret - left) | int %}
+            {% set end = ret if ret > left else now().timestamp() %}
+            {% set diff = (end - left) | int %}
             {% set h = diff // 3600 %}
             {% set m = (diff % 3600) // 60 %}
             {% set s = diff % 60 %}
