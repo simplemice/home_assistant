@@ -41,6 +41,8 @@
           "manufacturer": "Hersteller",
           "model": "Modell",
           "serial_number": "Seriennummer",
+          "documentation_url": "Handbuch / Dokumentations-URL",
+          "notes": "Notizen",
           "go_back": "Zurück"
         },
         "data_description": {
@@ -49,6 +51,8 @@
           "manufacturer": "Der Hersteller des Objekts.",
           "model": "Die Modellbezeichnung oder -nummer.",
           "serial_number": "Die Seriennummer des Objekts.",
+          "documentation_url": "Optionaler Link zu einem PDF-Handbuch, einer Hersteller-Seite oder beliebiger URL mit Referenz-Infos zu diesem Objekt.",
+          "notes": "Freie Notizen zum Objekt — Teilenummern, Verfahren, Einstellungs-Erinnerungen, etc.",
           "go_back": "Zurück zur Vorlagenauswahl ohne zu speichern."
         }
       },
@@ -75,6 +79,8 @@
           "manufacturer": "Hersteller",
           "model": "Modell",
           "serial_number": "Seriennummer",
+          "documentation_url": "Handbuch / Dokumentations-URL",
+          "notes": "Notizen",
           "installation_date": "Installationsdatum",
           "go_back": "Zurück"
         },
@@ -84,6 +90,8 @@
           "manufacturer": "Der Hersteller des Objekts.",
           "model": "Die Modellbezeichnung oder -nummer.",
           "serial_number": "Die Seriennummer des Objekts.",
+          "documentation_url": "Optionaler Link zu einem PDF-Handbuch, einer Hersteller-Seite oder beliebiger URL mit Referenz-Infos zu diesem Objekt.",
+          "notes": "Freie Notizen zum Objekt — Teilenummern, Verfahren, Einstellungs-Erinnerungen, etc.",
           "installation_date": "Wann dieses Objekt installiert oder gekauft wurde.",
           "go_back": "Zurück zum Hauptmenü ohne zu speichern."
         }
@@ -370,6 +378,8 @@
           "manufacturer": "Hersteller",
           "model": "Modell",
           "serial_number": "Seriennummer",
+          "documentation_url": "Handbuch / Dokumentations-URL",
+          "notes": "Notizen",
           "installation_date": "Installationsdatum"
         },
         "data_description": {
@@ -378,6 +388,8 @@
           "manufacturer": "Der Hersteller dieses Objekts.",
           "model": "Das Modell dieses Objekts.",
           "serial_number": "Die Seriennummer dieses Objekts.",
+          "documentation_url": "Optionaler Link zu einem PDF-Handbuch, einer Hersteller-Seite oder beliebiger URL mit Referenz-Infos zu diesem Objekt.",
+          "notes": "Freie Notizen zum Objekt — Teilenummern, Verfahren, Einstellungs-Erinnerungen, etc.",
           "installation_date": "Wann dieses Objekt installiert wurde."
         }
       }
@@ -421,6 +433,7 @@
         "menu_options": {
           "general_settings": "Allgemeine Einstellungen",
           "advanced_features": "Erweiterte Funktionen",
+          "panel_access": "Panel-Zugriff",
           "budget_settings": "Budgeteinstellungen",
           "manage_groups": "Gruppen verwalten",
           "notification_settings": "Benachrichtigungseinstellungen",
@@ -439,7 +452,8 @@
           "advanced_environmental_visible": "Umweltkorrelation",
           "advanced_budget_visible": "Budgetverfolgung",
           "advanced_groups_visible": "Gruppen",
-          "advanced_checklists_visible": "Checklisten"
+          "advanced_checklists_visible": "Checklisten",
+          "advanced_schedule_time_visible": "Uhrzeit-Scheduling"
         },
         "data_description": {
           "advanced_adaptive_visible": "EWA-, Weibull-Analyse und Intervallvorschläge für Aufgaben anzeigen.",
@@ -448,7 +462,18 @@
           "advanced_environmental_visible": "Umweltkorrelation (Temperatur, Feuchtigkeit) anzeigen.",
           "advanced_budget_visible": "Monatliche/jährliche Budgetverfolgung und Warnungen anzeigen.",
           "advanced_groups_visible": "Wartungsgruppen-Verwaltung anzeigen.",
-          "advanced_checklists_visible": "Aufgaben-Checklisten für schrittweise Erledigung anzeigen."
+          "advanced_checklists_visible": "Aufgaben-Checklisten für schrittweise Erledigung anzeigen.",
+          "advanced_schedule_time_visible": "Erlaubt Tasks, zu einer festen Uhrzeit fällig zu werden statt um Mitternacht."
+        }
+      },
+      "panel_access": {
+        "title": "Panel-Zugriff",
+        "description": "Wähle Non-Admin-User von Home Assistant aus, die auch das vollständige Maintenance-Supporter-Panel sehen sollen (Erstellen / Bearbeiten / Löschen). Admins sehen immer das volle Panel. {user_count} Non-Admin-User gefunden.",
+        "data": {
+          "admin_panel_user_ids": "User mit Vollzugriff"
+        },
+        "data_description": {
+          "admin_panel_user_ids": "Ausgewählte User sehen das volle Panel, alle anderen nur Abhaken und Überspringen."
         }
       },
       "general_settings": {
@@ -482,7 +507,8 @@
           "quiet_hours_end": "Ruhezeit Ende",
           "max_notifications_per_day": "Max. Benachrichtigungen pro Tag",
           "notification_bundling_enabled": "Benachrichtigungen bündeln",
-          "notification_bundle_threshold": "Bündelungsschwelle"
+          "notification_bundle_threshold": "Bündelungsschwelle",
+          "notification_title_style": "Format des Benachrichtigungs-Titels"
         },
         "data_description": {
           "notify_due_soon_interval_hours": "Wie oft die Erinnerung wiederholt werden soll. 0 = einmalige Benachrichtigung.",
@@ -491,7 +517,8 @@
           "quiet_hours_enabled": "Benachrichtigungen während der Ruhezeit unterdrücken.",
           "max_notifications_per_day": "Maximale Anzahl Benachrichtigungen pro Tag. 0 = unbegrenzt.",
           "notification_bundling_enabled": "Eine zusammengefasste Benachrichtigung senden, wenn mehrere Aufgaben Aufmerksamkeit erfordern.",
-          "notification_bundle_threshold": "Mindestanzahl an Aufgaben, um eine gebündelte Benachrichtigung auszulösen."
+          "notification_bundle_threshold": "Mindestanzahl an Aufgaben, um eine gebündelte Benachrichtigung auszulösen.",
+          "notification_title_style": "Was als TITEL der Benachrichtigung erscheint. „Standard“ behält den Status-Text (z. B. „Wartung überfällig!“). Objekt- / Aufgabenname helfen, wenn das Smartphone Benachrichtigungen stapelt."
         }
       },
       "notification_actions": {
@@ -927,6 +954,8 @@
           "manufacturer": "Hersteller",
           "model": "Modell",
           "serial_number": "Seriennummer",
+          "documentation_url": "Handbuch / Dokumentations-URL",
+          "notes": "Notizen",
           "area_id": "Bereich",
           "installation_date": "Installationsdatum",
           "go_back": "Zurück"
@@ -936,6 +965,8 @@
           "manufacturer": "Der Hersteller des Objekts.",
           "model": "Die Modellbezeichnung oder -nummer.",
           "serial_number": "Die Seriennummer des Objekts.",
+          "documentation_url": "Optionaler Link zu einem PDF-Handbuch, einer Hersteller-Seite oder beliebiger URL mit Referenz-Infos zu diesem Objekt.",
+          "notes": "Freie Notizen zum Objekt — Teilenummern, Verfahren, Einstellungs-Erinnerungen, etc.",
           "area_id": "Der Bereich in Ihrem Zuhause, in dem sich dieses Objekt befindet.",
           "installation_date": "Wann dieses Objekt installiert oder gekauft wurde.",
           "go_back": "Zurück zum Hauptmenü ohne Speichern."
@@ -1238,6 +1269,13 @@
         "any": "Beliebige Entität löst aus",
         "all": "Alle Entitäten müssen auslösen"
       }
+    },
+    "notification_title_style": {
+      "options": {
+        "default": "Standard (Status-Titel)",
+        "object_name": "Objektname als Titel",
+        "task_name": "Aufgabenname als Titel"
+      }
     }
   },
   "services": {
@@ -1333,6 +1371,43 @@
           "remove_trigger": {
             "title": "Sensor-Trigger entfernen",
             "description": "Dies entfernt den Sensor-Trigger von Aufgabe \"{task_name}\" an \"{object_name}\" und konvertiert den Zeitplan zu zeitbasiert oder manuell. Die Wartungshistorie bleibt erhalten.\n\nBisherige Trigger-Entität: `{entity_id}`"
+          }
+        }
+      }
+    },
+    "orphan_admin_panel_user": {
+      "title": "User aus Panel-Zugriff existiert nicht mehr",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Verwaister User in Panel-Zugriffsliste",
+            "description": "User `{user_id}…` ist in der Panel-Zugriffsliste, existiert aber nicht mehr in Home Assistant. Wahrscheinlich wurde der User gelöscht.\n\nKlicke **Senden** um den User aus der Liste zu entfernen. (Soll das Issue offen bleiben: nutze stattdessen den **Ignorieren**-Button auf der Repairs-Seite von Home Assistant.)"
+          }
+        }
+      }
+    },
+    "stale_action_entity": {
+      "title": "Completion-Action verweist auf gelöschte Entität",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Completion-Action: {stale_entity} existiert nicht mehr",
+            "description": "Die Aufgabe **{task_name}** hat eine `on_complete_action` konfiguriert, die einen Service auf `{stale_entity}` aufruft, aber diese Entität ist nicht mehr in Home Assistant registriert.\n\nWähle wie repariert werden soll:",
+            "menu_options": {
+              "replace_entity": "Mit anderer Entität ersetzen",
+              "remove_action": "Completion-Action entfernen"
+            }
+          },
+          "replace_entity": {
+            "title": "Ziel-Entität ersetzen",
+            "description": "Wähle die Entität die statt `{stale_entity}` für Aufgabe **{task_name}** verwendet werden soll.",
+            "data": {
+              "new_entity": "Neue Ziel-Entität"
+            }
+          },
+          "remove_action": {
+            "title": "Completion-Action entfernen",
+            "description": "Entferne die `on_complete_action` von Aufgabe **{task_name}** vollständig. Die Aufgabe selbst bleibt unverändert — nur der Service-Call beim Abschluss wird entfernt."
           }
         }
       }

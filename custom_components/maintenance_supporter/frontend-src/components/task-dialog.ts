@@ -6,17 +6,26 @@ import type { HomeAssistant, MaintenanceTask, TriggerConfig, HAUser } from "../t
 import { t } from "../styles";
 import { UserService } from "../user-service";
 
+import { describeWsError } from "../ws-errors";
+
 const MAINTENANCE_TYPE_KEYS = ["cleaning", "inspection", "replacement", "calibration", "service", "custom"];
 const SCHEDULE_TYPE_KEYS = ["time_based", "sensor_based", "manual"];
 const TRIGGER_TYPE_KEYS = ["threshold", "counter", "state_change", "runtime"];
 
 export class MaintenanceTaskDialog extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
+  @property({ type: Boolean, attribute: "checklists-enabled" }) public checklistsEnabled = false;
+  @property({ type: Boolean, attribute: "schedule-time-enabled" }) public scheduleTimeEnabled = false;
+  @property({ type: Boolean, attribute: "completion-actions-enabled" }) public completionActionsEnabled = false;
+  @property({ type: Number, attribute: "default-warning-days" }) public defaultWarningDays = 7;
   @state() private _open = false;
   @state() private _loading = false;
   @state() private _error = "";
   @state() private _entryId = "";
   @state() private _taskId: string | null = null; // null = create
+  // When openCreate is called without an entry_id and a list of objects is supplied,
+  // the dialog renders an Object selector dropdown so the user can pick the parent.
+  @state() private _objectChoices: Array<{ entry_id: string; name: string }> = [];
 
   // Task fields
   @state() private _name = "";
@@ -59,16 +68,56 @@ export class MaintenanceTaskDialog extends LitElement {
   // User assignment
   @state() private _responsibleUserId: string | null = null;
   @state() private _availableUsers: HAUser[] = [];
+
+  // Checklist (newline-separated steps, one per line)
+  @state() private _checklistText = "";
+
+  // Schedule time (HH:MM, advanced feature)
+  @state() private _scheduleTime = "";
+
+  // v1.3.0: on_complete_action (gated by completionActionsEnabled)
+  // v1.3.1: _actionData is the parsed object (was: _actionDataJson string)
+  // so ha-form can drive the data fields when the service schema is known.
+  @state() private _actionService = "";
+  @state() private _actionTargetEntity = "";
+  @state() private _actionData: Record<string, unknown> = {};
+  @state() private _actionDataJsonFallback = "";
+  @state() private _actionTesting = false;
+  @state() private _actionTestResult: "" | "ok" | "error" = "";
+
+  // v1.3.0: quick_complete_defaults (gated by completionActionsEnabled)
+  @state() private _qcNotes = "";
+  @state() private _qcCost = "";
+  @state() private _qcDuration = "";
+  @state() private _qcFeedback: "" | "needed" | "not_needed" = "";
+
+  // Environmental entity (adaptive_config)
+  @state() private _environmentalEntity = "";
+  @state() private _environmentalAttribute = "";
+  private _environmentalInitial = ""; // for change detection on save
+  private _environmentalAttributeInitial = "";
   private _userService: UserService | null = null;
 
   private get _lang(): string {
     return this.hass?.language ?? navigator.language.split("-")[0] ?? "en";
   }
 
-  public async openCreate(entryId: string): Promise<void> {
+  public async openCreate(entryId: string, objects?: Array<{ entry_id: string; object: { name: string } }>): Promise<void> {
     this._entryId = entryId;
     this._taskId = null;
     this._error = "";
+    // If no entryId is preset but caller passed objects, expose them as a dropdown.
+    // Sort alphabetically by name so the user doesn't have to scan for a target
+    // object in creation order (#40). First object after sort becomes the
+    // default selection so save can work without forced UI.
+    if (!entryId && objects && objects.length > 0) {
+      this._objectChoices = objects
+        .map(o => ({ entry_id: o.entry_id, name: o.object.name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      this._entryId = this._objectChoices[0].entry_id;
+    } else {
+      this._objectChoices = [];
+    }
     this._resetFields();
     await Promise.all([this._loadUsers(), this._loadTags()]);
     this._open = true;
@@ -81,7 +130,11 @@ export class MaintenanceTaskDialog extends LitElement {
     this._name = task.name;
     this._type = task.type;
     this._scheduleType = task.schedule_type;
-    this._intervalDays = task.interval_days?.toString() || "30";
+    // Preserve null (= no safety interval set) instead of forcing "30".
+    // Bug #42: the old `?.toString() || "30"` fallback reverted a cleared
+    // safety_interval back to 30 on next edit, silently overwriting the
+    // user's intent the moment they touched any other field and saved.
+    this._intervalDays = task.interval_days != null ? String(task.interval_days) : "";
     this._warningDays = task.warning_days.toString();
     this._intervalAnchor = task.interval_anchor || "completion";
     this._notes = task.notes || "";
@@ -91,6 +144,35 @@ export class MaintenanceTaskDialog extends LitElement {
     this._lastPerformed = task.last_performed || "";
     this._nfcTagId = task.nfc_tag_id || "";
     this._responsibleUserId = task.responsible_user_id || null;
+
+    this._checklistText = (task.checklist || []).join("\n");
+    this._scheduleTime = task.schedule_time || "";
+
+    // v1.3.0: hydrate on_complete_action + quick_complete_defaults
+    const oca = task.on_complete_action;
+    if (oca && oca.service) {
+      this._actionService = oca.service;
+      const tgt = oca.target?.entity_id;
+      this._actionTargetEntity = Array.isArray(tgt) ? (tgt[0] || "") : (tgt || "");
+      this._actionData = (oca.data && typeof oca.data === "object") ? { ...oca.data } : {};
+      this._actionDataJsonFallback = "";
+    } else {
+      this._actionService = "";
+      this._actionTargetEntity = "";
+      this._actionData = {};
+      this._actionDataJsonFallback = "";
+    }
+    const qcd = task.quick_complete_defaults;
+    this._qcNotes = qcd?.notes || "";
+    this._qcCost = qcd?.cost != null ? String(qcd.cost) : "";
+    this._qcDuration = qcd?.duration != null ? String(qcd.duration) : "";
+    this._qcFeedback = (qcd?.feedback as "needed" | "not_needed" | undefined) || "";
+
+    const ac = task.adaptive_config || {};
+    this._environmentalEntity = (ac.environmental_entity as string) || "";
+    this._environmentalAttribute = (ac.environmental_attribute as string) || "";
+    this._environmentalInitial = this._environmentalEntity;
+    this._environmentalAttributeInitial = this._environmentalAttribute;
 
     if (task.trigger_config) {
       const tc = task.trigger_config;
@@ -126,7 +208,7 @@ export class MaintenanceTaskDialog extends LitElement {
     this._type = "custom";
     this._scheduleType = "time_based";
     this._intervalDays = "30";
-    this._warningDays = "7";
+    this._warningDays = String(this.defaultWarningDays);
     this._intervalAnchor = "completion";
     this._notes = "";
     this._documentationUrl = "";
@@ -135,6 +217,23 @@ export class MaintenanceTaskDialog extends LitElement {
     this._lastPerformed = "";
     this._nfcTagId = "";
     this._responsibleUserId = null;
+    this._checklistText = "";
+    this._scheduleTime = "";
+    this._environmentalEntity = "";
+    this._environmentalAttribute = "";
+    this._environmentalInitial = "";
+    this._environmentalAttributeInitial = "";
+    // v1.3.0
+    this._actionService = "";
+    this._actionTargetEntity = "";
+    this._actionData = {};
+    this._actionDataJsonFallback = "";
+    this._actionTesting = false;
+    this._actionTestResult = "";
+    this._qcNotes = "";
+    this._qcCost = "";
+    this._qcDuration = "";
+    this._qcFeedback = "";
     this._resetTriggerFields();
   }
 
@@ -168,6 +267,161 @@ export class MaintenanceTaskDialog extends LitElement {
       console.error("Failed to load users:", error);
       this._availableUsers = [];
     }
+  }
+
+  // v1.3.0: fire the configured action immediately so the user can verify
+  // it works before saving the task. Doesn't persist anything.
+  private async _testAction(): Promise<void> {
+    const svc = this._actionService.trim();
+    if (!svc || !/^[a-z][a-z0-9_]*\.[a-z0-9_]+$/.test(svc)) {
+      this._actionTestResult = "error";
+      return;
+    }
+    const [domain, name] = svc.split(".");
+    const data = { ...this._buildActionData() };
+    const tgt = this._actionTargetEntity.trim();
+    if (tgt) data.entity_id = tgt;
+    this._actionTesting = true;
+    this._actionTestResult = "";
+    try {
+      await this.hass.callService(domain, name, data);
+      this._actionTestResult = "ok";
+    } catch {
+      this._actionTestResult = "error";
+    } finally {
+      this._actionTesting = false;
+      // Auto-clear the indicator after 3s.
+      setTimeout(() => { this._actionTestResult = ""; }, 3000);
+    }
+  }
+
+  // v1.3.1: derive the data dict from either the schema-driven _actionData
+  // (preferred) or the JSON fallback textfield. Returns {} on any parse
+  // problem so the caller still gets a usable empty object.
+  private _buildActionData(): Record<string, unknown> {
+    if (this._actionDataJsonFallback.trim()) {
+      try {
+        const parsed = JSON.parse(this._actionDataJsonFallback);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return parsed as Record<string, unknown>;
+        }
+      } catch { /* fallthrough to ha-form data */ }
+    }
+    return { ...this._actionData };
+  }
+
+  // v1.3.1: look up the selected service in hass.services and convert its
+  // `fields` map into the schema shape ha-form expects. Returns null when
+  // the service is unknown or has no fields metadata — caller falls back
+  // to a free-form JSON textfield.
+  private _serviceSchema(): Array<{
+    name: string;
+    required: boolean;
+    selector: Record<string, unknown>;
+  }> | null {
+    const svc = this._actionService.trim();
+    if (!svc || !/^[a-z][a-z0-9_]*\.[a-z0-9_]+$/.test(svc)) return null;
+    const [domain, name] = svc.split(".");
+    const fields = this.hass?.services?.[domain]?.[name]?.fields;
+    if (!fields || Object.keys(fields).length === 0) return null;
+    return Object.entries(fields).map(([fname, def]) => ({
+      name: fname,
+      required: !!def.required,
+      selector: (def.selector as Record<string, unknown>) || { text: {} },
+    }));
+  }
+
+  private _renderCompletionActionsSection(L: string) {
+    if (!this.completionActionsEnabled) return nothing;
+    const schema = this._serviceSchema();
+    return html`
+      <details class="ca-section">
+        <summary>${t("on_complete_action_title", L)}</summary>
+        <p class="field-help">${t("on_complete_action_desc", L)}</p>
+        <ha-service-picker
+          .hass=${this.hass}
+          .value=${this._actionService}
+          @value-changed=${(e: CustomEvent) => {
+            this._actionService = e.detail.value || "";
+            // Schema changed → drop fields the new service doesn't accept.
+            const newSchema = this._serviceSchema();
+            if (newSchema) {
+              const allowed = new Set(newSchema.map(f => f.name));
+              this._actionData = Object.fromEntries(
+                Object.entries(this._actionData).filter(([k]) => allowed.has(k)),
+              );
+            }
+          }}
+        ></ha-service-picker>
+        <ha-entity-picker
+          .hass=${this.hass}
+          .value=${this._actionTargetEntity}
+          .label=${t("on_complete_action_target", L)}
+          @value-changed=${(e: CustomEvent) => { this._actionTargetEntity = e.detail.value || ""; }}
+        ></ha-entity-picker>
+        ${schema
+          ? html`
+              <ha-form
+                class="ca-data-form"
+                .hass=${this.hass}
+                .schema=${schema}
+                .data=${this._actionData}
+                @value-changed=${(e: CustomEvent) => {
+                  this._actionData = { ...(e.detail.value as Record<string, unknown>) };
+                }}
+              ></ha-form>
+            `
+          : html`
+              <ha-textfield
+                label="${t("on_complete_action_data", L)}"
+                placeholder="{}"
+                .value=${this._actionDataJsonFallback}
+                @input=${(e: Event) => { this._actionDataJsonFallback = (e.target as HTMLInputElement).value; }}
+              ></ha-textfield>
+            `}
+        <div class="ca-test-row">
+          <button type="button" ?disabled=${this._actionTesting || !this._actionService}
+            @click=${this._testAction}>
+            ${this._actionTesting ? "…" : t("on_complete_action_test", L)}
+          </button>
+          ${this._actionTestResult === "ok"
+            ? html`<span class="ca-test-ok">${t("on_complete_action_test_success", L)}</span>`
+            : nothing}
+          ${this._actionTestResult === "error"
+            ? html`<span class="ca-test-error">${t("on_complete_action_test_failed", L)}</span>`
+            : nothing}
+        </div>
+      </details>
+
+      <details class="ca-section">
+        <summary>${t("quick_complete_defaults_title", L)}</summary>
+        <p class="field-help">${t("quick_complete_defaults_desc", L)}</p>
+        <ha-textfield
+          label="${t("quick_complete_defaults_notes", L)}"
+          .value=${this._qcNotes}
+          @input=${(e: Event) => { this._qcNotes = (e.target as HTMLInputElement).value; }}
+        ></ha-textfield>
+        <ha-textfield
+          label="${t("quick_complete_defaults_cost", L)}"
+          type="number" min="0" step="0.01"
+          .value=${this._qcCost}
+          @input=${(e: Event) => { this._qcCost = (e.target as HTMLInputElement).value; }}
+        ></ha-textfield>
+        <ha-textfield
+          label="${t("quick_complete_defaults_duration", L)}"
+          type="number" min="0" step="1"
+          .value=${this._qcDuration}
+          @input=${(e: Event) => { this._qcDuration = (e.target as HTMLInputElement).value; }}
+        ></ha-textfield>
+        <select class="qc-feedback"
+          .value=${this._qcFeedback}
+          @change=${(e: Event) => { this._qcFeedback = (e.target as HTMLSelectElement).value as "" | "needed" | "not_needed"; }}>
+          <option value="">${t("quick_complete_defaults_feedback_none", L)}</option>
+          <option value="needed">${t("quick_complete_defaults_feedback_needed", L)}</option>
+          <option value="not_needed">${t("quick_complete_defaults_feedback_not_needed", L)}</option>
+        </select>
+      </details>
+    `;
   }
 
   private async _loadTags(): Promise<void> {
@@ -282,11 +536,80 @@ export class MaintenanceTaskDialog extends LitElement {
         data.trigger_config = null;
       }
 
-      await this.hass.connection.sendMessagePromise(data);
+      // Schedule time only sent when feature is enabled — empty string clears.
+      if (this.scheduleTimeEnabled && this._scheduleType === "time_based") {
+        const t = this._scheduleTime.trim();
+        data.schedule_time = /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : null;
+      }
+
+      if (this.checklistsEnabled) {
+        const items = this._checklistText
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .slice(0, 100);
+        data.checklist = items.length ? items : null;
+      }
+
+      // v1.3.0: on_complete_action + quick_complete_defaults (gated)
+      if (this.completionActionsEnabled) {
+        const svc = this._actionService.trim();
+        if (svc && /^[a-z][a-z0-9_]*\.[a-z0-9_]+$/.test(svc)) {
+          const action: Record<string, unknown> = { service: svc };
+          const tgt = this._actionTargetEntity.trim();
+          if (tgt) action.target = { entity_id: tgt };
+          const dataDict = this._buildActionData();
+          if (Object.keys(dataDict).length > 0) {
+            action.data = dataDict;
+          }
+          data.on_complete_action = action;
+        } else {
+          data.on_complete_action = null;
+        }
+
+        const qcd: Record<string, unknown> = {};
+        if (this._qcNotes.trim()) qcd.notes = this._qcNotes.trim();
+        const cost = parseFloat(this._qcCost);
+        if (!isNaN(cost) && cost >= 0) qcd.cost = cost;
+        const dur = parseInt(this._qcDuration, 10);
+        if (!isNaN(dur) && dur >= 0) qcd.duration = dur;
+        if (this._qcFeedback) qcd.feedback = this._qcFeedback;
+        data.quick_complete_defaults = Object.keys(qcd).length ? qcd : null;
+      }
+
+      const result = await this.hass.connection.sendMessagePromise(data) as { task_id?: string };
+      const savedTaskId = this._taskId || result?.task_id;
+
+      // Environmental entity lives in adaptive_config (Store-managed),
+      // so it has a dedicated endpoint. Only call it when something
+      // actually changed, and only for sensor_based tasks.
+      const envChanged =
+        this._environmentalEntity !== this._environmentalInitial
+        || this._environmentalAttribute !== this._environmentalAttributeInitial;
+      if (
+        savedTaskId
+        && this._scheduleType === "sensor_based"
+        && envChanged
+      ) {
+        try {
+          await this.hass.connection.sendMessagePromise({
+            type: "maintenance_supporter/task/set_environmental_entity",
+            entry_id: this._entryId,
+            task_id: savedTaskId,
+            environmental_entity: this._environmentalEntity || null,
+            environmental_attribute: this._environmentalAttribute || null,
+          });
+          this._environmentalInitial = this._environmentalEntity;
+          this._environmentalAttributeInitial = this._environmentalAttribute;
+        } catch {
+          /* non-fatal — task itself saved */
+        }
+      }
+
       this._open = false;
       this.dispatchEvent(new CustomEvent("task-saved"));
-    } catch {
-      this._error = t("save_error", this._lang);
+    } catch (e) {
+      this._error = describeWsError(e, this._lang, t("save_error", this._lang));
     } finally {
       this._loading = false;
     }
@@ -426,6 +749,7 @@ export class MaintenanceTaskDialog extends LitElement {
           .value=${this._triggerFromState}
           @input=${(e: Event) => (this._triggerFromState = (e.target as HTMLInputElement).value)}
         ></ha-textfield>
+        <div class="field-help">${t("state_value_help", L)}</div>
         <ha-textfield
           label="${t("to_state_optional", L)}"
           .value=${this._triggerToState}
@@ -434,9 +758,11 @@ export class MaintenanceTaskDialog extends LitElement {
         <ha-textfield
           label="${t("target_changes", L)}"
           type="number"
+          min="1"
           .value=${this._triggerTargetChanges}
           @input=${(e: Event) => (this._triggerTargetChanges = (e.target as HTMLInputElement).value)}
         ></ha-textfield>
+        <div class="field-help">${t("target_changes_help", L)}</div>
       `;
     }
     if (this._triggerType === "runtime") {
@@ -462,6 +788,19 @@ export class MaintenanceTaskDialog extends LitElement {
         <div class="dialog-title">${title}</div>
         <div class="content">
           ${this._error ? html`<div class="error">${this._error}</div>` : nothing}
+          ${this._objectChoices.length > 0 ? html`
+            <div class="select-row">
+              <label>${t("object", L)}</label>
+              <select
+                .value=${this._entryId}
+                @change=${(e: Event) => (this._entryId = (e.target as HTMLSelectElement).value)}
+              >
+                ${this._objectChoices.map(
+                  (o) => html`<option value=${o.entry_id} ?selected=${o.entry_id === this._entryId}>${o.name}</option>`
+                )}
+              </select>
+            </div>
+          ` : nothing}
           <ha-textfield
             label="${t("task_name", L)}"
             required
@@ -508,6 +847,15 @@ export class MaintenanceTaskDialog extends LitElement {
                     <option value="planned" ?selected=${this._intervalAnchor === "planned"}>${t("anchor_planned", L)}</option>
                   </select>
                 </div>
+                ${this.scheduleTimeEnabled ? html`
+                  <ha-textfield
+                    label="${t("schedule_time_optional", L)}"
+                    type="time"
+                    .value=${this._scheduleTime}
+                    helper="${t("schedule_time_help", L)}"
+                    @input=${(e: Event) => (this._scheduleTime = (e.target as HTMLInputElement).value)}
+                  ></ha-textfield>
+                ` : nothing}
               `
             : nothing}
           <ha-textfield
@@ -516,6 +864,18 @@ export class MaintenanceTaskDialog extends LitElement {
             .value=${this._warningDays}
             @input=${(e: Event) => (this._warningDays = (e.target as HTMLInputElement).value)}
           ></ha-textfield>
+          ${this.checklistsEnabled ? html`
+            <h3>${t("checklist_steps_optional", L)}</h3>
+            <textarea
+              id="checklist-textarea"
+              class="checklist-textarea"
+              rows="5"
+              placeholder="${t("checklist_placeholder", L)}"
+              .value=${this._checklistText}
+              @input=${(e: Event) => (this._checklistText = (e.target as HTMLTextAreaElement).value)}
+            ></textarea>
+            <div class="field-help">${t("checklist_help", L)}</div>
+          ` : nothing}
           <ha-textfield
             label="${t("last_performed_optional", L)}"
             type="date"
@@ -538,6 +898,21 @@ export class MaintenanceTaskDialog extends LitElement {
             </select>
           </div>
           ${this._renderTriggerFields()}
+          ${this._scheduleType === "sensor_based" ? html`
+            <ha-textfield
+              label="${t("environmental_entity_optional", L)}"
+              helper="${t("environmental_entity_helper", L)}"
+              .value=${this._environmentalEntity}
+              @input=${(e: Event) => (this._environmentalEntity = (e.target as HTMLInputElement).value.trim())}
+            ></ha-textfield>
+            ${this._environmentalEntity ? html`
+              <ha-textfield
+                label="${t("environmental_attribute_optional", L)}"
+                .value=${this._environmentalAttribute}
+                @input=${(e: Event) => (this._environmentalAttribute = (e.target as HTMLInputElement).value.trim())}
+              ></ha-textfield>
+            ` : nothing}
+          ` : nothing}
           <ha-textfield
             label="${t("notes_optional", L)}"
             .value=${this._notes}
@@ -548,11 +923,13 @@ export class MaintenanceTaskDialog extends LitElement {
             .value=${this._documentationUrl}
             @input=${(e: Event) => (this._documentationUrl = (e.target as HTMLInputElement).value)}
           ></ha-textfield>
-          <ha-textfield
+          <ha-icon-picker
+            .hass=${this.hass}
             label="${t("custom_icon_optional", L)}"
             .value=${this._customIcon}
-            @input=${(e: Event) => (this._customIcon = (e.target as HTMLInputElement).value)}
-          ></ha-textfield>
+            @value-changed=${(e: CustomEvent) =>
+              (this._customIcon = (e.detail.value as string) || "")}
+          ></ha-icon-picker>
           ${this._availableTags.length > 0
             ? html`
               <div class="select-row">
@@ -566,6 +943,8 @@ export class MaintenanceTaskDialog extends LitElement {
                     (tag) => html`<option value=${tag.id} ?selected=${tag.id === this._nfcTagId}>${tag.name}</option>`
                   )}
                 </select>
+                <button type="button" class="link-button" @click=${this._loadTags}
+                  title="${t("nfc_tags_refresh", L)}">↻</button>
               </div>
             `
             : html`
@@ -574,6 +953,14 @@ export class MaintenanceTaskDialog extends LitElement {
                 .value=${this._nfcTagId}
                 @input=${(e: Event) => (this._nfcTagId = (e.target as HTMLInputElement).value)}
               ></ha-textfield>
+              <div class="field-help">
+                ${t("nfc_tags_empty_help", L)}
+                <a href="/config/tags">${t("nfc_tags_open_settings", L)}</a>
+                ·
+                <button type="button" class="link-button" @click=${this._loadTags}>
+                  ${t("nfc_tags_refresh", L)}
+                </button>
+              </div>
             `
           }
           <label class="toggle-row">
@@ -584,6 +971,7 @@ export class MaintenanceTaskDialog extends LitElement {
             />
             ${t("task_enabled", L)}
           </label>
+          ${this._renderCompletionActionsSection(L)}
         </div>
         <div class="dialog-actions">
           <ha-button appearance="plain" @click=${this._close}>${t("cancel", L)}</ha-button>
@@ -604,6 +992,41 @@ export class MaintenanceTaskDialog extends LitElement {
       font-weight: 500;
       padding-bottom: 12px;
     }
+    /* v1.3.0: completion-action sections */
+    .ca-section {
+      border: 1px solid var(--divider-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-top: 8px;
+    }
+    .ca-section > summary {
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .ca-section ha-textfield,
+    .ca-section ha-entity-picker,
+    .ca-section ha-service-picker,
+    .ca-section ha-form,
+    .ca-section .qc-feedback {
+      width: 100%;
+      margin-top: 8px;
+      display: block;
+    }
+    .ca-section .qc-feedback {
+      padding: 8px;
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+      background: var(--card-background-color, #fff);
+      color: var(--primary-text-color);
+    }
+    .ca-test-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .ca-test-ok { color: var(--success-color, #4caf50); font-size: 13px; }
+    .ca-test-error { color: var(--error-color, #f44336); font-size: 13px; }
     .content {
       display: flex;
       flex-direction: column;
@@ -611,6 +1034,12 @@ export class MaintenanceTaskDialog extends LitElement {
       min-width: 350px;
       max-height: 70vh;
       overflow-y: auto;
+    }
+    @media (max-width: 600px) {
+      .content {
+        min-width: 0;
+        max-height: none;
+      }
     }
     .dialog-actions {
       display: flex;
@@ -620,6 +1049,51 @@ export class MaintenanceTaskDialog extends LitElement {
     }
     ha-textfield {
       display: block;
+    }
+    .field-label {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
+    .checklist-textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+      background: var(--card-background-color);
+      color: var(--primary-text-color);
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .field-help {
+      font-size: 12px;
+      color: var(--secondary-text-color);
+    }
+    .field-help a,
+    .link-button {
+      background: none;
+      border: 0;
+      padding: 0;
+      color: var(--primary-color);
+      cursor: pointer;
+      font: inherit;
+      text-decoration: underline;
+    }
+    .field-help a:hover,
+    .link-button:hover {
+      text-decoration: none;
+    }
+    /* Smaller refresh icon-button when shown next to the dropdown. */
+    .select-row .link-button {
+      margin-left: 8px;
+      text-decoration: none;
+      font-size: 16px;
+    }
+    .select-row .link-button:hover {
+      color: var(--primary-color);
+      opacity: 0.7;
     }
     h3 {
       margin: 8px 0 0;

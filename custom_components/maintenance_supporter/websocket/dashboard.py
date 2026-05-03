@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import logging
 import math
-from collections.abc import Mapping
+import re
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -17,12 +18,15 @@ from ..const import (
     CONF_ACTION_COMPLETE_ENABLED,
     CONF_ACTION_SKIP_ENABLED,
     CONF_ACTION_SNOOZE_ENABLED,
+    CONF_ADMIN_PANEL_USER_IDS,
     CONF_ADVANCED_ADAPTIVE,
     CONF_ADVANCED_BUDGET,
     CONF_ADVANCED_CHECKLISTS,
+    CONF_ADVANCED_COMPLETION_ACTIONS,
     CONF_ADVANCED_ENVIRONMENTAL,
     CONF_ADVANCED_GROUPS,
     CONF_ADVANCED_PREDICTIONS,
+    CONF_ADVANCED_SCHEDULE_TIME,
     CONF_ADVANCED_SEASONAL,
     CONF_BUDGET_ALERT_THRESHOLD,
     CONF_BUDGET_ALERTS_ENABLED,
@@ -33,6 +37,7 @@ from ..const import (
     CONF_MAX_NOTIFICATIONS_PER_DAY,
     CONF_NOTIFICATION_BUNDLE_THRESHOLD,
     CONF_NOTIFICATION_BUNDLING_ENABLED,
+    CONF_NOTIFICATION_TITLE_STYLE,
     CONF_NOTIFICATIONS_ENABLED,
     CONF_NOTIFY_DUE_SOON_ENABLED,
     CONF_NOTIFY_DUE_SOON_INTERVAL,
@@ -73,6 +78,11 @@ _ALLOWED_SETTING_KEYS: dict[str, type | vol.Any] = {
     CONF_ADVANCED_BUDGET: bool,
     CONF_ADVANCED_GROUPS: bool,
     CONF_ADVANCED_CHECKLISTS: bool,
+    CONF_ADVANCED_SCHEDULE_TIME: bool,
+    CONF_ADVANCED_COMPLETION_ACTIONS: bool,
+    # Type-validated as a list here; element + length caps applied below in
+    # ws_update_global_settings (HA installs rarely exceed ~10 entries).
+    CONF_ADMIN_PANEL_USER_IDS: list,
     # Notification per-status
     CONF_NOTIFY_DUE_SOON_ENABLED: bool,
     CONF_NOTIFY_DUE_SOON_INTERVAL: int,
@@ -89,6 +99,8 @@ _ALLOWED_SETTING_KEYS: dict[str, type | vol.Any] = {
     # Bundling
     CONF_NOTIFICATION_BUNDLING_ENABLED: bool,
     CONF_NOTIFICATION_BUNDLE_THRESHOLD: int,
+    # v1.4.0 (#44): how to format the notification title
+    CONF_NOTIFICATION_TITLE_STYLE: str,
     # Actions
     CONF_ACTION_COMPLETE_ENABLED: bool,
     CONF_ACTION_SKIP_ENABLED: bool,
@@ -114,7 +126,12 @@ def _build_full_settings(options: Mapping[str, Any]) -> dict[str, Any]:
             "budget": options.get(CONF_ADVANCED_BUDGET, False),
             "groups": options.get(CONF_ADVANCED_GROUPS, False),
             "checklists": options.get(CONF_ADVANCED_CHECKLISTS, False),
+            "schedule_time": options.get(CONF_ADVANCED_SCHEDULE_TIME, False),
+            "completion_actions": options.get(CONF_ADVANCED_COMPLETION_ACTIONS, False),
         },
+        # Top-level (not a feature toggle, not a bool): list of HA user IDs
+        # whose UI gets the full admin panel even though they're not HA admins.
+        "admin_panel_user_ids": options.get(CONF_ADMIN_PANEL_USER_IDS, []),
         "general": {
             "default_warning_days": options.get(CONF_DEFAULT_WARNING_DAYS, 7),
             "notifications_enabled": options.get(CONF_NOTIFICATIONS_ENABLED, False),
@@ -134,6 +151,8 @@ def _build_full_settings(options: Mapping[str, Any]) -> dict[str, Any]:
             "max_per_day": options.get(CONF_MAX_NOTIFICATIONS_PER_DAY, 0),
             "bundling_enabled": options.get(CONF_NOTIFICATION_BUNDLING_ENABLED, False),
             "bundle_threshold": options.get(CONF_NOTIFICATION_BUNDLE_THRESHOLD, 2),
+            # v1.4.0 (#44): default keeps backwards-compatible per-status titles
+            "title_style": options.get(CONF_NOTIFICATION_TITLE_STYLE, "default"),
         },
         "actions": {
             "complete_enabled": options.get(CONF_ACTION_COMPLETE_ENABLED, False),
@@ -151,6 +170,60 @@ def _build_full_settings(options: Mapping[str, Any]) -> dict[str, Any]:
                 options.get(CONF_BUDGET_CURRENCY, "EUR"), "€"
             ),
         },
+        # Vacation mode (v1.2.0). Mirror the active flag so the panel can
+        # decide whether to show the Vacation tab without a separate WS call.
+        "vacation": _vacation_summary(options),
+    }
+
+
+def _vacation_summary(options: Mapping[str, Any]) -> dict[str, Any]:
+    """Embed-friendly slice of vacation state for the /settings response."""
+    from datetime import date, timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    from ..const import (
+        CONF_VACATION_BUFFER_DAYS,
+        CONF_VACATION_ENABLED,
+        CONF_VACATION_END,
+        CONF_VACATION_EXEMPT_TASK_IDS,
+        CONF_VACATION_START,
+        DEFAULT_VACATION_BUFFER_DAYS,
+    )
+
+    def _parse(s: Any) -> date | None:
+        if not s or not isinstance(s, str):
+            return None
+        try:
+            return date.fromisoformat(s)
+        except (TypeError, ValueError):
+            return None
+
+    enabled = bool(options.get(CONF_VACATION_ENABLED, False))
+    start = _parse(options.get(CONF_VACATION_START))
+    end = _parse(options.get(CONF_VACATION_END))
+    buffer_days = int(options.get(CONF_VACATION_BUFFER_DAYS, DEFAULT_VACATION_BUFFER_DAYS))
+    window_end = end + timedelta(days=max(0, buffer_days)) if end else None
+    # Use HA's configured timezone, not the host's. Vacation is a calendar-day
+    # concept: when the user said "vacation ends 2026-05-15" they mean their
+    # local 2026-05-15, not the server's UTC midnight.
+    today = dt_util.now().date()
+    is_active = (
+        enabled
+        and start is not None
+        and end is not None
+        and start <= today <= (window_end or end)
+    )
+    raw_exempt = options.get(CONF_VACATION_EXEMPT_TASK_IDS) or []
+    exempt = [x for x in raw_exempt if isinstance(x, str) and x.strip()]
+    return {
+        "enabled": enabled,
+        "start": start.isoformat() if start else None,
+        "end": end.isoformat() if end else None,
+        "buffer_days": buffer_days,
+        "exempt_task_ids": sorted(set(exempt)),
+        "is_active": is_active,
+        "window_end": window_end.isoformat() if window_end else None,
     }
 
 
@@ -232,7 +305,7 @@ async def ws_subscribe(
 ) -> None:
     """Subscribe to real-time maintenance updates."""
     attached_entry_ids: set[str] = set()
-    unsub_callbacks: list = []
+    unsub_callbacks: list[Callable[[], None]] = []
 
     @callback
     def _forward_update() -> None:
@@ -434,6 +507,50 @@ async def ws_update_global_settings(
         if key in filtered and len(filtered[key]) > max_len:
             del filtered[key]
 
+    # v1.4.0 (#44): enum-validate notification_title_style. Anything outside
+    # the known set is dropped silently so a bogus value can't get into the
+    # ConfigEntry options.
+    from ..const import NOTIFICATION_TITLE_STYLES
+    if (
+        CONF_NOTIFICATION_TITLE_STYLE in filtered
+        and filtered[CONF_NOTIFICATION_TITLE_STYLE] not in NOTIFICATION_TITLE_STYLES
+    ):
+        del filtered[CONF_NOTIFICATION_TITLE_STYLE]
+
+    # v1.4.6 (#44 follow-up): drop quiet-hours time strings that aren't valid
+    # HH:MM[:SS]. The HA TimeSelector in the options-flow rejects empty / bad
+    # strings as "Invalid time" and that error blocks the entire form save —
+    # even when the user is here to change something else and quiet_hours is
+    # disabled. By dropping invalid values here, the form falls back to the
+    # 22:00 / 08:00 defaults next render.
+    _TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$")
+    for time_key in (CONF_QUIET_HOURS_START, CONF_QUIET_HOURS_END):
+        if time_key in filtered:
+            v = filtered[time_key]
+            if not isinstance(v, str) or not _TIME_PATTERN.match(v):
+                del filtered[time_key]
+
+    # Sanitise admin_panel_user_ids: drop non-string entries + whitespace-only
+    # entries, cap each at 64 chars (HA user UUIDs are 32), cap list at 50
+    # entries, dedupe.
+    if CONF_ADMIN_PANEL_USER_IDS in filtered:
+        raw = filtered[CONF_ADMIN_PANEL_USER_IDS]
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for v in raw:
+            if not isinstance(v, str):
+                continue
+            stripped = v.strip()
+            if not stripped or len(stripped) > 64:
+                continue
+            if stripped in seen:
+                continue
+            seen.add(stripped)
+            cleaned.append(stripped)
+            if len(cleaned) >= 50:
+                break
+        filtered[CONF_ADMIN_PANEL_USER_IDS] = cleaned
+
     if not filtered:
         connection.send_error(
             msg["id"], "invalid_input", "No valid setting keys provided"
@@ -478,7 +595,7 @@ async def ws_test_notification(
     """Send a test notification using the configured service."""
     from ..config_flow_options_global import (
         _get_test_result_text,
-        validate_notify_service,
+        send_test_notification,
     )
 
     global_entry = _get_global_entry(hass)
@@ -486,62 +603,12 @@ async def ws_test_notification(
         connection.send_error(msg["id"], "not_found", "Global config entry not found")
         return
 
-    options = global_entry.options or global_entry.data
-    notify_service = str(options.get(CONF_NOTIFY_SERVICE, ""))
-
-    if not notify_service:
-        connection.send_result(
-            msg["id"],
-            {"success": False, "message": _get_test_result_text(hass, "no_service")},
-        )
-        return
-
-    normalized, error = validate_notify_service(notify_service)
-    if error:
-        connection.send_result(
-            msg["id"],
-            {
-                "success": False,
-                "message": _get_test_result_text(hass, "invalid_service"),
-            },
-        )
-        return
-
-    try:
-        parts = normalized.split(".")
-        push_msg = _get_test_result_text(hass, "push_message")
-        service_data: dict[str, Any] = {
-            "title": "Maintenance Supporter",
-            "message": push_msg,
-        }
-
-        # Add action buttons so users can verify their notification layout
-        actions_enabled = options.get(CONF_ACTION_COMPLETE_ENABLED, False)
-        skip_enabled = options.get(CONF_ACTION_SKIP_ENABLED, False)
-        snooze_enabled = options.get(CONF_ACTION_SNOOZE_ENABLED, False)
-        if actions_enabled or skip_enabled or snooze_enabled:
-            test_actions: list[dict[str, str]] = []
-            if actions_enabled:
-                test_actions.append({"action": "MS_TEST_COMPLETE", "title": "\u2705 Complete"})
-            if skip_enabled:
-                test_actions.append({"action": "MS_TEST_SKIP", "title": "\u23ed\ufe0f Skip"})
-            if snooze_enabled:
-                test_actions.append({"action": "MS_TEST_SNOOZE", "title": "\U0001f4a4 Snooze"})
-            service_data["data"] = {"actions": test_actions}
-
-        await hass.services.async_call(
-            parts[0],
-            parts[1],
-            service_data,
-            blocking=True,
-        )
-        connection.send_result(
-            msg["id"],
-            {"success": True, "message": _get_test_result_text(hass, "success")},
-        )
-    except Exception:
-        _LOGGER.debug("Test notification failed for %s", notify_service, exc_info=True)
-        connection.send_result(
-            msg["id"],
-            {"success": False, "message": _get_test_result_text(hass, "failed")},
-        )
+    options = dict(global_entry.options or global_entry.data)
+    result_key = await send_test_notification(hass, options)
+    connection.send_result(
+        msg["id"],
+        {
+            "success": result_key == "success",
+            "message": _get_test_result_text(hass, result_key),
+        },
+    )

@@ -57,9 +57,21 @@ def _get_merged_tasks(entry: ConfigEntry) -> dict[str, Any]:
 
 
 def _build_task_summary(
-    hass: HomeAssistant, task_id: str, task_data: dict[str, Any], coordinator_task: dict[str, Any] | None
+    hass: HomeAssistant,
+    task_id: str,
+    task_data: dict[str, Any],
+    coordinator_task: dict[str, Any] | None,
+    object_slug: str | None = None,
 ) -> dict[str, Any]:
-    """Build a task summary dict for WS responses."""
+    """Build a task summary dict for WS responses.
+
+    object_slug (when provided) lets the response include the auto-derived
+    sensor + binary_sensor entity_ids for this task, so frontend cards can
+    use HA's native entity_ids: filter pattern without re-implementing the
+    slugify logic.
+    """
+    from homeassistant.helpers import entity_registry as er
+
     from ..entity.triggers import normalize_entity_ids
 
     ct = coordinator_task or {}
@@ -102,6 +114,7 @@ def _build_task_summary(
         "interval_days": task_data.get("interval_days"),
         "interval_anchor": task_data.get("interval_anchor", "completion"),
         "last_planned_due": task_data.get("last_planned_due"),
+        "schedule_time": task_data.get("schedule_time"),
         "warning_days": task_data.get("warning_days", 7),
         "last_performed": task_data.get("last_performed"),
         "notes": task_data.get("notes"),
@@ -110,6 +123,22 @@ def _build_task_summary(
         "nfc_tag_id": task_data.get("nfc_tag_id"),
         "responsible_user_id": task_data.get("responsible_user_id"),
         "entity_slug": task_data.get("entity_slug"),
+        # Auto-derived entity_ids for this task's sensor + binary_sensor.
+        # Lookup via entity registry by unique_id so we get the actual
+        # registered entity_id (which can differ from the unique_id when the
+        # user has renamed it). None when registry lookup fails (rare).
+        "sensor_entity_id": (
+            er.async_get(hass).async_get_entity_id(
+                "sensor", "maintenance_supporter",
+                f"maintenance_supporter_{object_slug}_{task_id}",
+            ) if object_slug else None
+        ),
+        "binary_sensor_entity_id": (
+            er.async_get(hass).async_get_entity_id(
+                "binary_sensor", "maintenance_supporter",
+                f"maintenance_supporter_{object_slug}_{task_id}_overdue",
+            ) if object_slug else None
+        ),
         "trigger_config": trigger_config,
         "trigger_entity_info": trigger_entity_info,
         "trigger_entity_infos": trigger_entity_infos,
@@ -151,12 +180,15 @@ def _build_task_summary(
 
 def _build_object_response(hass: HomeAssistant, entry: ConfigEntry, coordinator_data: dict[str, Any] | None) -> dict[str, Any]:
     """Build a full object response dict."""
+    from ..const import slugify_object_name
+
     obj_data = entry.data.get(CONF_OBJECT, {})
     tasks_data = _get_merged_tasks(entry)
     ct_tasks = (coordinator_data or {}).get(CONF_TASKS, {})
+    object_slug = slugify_object_name(obj_data.get("name", "unknown"))
 
     tasks = [
-        _build_task_summary(hass, tid, tdata, ct_tasks.get(tid))
+        _build_task_summary(hass, tid, tdata, ct_tasks.get(tid), object_slug)
         for tid, tdata in tasks_data.items()
     ]
 
@@ -170,6 +202,12 @@ def _build_object_response(hass: HomeAssistant, entry: ConfigEntry, coordinator_
             "model": obj_data.get("model"),
             "serial_number": obj_data.get("serial_number"),
             "installation_date": obj_data.get("installation_date"),
+            # v1.4.0 (#43): expose to the frontend so the manual link
+            # renders in the object detail header AND, since v1.4.1, on
+            # every task detail page belonging to this object.
+            "documentation_url": obj_data.get("documentation_url"),
+            # v1.4.10 (#46): free-form notes shown below the meta block.
+            "notes": obj_data.get("notes"),
         },
         "tasks": tasks,
     }
@@ -261,6 +299,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_update_group,
     )
     from .io import (
+        ws_batch_generate_qr,
         ws_export_csv,
         ws_export_data,
         ws_generate_qr,
@@ -282,11 +321,18 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_create_task,
         ws_delete_task,
         ws_list_tasks,
+        ws_quick_complete_task,
         ws_reset_task,
         ws_skip_task,
         ws_update_task,
     )
     from .users import ws_assign_user, ws_list_users, ws_tasks_by_user
+    from .vacation import (
+        ws_vacation_end_now,
+        ws_vacation_preview,
+        ws_vacation_state,
+        ws_vacation_update,
+    )
 
     websocket_api.async_register_command(hass, ws_get_objects)
     websocket_api.async_register_command(hass, ws_get_object)
@@ -300,6 +346,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_delete_task)
     websocket_api.async_register_command(hass, ws_list_tasks)
     websocket_api.async_register_command(hass, ws_complete_task)
+    websocket_api.async_register_command(hass, ws_quick_complete_task)
     websocket_api.async_register_command(hass, ws_skip_task)
     websocket_api.async_register_command(hass, ws_reset_task)
     websocket_api.async_register_command(hass, ws_get_templates)
@@ -317,6 +364,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_seasonal_overrides)
     websocket_api.async_register_command(hass, ws_set_environmental_entity)
     websocket_api.async_register_command(hass, ws_generate_qr)
+    websocket_api.async_register_command(hass, ws_batch_generate_qr)
     websocket_api.async_register_command(hass, ws_get_settings)
     websocket_api.async_register_command(hass, ws_update_global_settings)
     websocket_api.async_register_command(hass, ws_test_notification)
@@ -325,3 +373,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_tasks_by_user)
     websocket_api.async_register_command(hass, ws_entity_attributes)
     websocket_api.async_register_command(hass, ws_list_tags)
+    websocket_api.async_register_command(hass, ws_vacation_state)
+    websocket_api.async_register_command(hass, ws_vacation_update)
+    websocket_api.async_register_command(hass, ws_vacation_preview)
+    websocket_api.async_register_command(hass, ws_vacation_end_now)

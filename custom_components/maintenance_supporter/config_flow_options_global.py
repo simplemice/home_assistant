@@ -21,12 +21,14 @@ from .const import (
     CONF_ACTION_COMPLETE_ENABLED,
     CONF_ACTION_SKIP_ENABLED,
     CONF_ACTION_SNOOZE_ENABLED,
+    CONF_ADMIN_PANEL_USER_IDS,
     CONF_ADVANCED_ADAPTIVE,
     CONF_ADVANCED_BUDGET,
     CONF_ADVANCED_CHECKLISTS,
     CONF_ADVANCED_ENVIRONMENTAL,
     CONF_ADVANCED_GROUPS,
     CONF_ADVANCED_PREDICTIONS,
+    CONF_ADVANCED_SCHEDULE_TIME,
     CONF_ADVANCED_SEASONAL,
     CONF_BUDGET_ALERT_THRESHOLD,
     CONF_BUDGET_ALERTS_ENABLED,
@@ -37,6 +39,7 @@ from .const import (
     CONF_MAX_NOTIFICATIONS_PER_DAY,
     CONF_NOTIFICATION_BUNDLE_THRESHOLD,
     CONF_NOTIFICATION_BUNDLING_ENABLED,
+    CONF_NOTIFICATION_TITLE_STYLE,
     CONF_NOTIFICATIONS_ENABLED,
     CONF_NOTIFY_DUE_SOON_ENABLED,
     CONF_NOTIFY_DUE_SOON_INTERVAL,
@@ -58,6 +61,21 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _VALID_SERVICE_PART = re.compile(r"^[a-z0-9_]+$")
+# v1.4.6: HH:MM or HH:MM:SS, 0–23 hours, 0–59 minutes/seconds.
+_VALID_TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$")
+
+
+def _safe_time(value: Any, fallback: str) -> str:
+    """Return ``value`` if it parses as HH:MM[:SS], else the ``fallback``.
+
+    HA's `TimeSelector` rejects empty strings, `None`, and non-time strings as
+    "Invalid time" — and that error then blocks the entire form save, even when
+    the user wasn't editing the time field. Coerce the form's *default* to a
+    valid time so the user can still hit Save.
+    """
+    if isinstance(value, str) and _VALID_TIME_PATTERN.match(value):
+        return value
+    return fallback
 
 
 def validate_notify_service(
@@ -165,6 +183,52 @@ def _get_test_result_text(hass: HomeAssistant, key: str) -> str:
     return texts.get(key, texts.get("failed", key))
 
 
+async def send_test_notification(
+    hass: HomeAssistant, options: dict[str, Any]
+) -> str:
+    """Send a test notification using the configured notify service.
+
+    Returns a result key ("success", "no_service", "invalid_service", "failed")
+    that callers map to localized text. Action buttons are included whenever
+    the corresponding action-feature toggles are enabled, so the rendered
+    notification matches the real layout users see for actual tasks.
+    """
+    notify_service = str(options.get(CONF_NOTIFY_SERVICE, ""))
+    if not notify_service:
+        return "no_service"
+
+    # Format-only validation — existence is left to the async_call below so
+    # notify services registered lazily (e.g. mobile_app_*) still test cleanly.
+    normalized, error = validate_notify_service(notify_service)
+    if error:
+        return "invalid_service"
+
+    try:
+        parts = normalized.split(".")
+        push_msg = _get_test_result_text(hass, "push_message")
+        service_data: dict[str, Any] = {
+            "title": "Maintenance Supporter",
+            "message": push_msg,
+        }
+        actions_enabled = options.get(CONF_ACTION_COMPLETE_ENABLED, False)
+        skip_enabled = options.get(CONF_ACTION_SKIP_ENABLED, False)
+        snooze_enabled = options.get(CONF_ACTION_SNOOZE_ENABLED, False)
+        if actions_enabled or skip_enabled or snooze_enabled:
+            test_actions: list[dict[str, str]] = []
+            if actions_enabled:
+                test_actions.append({"action": "MS_TEST_COMPLETE", "title": "\u2705 Complete"})
+            if skip_enabled:
+                test_actions.append({"action": "MS_TEST_SKIP", "title": "\u23ed\ufe0f Skip"})
+            if snooze_enabled:
+                test_actions.append({"action": "MS_TEST_SNOOZE", "title": "\U0001f4a4 Snooze"})
+            service_data["data"] = {"actions": test_actions}
+        await hass.services.async_call(parts[0], parts[1], service_data, blocking=True)
+        return "success"
+    except Exception:  # noqa: BLE001 - any failure mode reports "failed" to the UI
+        _LOGGER.debug("Test notification failed for %s", notify_service, exc_info=True)
+        return "failed"
+
+
 class GlobalOptionsFlow(OptionsFlow):
     """Handle global options with menu-based navigation."""
 
@@ -188,7 +252,7 @@ class GlobalOptionsFlow(OptionsFlow):
     def _menu_options(self) -> list[str]:
         """Build dynamic menu options."""
         current = self._current
-        options = ["general_settings", "advanced_features"]
+        options = ["general_settings", "advanced_features", "panel_access"]
         if current.get(CONF_ADVANCED_BUDGET, False):
             options.append("budget_settings")
         if current.get(CONF_ADVANCED_GROUPS, False):
@@ -277,8 +341,60 @@ class GlobalOptionsFlow(OptionsFlow):
                         CONF_ADVANCED_CHECKLISTS,
                         default=current.get(CONF_ADVANCED_CHECKLISTS, False),
                     ): selector.BooleanSelector(),
+                    vol.Optional(
+                        CONF_ADVANCED_SCHEDULE_TIME,
+                        default=current.get(CONF_ADVANCED_SCHEDULE_TIME, False),
+                    ): selector.BooleanSelector(),
                 }
             ),
+        )
+
+    # --- Panel Access (per-user override) ---
+
+    async def async_step_panel_access(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Pick non-admin HA users who should also see the full admin panel.
+
+        Admins always see the full panel. Non-admins listed here also get it;
+        all other non-admins see the read-only operator view (Complete / Skip).
+        """
+        if user_input is not None:
+            return self._save_and_return(user_input)
+
+        # Build the multi-select option list from the HA auth registry,
+        # mirroring the panel's own users/list filter (active humans only).
+        users = await self.hass.auth.async_get_users()
+        non_admin = [
+            u for u in users
+            if not u.is_admin and not u.system_generated and u.is_active
+        ]
+        options = [
+            selector.SelectOptionDict(
+                value=u.id,
+                label=(u.name or u.id[:8]),
+            )
+            for u in non_admin
+        ]
+
+        current = self._current
+        return self.async_show_form(
+            step_id="panel_access",
+            data_schema=vol.Schema({
+                vol.Optional(
+                    CONF_ADMIN_PANEL_USER_IDS,
+                    default=current.get(CONF_ADMIN_PANEL_USER_IDS, []),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=options,
+                        multiple=True,
+                        mode=selector.SelectSelectorMode.LIST,
+                    ),
+                ),
+            }),
+            description_placeholders={
+                "user_count": str(len(non_admin)),
+            },
         )
 
     # --- General Settings ---
@@ -301,6 +417,11 @@ class GlobalOptionsFlow(OptionsFlow):
                 return self._save_and_return(user_input)
 
         current = self._current
+        currency_code = current.get(CONF_BUDGET_CURRENCY, "EUR")
+        currency_options = [
+            selector.SelectOptionDict(value=code, label=f"{code} ({symbol})")
+            for code, symbol in BUDGET_CURRENCIES.items()
+        ]
 
         return self.async_show_form(
             step_id="general_settings",
@@ -312,6 +433,15 @@ class GlobalOptionsFlow(OptionsFlow):
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1, max=365, step=1, mode=selector.NumberSelectorMode.BOX
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_BUDGET_CURRENCY,
+                        default=currency_code,
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=currency_options,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
                         )
                     ),
                     vol.Optional(
@@ -392,13 +522,20 @@ class GlobalOptionsFlow(OptionsFlow):
                         CONF_QUIET_HOURS_ENABLED,
                         default=current.get(CONF_QUIET_HOURS_ENABLED, True),
                     ): selector.BooleanSelector(),
+                    # v1.4.6 (#44 follow-up): use `or` instead of dict-default so
+                    # empty-string / null / non-HH:MM values in storage don't
+                    # break the whole form. HA's TimeSelector rejects an empty
+                    # string as "Invalid time" and that error blocks the save
+                    # button — even if the user is here to change something
+                    # else and quiet_hours is disabled. Coerce to the sane
+                    # fallback whenever the persisted value isn't a usable time.
                     vol.Optional(
                         CONF_QUIET_HOURS_START,
-                        default=current.get(CONF_QUIET_HOURS_START, "22:00"),
+                        default=_safe_time(current.get(CONF_QUIET_HOURS_START), "22:00"),
                     ): selector.TimeSelector(),
                     vol.Optional(
                         CONF_QUIET_HOURS_END,
-                        default=current.get(CONF_QUIET_HOURS_END, "08:00"),
+                        default=_safe_time(current.get(CONF_QUIET_HOURS_END), "08:00"),
                     ): selector.TimeSelector(),
                     # --- Daily Limit ---
                     vol.Optional(
@@ -422,6 +559,17 @@ class GlobalOptionsFlow(OptionsFlow):
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=2, max=20, step=1, mode=selector.NumberSelectorMode.BOX
+                        )
+                    ),
+                    # v1.4.0 (#44): notification title style
+                    vol.Optional(
+                        CONF_NOTIFICATION_TITLE_STYLE,
+                        default=current.get(CONF_NOTIFICATION_TITLE_STYLE, "default"),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["default", "object_name", "task_name"],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="notification_title_style",
                         )
                     ),
                 }
@@ -482,38 +630,9 @@ class GlobalOptionsFlow(OptionsFlow):
                 menu_options=self._menu_options(),
             )
 
-        # First call: send the test notification
-        current = self._current
-        notify_service = current.get(CONF_NOTIFY_SERVICE, "")
-
-        if not notify_service:
-            result_key = "no_service"
-        else:
-            normalized, error = validate_notify_service(
-                notify_service, hass=self.hass
-            )
-            if error:
-                result_key = "invalid_service"
-            else:
-                try:
-                    parts = normalized.split(".")
-                    push_msg = _get_test_result_text(self.hass, "push_message")
-                    await self.hass.services.async_call(
-                        parts[0],
-                        parts[1],
-                        {
-                            "title": "Maintenance Supporter",
-                            "message": push_msg,
-                        },
-                        blocking=True,
-                    )
-                    result_key = "success"
-                except Exception:
-                    _LOGGER.debug(
-                        "Test notification failed for %s", notify_service, exc_info=True
-                    )
-                    result_key = "failed"
-
+        # First call: send the test notification via shared helper so the
+        # same actions appear here as from the panel WS call.
+        result_key = await send_test_notification(self.hass, self._current)
         result_text = _get_test_result_text(self.hass, result_key)
 
         return self.async_show_form(
@@ -535,26 +654,10 @@ class GlobalOptionsFlow(OptionsFlow):
         currency_code = current.get(CONF_BUDGET_CURRENCY, "EUR")
         currency_symbol = BUDGET_CURRENCIES.get(currency_code, "€")
 
-        currency_options = [
-            selector.SelectOptionDict(
-                value=code, label=f"{code} ({symbol})"
-            )
-            for code, symbol in BUDGET_CURRENCIES.items()
-        ]
-
         return self.async_show_form(
             step_id="budget_settings",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        CONF_BUDGET_CURRENCY,
-                        default=currency_code,
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=currency_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
                     vol.Optional(
                         CONF_BUDGET_MONTHLY,
                         default=current.get(CONF_BUDGET_MONTHLY, 0.0),
@@ -645,6 +748,7 @@ class GlobalOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Add a new maintenance group."""
         from .const import CONF_GROUPS
+        from .helpers.sanitize import cap_group_fields
 
         if user_input is not None:
             group_name = user_input.get("group_name", "").strip()
@@ -652,11 +756,13 @@ class GlobalOptionsFlow(OptionsFlow):
                 group_id = uuid4().hex
                 merged = self._current
                 groups = dict(merged.get(CONF_GROUPS, {}))
-                groups[group_id] = {
+                new_group = {
                     "name": group_name,
                     "description": user_input.get("group_description", ""),
                     "task_refs": [],
                 }
+                cap_group_fields(new_group)
+                groups[group_id] = new_group
                 merged[CONF_GROUPS] = groups
                 self.hass.config_entries.async_update_entry(
                     self.config_entry, options=merged

@@ -41,6 +41,8 @@
           "manufacturer": "Produttore",
           "model": "Modello",
           "serial_number": "Numero di serie",
+          "documentation_url": "URL manuale / documentazione",
+          "notes": "Note",
           "go_back": "Indietro"
         },
         "data_description": {
@@ -49,6 +51,8 @@
           "manufacturer": "Il produttore dell'oggetto.",
           "model": "Il nome o numero del modello.",
           "serial_number": "Il numero di serie dell'oggetto.",
+          "documentation_url": "Link opzionale a un manuale PDF, pagina del produttore o qualsiasi URL con informazioni di riferimento per questo oggetto.",
+          "notes": "Note libere sull'oggetto — numeri di parti, procedure, promemoria impostazioni, ecc.",
           "go_back": "Tornare alla selezione del modello senza salvare."
         }
       },
@@ -75,6 +79,8 @@
           "manufacturer": "Produttore",
           "model": "Modello",
           "serial_number": "Numero di serie",
+          "documentation_url": "URL manuale / documentazione",
+          "notes": "Note",
           "installation_date": "Data di installazione",
           "go_back": "Indietro"
         },
@@ -84,6 +90,8 @@
           "manufacturer": "Il produttore dell'oggetto.",
           "model": "Il nome o numero del modello.",
           "serial_number": "Il numero di serie dell'oggetto.",
+          "documentation_url": "Link opzionale a un manuale PDF, pagina del produttore o qualsiasi URL con informazioni di riferimento per questo oggetto.",
+          "notes": "Note libere sull'oggetto — numeri di parti, procedure, promemoria impostazioni, ecc.",
           "installation_date": "Data di installazione o acquisto di questo oggetto.",
           "go_back": "Tornare al menu principale senza salvare."
         }
@@ -370,6 +378,8 @@
           "manufacturer": "Produttore",
           "model": "Modello",
           "serial_number": "Numero di serie",
+          "documentation_url": "URL manuale / documentazione",
+          "notes": "Note",
           "installation_date": "Data di installazione"
         },
         "data_description": {
@@ -378,6 +388,8 @@
           "manufacturer": "Il produttore di questo oggetto.",
           "model": "Il modello di questo oggetto.",
           "serial_number": "Il numero di serie di questo oggetto.",
+          "documentation_url": "Link opzionale a un manuale PDF, pagina del produttore o qualsiasi URL con informazioni di riferimento per questo oggetto.",
+          "notes": "Note libere sull'oggetto — numeri di parti, procedure, promemoria impostazioni, ecc.",
           "installation_date": "Quando è stato installato questo oggetto."
         }
       }
@@ -421,6 +433,7 @@
         "menu_options": {
           "general_settings": "Impostazioni generali",
           "advanced_features": "Funzionalità avanzate",
+          "panel_access": "Accesso al pannello",
           "budget_settings": "Impostazioni budget",
           "manage_groups": "Gestisci gruppi",
           "notification_settings": "Impostazioni notifiche",
@@ -439,7 +452,8 @@
           "advanced_environmental_visible": "Correlazione ambientale",
           "advanced_budget_visible": "Monitoraggio budget",
           "advanced_groups_visible": "Gruppi",
-          "advanced_checklists_visible": "Liste di controllo"
+          "advanced_checklists_visible": "Liste di controllo",
+          "advanced_schedule_time_visible": "Pianificazione oraria"
         },
         "data_description": {
           "advanced_adaptive_visible": "Mostra analisi EWA, Weibull e suggerimenti di intervallo per le attività.",
@@ -448,7 +462,18 @@
           "advanced_environmental_visible": "Mostra regolazioni di correlazione ambientale (temperatura, umidità).",
           "advanced_budget_visible": "Mostra monitoraggio budget mensile/annuale e avvisi.",
           "advanced_groups_visible": "Mostra la gestione dei gruppi di manutenzione.",
-          "advanced_checklists_visible": "Mostra liste di controllo per il completamento passo per passo delle attività."
+          "advanced_checklists_visible": "Mostra liste di controllo per il completamento passo per passo delle attività.",
+          "advanced_schedule_time_visible": "Consente alle attività di scadere a un'ora specifica anziché a mezzanotte."
+        }
+      },
+      "panel_access": {
+        "title": "Accesso al pannello",
+        "description": "Seleziona gli utenti Home Assistant non amministratori che dovrebbero anche vedere il pannello Maintenance Supporter completo (crea / modifica / elimina). Gli amministratori vedono sempre il pannello completo. Trovati {user_count} utenti non amministratori.",
+        "data": {
+          "admin_panel_user_ids": "Utenti con accesso completo al pannello"
+        },
+        "data_description": {
+          "admin_panel_user_ids": "Gli utenti selezionati vedono il pannello completo; tutti gli altri vedono solo Completa e Salta."
         }
       },
       "general_settings": {
@@ -482,7 +507,8 @@
           "quiet_hours_end": "Fine ore silenziose",
           "max_notifications_per_day": "Notifiche max al giorno",
           "notification_bundling_enabled": "Raggruppa notifiche",
-          "notification_bundle_threshold": "Soglia di raggruppamento"
+          "notification_bundle_threshold": "Soglia di raggruppamento",
+          "notification_title_style": "Stile del titolo di notifica"
         },
         "data_description": {
           "notify_due_soon_interval_hours": "Frequenza di ripetizione del promemoria in scadenza. Impostare a 0 per una singola notifica.",
@@ -491,7 +517,8 @@
           "quiet_hours_enabled": "Sopprimere le notifiche durante le ore silenziose.",
           "max_notifications_per_day": "Numero massimo di notifiche al giorno. Impostare a 0 per illimitato.",
           "notification_bundling_enabled": "Inviare una notifica riepilogativa quando più attività richiedono attenzione.",
-          "notification_bundle_threshold": "Numero minimo di attività per attivare una notifica raggruppata."
+          "notification_bundle_threshold": "Numero minimo di attività per attivare una notifica raggruppata.",
+          "notification_title_style": "Cosa appare come TITOLO della notifica. Predefinito mantiene il testo per stato (es. «Manutenzione in ritardo!»). Nome oggetto / attività aiuta quando il telefono accumula le notifiche."
         }
       },
       "notification_actions": {
@@ -927,6 +954,8 @@
           "manufacturer": "Produttore",
           "model": "Modello",
           "serial_number": "Numero di serie",
+          "documentation_url": "URL manuale / documentazione",
+          "notes": "Note",
           "area_id": "Area",
           "installation_date": "Data di installazione",
           "go_back": "Indietro"
@@ -936,6 +965,8 @@
           "manufacturer": "Il produttore dell'oggetto.",
           "model": "Il nome o numero del modello.",
           "serial_number": "Il numero di serie dell'oggetto.",
+          "documentation_url": "Link opzionale a un manuale PDF, pagina del produttore o qualsiasi URL con informazioni di riferimento per questo oggetto.",
+          "notes": "Note libere sull'oggetto — numeri di parti, procedure, promemoria impostazioni, ecc.",
           "area_id": "L'area della tua casa dove si trova questo oggetto.",
           "installation_date": "Quando questo oggetto è stato installato o acquistato.",
           "go_back": "Torna al menu principale senza salvare."
@@ -1238,6 +1269,13 @@
         "any": "Qualsiasi entità attiva",
         "all": "Tutte le entità devono attivare"
       }
+    },
+    "notification_title_style": {
+      "options": {
+        "default": "Predefinito (titolo per stato)",
+        "object_name": "Nome dell'oggetto come titolo",
+        "task_name": "Nome dell'attività come titolo"
+      }
     }
   },
   "services": {
@@ -1333,6 +1371,43 @@
           "remove_trigger": {
             "title": "Rimuovi trigger sensore",
             "description": "Questo rimuoverà il trigger sensore dall'attività \"{task_name}\" su \"{object_name}\" e convertirà la pianificazione in temporale o manuale. La cronologia della manutenzione sarà conservata.\n\nEntità trigger precedente: `{entity_id}`"
+          }
+        }
+      }
+    },
+    "orphan_admin_panel_user": {
+      "title": "L'utente nell'elenco di accesso al pannello non esiste più",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Utente orfano nell'elenco di accesso al pannello",
+            "description": "L'utente `{user_id}…` è nell'elenco di accesso al pannello Maintenance Supporter ma non esiste più in Home Assistant. Probabilmente l'utente è stato eliminato.\n\nClicca **Invia** per rimuovere l'utente dall'elenco. (Per lasciare il problema in pace: usa il pulsante **Ignora** sulla pagina Riparazioni di Home Assistant.)"
+          }
+        }
+      }
+    },
+    "stale_action_entity": {
+      "title": "L'azione di completamento fa riferimento a un'entità eliminata",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Azione di completamento: {stale_entity} non esiste più",
+            "description": "L'attività **{task_name}** ha una `on_complete_action` configurata per chiamare un servizio su `{stale_entity}`, ma quell'entità non è più registrata in Home Assistant.\n\nScegli come riparare:",
+            "menu_options": {
+              "replace_entity": "Sostituisci con un'altra entità",
+              "remove_action": "Rimuovi l'azione di completamento"
+            }
+          },
+          "replace_entity": {
+            "title": "Sostituisci entità target",
+            "description": "Scegli l'entità da usare al posto di `{stale_entity}` per l'attività **{task_name}**.",
+            "data": {
+              "new_entity": "Nuova entità target"
+            }
+          },
+          "remove_action": {
+            "title": "Rimuovi azione di completamento",
+            "description": "Rimuove completamente la `on_complete_action` dall'attività **{task_name}**. L'attività in sé non è influenzata — solo la chiamata al servizio di completamento viene rimossa."
           }
         }
       }

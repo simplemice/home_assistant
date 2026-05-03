@@ -23,6 +23,8 @@ class MaintenanceObject:
     model: str | None = None
     serial_number: str | None = None
     installation_date: str | None = None  # ISO format YYYY-MM-DD
+    documentation_url: str | None = None  # v1.4.0: link to PDF manual / vendor page (#43)
+    notes: str | None = None  # v1.4.10: free-form notes — part numbers, procedures (#46)
     task_ids: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -35,6 +37,8 @@ class MaintenanceObject:
             "model": self.model,
             "serial_number": self.serial_number,
             "installation_date": self.installation_date,
+            "documentation_url": self.documentation_url,
+            "notes": self.notes,
             "task_ids": self.task_ids,
         }
 
@@ -49,6 +53,8 @@ class MaintenanceObject:
             model=data.get("model"),
             serial_number=data.get("serial_number"),
             installation_date=data.get("installation_date"),
+            documentation_url=data.get("documentation_url"),
+            notes=data.get("notes"),
             task_ids=data.get("task_ids", []),
         )
 

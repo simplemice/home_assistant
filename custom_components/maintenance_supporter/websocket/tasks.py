@@ -22,7 +22,11 @@ from ..const import (
     GLOBAL_UNIQUE_ID,
     MAX_CHECKLIST_ITEM_LENGTH,
     MAX_CHECKLIST_ITEMS,
+    MAX_DATE_LENGTH,
+    MAX_ENTITY_SLUG_LENGTH,
     MAX_ICON_LENGTH,
+    MAX_ID_LENGTH,
+    MAX_INTERVAL_DAYS,
     MAX_META_LENGTH,
     MAX_NAME_LENGTH,
     MAX_TEXT_LENGTH,
@@ -56,7 +60,7 @@ def _is_safe_url(url: str | None) -> bool:
         from urllib.parse import urlparse
         scheme = urlparse(url).scheme.lower()
         return scheme in _SAFE_URL_SCHEMES
-    except Exception:
+    except Exception:  # noqa: BLE001 - any malformed URL is rejected as unsafe
         return False
 
 
@@ -101,11 +105,16 @@ _TRIGGER_REQUIRED_FIELDS: dict[str, list[str]] = {
 }
 
 _TRIGGER_ALLOWED_KEYS: set[str] = {
-    "type", "entity_id", "entity_ids", "entity_logic",
-    "trigger_above", "trigger_below",
-    "trigger_target_value", "trigger_reset_on_complete",
+    "type", "entity_id", "entity_ids", "entity_logic", "attribute",
+    # threshold
+    "trigger_above", "trigger_below", "trigger_for_minutes",
+    # counter
+    "trigger_target_value", "trigger_delta_mode",
+    # runtime
     "trigger_runtime_hours", "trigger_on_states",
-    "trigger_target_changes",
+    # state_change
+    "trigger_from_state", "trigger_to_state", "trigger_target_changes",
+    # compound
     "compound_logic", "conditions",
 }
 
@@ -199,6 +208,19 @@ def _validate_trigger_config(
     for key in unknown:
         del trigger_config[key]
 
+    # Normalise state_change from/to: HA's state machine stores values lowercase
+    # ("on"/"off"/"home"/...). Users typing "ON"/"OFF" expect a match — same
+    # forgiving treatment as the runtime trigger, which lowercases trigger_on_states.
+    if trigger_type == "state_change":
+        for key in ("trigger_from_state", "trigger_to_state"):
+            val = trigger_config.get(key)
+            if isinstance(val, str):
+                stripped = val.strip().lower()
+                if stripped:
+                    trigger_config[key] = stripped
+                else:
+                    trigger_config.pop(key, None)
+
     return errors, warnings
 
 
@@ -251,22 +273,34 @@ def _validate_compound_trigger(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/create",
-        vol.Required("entry_id"): str,
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
         vol.Required("name"): vol.All(str, vol.Length(min=1, max=MAX_NAME_LENGTH)),
         vol.Optional("task_type", default="custom"): vol.All(str, vol.Length(max=MAX_TYPE_LENGTH)),
         vol.Optional("schedule_type", default="time_based"): vol.All(str, vol.Length(max=MAX_TYPE_LENGTH)),
-        vol.Optional("interval_days"): vol.Any(vol.All(int, vol.Range(min=1)), None),
+        vol.Optional("interval_days"): vol.Any(vol.All(int, vol.Range(min=1, max=MAX_INTERVAL_DAYS)), None),
         vol.Optional("interval_anchor", default="completion"): vol.In(["completion", "planned"]),
         vol.Optional("warning_days", default=7): vol.All(int, vol.Range(min=0, max=365)),
-        vol.Optional("last_performed"): vol.Any(str, None),
+        vol.Optional("last_performed"): vol.Any(vol.All(str, vol.Length(max=MAX_DATE_LENGTH)), None),
         vol.Optional("trigger_config"): vol.Any(dict, None),
         vol.Optional("notes"): vol.Any(vol.All(str, vol.Length(max=MAX_TEXT_LENGTH)), None),
         vol.Optional("documentation_url"): vol.Any(vol.All(str, vol.Length(max=MAX_URL_LENGTH)), None),
         vol.Optional("responsible_user_id"): vol.Any(vol.All(str, vol.Length(max=MAX_META_LENGTH)), None),
-        vol.Optional("entity_slug"): vol.Any(str, None),
+        vol.Optional("entity_slug"): vol.Any(vol.All(str, vol.Length(max=MAX_ENTITY_SLUG_LENGTH)), None),
         vol.Optional("custom_icon"): vol.Any(vol.All(str, vol.Length(max=MAX_ICON_LENGTH)), None),
         vol.Optional("nfc_tag_id"): vol.Any(vol.All(str, vol.Length(max=256)), None),
         vol.Optional("checklist"): vol.Any(vol.All([vol.All(str, vol.Length(max=MAX_CHECKLIST_ITEM_LENGTH))], vol.Length(max=MAX_CHECKLIST_ITEMS)), None),
+        # HH:MM strict (00–23 : 00–59). None clears the time → midnight semantic.
+        vol.Optional("schedule_time"): vol.Any(
+            vol.All(str, vol.Match(r"^([01]\d|2[0-3]):[0-5]\d$")),
+            None,
+        ),
+        # v1.3.0: per-task on_complete_action + quick_complete_defaults.
+        # Both kept loose at the schema level (vol.Any(dict, None)); strict
+        # field-by-field validation lives in helpers/sanitize.py so the
+        # config-flow path (which doesn't go through this schema) gets
+        # identical validation behaviour.
+        vol.Optional("on_complete_action"): vol.Any(dict, None),
+        vol.Optional("quick_complete_defaults"): vol.Any(dict, None),
         vol.Optional("enabled", default=True): bool,
         vol.Optional("dry_run", default=False): bool,
     }
@@ -372,6 +406,18 @@ async def ws_create_task(
                 tc_warnings.append(nfc_warn)
     if msg.get("checklist"):
         task_data["checklist"] = msg["checklist"]
+    if msg.get("schedule_time"):
+        task_data["schedule_time"] = msg["schedule_time"]
+    # v1.3.0: optional completion-action + quick-defaults. Strict shape
+    # validated by sanitize.cap_action_field / cap_quick_complete_defaults_field
+    # below — accepted loosely here, dropped if malformed.
+    if msg.get("on_complete_action"):
+        task_data["on_complete_action"] = msg["on_complete_action"]
+    if msg.get("quick_complete_defaults"):
+        task_data["quick_complete_defaults"] = msg["quick_complete_defaults"]
+    from ..helpers.sanitize import cap_action_field, cap_quick_complete_defaults_field
+    cap_action_field(task_data)
+    cap_quick_complete_defaults_field(task_data)
 
     # Dry-run mode: validate only, do not persist
     if msg.get("dry_run"):
@@ -423,24 +469,31 @@ async def ws_create_task(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/update",
-        vol.Required("entry_id"): str,
-        vol.Required("task_id"): str,
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Required("task_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
         vol.Optional("name"): vol.All(str, vol.Length(min=1, max=MAX_NAME_LENGTH)),
         vol.Optional("task_type"): vol.All(str, vol.Length(max=MAX_TYPE_LENGTH)),
         vol.Optional("enabled"): bool,
         vol.Optional("schedule_type"): vol.All(str, vol.Length(max=MAX_TYPE_LENGTH)),
-        vol.Optional("interval_days"): vol.Any(vol.All(int, vol.Range(min=1)), None),
+        vol.Optional("interval_days"): vol.Any(vol.All(int, vol.Range(min=1, max=MAX_INTERVAL_DAYS)), None),
         vol.Optional("interval_anchor"): vol.In(["completion", "planned"]),
         vol.Optional("warning_days"): vol.All(int, vol.Range(min=0, max=365)),
-        vol.Optional("last_performed"): vol.Any(str, None),
+        vol.Optional("last_performed"): vol.Any(vol.All(str, vol.Length(max=MAX_DATE_LENGTH)), None),
         vol.Optional("trigger_config"): vol.Any(dict, None),
         vol.Optional("notes"): vol.Any(vol.All(str, vol.Length(max=MAX_TEXT_LENGTH)), None),
         vol.Optional("documentation_url"): vol.Any(vol.All(str, vol.Length(max=MAX_URL_LENGTH)), None),
         vol.Optional("responsible_user_id"): vol.Any(vol.All(str, vol.Length(max=MAX_META_LENGTH)), None),
-        vol.Optional("entity_slug"): vol.Any(str, None),
+        vol.Optional("entity_slug"): vol.Any(vol.All(str, vol.Length(max=MAX_ENTITY_SLUG_LENGTH)), None),
         vol.Optional("custom_icon"): vol.Any(vol.All(str, vol.Length(max=MAX_ICON_LENGTH)), None),
         vol.Optional("nfc_tag_id"): vol.Any(vol.All(str, vol.Length(max=256)), None),
         vol.Optional("checklist"): vol.Any(vol.All([vol.All(str, vol.Length(max=MAX_CHECKLIST_ITEM_LENGTH))], vol.Length(max=MAX_CHECKLIST_ITEMS)), None),
+        vol.Optional("schedule_time"): vol.Any(
+            vol.All(str, vol.Match(r"^([01]\d|2[0-3]):[0-5]\d$")),
+            None,
+        ),
+        # v1.3.0: same loose schema as create. Sanitize layer enforces shape.
+        vol.Optional("on_complete_action"): vol.Any(dict, None),
+        vol.Optional("quick_complete_defaults"): vol.Any(dict, None),
     }
 )
 @websocket_api.require_admin
@@ -533,10 +586,20 @@ async def ws_update_task(
         "custom_icon": "custom_icon",
         "nfc_tag_id": "nfc_tag_id",
         "checklist": "checklist",
+        "schedule_time": "schedule_time",
+        # v1.3.0
+        "on_complete_action": "on_complete_action",
+        "quick_complete_defaults": "quick_complete_defaults",
     }
     for msg_key, data_key in field_map.items():
         if msg_key in msg:
             task[data_key] = msg[msg_key]
+    # Validate/cap newly-applied v1.3.0 fields. cap_task_fields runs the
+    # full task sanitize (caches, lengths, action shape) so update-path
+    # behaves identically to create-path.
+    from ..helpers.sanitize import cap_action_field, cap_quick_complete_defaults_field
+    cap_action_field(task)
+    cap_quick_complete_defaults_field(task)
 
     # Clear stale trigger runtime in Store only when trigger fundamentally changes
     if "trigger_config" in msg:
@@ -569,8 +632,8 @@ async def ws_update_task(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/delete",
-        vol.Required("entry_id"): str,
-        vol.Required("task_id"): str,
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Required("task_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
     }
 )
 @websocket_api.require_admin
@@ -653,7 +716,7 @@ async def ws_delete_task(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/list",
-        vol.Optional("entry_id"): str,
+        vol.Optional("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
     }
 )
 @callback
@@ -697,12 +760,21 @@ def ws_list_tasks(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/complete",
-        vol.Required("entry_id"): str,
-        vol.Required("task_id"): str,
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Required("task_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
         vol.Optional("notes"): vol.Any(vol.All(str, vol.Length(max=MAX_TEXT_LENGTH)), None),
         vol.Optional("cost"): vol.Any(vol.All(vol.Coerce(float), vol.Range(min=0, max=1_000_000)), None),
         vol.Optional("duration"): vol.Any(vol.All(vol.Coerce(int), vol.Range(min=0, max=525_600)), None),
-        vol.Optional("checklist_state"): vol.Any(dict, None),
+        # Restrict checklist_state to {string-key (≤500): bool, ...} with
+        # a hard cap on entries. Without this, attackers (or bad clients)
+        # could inflate the per-task history with arbitrarily large dicts.
+        vol.Optional("checklist_state"): vol.Any(
+            vol.All(
+                {vol.All(str, vol.Length(max=MAX_CHECKLIST_ITEM_LENGTH)): bool},
+                vol.Length(max=MAX_CHECKLIST_ITEMS),
+            ),
+            None,
+        ),
         vol.Optional("feedback"): vol.Any(vol.All(str, vol.Length(max=MAX_TEXT_LENGTH)), None),
     }
 )
@@ -734,11 +806,63 @@ async def ws_complete_task(
     connection.send_result(msg["id"], {"success": True})
 
 
+# v1.3.0: One-tap completion using values pre-configured on the task.
+# Used by the "quick_complete" QR scan path. Falls back with `no_defaults`
+# error when the task has no quick_complete_defaults — frontend then
+# routes the user to the normal complete dialog.
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "maintenance_supporter/task/quick_complete",
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Required("task_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+    }
+)
+@websocket_api.async_response
+async def ws_quick_complete_task(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Complete a task using its pre-configured `quick_complete_defaults`."""
+    rd = _get_runtime_data(hass, msg["entry_id"])
+    if rd is None or rd.coordinator is None:
+        connection.send_error(msg["id"], "not_found", "Coordinator not found")
+        return
+
+    entry = hass.config_entries.async_get_entry(msg["entry_id"])
+    if entry is None:
+        connection.send_error(msg["id"], "not_found", "Object not found")
+        return
+    task = entry.data.get(CONF_TASKS, {}).get(msg["task_id"])
+    if not task:
+        connection.send_error(msg["id"], "not_found", "Task not found")
+        return
+
+    defaults = task.get("quick_complete_defaults") or {}
+    if not isinstance(defaults, dict) or not defaults:
+        # Frontend fallback: open the normal complete dialog so the user
+        # is never stuck staring at a useless QR scan.
+        connection.send_error(
+            msg["id"], "no_defaults",
+            "Task has no quick_complete_defaults; open complete dialog instead",
+        )
+        return
+
+    await rd.coordinator.complete_maintenance(
+        task_id=msg["task_id"],
+        notes=defaults.get("notes"),
+        cost=defaults.get("cost"),
+        duration=defaults.get("duration"),
+        feedback=defaults.get("feedback"),
+    )
+    connection.send_result(msg["id"], {"success": True, "via": "quick"})
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/skip",
-        vol.Required("entry_id"): str,
-        vol.Required("task_id"): str,
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Required("task_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
         vol.Optional("reason"): vol.Any(vol.All(str, vol.Length(max=MAX_TEXT_LENGTH)), None),
     }
 )
@@ -769,9 +893,9 @@ async def ws_skip_task(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "maintenance_supporter/task/reset",
-        vol.Required("entry_id"): str,
-        vol.Required("task_id"): str,
-        vol.Optional("date"): vol.Any(str, None),
+        vol.Required("entry_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Required("task_id"): vol.All(str, vol.Length(max=MAX_ID_LENGTH)),
+        vol.Optional("date"): vol.Any(vol.All(str, vol.Length(max=MAX_DATE_LENGTH)), None),
     }
 )
 @websocket_api.async_response

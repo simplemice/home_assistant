@@ -30,14 +30,21 @@ import type { MaintenanceQrDialog } from "./components/qr-dialog";
 import "./components/confirm-dialog";
 import type { MaintenanceConfirmDialog } from "./components/confirm-dialog";
 import "./components/settings-view";
+import "./components/seasonal-overrides-dialog";
+import type { SeasonalOverridesDialog } from "./components/seasonal-overrides-dialog";
+import "./components/group-dialog";
+import type { MaintenanceGroupDialog } from "./components/group-dialog";
 import { renderTriggerSection, type SparklineContext } from "./renderers/sparkline";
 import { renderPredictionSection } from "./renderers/prediction";
 import { renderWeibullSection } from "./renderers/weibull";
+import { buildCalendarBuckets, isoDateLocal, type CalendarEvent } from "./helpers/calendar-bucket";
 import { renderSeasonalCardCompact, renderSeasonalCardExpanded } from "./renderers/seasonal";
 import { renderCostDurationCard } from "./renderers/charts";
 
 type View = "overview" | "object" | "task" | "all_objects";
-type SortMode = "due_date" | "object" | "type" | "task_name";
+type SortMode = "due_date" | "object" | "type" | "task_name" | "area" | "assigned_user" | "group";
+type ObjectSortMode = "alphabetical" | "due_soonest" | "task_count";
+type GroupByMode = "none" | "area" | "group" | "user";
 
 // Chart dimension constants for mini sparklines (overview)
 const MINI_SPARKLINE_W = 60;
@@ -64,7 +71,13 @@ export class MaintenanceSupporterPanel extends LitElement {
   @state() private _groups: Record<string, MaintenanceGroup> = {};
   @state() private _detailStatsData: Map<string, StatisticsPoint[]> = new Map();
   @state() private _miniStatsData: Map<string, StatisticsPoint[]> = new Map();
-  @state() private _features: AdvancedFeatures = { adaptive: false, predictions: false, seasonal: false, environmental: false, budget: false, groups: false, checklists: false };
+  @state() private _features: AdvancedFeatures = { adaptive: false, predictions: false, seasonal: false, environmental: false, budget: false, groups: false, checklists: false, schedule_time: false, completion_actions: false };
+  // HA user IDs (UUIDs) granted full panel access despite not being HA admins.
+  @state() private _adminPanelUserIds: string[] = [];
+  // Default warning_days from the global config entry — used as the initial
+  // value in the task-create dialog so the Settings → General → "Default
+  // warning days" choice actually flows through to new tasks.
+  @state() private _defaultWarningDays = 7;
   @state() private _actionLoading = false;
   @state() private _moreMenuOpen = false;
   @state() private _toastMessage = "";
@@ -72,11 +85,18 @@ export class MaintenanceSupporterPanel extends LitElement {
   private _dismissedSuggestions = new Set<string>();
 
   // Dashboard redesign state
-  @state() private _overviewTab: "dashboard" | "settings" = "dashboard";
+  @state() private _overviewTab: "dashboard" | "calendar" | "settings" = "dashboard";
   @state() private _activeTab: "overview" | "history" = "overview";
   @state() private _costDurationToggle: "cost" | "duration" | "both" = "both";
   @state() private _historySearch = "";
   @state() private _sortMode: SortMode = "due_date";
+  @state() private _objectSortMode: ObjectSortMode = "alphabetical";
+  @state() private _groupByMode: GroupByMode = "none";
+  // v1.5.0: Calendar tab state
+  // v1.5.2: 365-day option added — see _renderCalendar where empty days are
+  // collapsed in year view (300+ "No maintenance" rows otherwise drown the list).
+  @state() private _calendarWindowDays: 7 | 14 | 30 | 365 = 30;
+  @state() private _calendarUserFilter: string = "";  // "" = all users
 
   private _statsService: StatisticsService | null = null;
   private _userService: UserService | null = null;
@@ -87,14 +107,41 @@ export class MaintenanceSupporterPanel extends LitElement {
     return this.hass?.language || "en";
   }
 
+  /**
+   * Operator mode = read-only end-user mode (hides every create/edit/delete action).
+   *
+   * Gating (OR of exceptions flips to full panel):
+   *   - admins (incl. the owner) always see the full panel
+   *   - non-admin users whose ID is in the `admin_panel_user_ids` setting
+   *     also see the full panel (per-user override)
+   *   - everyone else sees operator mode (Complete / Skip only)
+   *
+   * The user list is managed by an admin under Settings → Panel Access
+   * (either in the panel's Settings tab or HA Config Flow).
+   */
+  private get _isOperator(): boolean {
+    const u = this.hass?.user;
+    if (!u) return true; // pre-hass state: render safe default
+    if (u.is_admin) return false;
+    return !this._adminPanelUserIds.includes(u.id);
+  }
+
   private _popstateHandler = (e: PopStateEvent) => this._onPopState(e);
 
   connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener("popstate", this._popstateHandler);
     const saved = localStorage.getItem("maintenance_supporter_sort");
-    if (saved && ["due_date", "object", "type", "task_name"].includes(saved)) {
+    if (saved && ["due_date", "object", "type", "task_name", "area", "assigned_user", "group"].includes(saved)) {
       this._sortMode = saved as SortMode;
+    }
+    const savedObj = localStorage.getItem("maintenance_supporter_object_sort");
+    if (savedObj && ["alphabetical", "due_soonest", "task_count"].includes(savedObj)) {
+      this._objectSortMode = savedObj as ObjectSortMode;
+    }
+    const savedGroup = localStorage.getItem("maintenance_supporter_groupby");
+    if (savedGroup && ["none", "area", "group", "user"].includes(savedGroup)) {
+      this._groupByMode = savedGroup as GroupByMode;
     }
   }
 
@@ -160,7 +207,19 @@ export class MaintenanceSupporterPanel extends LitElement {
     if (statsResult) this._stats = statsResult as StatisticsResponse;
     if (budgetResult) this._budget = budgetResult as BudgetStatus;
     if (groupsResult) this._groups = (groupsResult as { groups: Record<string, MaintenanceGroup> }).groups || {};
-    if (settingsResult) this._features = (settingsResult as { features: AdvancedFeatures }).features;
+    if (settingsResult) {
+      const sr = settingsResult as {
+        features: AdvancedFeatures;
+        admin_panel_user_ids?: string[];
+        general?: { default_warning_days?: number };
+      };
+      this._features = sr.features;
+      this._adminPanelUserIds = sr.admin_panel_user_ids || [];
+      const dwd = sr.general?.default_warning_days;
+      if (typeof dwd === "number" && dwd >= 0 && dwd <= 365) {
+        this._defaultWarningDays = dwd;
+      }
+    }
 
     // Fetch mini-sparkline data for overview (non-blocking)
     this._fetchMiniStatsForOverview();
@@ -174,6 +233,23 @@ export class MaintenanceSupporterPanel extends LitElement {
   private _handleDeepLink(): void {
     if (this._deepLinkHandled) return;
     const params = new URLSearchParams(window.location.search);
+
+    // v1.8.1: ms_action deep links from the dashboard strategy's fire-dom-event
+    // Empty-state buttons. Currently: open the Add Object dialog. Cleared from
+    // the URL after one fire so refreshing the page doesn't re-open it.
+    const msAction = params.get("ms_action");
+    if (msAction === "add_object") {
+      this._deepLinkHandled = true;
+      const cleanUrl = window.location.pathname + window.location.hash;
+      history.replaceState(history.state, "", cleanUrl);
+      requestAnimationFrame(() => {
+        this.shadowRoot
+          ?.querySelector<MaintenanceObjectDialog>("maintenance-object-dialog")
+          ?.openCreate();
+      });
+      return;
+    }
+
     const entryId = params.get("entry_id");
     if (!entryId) return;
     this._deepLinkHandled = true;
@@ -203,6 +279,12 @@ export class MaintenanceSupporterPanel extends LitElement {
       if (action === "complete") {
         requestAnimationFrame(() => {
           this._openCompleteDialog(entryId, taskId, task.name, this._features.checklists ? task.checklist : undefined, this._features.adaptive && !!task.adaptive_config?.enabled);
+        });
+      } else if (action === "quick_complete") {
+        // v1.3.0: silent complete using pre-configured defaults; falls back
+        // to the normal dialog if the task has none.
+        requestAnimationFrame(() => {
+          this._handleQuickComplete(entryId, taskId, task);
         });
       }
     } else {
@@ -271,6 +353,14 @@ export class MaintenanceSupporterPanel extends LitElement {
           if (task.responsible_user_id !== userId) continue;
         }
 
+        // Collect groups that contain this task
+        const groupNames: string[] = [];
+        for (const group of Object.values(this._groups)) {
+          if (group.task_refs?.some((r) => r.entry_id === obj.entry_id && r.task_id === task.id)) {
+            groupNames.push(group.name);
+          }
+        }
+
         rows.push({
           entry_id: obj.entry_id,
           task_id: task.id,
@@ -293,6 +383,9 @@ export class MaintenanceSupporterPanel extends LitElement {
           history: task.history || [],
           enabled: task.enabled,
           nfc_tag_id: task.nfc_tag_id ?? null,
+          area_id: obj.object.area_id ?? null,
+          responsible_user_id: task.responsible_user_id ?? null,
+          group_names: groupNames,
         });
       }
     }
@@ -300,11 +393,35 @@ export class MaintenanceSupporterPanel extends LitElement {
     const byStatus = (a: TaskRow, b: TaskRow) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9);
     const byDays = (a: TaskRow, b: TaskRow) => (a.days_until_due ?? 99999) - (b.days_until_due ?? 99999);
     const byDue = (a: TaskRow, b: TaskRow) => byStatus(a, b) || byDays(a, b);
+    const areaName = (r: TaskRow) =>
+      r.area_id ? this.hass?.areas?.[r.area_id]?.name || "" : "";
+    const userName = (r: TaskRow) =>
+      r.responsible_user_id ? this._userService?.getUserName(r.responsible_user_id) || "" : "";
+    const groupName = (r: TaskRow) => r.group_names[0] || "";
     const sorts: Record<SortMode, (a: TaskRow, b: TaskRow) => number> = {
       due_date: byDue,
       object: (a, b) => a.object_name.localeCompare(b.object_name) || byDue(a, b),
       type: (a, b) => a.type.localeCompare(b.type) || byDue(a, b),
       task_name: (a, b) => a.task_name.localeCompare(b.task_name),
+      area: (a, b) => {
+        const an = areaName(a), bn = areaName(b);
+        // Empty areas at end
+        if (!an && bn) return 1;
+        if (an && !bn) return -1;
+        return an.localeCompare(bn) || byDue(a, b);
+      },
+      assigned_user: (a, b) => {
+        const an = userName(a), bn = userName(b);
+        if (!an && bn) return 1;
+        if (an && !bn) return -1;
+        return an.localeCompare(bn) || byDue(a, b);
+      },
+      group: (a, b) => {
+        const an = groupName(a), bn = groupName(b);
+        if (!an && bn) return 1;
+        if (an && !bn) return -1;
+        return an.localeCompare(bn) || byDue(a, b);
+      },
     };
     rows.sort(sorts[this._sortMode]);
     return rows;
@@ -490,6 +607,39 @@ export class MaintenanceSupporterPanel extends LitElement {
     }
   }
 
+  private _openSeasonalOverrides(task: MaintenanceTask): void {
+    const dlg = this.shadowRoot!.querySelector<SeasonalOverridesDialog>("maintenance-seasonal-overrides-dialog");
+    if (!dlg || !this._selectedEntryId) return;
+    const overrides = task.adaptive_config?.seasonal_overrides as Record<number, number> | null | undefined;
+    dlg.open(this._selectedEntryId, task.id, overrides);
+  }
+
+  private async _reanalyzeInterval(entryId: string, taskId: string): Promise<void> {
+    try {
+      const res = await this.hass.connection.sendMessagePromise({
+        type: "maintenance_supporter/task/analyze_interval",
+        entry_id: entryId,
+        task_id: taskId,
+      }) as {
+        recommended_interval: number | null;
+        confidence: string;
+        data_points: number;
+        recommendation_reason: string | null;
+      };
+      if (res.recommended_interval) {
+        this._showToast(
+          `${t("reanalyze_result", this._lang)}: ${res.recommended_interval} ${t("days", this._lang)} ` +
+          `(${t(`confidence_${res.confidence}`, this._lang)}, ${res.data_points} ${t("data_points", this._lang)})`,
+        );
+      } else {
+        this._showToast(t("reanalyze_insufficient_data", this._lang));
+      }
+      await this._loadData();
+    } catch {
+      this._showToast(t("action_error", this._lang));
+    }
+  }
+
   private async _promptSkipTask(entryId: string, taskId: string): Promise<void> {
     const dlg = this.shadowRoot!.querySelector<MaintenanceConfirmDialog>("maintenance-confirm-dialog");
     if (!dlg) return;
@@ -523,6 +673,33 @@ export class MaintenanceSupporterPanel extends LitElement {
       this._dismissedSuggestions.add(`${entryId}_${taskId}`);
     }
     this.requestUpdate();
+  }
+
+  // v1.3.0: silent complete-via-QR. Tries the quick endpoint first; if the
+  // task has no quick_complete_defaults configured, falls back to the
+  // normal complete dialog so the user is never stuck after a scan.
+  private async _handleQuickComplete(
+    entryId: string, taskId: string, task: MaintenanceTask,
+  ): Promise<void> {
+    try {
+      await this.hass.connection.sendMessagePromise({
+        type: "maintenance_supporter/task/quick_complete",
+        entry_id: entryId, task_id: taskId,
+      });
+      this._showToast(t("quick_complete_success", this._lang));
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code || "";
+      if (code === "no_defaults") {
+        // No defaults set — open the dialog so the user can fill them in.
+        this._openCompleteDialog(
+          entryId, taskId, task.name,
+          this._features.checklists ? task.checklist : undefined,
+          this._features.adaptive && !!task.adaptive_config?.enabled,
+        );
+      } else {
+        this._showToast(t("action_error", this._lang));
+      }
+    }
   }
 
   private _openCompleteDialog(entryId: string, taskId: string, taskName: string, checklist?: string[], adaptiveEnabled?: boolean): void {
@@ -573,6 +750,10 @@ export class MaintenanceSupporterPanel extends LitElement {
       ></maintenance-object-dialog>
       <maintenance-task-dialog
         .hass=${this.hass}
+        .checklistsEnabled=${this._features.checklists}
+        .scheduleTimeEnabled=${this._features.schedule_time}
+        .completionActionsEnabled=${this._features.completion_actions}
+        .defaultWarningDays=${this._defaultWarningDays}
         @task-saved=${this._onDialogEvent}
       ></maintenance-task-dialog>
       <maintenance-complete-dialog
@@ -586,6 +767,15 @@ export class MaintenanceSupporterPanel extends LitElement {
       <maintenance-confirm-dialog
         .hass=${this.hass}
       ></maintenance-confirm-dialog>
+      <maintenance-seasonal-overrides-dialog
+        .hass=${this.hass}
+        @overrides-saved=${this._onDialogEvent}
+      ></maintenance-seasonal-overrides-dialog>
+      <maintenance-group-dialog
+        .hass=${this.hass}
+        .objects=${this._objects}
+        @group-saved=${this._onDialogEvent}
+      ></maintenance-group-dialog>
       ${this._toastMessage ? html`<div class="toast">${this._toastMessage}</div>` : nothing}
     `;
   }
@@ -636,19 +826,33 @@ export class MaintenanceSupporterPanel extends LitElement {
 
   private _renderOverview() {
     const L = this._lang;
+    const isOperator = this._isOperator;
+    // Operator mode: hide the Settings tab so end-users can't toggle features.
+    // The Calendar tab IS visible to operators (read-only view).
+    if (isOperator && this._overviewTab === "settings") {
+      this._overviewTab = "dashboard";
+    }
     return html`
       <div class="tab-bar">
         <div class="tab ${this._overviewTab === "dashboard" ? "active" : ""}"
           @click=${() => { this._overviewTab = "dashboard"; }}>
           ${t("dashboard", L)}
         </div>
-        <div class="tab ${this._overviewTab === "settings" ? "active" : ""}"
-          @click=${() => { this._overviewTab = "settings"; }}>
-          ${t("settings", L)}
+        <div class="tab ${this._overviewTab === "calendar" ? "active" : ""}"
+          @click=${() => { this._overviewTab = "calendar"; }}>
+          ${t("tab_calendar", L)}
         </div>
+        ${!isOperator ? html`
+          <div class="tab ${this._overviewTab === "settings" ? "active" : ""}"
+            @click=${() => { this._overviewTab = "settings"; }}>
+            ${t("settings", L)}
+          </div>
+        ` : nothing}
       </div>
       ${this._overviewTab === "dashboard"
         ? this._renderDashboard()
+        : this._overviewTab === "calendar"
+        ? this._renderCalendar()
         : html`<maintenance-settings-view
             .hass=${this.hass}
             .features=${this._features}
@@ -658,10 +862,145 @@ export class MaintenanceSupporterPanel extends LitElement {
     `;
   }
 
+  /**
+   * v1.5.0: Calendar tab — rolling list view.
+   *
+   * Shows upcoming maintenance events in a 7/14/30-day window starting today.
+   * Time-based tasks project up to 5 occurrences; sensor-triggered tasks show
+   * only their current next_due. User filter narrows by responsible_user_id.
+   */
+  private _renderCalendar() {
+    const L = this._lang;
+    // Resolve user filter analogous to the dashboard: "" = all, "current_user"
+    // = me, otherwise pass through. The bucket helper just matches strings,
+    // so we resolve "current_user" → real ID here once.
+    let userFilter: string | null = null;
+    if (this._calendarUserFilter) {
+      userFilter = this._calendarUserFilter === "current_user"
+        ? (this._userService?.getCurrentUserId() ?? null)
+        : this._calendarUserFilter;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const buckets = buildCalendarBuckets(
+      this._objects,
+      today,
+      this._calendarWindowDays,
+      userFilter,
+    );
+
+    const todayIso = isoDateLocal(today);
+
+    const renderEvent = (ev: CalendarEvent) => {
+      const statusClass = `cal-status-${ev.status}`;
+      const projClass = ev.projected ? "cal-event-projected" : "";
+      const overdueLabel = ev.status === "overdue" && ev.days_until_due != null
+        ? ` (${Math.abs(ev.days_until_due)}d ${t("overdue", L).toLowerCase()})`
+        : "";
+      const recurEvery = ev.projected && ev.interval_days
+        ? html`<span class="cal-event-recur">${t("cal_every_n_days", L).replace("{n}", String(ev.interval_days))}</span>`
+        : nothing;
+      // v1.5.1: source indicator. Time-based gets a clock icon; sensor-based
+      // gets a trending-up icon (signals "predicted from sensor regression").
+      // Adaptive time-based tasks get a small auto-renew sparkle next to the
+      // clock to flag "interval is learning from completion history".
+      const isSensor = ev.schedule_type === "sensor_based";
+      const sourceIcon = isSensor
+        ? html`<ha-icon class="cal-event-icon cal-source-sensor"
+                title="${t("cal_source_sensor", L)}" icon="mdi:trending-up"></ha-icon>`
+        : html`<ha-icon class="cal-event-icon cal-source-time"
+                title="${ev.adaptive_enabled ? t("cal_source_time_adaptive", L) : t("cal_source_time", L)}"
+                icon="${ev.adaptive_enabled ? "mdi:clock-time-four-outline" : "mdi:clock-outline"}"></ha-icon>`;
+      // Sensor-based subtitle: "predicted · {confidence}" — only for events
+      // that are not already triggered (status pill carries that signal).
+      const predictionSubtitle = isSensor && ev.prediction_confidence
+        && ev.status !== "triggered" && !ev.projected
+        ? html`<span class="cal-event-prediction cal-conf-${ev.prediction_confidence}">
+            ${t("cal_predicted", L)} · ${t(`cal_confidence_${ev.prediction_confidence}`, L)}
+          </span>`
+        : nothing;
+      return html`
+        <div class="cal-event ${projClass}"
+          @click=${() => this._showTask(ev.entry_id, ev.task_id)}>
+          ${sourceIcon}
+          <span class="cal-status-pill ${statusClass}">${t(ev.status, L)}</span>
+          <div class="cal-event-body">
+            <div class="cal-event-title">${ev.object_name} · ${ev.task_name}${overdueLabel}</div>
+            ${predictionSubtitle}
+            ${recurEvery}
+          </div>
+          ${ev.avg_cost != null && ev.avg_cost > 0
+            ? html`<span class="cal-event-cost">${ev.avg_cost.toFixed(0)} ${this._budget?.currency_symbol || "€"}</span>`
+            : nothing}
+        </div>
+      `;
+    };
+
+    const renderDayRow = (bucket: { date: string; events: CalendarEvent[] }) => {
+      const [y, m, d] = bucket.date.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      const isToday = bucket.date === todayIso;
+      const weekday = date.toLocaleDateString(L, { weekday: "short" });
+      const monthLabel = date.toLocaleDateString(L, { month: "long" });
+      return html`
+        <div class="cal-day-row">
+          <div class="cal-day-pill ${isToday ? "cal-today" : ""}">
+            <span class="cal-pill-weekday">${weekday}</span>
+            <span class="cal-pill-day">${date.getDate()}</span>
+          </div>
+          <div class="cal-day-content">
+            <div class="cal-day-header">
+              <span class="cal-day-month">${monthLabel}</span>
+              ${isToday ? html`<span class="cal-day-today-badge">${t("today", L)}</span>` : nothing}
+            </div>
+            ${bucket.events.length === 0
+              ? html`<div class="cal-empty">${t("cal_no_events", L)}</div>`
+              : bucket.events.map(renderEvent)}
+          </div>
+        </div>
+      `;
+    };
+
+    // v1.5.2: collapse empty days in 365-day view — otherwise 300+
+    // "No maintenance" rows drown the few real events. Other windows
+    // keep all day rows (preserves the calendar-grid feel).
+    const hideEmptyDays = this._calendarWindowDays === 365;
+    const visibleBuckets = hideEmptyDays
+      ? buckets.filter((b) => b.events.length > 0)
+      : buckets;
+
+    return html`
+      <div class="cal-controls">
+        <div class="cal-window-chips">
+          ${[7, 14, 30, 365].map((w) => html`
+            <button class="cal-window-chip ${this._calendarWindowDays === w ? "active" : ""}"
+              @click=${() => { this._calendarWindowDays = w as 7 | 14 | 30 | 365; }}>
+              ${t(`cal_window_${w}`, L)}
+            </button>
+          `)}
+        </div>
+        <select class="cal-user-filter"
+          .value=${this._calendarUserFilter}
+          @change=${(e: Event) => {
+            this._calendarUserFilter = (e.target as HTMLSelectElement).value;
+          }}>
+          <option value="">${t("all_users", L)}</option>
+          <option value="current_user">${t("my_tasks", L)}</option>
+        </select>
+      </div>
+      <div class="cal-rolling">
+        ${visibleBuckets.length === 0 && hideEmptyDays
+          ? html`<div class="cal-empty">${t("cal_no_events", L)}</div>`
+          : visibleBuckets.map(renderDayRow)}
+      </div>
+    `;
+  }
+
   private _renderDashboard() {
     const s = this._stats;
     const rows = this._taskRows;
     const L = this._lang;
+    const isOperator = this._isOperator;
 
     return html`
       ${s
@@ -694,42 +1033,76 @@ export class MaintenanceSupporterPanel extends LitElement {
       ${this._features.budget ? this._renderBudgetBar() : nothing}
 
       <div class="filter-bar">
-        <select
-          @change=${(e: Event) => (this._filterStatus = (e.target as HTMLSelectElement).value)}
-        >
-          <option value="">${t("all", L)}</option>
-          <option value="overdue">${t("overdue", L)}</option>
-          <option value="due_soon">${t("due_soon", L)}</option>
-          <option value="triggered">${t("triggered", L)}</option>
-          <option value="ok">${t("ok", L)}</option>
-        </select>
-        <select
-          .value=${this._filterUser || ""}
-          @change=${(e: Event) => {
-            const val = (e.target as HTMLSelectElement).value;
-            this._filterUser = val || null;
-          }}
-        >
-          <option value="">${t("all_users", L)}</option>
-          <option value="current_user">${t("my_tasks", L)}</option>
-        </select>
-        <select
-          .value=${this._sortMode}
-          @change=${(e: Event) => {
-            this._sortMode = (e.target as HTMLSelectElement).value as SortMode;
-            localStorage.setItem("maintenance_supporter_sort", this._sortMode);
-          }}
-        >
-          <option value="due_date" ?selected=${this._sortMode === "due_date"}>${t("sort_due_date", L)}</option>
-          <option value="object" ?selected=${this._sortMode === "object"}>${t("sort_object", L)}</option>
-          <option value="type" ?selected=${this._sortMode === "type"}>${t("sort_type", L)}</option>
-          <option value="task_name" ?selected=${this._sortMode === "task_name"}>${t("sort_task_name", L)}</option>
-        </select>
-        <ha-button
-          @click=${() => this.shadowRoot!.querySelector<MaintenanceObjectDialog>("maintenance-object-dialog")?.openCreate()}
-        >
-          ${t("new_object", L)}
-        </ha-button>
+        <label class="filter-field">
+          <span class="filter-label">${t("filter_label", L)}</span>
+          <select
+            @change=${(e: Event) => (this._filterStatus = (e.target as HTMLSelectElement).value)}
+          >
+            <option value="">${t("all", L)}</option>
+            <option value="overdue">${t("overdue", L)}</option>
+            <option value="due_soon">${t("due_soon", L)}</option>
+            <option value="triggered">${t("triggered", L)}</option>
+            <option value="ok">${t("ok", L)}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">${t("user_label", L)}</span>
+          <select
+            .value=${this._filterUser || ""}
+            @change=${(e: Event) => {
+              const val = (e.target as HTMLSelectElement).value;
+              this._filterUser = val || null;
+            }}
+          >
+            <option value="">${t("all_users", L)}</option>
+            <option value="current_user">${t("my_tasks", L)}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">${t("sort_label", L)}</span>
+          <select
+            .value=${this._sortMode}
+            @change=${(e: Event) => {
+              this._sortMode = (e.target as HTMLSelectElement).value as SortMode;
+              localStorage.setItem("maintenance_supporter_sort", this._sortMode);
+            }}
+          >
+            <option value="due_date" ?selected=${this._sortMode === "due_date"}>${t("sort_due_date", L)}</option>
+            <option value="object" ?selected=${this._sortMode === "object"}>${t("sort_object", L)}</option>
+            <option value="type" ?selected=${this._sortMode === "type"}>${t("sort_type", L)}</option>
+            <option value="task_name" ?selected=${this._sortMode === "task_name"}>${t("sort_task_name", L)}</option>
+            <option value="area" ?selected=${this._sortMode === "area"}>${t("sort_area", L)}</option>
+            <option value="assigned_user" ?selected=${this._sortMode === "assigned_user"}>${t("sort_assigned_user", L)}</option>
+            <option value="group" ?selected=${this._sortMode === "group"}>${t("sort_group", L)}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">${t("group_by_label", L)}</span>
+          <select
+            .value=${this._groupByMode}
+            @change=${(e: Event) => {
+              this._groupByMode = (e.target as HTMLSelectElement).value as GroupByMode;
+              localStorage.setItem("maintenance_supporter_groupby", this._groupByMode);
+            }}
+          >
+            <option value="none" ?selected=${this._groupByMode === "none"}>${t("groupby_none", L)}</option>
+            <option value="area" ?selected=${this._groupByMode === "area"}>${t("groupby_area", L)}</option>
+            ${this._features.groups ? html`<option value="group" ?selected=${this._groupByMode === "group"}>${t("groupby_group", L)}</option>` : nothing}
+            <option value="user" ?selected=${this._groupByMode === "user"}>${t("groupby_user", L)}</option>
+          </select>
+        </label>
+        ${!isOperator ? html`
+          <ha-button
+            @click=${() => this.shadowRoot!.querySelector<MaintenanceObjectDialog>("maintenance-object-dialog")?.openCreate()}
+          >
+            ${t("new_object", L)}
+          </ha-button>
+          <ha-button
+            @click=${() => this.shadowRoot!.querySelector<MaintenanceTaskDialog>("maintenance-task-dialog")?.openCreate("", this._objects)}
+          >
+            ${t("new_task", L)}
+          </ha-button>
+        ` : nothing}
       </div>
 
       ${rows.length === 0
@@ -739,18 +1112,116 @@ export class MaintenanceSupporterPanel extends LitElement {
               <p>${t("no_tasks", L)}</p>
             </div>
           `
-        : html`
-            <div class="task-table">
-              ${rows.map((row) => this._renderOverviewRow(row))}
-            </div>
-          `}
+        : this._groupByMode === "none"
+          ? html`
+              <div class="task-table">
+                ${rows.map((row) => this._renderOverviewRow(row))}
+              </div>
+            `
+          : this._renderGroupedTasks(rows, L)}
 
-      ${this._features.groups ? this._renderGroupsSection() : nothing}
+      ${this._features.groups && !isOperator ? this._renderGroupsSection() : nothing}
+    `;
+  }
+
+  private _renderGroupedTasks(rows: TaskRow[], L: string) {
+    const groups = new Map<string, TaskRow[]>();
+    const noneLabel = t("unassigned", L);
+    for (const row of rows) {
+      let keys: string[] = [];
+      if (this._groupByMode === "area") {
+        const a = row.area_id ? this.hass?.areas?.[row.area_id]?.name : null;
+        keys = [a || noneLabel];
+      } else if (this._groupByMode === "user") {
+        const u = row.responsible_user_id ? this._userService?.getUserName(row.responsible_user_id) : null;
+        keys = [u || noneLabel];
+      } else if (this._groupByMode === "group") {
+        keys = row.group_names.length > 0 ? row.group_names : [noneLabel];
+      }
+      for (const k of keys) {
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k)!.push(row);
+      }
+    }
+    const sorted = [...groups.entries()].sort(([a], [b]) => {
+      // Push "unassigned" / "no area" to bottom
+      if (a === noneLabel && b !== noneLabel) return 1;
+      if (b === noneLabel && a !== noneLabel) return -1;
+      return a.localeCompare(b);
+    });
+    const icon = this._groupByMode === "area" ? "mdi:map-marker-outline"
+      : this._groupByMode === "group" ? "mdi:folder-outline"
+      : "mdi:account-outline";
+    return html`
+      ${sorted.map(([key, taskRows]) => html`
+        <details class="group-section" open>
+          <summary class="group-section-header">
+            <ha-icon icon="${icon}"></ha-icon>
+            <span>${key}</span>
+            <span class="group-section-count">(${taskRows.length})</span>
+          </summary>
+          <div class="task-table">
+            ${taskRows.map((row) => this._renderOverviewRow(row))}
+          </div>
+        </details>
+      `)}
     `;
   }
 
   private _renderAllObjects() {
     const L = this._lang;
+    const isOperator = this._isOperator;
+
+    // Sort + group helpers
+    const minDays = (obj: MaintenanceObjectResponse): number => {
+      let m = Infinity;
+      for (const t of obj.tasks) {
+        const d = t.days_until_due;
+        if (d !== null && d !== undefined && d < m) m = d;
+      }
+      return m;
+    };
+    const sorted = [...this._objects];
+    if (this._objectSortMode === "alphabetical") {
+      sorted.sort((a, b) => a.object.name.localeCompare(b.object.name));
+    } else if (this._objectSortMode === "task_count") {
+      sorted.sort((a, b) => b.tasks.length - a.tasks.length || a.object.name.localeCompare(b.object.name));
+    } else {
+      // due_soonest
+      sorted.sort((a, b) => minDays(a) - minDays(b) || a.object.name.localeCompare(b.object.name));
+    }
+
+    // Group by area for objects view
+    const groupedByArea = (): Map<string, MaintenanceObjectResponse[]> => {
+      const map = new Map<string, MaintenanceObjectResponse[]>();
+      for (const obj of sorted) {
+        const areaId = obj.object.area_id;
+        const key = areaId ? this.hass?.areas?.[areaId]?.name || t("unassigned", L) : t("no_area", L);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(obj);
+      }
+      return new Map([...map.entries()].sort(([a], [b]) => a.localeCompare(b)));
+    };
+
+    const renderObject = (obj: MaintenanceObjectResponse) => {
+      const overdue = obj.tasks.some(t => t.status === "overdue" || t.status === "triggered");
+      return html`
+        <div class="object-card${overdue ? ' object-card-overdue' : ''}" @click=${() => this._showObject(obj.entry_id)}>
+          ${overdue ? html`<span class="overdue-dot" title="${t("has_overdue", L)}"></span>` : nothing}
+          <div class="object-card-header">
+            <span class="object-card-name">${obj.object.name}</span>
+            <span class="object-card-count">${obj.tasks.length} ${t("tasks_lower", L)}</span>
+          </div>
+          ${obj.object.manufacturer || obj.object.model
+            ? html`<div class="object-card-meta">${[obj.object.manufacturer, obj.object.model].filter(Boolean).join(" ")}</div>`
+            : nothing}
+          ${obj.tasks.length === 0
+            ? html`<div class="object-card-empty">${t("no_tasks_yet", L)}</div>`
+            : nothing}
+        </div>
+      `;
+    };
+
     return html`
       <div class="breadcrumb">
         <ha-icon-button @click=${() => this._showOverview()}>
@@ -758,22 +1229,56 @@ export class MaintenanceSupporterPanel extends LitElement {
         </ha-icon-button>
         <span>${t("all_objects", L)}</span>
       </div>
-      <div class="objects-grid">
-        ${this._objects.map(obj => html`
-          <div class="object-card" @click=${() => this._showObject(obj.entry_id)}>
-            <div class="object-card-header">
-              <span class="object-card-name">${obj.object.name}</span>
-              <span class="object-card-count">${obj.tasks.length} ${t("tasks_lower", L)}</span>
-            </div>
-            ${obj.object.manufacturer || obj.object.model
-              ? html`<div class="object-card-meta">${[obj.object.manufacturer, obj.object.model].filter(Boolean).join(" ")}</div>`
-              : nothing}
-            ${obj.tasks.length === 0
-              ? html`<div class="object-card-empty">${t("no_tasks_yet", L)}</div>`
-              : nothing}
-          </div>
-        `)}
+      <div class="filter-bar">
+        <label class="filter-field">
+          <span class="filter-label">${t("sort_label", L)}</span>
+          <select
+            .value=${this._objectSortMode}
+            @change=${(e: Event) => {
+              this._objectSortMode = (e.target as HTMLSelectElement).value as ObjectSortMode;
+              localStorage.setItem("maintenance_supporter_object_sort", this._objectSortMode);
+            }}
+          >
+            <option value="alphabetical" ?selected=${this._objectSortMode === "alphabetical"}>${t("sort_alphabetical", L)}</option>
+            <option value="due_soonest" ?selected=${this._objectSortMode === "due_soonest"}>${t("sort_due_soonest", L)}</option>
+            <option value="task_count" ?selected=${this._objectSortMode === "task_count"}>${t("sort_task_count", L)}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-label">${t("group_by_label", L)}</span>
+          <select
+            .value=${this._groupByMode}
+            @change=${(e: Event) => {
+              this._groupByMode = (e.target as HTMLSelectElement).value as GroupByMode;
+              localStorage.setItem("maintenance_supporter_groupby", this._groupByMode);
+            }}
+          >
+            <option value="none" ?selected=${this._groupByMode === "none"}>${t("groupby_none", L)}</option>
+            <option value="area" ?selected=${this._groupByMode === "area"}>${t("groupby_area", L)}</option>
+          </select>
+        </label>
+        ${!isOperator ? html`
+          <ha-button
+            @click=${() => this.shadowRoot!.querySelector<MaintenanceObjectDialog>("maintenance-object-dialog")?.openCreate()}
+          >
+            ${t("new_object", L)}
+          </ha-button>
+        ` : nothing}
       </div>
+      ${this._groupByMode === "area"
+        ? html`
+          ${[...groupedByArea().entries()].map(([area, objs]) => html`
+            <details class="group-section" open>
+              <summary class="group-section-header">
+                <ha-icon icon="mdi:map-marker-outline"></ha-icon>
+                <span>${area}</span>
+                <span class="group-section-count">(${objs.length})</span>
+              </summary>
+              <div class="objects-grid">${objs.map(renderObject)}</div>
+            </details>
+          `)}
+        `
+        : html`<div class="objects-grid">${sorted.map(renderObject)}</div>`}
     `;
   }
 
@@ -782,33 +1287,83 @@ export class MaintenanceSupporterPanel extends LitElement {
   }
 
   private _renderGroupsSection() {
+    if (!this._features.groups) return nothing;
     const entries = Object.entries(this._groups);
-    if (entries.length === 0) return nothing;
     const L = this._lang;
 
     return html`
       <div class="groups-section">
-        <h3>${t("groups", L)}</h3>
-        <div class="groups-grid">
-          ${entries.map(([_gid, group]) => {
-            const taskNames = group.task_refs
-              .map((ref) => this._getTask(ref.entry_id, ref.task_id)?.name)
-              .filter(Boolean);
-            return html`
-              <div class="group-card">
-                <div class="group-card-name">${group.name}</div>
-                ${group.description ? html`<div class="group-card-desc">${group.description}</div>` : nothing}
-                <div class="group-card-tasks">
-                  ${taskNames.length > 0
-                    ? taskNames.map((n) => html`<span class="group-task-chip">${n}</span>`)
-                    : html`<span style="font-size:12px;color:var(--secondary-text-color)">${t("no_tasks_short", L)}</span>`}
-                </div>
-              </div>
-            `;
-          })}
+        <div class="groups-header">
+          <h3>${t("groups", L)}</h3>
+          <ha-button appearance="plain" @click=${() => this._openGroupCreate()}>
+            ${t("new_group", L)}
+          </ha-button>
         </div>
+        ${entries.length === 0
+          ? html`<div class="hint">${t("no_groups", L)}</div>`
+          : html`
+            <div class="groups-grid">
+              ${entries.map(([gid, group]) => {
+                const taskNames = group.task_refs
+                  .map((ref) => this._getTask(ref.entry_id, ref.task_id)?.name)
+                  .filter(Boolean);
+                return html`
+                  <div class="group-card">
+                    <div class="group-card-head">
+                      <div class="group-card-name">${group.name}</div>
+                      <div class="group-card-actions">
+                        <mwc-icon-button title="${t("edit", L)}" @click=${() => this._openGroupEdit(gid)}>
+                          <ha-svg-icon path="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></ha-svg-icon>
+                        </mwc-icon-button>
+                        <mwc-icon-button title="${t("delete", L)}" @click=${() => this._deleteGroup(gid, group.name)}>
+                          <ha-svg-icon path="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12z"></ha-svg-icon>
+                        </mwc-icon-button>
+                      </div>
+                    </div>
+                    ${group.description ? html`<div class="group-card-desc">${group.description}</div>` : nothing}
+                    <div class="group-card-tasks">
+                      ${taskNames.length > 0
+                        ? taskNames.map((n) => html`<span class="group-task-chip">${n}</span>`)
+                        : html`<span style="font-size:12px;color:var(--secondary-text-color)">${t("no_tasks_short", L)}</span>`}
+                    </div>
+                  </div>
+                `;
+              })}
+            </div>
+          `}
       </div>
     `;
+  }
+
+  private _openGroupCreate(): void {
+    this.shadowRoot!.querySelector<MaintenanceGroupDialog>("maintenance-group-dialog")?.openCreate();
+  }
+
+  private _openGroupEdit(groupId: string): void {
+    const group = this._groups[groupId];
+    if (!group) return;
+    this.shadowRoot!.querySelector<MaintenanceGroupDialog>("maintenance-group-dialog")?.openEdit(groupId, group);
+  }
+
+  private async _deleteGroup(groupId: string, name: string): Promise<void> {
+    const dlg = this.shadowRoot!.querySelector<MaintenanceConfirmDialog>("maintenance-confirm-dialog");
+    const ok = dlg
+      ? await dlg.confirm({
+          title: t("delete_group", this._lang),
+          message: t("delete_group_confirm", this._lang).replace("{name}", name),
+          confirmText: t("delete", this._lang),
+        })
+      : confirm(`${t("delete_group_confirm", this._lang).replace("{name}", name)}`);
+    if (!ok) return;
+    try {
+      await this.hass.connection.sendMessagePromise({
+        type: "maintenance_supporter/group/delete",
+        group_id: groupId,
+      });
+      await this._loadData();
+    } catch {
+      this._showToast(t("action_error", this._lang));
+    }
   }
 
   private _renderBudgetBar() {
@@ -857,13 +1412,33 @@ export class MaintenanceSupporterPanel extends LitElement {
       else if (row.status === "due_soon") barColor = STATUS_COLORS.due_soon;
     }
 
+    const areaName = row.area_id ? this.hass?.areas?.[row.area_id]?.name : null;
+    const userName = row.responsible_user_id ? this._userService?.getUserName(row.responsible_user_id) : null;
+    const hasSub = row.group_names.length > 0 || areaName || userName;
+
     return html`
       <div class="task-row${!row.enabled ? ' task-disabled' : ''}">
-        <span class="status-badge ${row.status}">${t(row.status, L)}</span>
-        ${!row.enabled ? html`<span class="badge-disabled">${t("disabled", L)}</span>` : nothing}
-        ${row.nfc_tag_id ? html`<span class="nfc-badge" title="${t("nfc_linked", L)}"><ha-icon icon="mdi:nfc-variant"></ha-icon></span>` : nothing}
+        <span class="cell-badges">
+          <span class="status-badge ${row.status}">${t(row.status, L)}</span>
+          ${!row.enabled ? html`<span class="badge-disabled">${t("disabled", L)}</span>` : nothing}
+          ${row.nfc_tag_id ? html`<span class="nfc-badge" title="${t("nfc_linked", L)}"><ha-icon icon="mdi:nfc-variant"></ha-icon></span>` : nothing}
+        </span>
         <span class="cell object-name" @click=${(e: Event) => { e.stopPropagation(); this._showObject(row.entry_id); }}>${row.object_name}</span>
         <span class="cell task-name" @click=${() => this._showTask(row.entry_id, row.task_id)}>${row.task_name}</span>
+        <span class="task-sub${hasSub ? '' : ' task-sub-empty'}">
+          ${row.group_names.length > 0 ? html`
+            <span class="sub-chip" title="${t("groups", L)}">
+              <ha-icon icon="mdi:folder-outline"></ha-icon>${row.group_names.join(", ")}
+            </span>` : nothing}
+          ${areaName ? html`
+            <span class="sub-chip">
+              <ha-icon icon="mdi:map-marker-outline"></ha-icon>${areaName}
+            </span>` : nothing}
+          ${userName ? html`
+            <span class="sub-chip" title="${t("responsible_user", L)}">
+              <ha-icon icon="mdi:account-outline"></ha-icon>${userName}
+            </span>` : nothing}
+        </span>
         <span class="cell type">${t(row.type, L)}</span>
         <span class="due-cell" @click=${() => this._showTask(row.entry_id, row.task_id)}>
           <span class="due-text">${formatDueDays(row.days_until_due, L)}</span>
@@ -1074,20 +1649,24 @@ export class MaintenanceSupporterPanel extends LitElement {
     const o = obj.object;
     const L = this._lang;
 
+    const isOperator = this._isOperator;
+
     return html`
       <div class="detail-section">
         <div class="detail-header">
           <h2>${o.name}</h2>
           <div class="action-buttons">
-            <ha-button appearance="plain" @click=${() => {
-              const dlg = this.shadowRoot!.querySelector<MaintenanceObjectDialog>("maintenance-object-dialog");
-              dlg?.openEdit(obj.entry_id, o);
-            }}>${t("edit", L)}</ha-button>
-            <ha-button appearance="filled" @click=${() => {
-              const dlg = this.shadowRoot!.querySelector<MaintenanceTaskDialog>("maintenance-task-dialog");
-              dlg?.openCreate(obj.entry_id);
-            }}>${t("add_task", L)}</ha-button>
-            <ha-button variant="danger" appearance="plain" @click=${() => this._deleteObject(obj.entry_id)}>${t("delete", L)}</ha-button>
+            ${!isOperator ? html`
+              <ha-button appearance="plain" @click=${() => {
+                const dlg = this.shadowRoot!.querySelector<MaintenanceObjectDialog>("maintenance-object-dialog");
+                dlg?.openEdit(obj.entry_id, o);
+              }}>${t("edit", L)}</ha-button>
+              <ha-button appearance="filled" @click=${() => {
+                const dlg = this.shadowRoot!.querySelector<MaintenanceTaskDialog>("maintenance-task-dialog");
+                dlg?.openCreate(obj.entry_id);
+              }}>${t("add_task", L)}</ha-button>
+              <ha-button variant="danger" appearance="plain" @click=${() => this._deleteObject(obj.entry_id)}>${t("delete", L)}</ha-button>
+            ` : nothing}
             <ha-button appearance="plain" @click=${() => this._openQrForObject(obj.entry_id, o.name)}><ha-icon icon="mdi:qrcode"></ha-icon> ${t("qr_code", L)}</ha-button>
           </div>
         </div>
@@ -1095,7 +1674,18 @@ export class MaintenanceSupporterPanel extends LitElement {
           ? html`<p class="meta">${[o.manufacturer, o.model].filter(Boolean).join(" ")}</p>`
           : nothing}
         ${o.serial_number ? html`<p class="meta">${t("serial_number_label", L)}: ${o.serial_number}</p>` : nothing}
+        ${o.documentation_url && /^https?:\/\//i.test(o.documentation_url)
+          ? html`<p class="meta">${t("documentation_url_label", L)}:
+              <a href=${o.documentation_url} target="_blank" rel="noopener noreferrer">${o.documentation_url}</a>
+            </p>`
+          : nothing}
         ${o.installation_date ? html`<p class="meta">${t("installed", L)}: ${formatDate(o.installation_date, L)}</p>` : nothing}
+        ${o.notes
+          ? html`<div class="object-notes">
+              <div class="object-notes-label">${t("object_notes_label", L)}</div>
+              <div class="object-notes-body">${o.notes}</div>
+            </div>`
+          : nothing}
 
         <h3>${t("tasks", L)} (${obj.tasks.length})</h3>
         ${obj.tasks.length === 0
@@ -1145,6 +1735,7 @@ export class MaintenanceSupporterPanel extends LitElement {
     const L = this._lang;
     const obj = this._getObject(this._selectedEntryId!);
     const objName = obj?.object.name || "";
+    const isOperator = this._isOperator;
 
     // Determine status chip — use the backend-computed status
     const statusClass = task.status === "due_soon" ? "warning" : (task.status || "ok");
@@ -1160,27 +1751,29 @@ export class MaintenanceSupporterPanel extends LitElement {
           ${this._renderUserBadge(task)}
           ${task.nfc_tag_id
             ? html`<span class="nfc-badge" title="${t("nfc_tag_id", L)}: ${task.nfc_tag_id}"><ha-icon icon="mdi:nfc-variant"></ha-icon> NFC</span>`
-            : html`<span class="nfc-badge unlinked" title="${t("nfc_link_hint", L)}"
+            : !isOperator ? html`<span class="nfc-badge unlinked" title="${t("nfc_link_hint", L)}"
                 @click=${() => { this.shadowRoot!.querySelector<MaintenanceTaskDialog>("maintenance-task-dialog")?.openEdit(this._selectedEntryId!, task); }}>
                 <ha-icon icon="mdi:nfc-variant"></ha-icon>
-              </span>`
+              </span>` : nothing
           }
         </div>
         <div class="task-header-actions">
           <ha-button appearance="filled" @click=${() => this._openCompleteDialog(this._selectedEntryId!, this._selectedTaskId!, task.name, this._features.checklists ? task.checklist : undefined, this._features.adaptive && !!task.adaptive_config?.enabled)}>${t("complete", L)}</ha-button>
           <ha-button appearance="plain" .disabled=${this._actionLoading} @click=${() => this._promptSkipTask(this._selectedEntryId!, this._selectedTaskId!)}>${t("skip", L)}</ha-button>
-          <div class="more-menu-wrapper">
-            <ha-icon-button .disabled=${this._actionLoading} .path=${"M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"} @click=${this._toggleMoreMenu}></ha-icon-button>
-            ${this._moreMenuOpen ? html`
-              <div class="popup-menu" @click=${(e: Event) => e.stopPropagation()}>
-                <div class="popup-menu-item" @click=${() => { this._closeMoreMenu(); this.shadowRoot!.querySelector<MaintenanceTaskDialog>("maintenance-task-dialog")?.openEdit(this._selectedEntryId!, task); }}>${t("edit", L)}</div>
-                <div class="popup-menu-item" @click=${() => { this._closeMoreMenu(); this._promptResetTask(this._selectedEntryId!, this._selectedTaskId!); }}>${t("reset", L)}</div>
-                <div class="popup-menu-item" @click=${() => { this._closeMoreMenu(); const objData = this._getObject(this._selectedEntryId!)?.object; this._openQrForTask(this._selectedEntryId!, this._selectedTaskId!, objData?.name || "", task.name); }}><ha-icon icon="mdi:qrcode"></ha-icon> ${t("qr_code", L)}</div>
-                <div class="popup-menu-divider"></div>
-                <div class="popup-menu-item danger" @click=${() => { this._closeMoreMenu(); this._deleteTask(this._selectedEntryId!, this._selectedTaskId!); }}>${t("delete", L)}</div>
-              </div>
-            ` : nothing}
-          </div>
+          <ha-button appearance="plain" @click=${() => { const objData = this._getObject(this._selectedEntryId!)?.object; this._openQrForTask(this._selectedEntryId!, this._selectedTaskId!, objData?.name || "", task.name); }}><ha-icon icon="mdi:qrcode"></ha-icon> ${t("qr_code", L)}</ha-button>
+          ${!isOperator ? html`
+            <div class="more-menu-wrapper">
+              <ha-icon-button .disabled=${this._actionLoading} .path=${"M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"} @click=${this._toggleMoreMenu}></ha-icon-button>
+              ${this._moreMenuOpen ? html`
+                <div class="popup-menu" @click=${(e: Event) => e.stopPropagation()}>
+                  <div class="popup-menu-item" @click=${() => { this._closeMoreMenu(); this.shadowRoot!.querySelector<MaintenanceTaskDialog>("maintenance-task-dialog")?.openEdit(this._selectedEntryId!, task); }}>${t("edit", L)}</div>
+                  <div class="popup-menu-item" @click=${() => { this._closeMoreMenu(); this._promptResetTask(this._selectedEntryId!, this._selectedTaskId!); }}>${t("reset", L)}</div>
+                  <div class="popup-menu-divider"></div>
+                  <div class="popup-menu-item danger" @click=${() => { this._closeMoreMenu(); this._deleteTask(this._selectedEntryId!, this._selectedTaskId!); }}>${t("delete", L)}</div>
+                </div>
+              ` : nothing}
+            </div>
+          ` : nothing}
         </div>
       </div>
     `;
@@ -1298,8 +1891,39 @@ export class MaintenanceSupporterPanel extends LitElement {
           </div>
         </div>
         ${hasWeibullData ? renderWeibullSection(task, L) : nothing}
-        ${hasSeasonalData ? renderSeasonalCardExpanded(task, L) : nothing}
+        ${hasSeasonalData ? html`
+          ${renderSeasonalCardExpanded(task, L)}
+          <div class="seasonal-actions">
+            <ha-button appearance="plain" @click=${() => this._openSeasonalOverrides(task)}>
+              ${t("edit_seasonal_overrides", L)}
+            </ha-button>
+          </div>
+        ` : nothing}
+        ${this._renderChecklistCard(task)}
         ${this._renderRecentActivities(task)}
+      </div>
+    `;
+  }
+
+  /**
+   * Read-only preview of the configured checklist steps so users can see
+   * the steps without having to open the Edit or Complete dialog. Only
+   * rendered when the Checklists feature is enabled and steps are set.
+   */
+  private _renderChecklistCard(task: MaintenanceTask) {
+    if (!this._features.checklists) return nothing;
+    const items = task.checklist || [];
+    if (items.length === 0) return nothing;
+    const L = this._lang;
+    return html`
+      <div class="checklist-preview-card">
+        <div class="checklist-preview-header">
+          <ha-icon icon="mdi:format-list-checks"></ha-icon>
+          <span>${t("checklist", L)} (${items.length})</span>
+        </div>
+        <ol class="checklist-preview-list">
+          ${items.map((item) => html`<li>${item}</li>`)}
+        </ol>
       </div>
     `;
   }
@@ -1318,12 +1942,20 @@ export class MaintenanceSupporterPanel extends LitElement {
   }
 
   /**
-   * Render task notes and documentation URL if present.
+   * Render task notes, task documentation URL, and (since v1.4.1) the parent
+   * object's documentation_url for quick access to the device manual without
+   * having to navigate back to the object detail.
    */
   private _renderTaskMeta(task: MaintenanceTask) {
-    const safeUrl = task.documentation_url && /^https?:\/\//i.test(task.documentation_url)
+    const safeTaskUrl = task.documentation_url && /^https?:\/\//i.test(task.documentation_url)
       ? task.documentation_url : null;
-    if (!task.notes && !safeUrl) return nothing;
+    // v1.4.1: pull the parent object's documentation_url too. Tasks live
+    // inside an object that owns the device's manual, so showing it on the
+    // task page is the natural follow-up to v1.4.0 #43.
+    const parentObj = this._selectedEntryId ? this._getObject(this._selectedEntryId) : undefined;
+    const objUrl = parentObj?.object?.documentation_url;
+    const safeObjUrl = objUrl && /^https?:\/\//i.test(objUrl) ? objUrl : null;
+    if (!task.notes && !safeTaskUrl && !safeObjUrl) return nothing;
     const L = this._lang;
     return html`
       <div class="task-meta-card">
@@ -1333,10 +1965,16 @@ export class MaintenanceSupporterPanel extends LitElement {
             <span class="task-meta-notes">${task.notes}</span>
           </div>
         ` : nothing}
-        ${safeUrl ? html`
+        ${safeTaskUrl ? html`
           <div class="task-meta-row task-meta-link">
             <ha-icon icon="mdi:open-in-new"></ha-icon>
-            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${t("documentation_label", L)}</a>
+            <a href="${safeTaskUrl}" target="_blank" rel="noopener noreferrer">${t("documentation_label", L)}</a>
+          </div>
+        ` : nothing}
+        ${safeObjUrl ? html`
+          <div class="task-meta-row task-meta-link">
+            <ha-icon icon="mdi:book-open-variant"></ha-icon>
+            <a href="${safeObjUrl}" target="_blank" rel="noopener noreferrer">${t("documentation_url_label", L)} (${parentObj?.object?.name || ""})</a>
           </div>
         ` : nothing}
       </div>
@@ -1358,6 +1996,9 @@ export class MaintenanceSupporterPanel extends LitElement {
         <div class="kpi-card">
           <div class="kpi-label">${t("next_due", L)}</div>
           <div class="kpi-value">${task.next_due ? formatDate(task.next_due, L) : "—"}</div>
+          ${this._features.schedule_time && task.schedule_time
+            ? html`<div class="kpi-subtext">${t("at_time", L)} ${task.schedule_time}</div>`
+            : nothing}
         </div>
         <div class="kpi-card ${daysClass}">
           <div class="kpi-label">${t("days_until_due", L)}</div>
@@ -1431,6 +2072,9 @@ export class MaintenanceSupporterPanel extends LitElement {
           <ha-button appearance="filled" @click=${() => this._applySuggestion(this._selectedEntryId!, this._selectedTaskId!, suggested)}>
             ${t("apply_suggestion", L)}
           </ha-button>
+          <ha-button appearance="plain" @click=${() => this._reanalyzeInterval(this._selectedEntryId!, this._selectedTaskId!)}>
+            ${t("reanalyze", L)}
+          </ha-button>
           <ha-button appearance="plain" @click=${() => this._dismissSuggestion(this._selectedEntryId!, this._selectedTaskId!)}>
             ${t("dismiss_suggestion", L)}
           </ha-button>
@@ -1441,7 +2085,7 @@ export class MaintenanceSupporterPanel extends LitElement {
 
   private _renderRecentActivities(task: MaintenanceTask) {
     const L = this._lang;
-    const recent = task.history.slice(0, 3);
+    const recent = task.history.slice(-3).reverse();
 
     if (recent.length === 0) {
       return nothing;

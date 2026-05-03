@@ -24,13 +24,16 @@ from .const import (
     CONF_ADAPTIVE_MIN_INTERVAL,
     CONF_ADVANCED_ADAPTIVE,
     CONF_ADVANCED_CHECKLISTS,
+    CONF_ADVANCED_SCHEDULE_TIME,
     CONF_ENVIRONMENTAL_ENTITY,
     CONF_OBJECT,
     CONF_OBJECT_AREA,
+    CONF_OBJECT_DOCUMENTATION_URL,
     CONF_OBJECT_INSTALLATION_DATE,
     CONF_OBJECT_MANUFACTURER,
     CONF_OBJECT_MODEL,
     CONF_OBJECT_NAME,
+    CONF_OBJECT_NOTES,
     CONF_OBJECT_SERIAL_NUMBER,
     CONF_RESPONSIBLE_USER_ID,
     CONF_SENSOR_PREDICTION_ENABLED,
@@ -43,6 +46,7 @@ from .const import (
     CONF_TASK_NAME,
     CONF_TASK_NFC_TAG,
     CONF_TASK_NOTES,
+    CONF_TASK_SCHEDULE_TIME,
     CONF_TASK_SCHEDULE_TYPE,
     CONF_TASK_TYPE,
     CONF_TASK_WARNING_DAYS,
@@ -51,13 +55,15 @@ from .const import (
     DEFAULT_ADAPTIVE_MAX_INTERVAL,
     DEFAULT_ADAPTIVE_MIN_INTERVAL,
     DEFAULT_INTERVAL_DAYS,
-    DEFAULT_WARNING_DAYS,
     DOMAIN,
     GLOBAL_UNIQUE_ID,
+    MAX_CHECKLIST_ITEM_LENGTH,
+    MAX_CHECKLIST_ITEMS,
     MaintenanceTypeEnum,
     ScheduleType,
     TriggerType,
 )
+from .helpers.global_options import get_default_warning_days
 
 
 class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
@@ -81,6 +87,10 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
 
     def _save_new_task(self) -> ConfigFlowResult:
         """Save the current task and return to init."""
+        from homeassistant.util import dt as dt_util
+
+        from .helpers.sanitize import cap_task_fields
+
         task_id = uuid4().hex
         task_data: dict[str, Any] = {
             "id": task_id,
@@ -92,8 +102,10 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                 CONF_TASK_SCHEDULE_TYPE, ScheduleType.TIME_BASED
             ),
             "warning_days": self._current_task.get(
-                CONF_TASK_WARNING_DAYS, DEFAULT_WARNING_DAYS
+                CONF_TASK_WARNING_DAYS, get_default_warning_days(self.hass)
             ),
+            # Anchor for next_due fallback when last_performed is None (issue #30).
+            "created_at": dt_util.now().date().isoformat(),
         }
 
         if CONF_TASK_INTERVAL_DAYS in self._current_task:
@@ -108,6 +120,7 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
         if CONF_TASK_ICON in self._current_task:
             task_data["custom_icon"] = self._current_task[CONF_TASK_ICON]
 
+        cap_task_fields(task_data)
         new_data = dict(self.config_entry.data)
         new_tasks = dict(new_data.get(CONF_TASKS, {}))
         new_tasks[task_id] = task_data
@@ -293,8 +306,18 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                     updated_task["interval_days"] = int(user_input[CONF_TASK_INTERVAL_DAYS])
                 if CONF_TASK_INTERVAL_ANCHOR in user_input:
                     updated_task["interval_anchor"] = user_input[CONF_TASK_INTERVAL_ANCHOR]
+                # schedule_time only present when global advanced flag is on; clear by submitting "".
+                if CONF_TASK_SCHEDULE_TIME in user_input:
+                    sched = (user_input.get(CONF_TASK_SCHEDULE_TIME) or "").strip()
+                    if sched:
+                        updated_task["schedule_time"] = sched
+                    else:
+                        updated_task.pop("schedule_time", None)
                 updated_task["warning_days"] = int(
-                    user_input.get(CONF_TASK_WARNING_DAYS, updated_task.get("warning_days", DEFAULT_WARNING_DAYS))
+                    user_input.get(
+                        CONF_TASK_WARNING_DAYS,
+                        updated_task.get("warning_days", get_default_warning_days(self.hass)),
+                    )
                 )
                 updated_task[CONF_TASK_ENABLED] = user_input.get(
                     CONF_TASK_ENABLED, updated_task.get(CONF_TASK_ENABLED, True)
@@ -322,6 +345,9 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                 else:
                     updated_task.pop(CONF_TASK_NFC_TAG, None)
 
+                from .helpers.sanitize import cap_task_fields
+
+                cap_task_fields(updated_task)
                 new_tasks[self._selected_task_id or ""] = updated_task
                 new_data[CONF_TASKS] = new_tasks
                 self._update_config_entry(new_data)
@@ -413,13 +439,25 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                                     mode=selector.SelectSelectorMode.DROPDOWN,
                                 )
                             ),
+                            **(
+                                {
+                                    vol.Optional(
+                                        CONF_TASK_SCHEDULE_TIME,
+                                        default=task.get("schedule_time", ""),
+                                    ): selector.TimeSelector(),
+                                }
+                                if self._get_global_options().get(
+                                    CONF_ADVANCED_SCHEDULE_TIME, False
+                                )
+                                else dict[Any, Any]()
+                            ),
                         }
                         if task.get("schedule_type") == ScheduleType.TIME_BASED
                         else dict[Any, Any]()
                     ),
                     vol.Optional(
                         CONF_TASK_WARNING_DAYS,
-                        default=task.get("warning_days", DEFAULT_WARNING_DAYS),
+                        default=task.get("warning_days", get_default_warning_days(self.hass)),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=0, max=365, step=1, mode=selector.NumberSelectorMode.BOX
@@ -740,9 +778,15 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
             if user_input.get("go_back"):
                 return self._show_task_action_menu()
 
-            # Parse textarea: one step per line, strip empty lines
+            # Parse textarea: one step per line, strip empty lines.
+            # Per-item length and total-count caps mirror the WS schema so
+            # neither path can grow ConfigEntry.data without bound.
             raw = user_input.get("checklist_text", "")
-            items = [line.strip() for line in raw.splitlines() if line.strip()]
+            items = [
+                line.strip()[:MAX_CHECKLIST_ITEM_LENGTH]
+                for line in raw.splitlines()
+                if line.strip()
+            ][:MAX_CHECKLIST_ITEMS]
 
             new_data = dict(self.config_entry.data)
             new_tasks = dict(new_data.get(CONF_TASKS, {}))
@@ -921,7 +965,7 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
             else:
                 self._current_task[CONF_TASK_INTERVAL_DAYS] = interval
                 self._current_task[CONF_TASK_WARNING_DAYS] = user_input.get(
-                    CONF_TASK_WARNING_DAYS, DEFAULT_WARNING_DAYS
+                    CONF_TASK_WARNING_DAYS, get_default_warning_days(self.hass)
                 )
                 self._current_task[CONF_TASK_INTERVAL_ANCHOR] = user_input.get(
                     CONF_TASK_INTERVAL_ANCHOR, "completion"
@@ -956,7 +1000,8 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                     ),
                     vol.Optional("last_performed"): selector.DateSelector(),
                     vol.Optional(
-                        CONF_TASK_WARNING_DAYS, default=DEFAULT_WARNING_DAYS
+                        CONF_TASK_WARNING_DAYS,
+                        default=get_default_warning_days(self.hass),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=0, max=365, step=1, mode=selector.NumberSelectorMode.BOX
@@ -980,7 +1025,7 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
 
             self._current_task[CONF_TASK_SCHEDULE_TYPE] = ScheduleType.MANUAL
             self._current_task[CONF_TASK_WARNING_DAYS] = user_input.get(
-                CONF_TASK_WARNING_DAYS, DEFAULT_WARNING_DAYS
+                CONF_TASK_WARNING_DAYS, get_default_warning_days(self.hass)
             )
             if user_input.get(CONF_TASK_NOTES):
                 self._current_task[CONF_TASK_NOTES] = user_input[CONF_TASK_NOTES]
@@ -992,7 +1037,8 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_TASK_WARNING_DAYS, default=DEFAULT_WARNING_DAYS
+                        CONF_TASK_WARNING_DAYS,
+                        default=get_default_warning_days(self.hass),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=0, max=365, step=1, mode=selector.NumberSelectorMode.BOX
@@ -1355,6 +1401,8 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
         if user_input is not None:
             if user_input.get("go_back"):
                 return self._show_init_menu()
+            from .helpers.sanitize import cap_object_fields
+
             new_data = dict(self.config_entry.data)
             obj = dict(new_data.get(CONF_OBJECT, {}))
             obj[CONF_OBJECT_NAME] = user_input.get(CONF_OBJECT_NAME, obj.get("name"))
@@ -1366,6 +1414,15 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                 obj[CONF_OBJECT_INSTALLATION_DATE] = str(
                     user_input[CONF_OBJECT_INSTALLATION_DATE]
                 )
+            # v1.4.0 (#43)
+            obj[CONF_OBJECT_DOCUMENTATION_URL] = (
+                user_input.get(CONF_OBJECT_DOCUMENTATION_URL) or None
+            )
+            # v1.4.10 (#46)
+            obj[CONF_OBJECT_NOTES] = (
+                (user_input.get(CONF_OBJECT_NOTES) or "").strip() or None
+            )
+            cap_object_fields(obj)
             new_data[CONF_OBJECT] = obj
 
             self.hass.config_entries.async_update_entry(
@@ -1415,6 +1472,23 @@ class MaintenanceOptionsFlow(TriggerConfigMixin, OptionsFlow):
                         default=obj.get("serial_number") or "",
                     ): selector.TextSelector(
                         selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+                    ),
+                    # v1.4.0 (#43): place under serial_number
+                    vol.Optional(
+                        CONF_OBJECT_DOCUMENTATION_URL,
+                        default=obj.get("documentation_url") or "",
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
+                    ),
+                    # v1.4.10 (#46): free-form notes (multiline)
+                    vol.Optional(
+                        CONF_OBJECT_NOTES,
+                        default=obj.get("notes") or "",
+                    ): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.TEXT,
+                            multiline=True,
+                        )
                     ),
                     area_key: selector.AreaSelector(),
                     install_date_key: selector.DateSelector(),

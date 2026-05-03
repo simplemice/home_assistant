@@ -1,7 +1,7 @@
 /** Maintenance Supporter Lovelace Card. */
 
 import { LitElement, html, css, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { sharedStyles, STATUS_COLORS, t } from "./styles";
 import type {
   HomeAssistant,
@@ -19,7 +19,6 @@ interface FlatTask {
   task: MaintenanceTask;
 }
 
-@customElement("maintenance-supporter-card")
 export class MaintenanceSupporterCard extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _config: CardConfig = { type: "custom:maintenance-supporter-card" };
@@ -36,7 +35,17 @@ export class MaintenanceSupporterCard extends LitElement {
   }
 
   static getStubConfig() {
-    return { type: "custom:maintenance-supporter-card", show_header: true, show_actions: true };
+    // Opinionated default: when a user picks "Maintenance Supporter" from the
+    // card picker, show only the actionable tasks (overdue + triggered + due
+    // soon, max 10) — not the full task list which is overwhelming on first
+    // add. The user can broaden the filter via the editor afterwards.
+    return {
+      type: "custom:maintenance-supporter-card",
+      show_header: true,
+      show_actions: true,
+      filter_status: ["overdue", "triggered", "due_soon"],
+      max_items: 10,
+    };
   }
 
   setConfig(config: CardConfig): void {
@@ -113,12 +122,39 @@ export class MaintenanceSupporterCard extends LitElement {
 
   private get _flatTasks(): FlatTask[] {
     const tasks: FlatTask[] = [];
-    const { filter_status, filter_objects, max_items } = this._config;
+    const {
+      filter_status,
+      filter_objects,
+      entity_ids,
+      filter_due_min_days,
+      filter_due_max_days,
+      max_items,
+    } = this._config;
+    const entityFilter = entity_ids?.length ? new Set(entity_ids) : null;
+    const hasDueRange =
+      filter_due_min_days !== undefined || filter_due_max_days !== undefined;
 
     for (const obj of this._objects) {
       if (filter_objects?.length && !filter_objects.includes(obj.object.name)) continue;
       for (const task of obj.tasks) {
         if (filter_status?.length && !filter_status.includes(task.status)) continue;
+        // entity_ids: HA-native filter — match the task's sensor or
+        // binary_sensor entity_id. Both fields come pre-resolved from the
+        // backend WS response (see _build_task_summary in websocket/__init__.py).
+        if (entityFilter) {
+          const matches = (task.sensor_entity_id && entityFilter.has(task.sensor_entity_id))
+            || (task.binary_sensor_entity_id && entityFilter.has(task.binary_sensor_entity_id));
+          if (!matches) continue;
+        }
+        // due-days range — used by group_by=due_date strategy buckets.
+        // Tasks without a numeric days_until_due are excluded from any
+        // ranged view; they show up in unfiltered or status-only views.
+        if (hasDueRange) {
+          const days = task.days_until_due;
+          if (days === null || days === undefined) continue;
+          if (filter_due_min_days !== undefined && days < filter_due_min_days) continue;
+          if (filter_due_max_days !== undefined && days > filter_due_max_days) continue;
+        }
         tasks.push({ entry_id: obj.entry_id, object_name: obj.object.name, task });
       }
     }
@@ -160,7 +196,10 @@ export class MaintenanceSupporterCard extends LitElement {
             : nothing}
         </div>
         ${tasks.length === 0
-          ? html`<div class="empty-card">${t("no_tasks_short", L)}</div>`
+          ? html`<div class="empty-card">
+              <div>${t("card_no_tasks_title", L)}</div>
+              <a class="empty-link" href="/maintenance-supporter">${t("card_no_tasks_cta", L)}</a>
+            </div>`
           : html`
               <div class="task-list ${compact ? "compact" : ""}">
                 ${tasks.map(
@@ -247,7 +286,21 @@ export class MaintenanceSupporterCard extends LitElement {
       .badge.due_soon { background: var(--warning-color, #ff9800); }
       .badge.triggered { background: #ff5722; }
 
-      .empty-card { padding: 16px; text-align: center; color: var(--secondary-text-color); }
+      .empty-card {
+        padding: 24px 16px;
+        text-align: center;
+        color: var(--secondary-text-color);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+      .empty-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 13px;
+      }
+      .empty-link:hover { text-decoration: underline; }
       .task-list { padding: 0 16px 16px; }
 
       .task-item {
@@ -277,7 +330,15 @@ export class MaintenanceSupporterCard extends LitElement {
   ];
 }
 
-// Register as custom card
+// Module-bottom registration so esbuild's tree-shaker doesn't drop the
+// element class when the only reference is the @customElement decorator
+// (which triggered this exact bug for the dialog components — issue #32:
+// "card not showing in the card selector, busy spinner only").
+if (!customElements.get("maintenance-supporter-card")) {
+  customElements.define("maintenance-supporter-card", MaintenanceSupporterCard);
+}
+
+// Register as custom card so the Lovelace card picker lists it.
 (window as any).customCards = (window as any).customCards || [];
 (window as any).customCards.push({
   type: "maintenance-supporter-card",

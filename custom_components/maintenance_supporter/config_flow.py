@@ -24,10 +24,12 @@ from .const import (
     CONF_NOTIFY_SERVICE,
     CONF_OBJECT,
     CONF_OBJECT_AREA,
+    CONF_OBJECT_DOCUMENTATION_URL,
     CONF_OBJECT_INSTALLATION_DATE,
     CONF_OBJECT_MANUFACTURER,
     CONF_OBJECT_MODEL,
     CONF_OBJECT_NAME,
+    CONF_OBJECT_NOTES,
     CONF_OBJECT_SERIAL_NUMBER,
     CONF_TASK_ICON,
     CONF_TASK_INTERVAL_DAYS,
@@ -45,6 +47,7 @@ from .const import (
     ScheduleType,
     slugify_object_name,
 )
+from .helpers.global_options import get_default_warning_days
 from .templates import (
     TEMPLATE_CATEGORIES,
     ObjectTemplate,
@@ -250,6 +253,11 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                 }
 
                 # Build tasks from template
+                from homeassistant.util import dt as dt_util
+
+                from .helpers.sanitize import cap_object_fields, cap_task_fields
+
+                today_iso = dt_util.now().date().isoformat()
                 self._tasks = {}
                 for tt in template.tasks:
                     task_id = uuid4().hex
@@ -262,12 +270,15 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                         "schedule_type": tt.schedule_type,
                         "warning_days": tt.warning_days,
                         "history": [],
+                        "created_at": today_iso,
                     }
                     if tt.interval_days is not None:
                         task_data["interval_days"] = tt.interval_days
                     if tt.notes:
                         task_data["notes"] = tt.notes
+                    cap_task_fields(task_data)
                     self._tasks[task_id] = task_data
+                cap_object_fields(self._object_data)
 
                 self._object_data["task_ids"] = list(self._tasks.keys())
 
@@ -345,6 +356,14 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                 obj_data["installation_date"] = user_input.get(
                     CONF_OBJECT_INSTALLATION_DATE
                 )
+                # v1.4.0 (#43)
+                obj_data["documentation_url"] = (
+                    user_input.get(CONF_OBJECT_DOCUMENTATION_URL) or None
+                )
+                # v1.4.10 (#46)
+                obj_data["notes"] = (
+                    (user_input.get(CONF_OBJECT_NOTES) or "").strip() or None
+                )
 
                 new_data = dict(entry.data)
                 new_data[CONF_OBJECT] = obj_data
@@ -357,6 +376,8 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
             CONF_OBJECT_MANUFACTURER: obj_data.get("manufacturer", ""),
             CONF_OBJECT_MODEL: obj_data.get("model", ""),
             CONF_OBJECT_SERIAL_NUMBER: obj_data.get("serial_number", ""),
+            CONF_OBJECT_DOCUMENTATION_URL: obj_data.get("documentation_url", ""),
+            CONF_OBJECT_NOTES: obj_data.get("notes", ""),
         }
         if obj_data.get("area_id"):
             suggested[CONF_OBJECT_AREA] = obj_data["area_id"]
@@ -376,6 +397,17 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                     vol.Optional(
                         CONF_OBJECT_INSTALLATION_DATE,
                     ): selector.DateSelector(),
+                    # v1.4.0 (#43): place under serial_number per the request
+                    vol.Optional(CONF_OBJECT_DOCUMENTATION_URL): selector.TextSelector(
+                        selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
+                    ),
+                    # v1.4.10 (#46): free-form notes (multiline)
+                    vol.Optional(CONF_OBJECT_NOTES): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.TEXT,
+                            multiline=True,
+                        )
+                    ),
                 }
             ),
             suggested,
@@ -392,10 +424,15 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle object creation from the WebSocket API (no UI)."""
+        from homeassistant.util import dt as dt_util
+
+        from .helpers.sanitize import cap_object_fields, cap_task_fields
+
         if user_input is None:
             return self.async_abort(reason="missing_data")
 
-        obj_data = user_input.get(CONF_OBJECT, {})
+        obj_data = dict(user_input.get(CONF_OBJECT, {}))
+        cap_object_fields(obj_data)
         object_name = obj_data.get(CONF_OBJECT_NAME, "Unknown")
         object_slug = slugify_object_name(object_name)
 
@@ -404,11 +441,26 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
 
         obj_data.setdefault("task_ids", [])
 
+        # Stamp `created_at` on imported tasks that lack it so next_due has a
+        # stable anchor (issue #30). Imports from CSV/JSON go through this
+        # chokepoint regardless of format. Cap every task's strings so
+        # imports can't bypass the WS-schema length limits.
+        today_iso = dt_util.now().date().isoformat()
+        tasks = dict(user_input.get(CONF_TASKS, {}))
+        for task_id, td in list(tasks.items()):
+            if not isinstance(td, dict):
+                continue
+            new_td = dict(td)
+            if "created_at" not in new_td:
+                new_td["created_at"] = today_iso
+            cap_task_fields(new_td)
+            tasks[task_id] = new_td
+
         return self.async_create_entry(
             title=object_name,
             data={
                 CONF_OBJECT: obj_data,
-                CONF_TASKS: user_input.get(CONF_TASKS, {}),
+                CONF_TASKS: tasks,
             },
         )
 
@@ -433,6 +485,8 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
             if name.lower() in existing_names:
                 errors[CONF_OBJECT_NAME] = "name_exists"
             else:
+                from .helpers.sanitize import cap_object_fields
+
                 self._object_data = {
                     "id": uuid4().hex,
                     CONF_OBJECT_NAME: name,
@@ -445,7 +499,16 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                     CONF_OBJECT_INSTALLATION_DATE: user_input.get(
                         CONF_OBJECT_INSTALLATION_DATE
                     ),
+                    # v1.4.0 (#43)
+                    CONF_OBJECT_DOCUMENTATION_URL: user_input.get(
+                        CONF_OBJECT_DOCUMENTATION_URL
+                    ) or None,
+                    # v1.4.10 (#46)
+                    CONF_OBJECT_NOTES: (
+                        (user_input.get(CONF_OBJECT_NOTES) or "").strip() or None
+                    ),
                 }
+                cap_object_fields(self._object_data)
                 self._tasks = {}
                 return await self.async_step_task_menu()
 
@@ -477,6 +540,19 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                     vol.Optional(
                         CONF_OBJECT_INSTALLATION_DATE
                     ): selector.DateSelector(),
+                    # v1.4.0 (#43): place under serial_number per the request
+                    vol.Optional(CONF_OBJECT_DOCUMENTATION_URL): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.URL
+                        )
+                    ),
+                    # v1.4.10 (#46): free-form notes (multiline)
+                    vol.Optional(CONF_OBJECT_NOTES): selector.TextSelector(
+                        selector.TextSelectorConfig(
+                            type=selector.TextSelectorType.TEXT,
+                            multiline=True,
+                        )
+                    ),
                     vol.Optional("go_back", default=False): selector.BooleanSelector(),
                 }
             ),
@@ -576,7 +652,7 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
             else:
                 self._current_task[CONF_TASK_INTERVAL_DAYS] = interval
                 self._current_task[CONF_TASK_WARNING_DAYS] = user_input.get(
-                    CONF_TASK_WARNING_DAYS, DEFAULT_WARNING_DAYS
+                    CONF_TASK_WARNING_DAYS, get_default_warning_days(self.hass)
                 )
                 last_performed = user_input.get("last_performed")
                 if last_performed:
@@ -600,7 +676,8 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                     ),
                     vol.Optional("last_performed"): selector.DateSelector(),
                     vol.Optional(
-                        CONF_TASK_WARNING_DAYS, default=DEFAULT_WARNING_DAYS
+                        CONF_TASK_WARNING_DAYS,
+                        default=get_default_warning_days(self.hass),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=0,
@@ -808,7 +885,7 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
 
             self._current_task[CONF_TASK_SCHEDULE_TYPE] = ScheduleType.MANUAL
             self._current_task[CONF_TASK_WARNING_DAYS] = user_input.get(
-                CONF_TASK_WARNING_DAYS, DEFAULT_WARNING_DAYS
+                CONF_TASK_WARNING_DAYS, get_default_warning_days(self.hass)
             )
             if user_input.get(CONF_TASK_NOTES):
                 self._current_task[CONF_TASK_NOTES] = user_input[CONF_TASK_NOTES]
@@ -820,7 +897,8 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_TASK_WARNING_DAYS, default=DEFAULT_WARNING_DAYS
+                        CONF_TASK_WARNING_DAYS,
+                        default=get_default_warning_days(self.hass),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=0, max=365, step=1, mode=selector.NumberSelectorMode.BOX
@@ -871,6 +949,10 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
 
     def _save_task_and_return(self) -> ConfigFlowResult:
         """Save the current task and return to task menu."""
+        from homeassistant.util import dt as dt_util
+
+        from .helpers.sanitize import cap_task_fields
+
         task_id = self._current_task.get("id", uuid4().hex)
         task_data = {
             "id": task_id,
@@ -882,9 +964,11 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
                 CONF_TASK_SCHEDULE_TYPE, ScheduleType.TIME_BASED
             ),
             "warning_days": self._current_task.get(
-                CONF_TASK_WARNING_DAYS, DEFAULT_WARNING_DAYS
+                CONF_TASK_WARNING_DAYS, get_default_warning_days(self.hass)
             ),
             "history": [],
+            # Anchor for next_due fallback when last_performed is None (issue #30).
+            "created_at": dt_util.now().date().isoformat(),
         }
 
         if CONF_TASK_INTERVAL_DAYS in self._current_task:
@@ -900,6 +984,7 @@ class MaintenanceSupporterConfigFlow(TriggerConfigMixin, ConfigFlow, domain=DOMA
         if CONF_TASK_ICON in self._current_task:
             task_data["custom_icon"] = self._current_task[CONF_TASK_ICON]
 
+        cap_task_fields(task_data)
         self._tasks[task_id] = task_data
         self._current_task = {}
 

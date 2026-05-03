@@ -46,9 +46,24 @@ export const panelStyles = css`
   .filter-bar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     padding: 8px 0;
     gap: 8px;
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .filter-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--secondary-text-color);
+    padding-left: 2px;
   }
 
   .filter-bar select {
@@ -62,7 +77,17 @@ export const panelStyles = css`
   .task-table { display: flex; flex-direction: column; }
 
   .task-row {
-    display: flex;
+    /* Desktop: 7-column grid keeps every column aligned across rows regardless
+       of which optional chips/badges this particular row carries. */
+    display: grid;
+    grid-template-columns:
+      auto                         /* badges */
+      minmax(100px, 180px)         /* object-name */
+      minmax(120px, 1fr)           /* task-name */
+      minmax(0, 220px)             /* task-sub (chips) */
+      100px                        /* type */
+      150px                        /* due-cell */
+      auto;                        /* row-actions */
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
@@ -75,10 +100,44 @@ export const panelStyles = css`
     background: var(--table-row-alternative-background-color, rgba(0, 0, 0, 0.04));
   }
 
+  /* Wrapper for status + optional disabled/NFC badges so they share one grid column */
+  .cell-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .cell { font-size: 14px; }
-  .cell.object-name { color: var(--primary-color); cursor: pointer; min-width: 100px; }
-  .cell.task-name { flex: 1; font-weight: 500; }
-  .cell.type { min-width: 80px; color: var(--secondary-text-color); }
+  .cell.object-name { color: var(--primary-color); cursor: pointer; }
+  .cell.task-name { font-weight: 500; }
+  .cell.type { color: var(--secondary-text-color); }
+
+  /* Task subline chips (group / area / assigned user) — desktop shows inline, mobile wraps below */
+  .task-sub {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  /* Empty subline still occupies its grid slot so neighbouring columns line up */
+  .task-sub-empty { min-height: 1px; }
+  .sub-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--secondary-background-color, rgba(127, 127, 127, 0.1));
+    line-height: 1.4;
+  }
+  .sub-chip ha-icon {
+    --mdc-icon-size: 14px;
+    opacity: 0.75;
+  }
 
   .detail-section { padding: 16px 0; }
 
@@ -92,6 +151,28 @@ export const panelStyles = css`
   .detail-header h2 { margin: 0; font-size: 22px; }
   h3 { margin: 16px 0 8px; font-size: 16px; font-weight: 500; }
   .meta { color: var(--secondary-text-color); margin: 4px 0; }
+  /* v1.4.10 (#46): per-object free-form notes block */
+  .object-notes {
+    margin: 12px 0 4px;
+    padding: 12px 14px;
+    background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+    border-left: 3px solid var(--primary-color, #03a9f4);
+    border-radius: 4px;
+  }
+  .object-notes-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--secondary-text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+  }
+  .object-notes-body {
+    color: var(--primary-text-color);
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.45;
+  }
   .empty { color: var(--secondary-text-color); font-style: italic; }
   .analysis-empty-state { text-align: center; padding: 24px 16px; }
   .analysis-empty-state .empty { font-size: 15px; margin-bottom: 8px; }
@@ -474,6 +555,37 @@ export const panelStyles = css`
     border-color: var(--primary-color);
   }
 
+  /* Checklist preview card (read-only display in task overview) */
+  .checklist-preview-card {
+    background: var(--card-background-color, #fff);
+    border-radius: 8px;
+    padding: 12px 16px;
+    border: 1px solid var(--divider-color);
+    margin-top: 8px;
+  }
+  .checklist-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--secondary-text-color);
+    margin-bottom: 8px;
+  }
+  .checklist-preview-header ha-icon {
+    --mdc-icon-size: 18px;
+  }
+  .checklist-preview-list {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--primary-text-color);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .checklist-preview-list li {
+    padding: 1px 0;
+  }
+
   /* Recommendation Card */
   .recommendation-card {
     background: var(--card-background-color, #fff);
@@ -719,20 +831,77 @@ export const panelStyles = css`
     flex-wrap: wrap;
   }
 
+  :host([narrow]) .filter-field {
+    flex: 1;
+    min-width: 48%;
+  }
+
   :host([narrow]) .filter-bar select {
     flex: 1;
     min-width: 0;
+    width: 100%;
   }
 
   :host([narrow]) .task-row {
-    flex-wrap: wrap;
-    gap: 8px;
+    /* Mobile: 4-column grid keeps due-cell + actions at deterministic
+       X-positions across rows regardless of content (sparkline, bar, %).
+       Earlier flex-wrap-based layouts let the row wrap unpredictably so
+       "X days" sometimes sat near the middle, sometimes at the right edge.
+       Grid template:
+         [badges auto | task-name 1fr | due-cell 100px | actions auto]
+       Task-name spans the full top row (own row above), chips span the
+       full bottom row.  */
+    display: grid;
+    grid-template-columns: auto minmax(80px, 1fr) 100px auto;
+    grid-template-rows: auto auto auto;
+    column-gap: 8px;
+    row-gap: 4px;
     padding: 12px;
   }
 
   :host([narrow]) .cell.type { display: none; }
-  :host([narrow]) .cell.object-name { min-width: auto; }
-  :host([narrow]) .cell.task-name { flex-basis: 100%; order: -1; }
+  :host([narrow]) .cell.task-name {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+  }
+  :host([narrow]) .cell-badges {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  :host([narrow]) .cell.object-name {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    /* Cap long object names at 2 lines with ellipsis instead of growing
+       unbounded vertically. The full name is still readable via the panel
+       object-detail view (one tap on the object). */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.2;
+  }
+  :host([narrow]) .due-cell {
+    grid-column: 3;
+    grid-row: 2;
+    align-items: flex-end;
+    min-width: 0;
+  }
+  :host([narrow]) .row-actions {
+    grid-column: 4;
+    grid-row: 2;
+  }
+  :host([narrow]) .task-sub {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    font-size: 11px;
+    gap: 6px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  :host([narrow]) .task-sub-empty { display: none; }
+  :host([narrow]) .mini-sparkline { width: 50px; }
 
   :host([narrow]) .detail-header {
     flex-direction: column;
@@ -854,10 +1023,24 @@ export const panelStyles = css`
     .task-header-actions { width: 100%; justify-content: flex-start; }
     .filter-bar { flex-wrap: wrap; }
     .filter-bar select { flex: 1; min-width: 0; }
-    .task-row { flex-wrap: wrap; gap: 8px; padding: 12px; }
+    /* Mirror the :host([narrow]) grid layout for narrow desktop windows */
+    .task-row {
+      display: grid;
+      grid-template-columns: auto minmax(80px, 1fr) 100px auto;
+      grid-template-rows: auto auto auto;
+      column-gap: 8px;
+      row-gap: 4px;
+      padding: 12px;
+    }
     .cell.type { display: none; }
-    .cell.object-name { min-width: auto; }
-    .cell.task-name { flex-basis: 100%; order: -1; }
+    .cell.task-name { grid-column: 1 / -1; grid-row: 1; min-width: 0; }
+    .cell-badges { grid-column: 1; grid-row: 2; }
+    .cell.object-name { grid-column: 2; grid-row: 2; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
+    .due-cell { grid-column: 3; grid-row: 2; align-items: flex-end; min-width: 0; }
+    .row-actions { grid-column: 4; grid-row: 2; }
+    .task-sub { grid-column: 1 / -1; grid-row: 3; font-size: 11px; gap: 6px; justify-content: flex-start; flex-wrap: wrap; }
+    .task-sub-empty { display: none; }
+    .mini-sparkline { width: 50px; }
     .detail-header { flex-direction: column; align-items: flex-start; }
     .info-grid { grid-template-columns: 1fr; }
     .history-filters-new { flex-direction: column; }
@@ -891,5 +1074,180 @@ export const panelStyles = css`
   @keyframes toast-in {
     from { opacity: 0; transform: translateX(-50%) translateY(16px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* ─── v1.5.0: Calendar tab — rolling list view ─────────────────────── */
+  .cal-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--divider-color);
+  }
+  .cal-window-chips {
+    display: flex;
+    gap: 4px;
+    background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .cal-window-chip {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: var(--secondary-text-color);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: background 0.12s, color 0.12s;
+  }
+  .cal-window-chip:hover { color: var(--primary-text-color); }
+  .cal-window-chip.active {
+    background: var(--primary-color);
+    color: var(--text-primary-color, #fff);
+  }
+  .cal-user-filter {
+    margin-left: auto;
+    padding: 6px 10px;
+    background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+    color: var(--primary-text-color);
+    border: 1px solid var(--divider-color);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .cal-rolling { padding: 8px 16px 32px; }
+  .cal-day-row {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--divider-color);
+  }
+  .cal-day-pill {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+    border: 1px solid var(--divider-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .cal-day-pill.cal-today {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+  .cal-pill-weekday {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--secondary-text-color);
+  }
+  .cal-pill-day {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary-text-color);
+    line-height: 1.1;
+  }
+  .cal-day-pill.cal-today .cal-pill-weekday,
+  .cal-day-pill.cal-today .cal-pill-day {
+    color: var(--text-primary-color, #fff);
+  }
+  .cal-day-content { flex: 1; min-width: 0; }
+  .cal-day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .cal-day-month { color: var(--secondary-text-color); font-size: 13px; }
+  .cal-day-today-badge {
+    color: var(--primary-color);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .cal-empty {
+    color: var(--secondary-text-color);
+    font-size: 13px;
+    font-style: italic;
+    padding: 4px 0 4px;
+  }
+  .cal-event {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.12s;
+  }
+  .cal-event:hover { background: var(--state-icon-color, rgba(255,255,255,0.04)); }
+  .cal-event-projected { opacity: 0.55; }
+  .cal-event-body { flex: 1; min-width: 0; }
+  .cal-event-title {
+    font-size: 14px;
+    color: var(--primary-text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cal-event-recur {
+    display: block;
+    font-size: 11px;
+    color: var(--secondary-text-color);
+    margin-top: 2px;
+  }
+  /* v1.5.1: source indicator + prediction confidence */
+  .cal-event-icon {
+    --mdc-icon-size: 18px;
+    flex-shrink: 0;
+  }
+  .cal-source-time   { color: var(--secondary-text-color); }
+  .cal-source-sensor { color: var(--primary-color); }
+  .cal-event-prediction {
+    display: inline-block;
+    font-size: 11px;
+    margin-top: 2px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--card-background-color, var(--ha-card-background, #1c1c1c));
+    border: 1px solid var(--divider-color);
+  }
+  .cal-conf-high   { color: #4caf50; border-color: #4caf5044; }
+  .cal-conf-medium { color: #f9a825; border-color: #f9a82544; }
+  .cal-conf-low    { color: #d32f2f; border-color: #d32f2f44; }
+  .cal-event-cost {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+    flex-shrink: 0;
+  }
+  .cal-status-pill {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #fff;
+  }
+  .cal-status-overdue   { background: #d32f2f; }
+  .cal-status-triggered { background: #038fc7; }
+  .cal-status-due_soon  { background: #f9a825; color: #000; }
+  .cal-status-ok        { background: #2e7d32; }
+
+  @media (max-width: 600px) {
+    .cal-controls { padding: 10px 12px; }
+    .cal-rolling { padding: 6px 12px 24px; }
+    .cal-day-pill { width: 48px; height: 48px; }
+    .cal-pill-day { font-size: 17px; }
+    .cal-user-filter { margin-left: 0; width: 100%; }
   }
 `;

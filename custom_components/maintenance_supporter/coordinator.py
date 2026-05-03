@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     BUDGET_CURRENCIES,
+    CONF_ADVANCED_SCHEDULE_TIME,
     CONF_BUDGET_ALERT_THRESHOLD,
     CONF_BUDGET_ALERTS_ENABLED,
     CONF_BUDGET_CURRENCY,
@@ -29,6 +30,9 @@ from .const import (
     CONF_TASKS,
     DEFAULT_UPDATE_INTERVAL_MINUTES,
     DOMAIN,
+    EVENT_TASK_COMPLETED,
+    EVENT_TASK_RESET,
+    EVENT_TASK_SKIPPED,
     GLOBAL_UNIQUE_ID,
     MISSING_ENTITY_THRESHOLD_REFRESHES,
     SIGNAL_TASK_RESET,
@@ -73,7 +77,20 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._entity_unavailable_logged: dict[str, bool] = {}  # task_id -> logged?
         self._trigger_entity_states: dict[str, str] = {}  # task_id -> TriggerEntityState
 
-    @property
+    def _is_schedule_time_feature_enabled(self) -> bool:
+        """Return True iff the global advanced flag for time-of-day scheduling is on.
+
+        Reads the global config entry's options on every call. Cheap (just a
+        dict lookup over the small list of integration entries) and means a
+        toggle in Settings takes effect on the next coordinator refresh
+        without needing a restart.
+        """
+        for ce in self.hass.config_entries.async_entries(DOMAIN):
+            if ce.unique_id == GLOBAL_UNIQUE_ID:
+                opts = ce.options or ce.data
+                return bool(opts.get(CONF_ADVANCED_SCHEDULE_TIME, False))
+        return False
+
     def _in_startup_grace_period(self) -> bool:
         """Return True if still within the startup grace period."""
         return (
@@ -117,6 +134,13 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             CONF_TASKS: {},
         }
 
+        # Read the global advanced-feature flag once per refresh. When the
+        # `schedule_time` feature is disabled, we strip it from each task
+        # before computing status so behaviour reverts to the historical
+        # midnight semantic — even though the value stays persisted on disk
+        # and re-applies the moment the flag is re-enabled.
+        schedule_time_enabled = self._is_schedule_time_feature_enabled()
+
         for task_id, task in tasks.items():
             if not task.enabled:
                 result[CONF_TASKS][task_id] = task.to_dict()
@@ -138,6 +162,13 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 and task.trigger_config
             ):
                 await self._evaluate_trigger_fallback(task, task_id)
+
+            # Feature-flag gate: zero out schedule_time so the model's
+            # _is_past_schedule_time() short-circuits to False. Mutate the
+            # in-memory model directly (next refresh re-instantiates fresh
+            # tasks anyway, so disk state is unaffected).
+            if not schedule_time_enabled:
+                task.schedule_time = None
 
             # Compute status
             status = task.status
@@ -289,7 +320,7 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                     1,
                                     int(si * env.adjustment_factor),
                                 )
-                except Exception:
+                except Exception:  # noqa: BLE001 - one task's prediction failure must not break the whole coordinator update
                     _LOGGER.debug(
                         "Sensor prediction failed for task %s",
                         task_id,
@@ -538,7 +569,7 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     ir.async_delete_issue(self.hass, DOMAIN, issue_id)
 
-                elif self._in_startup_grace_period:
+                elif self._in_startup_grace_period():
                     # Entity missing during startup
                     if worst_state in (
                         TriggerEntityState.AVAILABLE,
@@ -600,6 +631,59 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         )
 
             self._trigger_entity_states[task_id] = worst_state
+
+        # v1.3.0: scan on_complete_action.target.entity_id refs for staleness.
+        # Posts/clears repair issues so a renamed/deleted target doesn't
+        # silently cause failed service-calls. Re-uses the same issue_registry
+        # lifecycle as the trigger-entity scan above.
+        self._check_stale_action_entities()
+
+    def _check_stale_action_entities(self) -> None:
+        """Create/clear repair issues for invalid on_complete_action targets."""
+        for task_id, task_dict in self._get_merged_tasks_data().items():
+            action = task_dict.get("on_complete_action") or {}
+            if not isinstance(action, dict):
+                continue
+            target = action.get("target") or {}
+            if not isinstance(target, dict):
+                continue
+            raw_eid = target.get("entity_id")
+            # Only single-entity targets are checked here. List/template targets
+            # are out of scope (HA's service-call already validates them at
+            # call-time and our action_listener tolerates failures).
+            if isinstance(raw_eid, list):
+                eids: list[str] = [e for e in raw_eid if isinstance(e, str)]
+            elif isinstance(raw_eid, str):
+                eids = [raw_eid]
+            else:
+                continue
+
+            for entity_id in eids:
+                issue_id = f"stale_action_entity_{self.entry.entry_id}_{task_id}_{entity_id}"
+                state = self.hass.states.get(entity_id)
+                if state is not None:
+                    ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+                elif not self._in_startup_grace_period():
+                    task_name = task_dict.get("name", "?")
+                    ir.async_create_issue(
+                        self.hass,
+                        DOMAIN,
+                        issue_id,
+                        is_fixable=True,
+                        severity=ir.IssueSeverity.WARNING,
+                        translation_key="stale_action_entity",
+                        translation_placeholders={
+                            "entity_id": entity_id,
+                            "task_name": task_name,
+                            "object_name": self.maintenance_object.name,
+                        },
+                        data={
+                            "entry_id": self.entry.entry_id,
+                            "task_id": task_id,
+                            "task_name": task_name,
+                            "stale_entity": entity_id,
+                        },
+                    )
 
     async def _async_notify_status_changes(
         self, task_results: dict[str, Any]
@@ -912,6 +996,90 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
                 task.adaptive_config = updated_config
 
+        await self._persist_and_signal_task_change(task_id, task)
+
+        # Invalidate budget cache when a cost is recorded
+        if cost is not None:
+            self._recalculate_budget_cache()
+
+        _LOGGER.info(
+            "Maintenance completed: %s on %s", task.name, self.maintenance_object.name
+        )
+
+        # Fire event after persistence — power users wire HA automations on
+        # this; the integration's own action_listener also subscribes here
+        # to dispatch the per-task on_complete_action service-call.
+        self.hass.bus.async_fire(
+            EVENT_TASK_COMPLETED,
+            self._lifecycle_event_payload(
+                task, task_id,
+                notes=notes, cost=cost, duration=duration,
+                feedback=feedback, completed_by=completed_by,
+            ),
+        )
+
+    async def reset_maintenance(
+        self,
+        task_id: str,
+        date: date | None = None,
+    ) -> None:
+        """Reset the last performed date of a task."""
+        merged = self._get_merged_tasks_data()
+        if task_id not in merged:
+            _LOGGER.error("Task %s not found in entry %s", task_id, self.entry.title)
+            return
+
+        task = MaintenanceTask.from_dict(merged[task_id])
+        task.reset(reset_date=date)
+
+        await self._persist_and_signal_task_change(task_id, task)
+
+        _LOGGER.info(
+            "Maintenance reset: %s on %s", task.name, self.maintenance_object.name
+        )
+
+        self.hass.bus.async_fire(
+            EVENT_TASK_RESET,
+            self._lifecycle_event_payload(
+                task, task_id, reset_date=task.last_performed,
+            ),
+        )
+
+    async def skip_maintenance(
+        self,
+        task_id: str,
+        reason: str | None = None,
+    ) -> None:
+        """Skip the current maintenance cycle for a task."""
+        merged = self._get_merged_tasks_data()
+        if task_id not in merged:
+            _LOGGER.error("Task %s not found in entry %s", task_id, self.entry.title)
+            return
+
+        task = MaintenanceTask.from_dict(merged[task_id])
+        task.skip(reason=reason)
+
+        await self._persist_and_signal_task_change(task_id, task)
+
+        _LOGGER.info(
+            "Maintenance skipped: %s on %s", task.name, self.maintenance_object.name
+        )
+
+        self.hass.bus.async_fire(
+            EVENT_TASK_SKIPPED,
+            self._lifecycle_event_payload(task, task_id, reason=reason),
+        )
+
+    async def _persist_and_signal_task_change(
+        self, task_id: str, task: MaintenanceTask,
+    ) -> None:
+        """Single source of truth for the post-mutation persistence dance.
+
+        Used by complete/reset/skip — every path that mutates a task's
+        dynamic state (last_performed, history) flows through here so the
+        Store-vs-ConfigEntry split, the recently-completed marker, the
+        dispatcher signal and the refresh request stay in lockstep.
+        """
         if self._store is not None:
             # Dynamic state only → Store (no ConfigEntry write needed)
             self._persist_dynamic_state(task_id, task)
@@ -932,87 +1100,24 @@ class MaintenanceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             await self._async_persist_tasks(tasks_data)
 
-        # Invalidate budget cache when a cost is recorded
-        if cost is not None:
-            self._recalculate_budget_cache()
+    def _lifecycle_event_payload(
+        self, task: MaintenanceTask, task_id: str, **extra: Any,
+    ) -> dict[str, Any]:
+        """Build the common envelope shared by all task-lifecycle events.
 
-        _LOGGER.info(
-            "Maintenance completed: %s on %s", task.name, self.maintenance_object.name
-        )
-
-    async def reset_maintenance(
-        self,
-        task_id: str,
-        date: date | None = None,
-    ) -> None:
-        """Reset the last performed date of a task."""
-        merged = self._get_merged_tasks_data()
-        if task_id not in merged:
-            _LOGGER.error("Task %s not found in entry %s", task_id, self.entry.title)
-            return
-
-        task = MaintenanceTask.from_dict(merged[task_id])
-        task.reset(reset_date=date)
-
-        if self._store is not None:
-            self._persist_dynamic_state(task_id, task)
-            await self._store.async_save()  # Flush immediately for user actions
-            self._recently_completed[task_id] = time.monotonic()
-            async_dispatcher_send(
-                self.hass,
-                SIGNAL_TASK_RESET.format(entry_id=self.entry.entry_id, task_id=task_id),
-            )
-            await self.async_request_refresh()
-        else:
-            tasks_data = dict(self.entry.data.get(CONF_TASKS, {}))
-            tasks_data[task_id] = task.to_dict()
-            self._recently_completed[task_id] = time.monotonic()
-            async_dispatcher_send(
-                self.hass,
-                SIGNAL_TASK_RESET.format(entry_id=self.entry.entry_id, task_id=task_id),
-            )
-            await self._async_persist_tasks(tasks_data)
-
-        _LOGGER.info(
-            "Maintenance reset: %s on %s", task.name, self.maintenance_object.name
-        )
-
-    async def skip_maintenance(
-        self,
-        task_id: str,
-        reason: str | None = None,
-    ) -> None:
-        """Skip the current maintenance cycle for a task."""
-        merged = self._get_merged_tasks_data()
-        if task_id not in merged:
-            _LOGGER.error("Task %s not found in entry %s", task_id, self.entry.title)
-            return
-
-        task = MaintenanceTask.from_dict(merged[task_id])
-        task.skip(reason=reason)
-
-        if self._store is not None:
-            self._persist_dynamic_state(task_id, task)
-            await self._store.async_save()  # Flush immediately for user actions
-            self._recently_completed[task_id] = time.monotonic()
-            async_dispatcher_send(
-                self.hass,
-                SIGNAL_TASK_RESET.format(entry_id=self.entry.entry_id, task_id=task_id),
-            )
-            await self.async_request_refresh()
-        else:
-            tasks_data = dict(self.entry.data.get(CONF_TASKS, {}))
-            tasks_data[task_id] = task.to_dict()
-            self._recently_completed[task_id] = time.monotonic()
-            async_dispatcher_send(
-                self.hass,
-                SIGNAL_TASK_RESET.format(entry_id=self.entry.entry_id, task_id=task_id),
-            )
-            await self._async_persist_tasks(tasks_data)
-
-        _LOGGER.info(
-            "Maintenance skipped: %s on %s", task.name, self.maintenance_object.name
-        )
+        Guarantees that every EVENT_TASK_COMPLETED/SKIPPED/RESET payload
+        carries the four identification keys (entry_id, task_id, task_name,
+        object_name) — listeners can rely on them being present.
+        Variant-specific fields (notes, cost, reason, reset_date, …) are
+        passed via **extra.
+        """
+        return {
+            "entry_id": self.entry.entry_id,
+            "task_id": task_id,
+            "task_name": task.name,
+            "object_name": self.maintenance_object.name,
+            **extra,
+        }
 
     async def async_apply_suggested_interval(
         self, task_id: str, interval: int

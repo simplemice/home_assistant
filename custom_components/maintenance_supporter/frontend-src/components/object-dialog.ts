@@ -5,6 +5,8 @@ import { property, state } from "lit/decorators.js";
 import type { HomeAssistant, MaintenanceObject } from "../types";
 import { t } from "../styles";
 
+import { describeWsError } from "../ws-errors";
+
 export class MaintenanceObjectDialog extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
   @state() private _open = false;
@@ -16,6 +18,10 @@ export class MaintenanceObjectDialog extends LitElement {
   @state() private _serialNumber = "";
   @state() private _areaId = "";
   @state() private _installationDate = "";
+  // v1.4.0 (#43): per-object link to PDF manual / vendor page
+  @state() private _documentationUrl = "";
+  // v1.4.10 (#46): free-form notes (multiline)
+  @state() private _notes = "";
   @state() private _entryId: string | null = null; // null = create, string = update
 
   private get _lang(): string {
@@ -30,6 +36,8 @@ export class MaintenanceObjectDialog extends LitElement {
     this._serialNumber = "";
     this._areaId = "";
     this._installationDate = "";
+    this._documentationUrl = "";
+    this._notes = "";
     this._error = "";
     this._open = true;
   }
@@ -42,6 +50,8 @@ export class MaintenanceObjectDialog extends LitElement {
     this._serialNumber = obj.serial_number || "";
     this._areaId = obj.area_id || "";
     this._installationDate = obj.installation_date || "";
+    this._documentationUrl = obj.documentation_url || "";
+    this._notes = obj.notes || "";
     this._error = "";
     this._open = true;
   }
@@ -61,6 +71,8 @@ export class MaintenanceObjectDialog extends LitElement {
           serial_number: this._serialNumber || null,
           area_id: this._areaId || null,
           installation_date: this._installationDate || null,
+          documentation_url: this._documentationUrl.trim() || null,
+          notes: this._notes.trim() || null,
         });
       } else {
         await this.hass.connection.sendMessagePromise({
@@ -71,12 +83,14 @@ export class MaintenanceObjectDialog extends LitElement {
           serial_number: this._serialNumber || null,
           area_id: this._areaId || null,
           installation_date: this._installationDate || null,
+          documentation_url: this._documentationUrl.trim() || null,
+          notes: this._notes.trim() || null,
         });
       }
       this._open = false;
       this.dispatchEvent(new CustomEvent("object-saved"));
-    } catch {
-      this._error = t("save_error", this._lang);
+    } catch (e) {
+      this._error = describeWsError(e, this._lang, t("save_error", this._lang));
     } finally {
       this._loading = false;
     }
@@ -117,16 +131,31 @@ export class MaintenanceObjectDialog extends LitElement {
             @input=${(e: Event) => (this._serialNumber = (e.target as HTMLInputElement).value)}
           ></ha-textfield>
           <ha-textfield
+            label="${t("documentation_url_optional", L)}"
+            type="url"
+            .value=${this._documentationUrl}
+            @input=${(e: Event) => (this._documentationUrl = (e.target as HTMLInputElement).value)}
+          ></ha-textfield>
+          <ha-area-picker
+            .hass=${this.hass}
             label="${t("area_id_optional", L)}"
             .value=${this._areaId}
-            @input=${(e: Event) => (this._areaId = (e.target as HTMLInputElement).value)}
-          ></ha-textfield>
+            @value-changed=${(e: CustomEvent) =>
+              (this._areaId = (e.detail.value as string) || "")}
+          ></ha-area-picker>
           <ha-textfield
             label="${t("installation_date_optional", L)}"
             type="date"
             .value=${this._installationDate}
             @input=${(e: Event) => (this._installationDate = (e.target as HTMLInputElement).value)}
           ></ha-textfield>
+          <ha-textarea
+            label="${t("object_notes_optional", L)}"
+            autogrow
+            rows="3"
+            .value=${this._notes}
+            @input=${(e: Event) => (this._notes = (e.target as HTMLTextAreaElement).value)}
+          ></ha-textarea>
         </div>
         <div class="dialog-actions">
           <ha-button appearance="plain" @click=${this._close}>
@@ -161,7 +190,8 @@ export class MaintenanceObjectDialog extends LitElement {
       gap: 8px;
       padding-top: 16px;
     }
-    ha-textfield {
+    ha-textfield,
+    ha-textarea {
       display: block;
     }
     .error {

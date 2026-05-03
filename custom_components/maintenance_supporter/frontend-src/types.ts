@@ -8,6 +8,10 @@ export interface MaintenanceObject {
   model?: string | null;
   serial_number?: string | null;
   installation_date?: string | null;
+  /** v1.4.0 (#43): optional link to PDF manual / vendor page for the object */
+  documentation_url?: string | null;
+  /** v1.4.10 (#46): free-form notes — part numbers, procedures, etc. */
+  notes?: string | null;
 }
 
 export interface TriggerConfig {
@@ -95,11 +99,24 @@ export interface MaintenanceTask {
   schedule_type: string; // "time_based" | "sensor_based" | "manual"
   interval_days?: number | null;
   interval_anchor?: "completion" | "planned";
+  schedule_time?: string | null;  // "HH:MM" or null/undefined = midnight
   warning_days: number;
   last_performed?: string | null;
   notes?: string | null;
   documentation_url?: string | null;
   checklist?: string[];
+  // v1.3.0: completion-action + quick-complete (gated by completion_actions feature)
+  on_complete_action?: {
+    service: string;                          // "domain.service"
+    target?: { entity_id?: string | string[]; device_id?: string | string[]; area_id?: string | string[] };
+    data?: Record<string, unknown>;
+  } | null;
+  quick_complete_defaults?: {
+    notes?: string;
+    cost?: number;
+    duration?: number;
+    feedback?: "needed" | "not_needed";
+  } | null;
   trigger_config?: TriggerConfig | null;
   trigger_entity_info?: TriggerEntityInfo | null;
   trigger_entity_infos?: TriggerEntityInfo[] | null;
@@ -139,6 +156,10 @@ export interface MaintenanceTask {
   responsible_user_id?: string | null;
   custom_icon?: string | null;
   nfc_tag_id?: string | null;
+  entity_slug?: string | null;
+  // Auto-derived sensor + binary_sensor entity_ids (since 1.0.45)
+  sensor_entity_id?: string | null;
+  binary_sensor_entity_id?: string | null;
 }
 
 export interface MaintenanceObjectResponse {
@@ -163,6 +184,21 @@ export interface CardConfig {
   max_items?: number;
   filter_status?: string[];
   filter_objects?: string[];
+  // HA-native entity_ids: pattern (since 1.0.45). When set, only tasks whose
+  // sensor or binary_sensor entity_id matches one of these are shown. Combines
+  // additively with filter_status / filter_objects.
+  entity_ids?: string[];
+  // Range filter on task.days_until_due (since 1.7.0). Inclusive on both
+  // ends. Used by the dashboard strategy's group_by=due_date buckets:
+  //   Today:      min=0, max=0
+  //   This Week:  min=1, max=7
+  //   This Month: min=8, max=30
+  //   Later:      min=31
+  //   Overdue:    max=-1
+  // Tasks with null/undefined days_until_due (e.g. sensor-triggered without
+  // a computed next_due) are excluded when either bound is set.
+  filter_due_min_days?: number;
+  filter_due_max_days?: number;
   compact?: boolean;
   show_actions?: boolean;
 }
@@ -195,6 +231,9 @@ export interface AdvancedFeatures {
   budget: boolean;
   groups: boolean;
   checklists: boolean;
+  schedule_time: boolean;
+  /** v1.3.0: gates per-task on_complete_action + quick_complete_defaults UI. */
+  completion_actions: boolean;
 }
 
 /** A single point in a recorder statistics time series. */
@@ -247,6 +286,9 @@ export interface TaskRow {
   history: HistoryEntry[];
   enabled: boolean;
   nfc_tag_id: string | null;
+  area_id: string | null;
+  responsible_user_id: string | null;
+  group_names: string[];
 }
 
 // HomeAssistant type (minimal for our needs)
@@ -273,6 +315,25 @@ export interface HomeAssistant {
     data?: Record<string, unknown>
   ): Promise<void>;
   states: Record<string, HassEntity>;
+  areas?: Record<string, { area_id: string; name: string; icon?: string | null }>;
+  /**
+   * HA service registry, mirroring the structure exposed to the frontend.
+   * Used by the task-dialog action section to drive ha-service-picker
+   * (autocomplete) + ha-form (schema-driven data fields).
+   */
+  services?: Record<string, Record<string, {
+    name?: string;
+    description?: string;
+    target?: Record<string, unknown>;
+    fields?: Record<string, {
+      name?: string;
+      description?: string;
+      required?: boolean;
+      example?: unknown;
+      default?: unknown;
+      selector?: Record<string, unknown>;
+    }>;
+  }>>;
   language: string;
   locale?: { language: string; number_format?: string };
   localize(key: string, ...args: unknown[]): string;

@@ -41,6 +41,8 @@
           "manufacturer": "Manufacturer",
           "model": "Model",
           "serial_number": "Serial number",
+          "documentation_url": "Manual / documentation URL",
+          "notes": "Notes",
           "go_back": "Go back"
         },
         "data_description": {
@@ -49,6 +51,8 @@
           "manufacturer": "The manufacturer of the object.",
           "model": "The model name or number.",
           "serial_number": "The serial number of the object.",
+          "documentation_url": "Optional link to a PDF manual, vendor page, or any URL with reference info for this object.",
+          "notes": "Free-form notes about the object — part numbers, procedures, settings reminders, etc.",
           "go_back": "Return to template selection without saving."
         }
       },
@@ -75,6 +79,8 @@
           "manufacturer": "Manufacturer",
           "model": "Model",
           "serial_number": "Serial number",
+          "documentation_url": "Manual / documentation URL",
+          "notes": "Notes",
           "installation_date": "Installation date",
           "go_back": "Go back"
         },
@@ -84,6 +90,8 @@
           "manufacturer": "The manufacturer of the object.",
           "model": "The model name or number.",
           "serial_number": "The serial number of the object.",
+          "documentation_url": "Optional link to a PDF manual, vendor page, or any URL with reference info for this object.",
+          "notes": "Free-form notes about the object — part numbers, procedures, settings reminders, etc.",
           "installation_date": "When this object was installed or purchased.",
           "go_back": "Return to the main menu without saving."
         }
@@ -370,6 +378,8 @@
           "manufacturer": "Manufacturer",
           "model": "Model",
           "serial_number": "Serial number",
+          "documentation_url": "Manual / documentation URL",
+          "notes": "Notes",
           "installation_date": "Installation date"
         },
         "data_description": {
@@ -378,6 +388,8 @@
           "manufacturer": "The manufacturer of this object.",
           "model": "The model of this object.",
           "serial_number": "The serial number of this object.",
+          "documentation_url": "Optional link to a PDF manual, vendor page, or any URL with reference info for this object.",
+          "notes": "Free-form notes about the object — part numbers, procedures, settings reminders, etc.",
           "installation_date": "When this object was installed."
         }
       }
@@ -421,6 +433,7 @@
         "menu_options": {
           "general_settings": "General Settings",
           "advanced_features": "Advanced Features",
+          "panel_access": "Panel Access",
           "budget_settings": "Budget Settings",
           "manage_groups": "Manage Groups",
           "notification_settings": "Notification Settings",
@@ -439,7 +452,8 @@
           "advanced_environmental_visible": "Environmental Correlation",
           "advanced_budget_visible": "Budget Tracking",
           "advanced_groups_visible": "Groups",
-          "advanced_checklists_visible": "Checklists"
+          "advanced_checklists_visible": "Checklists",
+          "advanced_schedule_time_visible": "Time-of-day scheduling"
         },
         "data_description": {
           "advanced_adaptive_visible": "Show EWA, Weibull analysis, and interval suggestions for tasks.",
@@ -448,7 +462,18 @@
           "advanced_environmental_visible": "Show environmental correlation (temperature, humidity) adjustments.",
           "advanced_budget_visible": "Show monthly/yearly budget tracking and alerts.",
           "advanced_groups_visible": "Show maintenance group management.",
-          "advanced_checklists_visible": "Show task checklists for step-by-step completion."
+          "advanced_checklists_visible": "Show task checklists for step-by-step completion.",
+          "advanced_schedule_time_visible": "Allow tasks to become overdue at a specific time of day instead of midnight."
+        }
+      },
+      "panel_access": {
+        "title": "Panel Access",
+        "description": "Select non-admin Home Assistant users who should also see the full Maintenance Supporter panel (create / edit / delete actions). Admins always see the full panel. Found {user_count} non-admin user(s).",
+        "data": {
+          "admin_panel_user_ids": "Users with full panel access"
+        },
+        "data_description": {
+          "admin_panel_user_ids": "Listed users see the full panel; everyone else sees only Complete and Skip on each task."
         }
       },
       "general_settings": {
@@ -482,7 +507,8 @@
           "quiet_hours_end": "Quiet hours end",
           "max_notifications_per_day": "Max notifications per day",
           "notification_bundling_enabled": "Bundle notifications",
-          "notification_bundle_threshold": "Bundle threshold"
+          "notification_bundle_threshold": "Bundle threshold",
+          "notification_title_style": "Notification title style"
         },
         "data_description": {
           "notify_due_soon_interval_hours": "How often to repeat the due-soon reminder. Set to 0 for a single notification.",
@@ -491,7 +517,8 @@
           "quiet_hours_enabled": "Suppress notifications during quiet hours.",
           "max_notifications_per_day": "Maximum number of notifications per day. Set to 0 for unlimited.",
           "notification_bundling_enabled": "Send a single summary notification when multiple tasks need attention.",
-          "notification_bundle_threshold": "Minimum number of tasks to trigger a bundled notification."
+          "notification_bundle_threshold": "Minimum number of tasks to trigger a bundled notification.",
+          "notification_title_style": "What appears as the notification's TITLE. Default keeps the per-status text (e.g. 'Maintenance overdue!'). Object name / Task name help when phone notifications stack."
         }
       },
       "budget_settings": {
@@ -927,6 +954,8 @@
           "manufacturer": "Manufacturer",
           "model": "Model",
           "serial_number": "Serial number",
+          "documentation_url": "Manual / documentation URL",
+          "notes": "Notes",
           "area_id": "Area",
           "installation_date": "Installation date",
           "go_back": "Go back"
@@ -936,6 +965,8 @@
           "manufacturer": "The manufacturer of the object.",
           "model": "The model name or number.",
           "serial_number": "The serial number of the object.",
+          "documentation_url": "Optional link to a PDF manual, vendor page, or any URL with reference info for this object.",
+          "notes": "Free-form notes about the object — part numbers, procedures, settings reminders, etc.",
           "area_id": "The area in your home where this object is located.",
           "installation_date": "When this object was installed or purchased.",
           "go_back": "Return to the main menu without saving."
@@ -1304,6 +1335,13 @@
         "any": "Any entity triggers",
         "all": "All entities must trigger"
       }
+    },
+    "notification_title_style": {
+      "options": {
+        "default": "Default (per-status title)",
+        "object_name": "Object name as title",
+        "task_name": "Task name as title"
+      }
     }
   },
   "issues": {
@@ -1333,6 +1371,43 @@
           "remove_trigger": {
             "title": "Remove sensor trigger",
             "description": "This will remove the sensor trigger from task \"{task_name}\" on \"{object_name}\" and convert the schedule to time-based or manual. The maintenance history will be preserved.\n\nPrevious trigger entity: `{entity_id}`"
+          }
+        }
+      }
+    },
+    "orphan_admin_panel_user": {
+      "title": "Panel-access user no longer exists",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Orphaned user in panel-access list",
+            "description": "User `{user_id}…` is in the Maintenance Supporter panel-access list but no longer exists in Home Assistant. Probably the user was deleted.\n\nClick **Submit** to remove this user from the list. (To leave the issue alone, use Home Assistant's **Ignore** button on the Repairs page instead.)"
+          }
+        }
+      }
+    },
+    "stale_action_entity": {
+      "title": "Completion action references a deleted entity",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Completion action: {stale_entity} no longer exists",
+            "description": "The task **{task_name}** has an `on_complete_action` configured to call a service on `{stale_entity}`, but that entity is no longer registered in Home Assistant.\n\nChoose how to repair:",
+            "menu_options": {
+              "replace_entity": "Replace with a different entity",
+              "remove_action": "Remove the completion action"
+            }
+          },
+          "replace_entity": {
+            "title": "Replace target entity",
+            "description": "Pick the entity to use instead of `{stale_entity}` for task **{task_name}**.",
+            "data": {
+              "new_entity": "New target entity"
+            }
+          },
+          "remove_action": {
+            "title": "Remove completion action",
+            "description": "Clear the `on_complete_action` from task **{task_name}** entirely. The task itself is unaffected — only the on-complete service-call is removed."
           }
         }
       }

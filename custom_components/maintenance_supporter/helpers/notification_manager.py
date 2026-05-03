@@ -16,6 +16,7 @@ from ..const import (
     CONF_ACTION_SKIP_ENABLED,
     CONF_ACTION_SNOOZE_ENABLED,
     CONF_MAX_NOTIFICATIONS_PER_DAY,
+    CONF_NOTIFICATION_TITLE_STYLE,
     CONF_NOTIFICATIONS_ENABLED,
     CONF_NOTIFY_DUE_SOON_ENABLED,
     CONF_NOTIFY_DUE_SOON_INTERVAL,
@@ -37,8 +38,14 @@ from ..const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Sentinel value: interval=0 means "notify once, never repeat"
-_SENT_ONCE = datetime.max
+# Sentinel value: interval=0 means "notify once, never repeat".
+# A naive datetime.max is intentionally NOT comparable with the timezone-aware
+# values stored elsewhere in self._last_notified — every code path that touches
+# this sentinel guards on equality (`last == _SENT_ONCE` / `last != _SENT_ONCE`)
+# BEFORE attempting any subtraction, so the naive/aware mix never reaches an
+# arithmetic operation. Replacing with a tz-aware version would still work but
+# adds noise; the sentinel is a singleton, not a real timestamp.
+_SENT_ONCE = datetime.max  # noqa: DTZ901 - intentional naive sentinel, see comment above
 
 # --- Notification message translations ---
 _NOTIFICATION_STRINGS: dict[str, dict[str, str]] = {
@@ -213,6 +220,68 @@ _NOTIFICATION_STRINGS: dict[str, dict[str, str]] = {
         "budget_alert_monthly": "Orçamento mensal em {pct}% ({spent} de {budget})",
         "budget_alert_yearly": "Orçamento anual em {pct}% ({spent} de {budget})",
     },
+    # v1.4.2: Polish notifications (panel + config-flow have been pl since v1.3.3
+    # but phone notifications still went out in English).
+    "pl": {
+        "due_soon_title": "Wkrótce wymagana konserwacja",
+        "due_soon_message": "{task} dla {object} wymagane za {days} dni (Termin: {due}).",
+        "overdue_title": "Konserwacja przeterminowana!",
+        "overdue_message": "{task} dla {object} jest przeterminowane o {days} dni!",
+        "triggered_title": "Konserwacja wyzwolona",
+        "triggered_message": "{task} dla {object} zostało wyzwolone przez dane z czujnika.",
+        "action_complete": "Zakończ",
+        "action_skip": "Pomiń",
+        "action_snooze": "Drzemka",
+        "bundled_title": "Konserwacja: {count} zadań",
+        "bundled_message": "{object}: {task_list}",
+        "bundled_overdue": "{task} (przeterminowane)",
+        "bundled_due_soon": "{task} (wkrótce)",
+        "bundled_triggered": "{task} (wyzwolone)",
+        "budget_alert_title": "Ostrzeżenie o budżecie konserwacji",
+        "budget_alert_monthly": "Budżet miesięczny na poziomie {pct}% ({spent} z {budget})",
+        "budget_alert_yearly": "Budżet roczny na poziomie {pct}% ({spent} z {budget})",
+    },
+    # v1.4.2: Czech notifications (panel UI is cs since v1.0.41; closing the
+    # config-flow + notification gap together).
+    "cs": {
+        "due_soon_title": "Údržba se blíží",
+        "due_soon_message": "{task} pro {object} je třeba za {days} dní (Termín: {due}).",
+        "overdue_title": "Údržba po termínu!",
+        "overdue_message": "{task} pro {object} je {days} dní po termínu!",
+        "triggered_title": "Údržba spuštěna",
+        "triggered_message": "{task} pro {object} bylo spuštěno daty ze senzoru.",
+        "action_complete": "Hotovo",
+        "action_skip": "Přeskočit",
+        "action_snooze": "Odložit",
+        "bundled_title": "Údržba: {count} úkolů",
+        "bundled_message": "{object}: {task_list}",
+        "bundled_overdue": "{task} (po termínu)",
+        "bundled_due_soon": "{task} (brzy)",
+        "bundled_triggered": "{task} (spuštěno)",
+        "budget_alert_title": "Upozornění na rozpočet údržby",
+        "budget_alert_monthly": "Měsíční rozpočet na {pct}% ({spent} z {budget})",
+        "budget_alert_yearly": "Roční rozpočet na {pct}% ({spent} z {budget})",
+    },
+    # v1.4.2: Swedish notifications.
+    "sv": {
+        "due_soon_title": "Underhåll snart",
+        "due_soon_message": "{task} för {object} förfaller om {days} dag(ar) (Förfaller: {due}).",
+        "overdue_title": "Underhåll försenat!",
+        "overdue_message": "{task} för {object} är {days} dag(ar) försenat!",
+        "triggered_title": "Underhåll utlöst",
+        "triggered_message": "{task} för {object} har utlösts av sensordata.",
+        "action_complete": "Slutför",
+        "action_skip": "Hoppa över",
+        "action_snooze": "Snooza",
+        "bundled_title": "Underhåll: {count} uppgifter",
+        "bundled_message": "{object}: {task_list}",
+        "bundled_overdue": "{task} (försenat)",
+        "bundled_due_soon": "{task} (snart)",
+        "bundled_triggered": "{task} (utlöst)",
+        "budget_alert_title": "Varning för underhållsbudget",
+        "budget_alert_monthly": "Månadsbudget på {pct}% ({spent} av {budget})",
+        "budget_alert_yearly": "Årsbudget på {pct}% ({spent} av {budget})",
+    },
 }
 
 
@@ -316,6 +385,23 @@ class NotificationManager:
     def notify_service(self) -> str:
         """Get the configured notify service."""
         return str(self._global_options.get(CONF_NOTIFY_SERVICE, ""))
+
+    @property
+    def title_style(self) -> str:
+        """v1.4.0 (#44): how to format the notification title.
+
+        Returns one of "default" / "object_name" / "task_name". Defaults to
+        "default" so existing installs see no behaviour change. Defensive
+        against a partially-initialised manager (some unit tests construct
+        NotificationManager via __new__ without setting `hass`).
+        """
+        try:
+            raw = str(self._global_options.get(CONF_NOTIFICATION_TITLE_STYLE, "default"))
+        except AttributeError:
+            return "default"
+        if raw not in ("default", "object_name", "task_name"):
+            return "default"
+        return raw
 
     def _is_status_enabled(self, status: str) -> bool:
         """Check if notifications for this specific status are enabled."""
@@ -424,6 +510,14 @@ class NotificationManager:
         # Check quiet hours
         if self._is_quiet_hours():
             _LOGGER.debug("Skipping notification during quiet hours")
+            return
+
+        # Vacation mode (v1.2.0): suppress unless task is on the exempt list.
+        # Sensor-triggered notifications use the same path so they're covered.
+        from .vacation import get_vacation_state
+
+        if get_vacation_state(self.hass).is_silent_for(task_id):
+            _LOGGER.debug("Skipping notification — vacation mode active for %s", task_id)
             return
 
         # Rate limiting / interval
@@ -547,6 +641,14 @@ class NotificationManager:
             title = "Maintenance"
             message = f"{task_name} ({object_name})"
 
+        # v1.4.0 (#44): override title with object/task name so phone
+        # notification stacks remain distinguishable at a glance.
+        style = self.title_style
+        if style == "object_name" and object_name:
+            title = object_name
+        elif style == "task_name" and task_name:
+            title = task_name
+
         return title, message
 
     async def _async_send_notification_to_service(
@@ -657,6 +759,12 @@ class NotificationManager:
         message = _notif_t(
             "bundled_message", lang, object=object_name, task_list=", ".join(task_parts)
         )
+
+        # v1.4.0 (#44): for bundled notifications, "object_name" style still
+        # prefers the object as the title; "task_name" doesn't map cleanly
+        # for multi-task bundles, so we leave the count-based default.
+        if self.title_style == "object_name" and object_name:
+            title = object_name
 
         service_data: dict[str, Any] = {
             "title": title,

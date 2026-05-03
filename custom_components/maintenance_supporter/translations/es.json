@@ -41,6 +41,8 @@
           "manufacturer": "Fabricante",
           "model": "Modelo",
           "serial_number": "Número de serie",
+          "documentation_url": "URL de manual / documentación",
+          "notes": "Notas",
           "go_back": "Volver"
         },
         "data_description": {
@@ -49,6 +51,8 @@
           "manufacturer": "El fabricante del objeto.",
           "model": "El nombre o número de modelo.",
           "serial_number": "El número de serie del objeto.",
+          "documentation_url": "Enlace opcional a un manual en PDF, página del fabricante o cualquier URL con información de referencia para este objeto.",
+          "notes": "Notas libres sobre el objeto — números de pieza, procedimientos, recordatorios, etc.",
           "go_back": "Volver a la selección de plantilla sin guardar."
         }
       },
@@ -75,6 +79,8 @@
           "manufacturer": "Fabricante",
           "model": "Modelo",
           "serial_number": "Número de serie",
+          "documentation_url": "URL de manual / documentación",
+          "notes": "Notas",
           "installation_date": "Fecha de instalación",
           "go_back": "Volver"
         },
@@ -84,6 +90,8 @@
           "manufacturer": "El fabricante del objeto.",
           "model": "El nombre o número de modelo.",
           "serial_number": "El número de serie del objeto.",
+          "documentation_url": "Enlace opcional a un manual en PDF, página del fabricante o cualquier URL con información de referencia para este objeto.",
+          "notes": "Notas libres sobre el objeto — números de pieza, procedimientos, recordatorios, etc.",
           "installation_date": "Fecha de instalación o compra de este objeto.",
           "go_back": "Volver al menú principal sin guardar."
         }
@@ -370,6 +378,8 @@
           "manufacturer": "Fabricante",
           "model": "Modelo",
           "serial_number": "Número de serie",
+          "documentation_url": "URL de manual / documentación",
+          "notes": "Notas",
           "installation_date": "Fecha de instalación"
         },
         "data_description": {
@@ -378,6 +388,8 @@
           "manufacturer": "El fabricante de este objeto.",
           "model": "El modelo de este objeto.",
           "serial_number": "El número de serie de este objeto.",
+          "documentation_url": "Enlace opcional a un manual en PDF, página del fabricante o cualquier URL con información de referencia para este objeto.",
+          "notes": "Notas libres sobre el objeto — números de pieza, procedimientos, recordatorios, etc.",
           "installation_date": "Cuándo se instaló este objeto."
         }
       }
@@ -421,6 +433,7 @@
         "menu_options": {
           "general_settings": "Configuración general",
           "advanced_features": "Funciones avanzadas",
+          "panel_access": "Acceso al panel",
           "budget_settings": "Configuración de presupuesto",
           "manage_groups": "Gestionar grupos",
           "notification_settings": "Configuración de notificaciones",
@@ -439,7 +452,8 @@
           "advanced_environmental_visible": "Correlación ambiental",
           "advanced_budget_visible": "Seguimiento de presupuesto",
           "advanced_groups_visible": "Grupos",
-          "advanced_checklists_visible": "Listas de verificación"
+          "advanced_checklists_visible": "Listas de verificación",
+          "advanced_schedule_time_visible": "Programación por hora"
         },
         "data_description": {
           "advanced_adaptive_visible": "Mostrar análisis EWA, Weibull y sugerencias de intervalo para las tareas.",
@@ -448,7 +462,18 @@
           "advanced_environmental_visible": "Mostrar ajustes de correlación ambiental (temperatura, humedad).",
           "advanced_budget_visible": "Mostrar seguimiento de presupuesto mensual/anual y alertas.",
           "advanced_groups_visible": "Mostrar la gestión de grupos de mantenimiento.",
-          "advanced_checklists_visible": "Mostrar listas de verificación para la realización paso a paso de las tareas."
+          "advanced_checklists_visible": "Mostrar listas de verificación para la realización paso a paso de las tareas.",
+          "advanced_schedule_time_visible": "Permite que las tareas venzan a una hora específica en lugar de medianoche."
+        }
+      },
+      "panel_access": {
+        "title": "Acceso al panel",
+        "description": "Selecciona los usuarios de Home Assistant no administradores que también deben ver el panel completo de Maintenance Supporter (crear / editar / eliminar). Los administradores siempre ven el panel completo. Encontrados {user_count} usuario(s) no administrador(es).",
+        "data": {
+          "admin_panel_user_ids": "Usuarios con acceso completo al panel"
+        },
+        "data_description": {
+          "admin_panel_user_ids": "Los usuarios seleccionados ven el panel completo; todos los demás solo ven Completar y Omitir."
         }
       },
       "general_settings": {
@@ -482,7 +507,8 @@
           "quiet_hours_end": "Fin de horas silenciosas",
           "max_notifications_per_day": "Notificaciones máx. por día",
           "notification_bundling_enabled": "Agrupar notificaciones",
-          "notification_bundle_threshold": "Umbral de agrupación"
+          "notification_bundle_threshold": "Umbral de agrupación",
+          "notification_title_style": "Estilo del título de notificación"
         },
         "data_description": {
           "notify_due_soon_interval_hours": "Frecuencia de repetición del recordatorio próximo a vencer. Establecer a 0 para una sola notificación.",
@@ -491,7 +517,8 @@
           "quiet_hours_enabled": "Suprimir notificaciones durante las horas silenciosas.",
           "max_notifications_per_day": "Número máximo de notificaciones por día. Establecer a 0 para ilimitado.",
           "notification_bundling_enabled": "Enviar una notificación resumida cuando varias tareas requieran atención.",
-          "notification_bundle_threshold": "Número mínimo de tareas para activar una notificación agrupada."
+          "notification_bundle_threshold": "Número mínimo de tareas para activar una notificación agrupada.",
+          "notification_title_style": "Lo que aparece como TÍTULO de la notificación. Por defecto se conserva el texto por estado (p. ej., '¡Mantenimiento vencido!'). Nombre del objeto / tarea ayudan cuando el teléfono apila notificaciones."
         }
       },
       "notification_actions": {
@@ -927,6 +954,8 @@
           "manufacturer": "Fabricante",
           "model": "Modelo",
           "serial_number": "Número de serie",
+          "documentation_url": "URL de manual / documentación",
+          "notes": "Notas",
           "area_id": "Área",
           "installation_date": "Fecha de instalación",
           "go_back": "Volver"
@@ -936,6 +965,8 @@
           "manufacturer": "El fabricante del objeto.",
           "model": "El nombre o número de modelo.",
           "serial_number": "El número de serie del objeto.",
+          "documentation_url": "Enlace opcional a un manual en PDF, página del fabricante o cualquier URL con información de referencia para este objeto.",
+          "notes": "Notas libres sobre el objeto — números de pieza, procedimientos, recordatorios, etc.",
           "area_id": "El área en su hogar donde se encuentra este objeto.",
           "installation_date": "Cuándo se instaló o compró este objeto.",
           "go_back": "Volver al menú principal sin guardar."
@@ -1238,6 +1269,13 @@
         "any": "Cualquier entidad activa",
         "all": "Todas las entidades deben activar"
       }
+    },
+    "notification_title_style": {
+      "options": {
+        "default": "Predeterminado (título por estado)",
+        "object_name": "Nombre del objeto como título",
+        "task_name": "Nombre de la tarea como título"
+      }
     }
   },
   "services": {
@@ -1333,6 +1371,43 @@
           "remove_trigger": {
             "title": "Eliminar disparador de sensor",
             "description": "Esto eliminará el disparador de sensor de la tarea \"{task_name}\" en \"{object_name}\" y convertirá la programación a temporal o manual. El historial de mantenimiento se conservará.\n\nEntidad disparador anterior: `{entity_id}`"
+          }
+        }
+      }
+    },
+    "orphan_admin_panel_user": {
+      "title": "El usuario en la lista de acceso al panel ya no existe",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Usuario huérfano en la lista de acceso al panel",
+            "description": "El usuario `{user_id}…` está en la lista de acceso al panel de Maintenance Supporter pero ya no existe en Home Assistant. Probablemente el usuario fue eliminado.\n\nHaz clic en **Enviar** para quitar al usuario de la lista. (Para dejar el problema sin resolver, usa el botón **Ignorar** en la página de Reparaciones de Home Assistant.)"
+          }
+        }
+      }
+    },
+    "stale_action_entity": {
+      "title": "La acción de finalización referencia una entidad eliminada",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Acción de finalización: {stale_entity} ya no existe",
+            "description": "La tarea **{task_name}** tiene una `on_complete_action` configurada para llamar un servicio en `{stale_entity}`, pero esa entidad ya no está registrada en Home Assistant.\n\nElige cómo reparar:",
+            "menu_options": {
+              "replace_entity": "Reemplazar por otra entidad",
+              "remove_action": "Eliminar la acción de finalización"
+            }
+          },
+          "replace_entity": {
+            "title": "Reemplazar entidad objetivo",
+            "description": "Elige la entidad a usar en lugar de `{stale_entity}` para la tarea **{task_name}**.",
+            "data": {
+              "new_entity": "Nueva entidad objetivo"
+            }
+          },
+          "remove_action": {
+            "title": "Eliminar acción de finalización",
+            "description": "Elimina completamente la `on_complete_action` de la tarea **{task_name}**. La tarea en sí no se ve afectada — solo se elimina la llamada al servicio en la finalización."
           }
         }
       }

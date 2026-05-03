@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_ADVANCED_SCHEDULE_TIME,
     CONF_OBJECT,
     CONF_TASKS,
     DOMAIN,
@@ -247,7 +248,14 @@ class MaintenanceCalendar(CalendarEntity):
             now, now + timedelta(days=365)
         )
         if events:
-            events.sort(key=lambda e: e.start)
+            # Events mix all-day (date) and timed (datetime) starts since v1.0.41.
+            # Normalise to datetime for comparison so sort doesn't TypeError.
+            def _key(e: CalendarEvent) -> datetime:
+                s = e.start
+                if isinstance(s, datetime):
+                    return s if s.tzinfo else s.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+                return datetime.combine(s, time.min, tzinfo=dt_util.DEFAULT_TIME_ZONE)
+            events.sort(key=_key)
             self._cached_next_event = events[0]
         else:
             self._cached_next_event = None
@@ -388,13 +396,40 @@ class MaintenanceCalendar(CalendarEntity):
         interval_text = _cal_t("interval_days", lang, days=str(task.interval_days)) if task.interval_days else ""
         last_perf = str(task.last_performed) if task.last_performed else _cal_t("never", lang)
 
+        # Build event window. Default: all-day. When schedule_time is set
+        # (and the global advanced flag is on), render as a 30-min timed
+        # event at HH:MM in HA's configured TZ — calendar apps can then
+        # set proper alarms instead of the generic "all-day" reminder.
+        start: date | datetime = next_due
+        end: date | datetime = next_due + timedelta(days=1)
+        if task.schedule_time and self._is_schedule_time_feature_enabled():
+            try:
+                hh, mm = task.schedule_time.split(":", 1)
+                start_dt = datetime.combine(
+                    next_due,
+                    time(int(hh), int(mm)),
+                    tzinfo=dt_util.DEFAULT_TIME_ZONE,
+                )
+                start = start_dt
+                end = start_dt + timedelta(minutes=30)
+            except (ValueError, TypeError):
+                pass  # malformed schedule_time → fall back to all-day
+
         return CalendarEvent(
             summary=f"{prefix} {task.name} ({object_name})",
-            start=next_due,
-            end=next_due + timedelta(days=1),
+            start=start,
+            end=end,
             description=(
                 f"{_cal_t('type', lang)}: {type_translated}\n"
                 f"{_cal_t('interval', lang)}: {interval_text}\n"
                 f"{_cal_t('last_performed', lang)}: {last_perf}"
             ),
         )
+
+    def _is_schedule_time_feature_enabled(self) -> bool:
+        """Lookup the global advanced flag — same approach as coordinator."""
+        for ce in self._hass.config_entries.async_entries(DOMAIN):
+            if ce.unique_id == GLOBAL_UNIQUE_ID:
+                opts = ce.options or ce.data
+                return bool(opts.get(CONF_ADVANCED_SCHEDULE_TIME, False))
+        return False

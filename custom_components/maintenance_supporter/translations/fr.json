@@ -41,6 +41,8 @@
           "manufacturer": "Fabricant",
           "model": "Modèle",
           "serial_number": "Numéro de série",
+          "documentation_url": "URL du manuel / documentation",
+          "notes": "Notes",
           "go_back": "Retour"
         },
         "data_description": {
@@ -49,6 +51,8 @@
           "manufacturer": "Le fabricant de l'objet.",
           "model": "Le nom ou numéro de modèle.",
           "serial_number": "Le numéro de série de l'objet.",
+          "documentation_url": "Lien optionnel vers un manuel PDF, une page constructeur ou toute URL contenant des informations de référence pour cet objet.",
+          "notes": "Notes libres sur l'objet — numéros de pièces, procédures, rappels de réglages, etc.",
           "go_back": "Retourner à la sélection de modèle sans sauvegarder."
         }
       },
@@ -75,6 +79,8 @@
           "manufacturer": "Fabricant",
           "model": "Modèle",
           "serial_number": "Numéro de série",
+          "documentation_url": "URL du manuel / documentation",
+          "notes": "Notes",
           "installation_date": "Date d'installation",
           "go_back": "Retour"
         },
@@ -84,6 +90,8 @@
           "manufacturer": "Le fabricant de l'objet.",
           "model": "Le nom ou numéro de modèle.",
           "serial_number": "Le numéro de série de l'objet.",
+          "documentation_url": "Lien optionnel vers un manuel PDF, une page constructeur ou toute URL contenant des informations de référence pour cet objet.",
+          "notes": "Notes libres sur l'objet — numéros de pièces, procédures, rappels de réglages, etc.",
           "installation_date": "Date d'installation ou d'achat de cet objet.",
           "go_back": "Retourner au menu principal sans sauvegarder."
         }
@@ -370,6 +378,8 @@
           "manufacturer": "Fabricant",
           "model": "Modèle",
           "serial_number": "Numéro de série",
+          "documentation_url": "URL du manuel / documentation",
+          "notes": "Notes",
           "installation_date": "Date d'installation"
         },
         "data_description": {
@@ -378,6 +388,8 @@
           "manufacturer": "Le fabricant de cet objet.",
           "model": "Le modèle de cet objet.",
           "serial_number": "Le numéro de série de cet objet.",
+          "documentation_url": "Lien optionnel vers un manuel PDF, une page constructeur ou toute URL contenant des informations de référence pour cet objet.",
+          "notes": "Notes libres sur l'objet — numéros de pièces, procédures, rappels de réglages, etc.",
           "installation_date": "Quand cet objet a été installé."
         }
       }
@@ -421,6 +433,7 @@
         "menu_options": {
           "general_settings": "Paramètres généraux",
           "advanced_features": "Fonctionnalités avancées",
+          "panel_access": "Accès au panneau",
           "budget_settings": "Paramètres de budget",
           "manage_groups": "Gérer les groupes",
           "notification_settings": "Paramètres de notification",
@@ -439,7 +452,8 @@
           "advanced_environmental_visible": "Corrélation environnementale",
           "advanced_budget_visible": "Suivi du budget",
           "advanced_groups_visible": "Groupes",
-          "advanced_checklists_visible": "Listes de contrôle"
+          "advanced_checklists_visible": "Listes de contrôle",
+          "advanced_schedule_time_visible": "Planification à l'heure"
         },
         "data_description": {
           "advanced_adaptive_visible": "Afficher l'analyse EWA, Weibull et les suggestions d'intervalle pour les tâches.",
@@ -448,7 +462,18 @@
           "advanced_environmental_visible": "Afficher les ajustements de corrélation environnementale (température, humidité).",
           "advanced_budget_visible": "Afficher le suivi de budget mensuel/annuel et les alertes.",
           "advanced_groups_visible": "Afficher la gestion des groupes de maintenance.",
-          "advanced_checklists_visible": "Afficher les listes de contrôle pour la réalisation étape par étape des tâches."
+          "advanced_checklists_visible": "Afficher les listes de contrôle pour la réalisation étape par étape des tâches.",
+          "advanced_schedule_time_visible": "Permettre aux tâches d'arriver à échéance à une heure précise plutôt qu'à minuit."
+        }
+      },
+      "panel_access": {
+        "title": "Accès au panneau",
+        "description": "Sélectionnez les utilisateurs Home Assistant non administrateurs qui doivent également voir le panneau Maintenance Supporter complet (créer / modifier / supprimer). Les administrateurs voient toujours le panneau complet. {user_count} utilisateur(s) non administrateur(s) trouvé(s).",
+        "data": {
+          "admin_panel_user_ids": "Utilisateurs avec accès complet au panneau"
+        },
+        "data_description": {
+          "admin_panel_user_ids": "Les utilisateurs sélectionnés voient le panneau complet ; tous les autres ne voient que Terminer et Ignorer."
         }
       },
       "general_settings": {
@@ -482,7 +507,8 @@
           "quiet_hours_end": "Fin des heures calmes",
           "max_notifications_per_day": "Notifications max par jour",
           "notification_bundling_enabled": "Regrouper les notifications",
-          "notification_bundle_threshold": "Seuil de regroupement"
+          "notification_bundle_threshold": "Seuil de regroupement",
+          "notification_title_style": "Style du titre de notification"
         },
         "data_description": {
           "notify_due_soon_interval_hours": "Fréquence de répétition du rappel bientôt dû. Définir à 0 pour une seule notification.",
@@ -491,7 +517,8 @@
           "quiet_hours_enabled": "Supprimer les notifications pendant les heures calmes.",
           "max_notifications_per_day": "Nombre maximum de notifications par jour. Définir à 0 pour illimité.",
           "notification_bundling_enabled": "Envoyer une notification résumée lorsque plusieurs tâches nécessitent attention.",
-          "notification_bundle_threshold": "Nombre minimum de tâches pour déclencher une notification groupée."
+          "notification_bundle_threshold": "Nombre minimum de tâches pour déclencher une notification groupée.",
+          "notification_title_style": "Ce qui apparaît comme TITRE de la notification. Par défaut, le texte par statut est conservé (p. ex. « Maintenance en retard ! »). Nom de l'objet / tâche aide quand le téléphone empile les notifications."
         }
       },
       "notification_actions": {
@@ -927,6 +954,8 @@
           "manufacturer": "Fabricant",
           "model": "Modèle",
           "serial_number": "Numéro de série",
+          "documentation_url": "URL du manuel / documentation",
+          "notes": "Notes",
           "area_id": "Zone",
           "installation_date": "Date d'installation",
           "go_back": "Retour"
@@ -936,6 +965,8 @@
           "manufacturer": "Le fabricant de l'objet.",
           "model": "Le nom ou numéro de modèle.",
           "serial_number": "Le numéro de série de l'objet.",
+          "documentation_url": "Lien optionnel vers un manuel PDF, une page constructeur ou toute URL contenant des informations de référence pour cet objet.",
+          "notes": "Notes libres sur l'objet — numéros de pièces, procédures, rappels de réglages, etc.",
           "area_id": "La zone de votre maison où se trouve cet objet.",
           "installation_date": "Quand cet objet a été installé ou acheté.",
           "go_back": "Retour au menu principal sans enregistrer."
@@ -1238,6 +1269,13 @@
         "any": "N'importe quelle entité déclenche",
         "all": "Toutes les entités doivent déclencher"
       }
+    },
+    "notification_title_style": {
+      "options": {
+        "default": "Par défaut (titre par statut)",
+        "object_name": "Nom de l'objet comme titre",
+        "task_name": "Nom de la tâche comme titre"
+      }
     }
   },
   "services": {
@@ -1333,6 +1371,43 @@
           "remove_trigger": {
             "title": "Supprimer le déclencheur capteur",
             "description": "Cela supprimera le déclencheur capteur de la tâche « {task_name} » sur « {object_name} » et convertira la planification en temporelle ou manuelle. L'historique de maintenance sera conservé.\n\nEntité déclencheur précédente : `{entity_id}`"
+          }
+        }
+      }
+    },
+    "orphan_admin_panel_user": {
+      "title": "L'utilisateur de la liste d'accès au panneau n'existe plus",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Utilisateur orphelin dans la liste d'accès",
+            "description": "L'utilisateur `{user_id}…` est dans la liste d'accès au panneau Maintenance Supporter mais n'existe plus dans Home Assistant. L'utilisateur a probablement été supprimé.\n\nCliquez sur **Envoyer** pour retirer cet utilisateur de la liste. (Pour laisser le problème en place, utilisez plutôt le bouton **Ignorer** sur la page Réparations de Home Assistant.)"
+          }
+        }
+      }
+    },
+    "stale_action_entity": {
+      "title": "L'action de finalisation référence une entité supprimée",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Action de finalisation : {stale_entity} n'existe plus",
+            "description": "La tâche **{task_name}** a une `on_complete_action` configurée pour appeler un service sur `{stale_entity}`, mais cette entité n'est plus enregistrée dans Home Assistant.\n\nChoisissez comment réparer :",
+            "menu_options": {
+              "replace_entity": "Remplacer par une autre entité",
+              "remove_action": "Supprimer l'action de finalisation"
+            }
+          },
+          "replace_entity": {
+            "title": "Remplacer l'entité cible",
+            "description": "Choisissez l'entité à utiliser à la place de `{stale_entity}` pour la tâche **{task_name}**.",
+            "data": {
+              "new_entity": "Nouvelle entité cible"
+            }
+          },
+          "remove_action": {
+            "title": "Supprimer l'action de finalisation",
+            "description": "Supprime entièrement la `on_complete_action` de la tâche **{task_name}**. La tâche elle-même n'est pas affectée — seul l'appel de service à la finalisation est supprimé."
           }
         }
       }

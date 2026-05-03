@@ -5,12 +5,21 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 from typing import Any
 from uuid import uuid4
 
 from homeassistant.core import HomeAssistant
 
-from ..const import CONF_OBJECT, CONF_TASKS, DOMAIN, GLOBAL_UNIQUE_ID
+from ..const import (
+    CONF_OBJECT,
+    CONF_TASKS,
+    DOMAIN,
+    GLOBAL_UNIQUE_ID,
+    MAX_CHECKLIST_ITEM_LENGTH,
+    MAX_CHECKLIST_ITEMS,
+)
+from .global_options import get_default_warning_days
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +36,7 @@ _COLUMNS = [
     "schedule_type",
     "interval_days",
     "interval_anchor",
+    "schedule_time",
     "warning_days",
     "last_performed",
     "notes",
@@ -38,6 +48,9 @@ _COLUMNS = [
     "status",
     "times_performed",
     "total_cost",
+    # Checklist exported as a single cell with steps separated by literal "\n".
+    # The csv module handles the embedded newlines via RFC 4180 field quoting.
+    "checklist",
 ]
 
 
@@ -90,6 +103,7 @@ def export_objects_csv(hass: HomeAssistant) -> str:
                     "schedule_type": tdata.get("schedule_type", "time_based"),
                     "interval_days": tdata.get("interval_days", ""),
                     "interval_anchor": tdata.get("interval_anchor", "completion"),
+                    "schedule_time": tdata.get("schedule_time", ""),
                     "warning_days": tdata.get("warning_days", 7),
                     "last_performed": tdata.get("last_performed", ""),
                     "notes": _csv_safe(tdata.get("notes", "")),
@@ -101,6 +115,12 @@ def export_objects_csv(hass: HomeAssistant) -> str:
                     "status": ct.get("_status", "ok"),
                     "times_performed": ct.get("_times_performed", 0),
                     "total_cost": ct.get("_total_cost", 0.0),
+                    # Each item is _csv_safe()-prefixed individually so a step
+                    # starting with "=" can't trigger a formula in Excel after
+                    # the cell is unpacked.
+                    "checklist": "\n".join(
+                        _csv_safe(item) for item in tdata.get("checklist", []) if item
+                    ),
                 }
             )
 
@@ -109,12 +129,19 @@ def export_objects_csv(hass: HomeAssistant) -> str:
 
 def import_objects_csv(
     csv_content: str,
+    hass: HomeAssistant | None = None,
 ) -> list[dict[str, Any]]:
     """Parse CSV content into a list of object dicts ready for creation.
+
+    When *hass* is supplied, missing per-row ``warning_days`` columns fall back
+    to the integration-wide default from the global config entry. Without
+    *hass* (e.g. in unit tests that exercise the parser in isolation), the
+    bare constant ``7`` is used.
 
     Returns a list of objects, each with 'object' and 'tasks' dicts
     matching the format expected by the config flow.
     """
+    default_warning_days = get_default_warning_days(hass) if hass is not None else 7
     reader = csv.DictReader(io.StringIO(csv_content))
 
     # Group rows by object name
@@ -151,7 +178,7 @@ def import_objects_csv(
             "type": (row.get("task_type") or "custom").strip(),
             "enabled": True,
             "schedule_type": (row.get("schedule_type") or "time_based").strip(),
-            "warning_days": _safe_int(row.get("warning_days"), 7),
+            "warning_days": _safe_int(row.get("warning_days"), default_warning_days),
             "history": [],
         }
 
@@ -162,6 +189,12 @@ def import_objects_csv(
         anchor = (row.get("interval_anchor") or "").strip()
         if anchor in ("planned", "completion"):
             task_data["interval_anchor"] = anchor
+
+        # schedule_time round-trip with strict HH:MM validation; malformed
+        # values are dropped silently (consistent with other CSV import fields).
+        sched_time = (row.get("schedule_time") or "").strip()
+        if sched_time and re.fullmatch(r"^([01]\d|2[0-3]):[0-5]\d$", sched_time):
+            task_data["schedule_time"] = sched_time
 
         last_performed = (row.get("last_performed") or "").strip()
         if last_performed:
@@ -189,6 +222,19 @@ def import_objects_csv(
         resp_user = (row.get("responsible_user_id") or "").strip()
         if resp_user:
             task_data["responsible_user_id"] = resp_user
+
+        # Checklist round-trips via a single cell with "\n" between items.
+        # Apply the same hard caps as the WebSocket schema so a malicious or
+        # accidental CSV can't bloat the entry.
+        checklist_raw = row.get("checklist") or ""
+        if checklist_raw:
+            items = [
+                line.strip()[:MAX_CHECKLIST_ITEM_LENGTH]
+                for line in checklist_raw.splitlines()
+                if line.strip()
+            ][:MAX_CHECKLIST_ITEMS]
+            if items:
+                task_data["checklist"] = items
 
         objects_map[obj_name]["tasks"][task_id] = task_data
         objects_map[obj_name]["object"]["task_ids"].append(task_id)

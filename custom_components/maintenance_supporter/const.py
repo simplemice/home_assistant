@@ -71,6 +71,27 @@ CONF_ADVANCED_ENVIRONMENTAL = "advanced_environmental_visible"
 CONF_ADVANCED_BUDGET = "advanced_budget_visible"
 CONF_ADVANCED_GROUPS = "advanced_groups_visible"
 CONF_ADVANCED_CHECKLISTS = "advanced_checklists_visible"
+CONF_ADVANCED_SCHEDULE_TIME = "advanced_schedule_time_visible"
+# v1.3.0: gates the per-task on_complete_action + quick_complete_defaults
+# UI sections in the task dialog, plus the quick_complete chip in the
+# Print-QR generator. Default OFF — beginners aren't overwhelmed; data
+# still persists if a user toggles the flag off again.
+CONF_ADVANCED_COMPLETION_ACTIONS = "advanced_completion_actions_visible"
+
+# Panel-access overrides: HA user IDs who get the full admin panel despite
+# not being HA admins. Empty list means only admins see the full panel.
+CONF_ADMIN_PANEL_USER_IDS = "admin_panel_user_ids"
+
+# --- Vacation mode (v1.2.0) ---
+# When active, suppresses notifications for non-exempt tasks across the
+# vacation window plus an N-day buffer (so a task that comes due the day
+# of return doesn't immediately fire).
+CONF_VACATION_ENABLED = "vacation_enabled"
+CONF_VACATION_START = "vacation_start"           # ISO date "YYYY-MM-DD"
+CONF_VACATION_END = "vacation_end"               # ISO date
+CONF_VACATION_BUFFER_DAYS = "vacation_buffer_days"
+CONF_VACATION_EXEMPT_TASK_IDS = "vacation_exempt_task_ids"
+DEFAULT_VACATION_BUFFER_DAYS = 3
 
 # --- Config Keys: Notification Per-Status ---
 CONF_NOTIFY_DUE_SOON_ENABLED = "notify_due_soon_enabled"
@@ -92,6 +113,14 @@ CONF_MAX_NOTIFICATIONS_PER_DAY = "max_notifications_per_day"
 CONF_NOTIFICATION_BUNDLING_ENABLED = "notification_bundling_enabled"
 CONF_NOTIFICATION_BUNDLE_THRESHOLD = "notification_bundle_threshold"
 
+# --- Config Keys: Notification Title (v1.4.0 #44) ---
+# How to format the notification title.
+#   "default"     — generic per-status title (e.g. "Maintenance overdue!"). Backwards-compatible.
+#   "object_name" — use the object name as the title (helps when phone stacks notifications).
+#   "task_name"   — use the task name as the title.
+CONF_NOTIFICATION_TITLE_STYLE = "notification_title_style"
+NOTIFICATION_TITLE_STYLES = ("default", "object_name", "task_name")
+
 # --- Config Keys: Notification Actions ---
 CONF_ACTION_COMPLETE_ENABLED = "action_complete_enabled"
 CONF_ACTION_SKIP_ENABLED = "action_skip_enabled"
@@ -104,6 +133,7 @@ PANEL_TITLE = "Maintenance"
 PANEL_ICON = "mdi:wrench-clock"
 PANEL_URL = "/maintenance_supporter_panel"
 CARD_URL = "/maintenance_supporter_card"
+STRATEGY_URL = "/maintenance_supporter_dashboard_strategy"
 
 # --- Config Keys: Object ---
 CONF_OBJECT = "object"
@@ -113,6 +143,10 @@ CONF_OBJECT_MANUFACTURER = "manufacturer"
 CONF_OBJECT_MODEL = "model"
 CONF_OBJECT_SERIAL_NUMBER = "serial_number"
 CONF_OBJECT_INSTALLATION_DATE = "installation_date"
+# v1.4.0 (#43): per-object link to PDF manual / vendor page
+CONF_OBJECT_DOCUMENTATION_URL = "documentation_url"
+# v1.4.10 (#46): per-object free-form notes (part numbers, procedures, etc.)
+CONF_OBJECT_NOTES = "notes"
 
 # --- Config Keys: Task ---
 CONF_TASKS = "tasks"
@@ -128,6 +162,7 @@ CONF_TASK_DOCUMENTATION_URL = "documentation_url"
 CONF_TASK_ICON = "custom_icon"
 CONF_TASK_NFC_TAG = "nfc_tag_id"
 CONF_TASK_INTERVAL_ANCHOR = "interval_anchor"
+CONF_TASK_SCHEDULE_TIME = "schedule_time"
 
 # --- Config Keys: User Assignment ---
 CONF_RESPONSIBLE_USER_ID = "responsible_user_id"
@@ -202,6 +237,13 @@ BUDGET_CURRENCIES: dict[str, str] = {
     "CNY": "¥",
     "INR": "₹",
     "BRL": "R$",
+    "CZK": "Kč",
+    "PLN": "zł",
+    "RUB": "₽",
+    "SEK": "kr",
+    "NOK": "kr",
+    "DKK": "kr",
+    "UAH": "₴",
 }
 
 # --- Groups ---
@@ -222,6 +264,13 @@ RUNTIME_TRIGGER_CURRENT_DELTA = "_trigger_current_delta"
 # --- Event Types ---
 EVENT_TRIGGER_ACTIVATED = f"{DOMAIN}_trigger_activated"
 EVENT_TRIGGER_DEACTIVATED = f"{DOMAIN}_trigger_deactivated"
+# v1.3.0: completion lifecycle events. Fired by coordinator after the
+# state mutation has persisted. Power users wire HA automations on these;
+# the integration's own action_listener also subscribes to the COMPLETED
+# event to dispatch the per-task on_complete_action service-call.
+EVENT_TASK_COMPLETED = f"{DOMAIN}_task_completed"
+EVENT_TASK_SKIPPED = f"{DOMAIN}_task_skipped"
+EVENT_TASK_RESET = f"{DOMAIN}_task_reset"
 
 # --- Service Names ---
 SERVICE_COMPLETE = "complete"
@@ -308,11 +357,18 @@ MAX_NAME_LENGTH = 200
 MAX_TEXT_LENGTH = 2000          # notes, reason, feedback, description
 MAX_URL_LENGTH = 2048
 MAX_ICON_LENGTH = 100           # "mdi:icon-name"
-MAX_META_LENGTH = 200           # manufacturer, model, user_id, etc.
+MAX_META_LENGTH = 200           # manufacturer, model, user_id, area_id, etc.
 MAX_TYPE_LENGTH = 50            # task_type, schedule_type
 MAX_CHECKLIST_ITEMS = 100
 MAX_CHECKLIST_ITEM_LENGTH = 500
 MAX_GROUP_TASK_REFS = 200
+MAX_ID_LENGTH = 64              # entry_id, task_id, group_id (uuid hex = 32)
+MAX_DATE_LENGTH = 20            # ISO 8601 date strings (e.g. 2026-04-21)
+MAX_ENTITY_ID_LENGTH = 255      # HA entity_id max
+MAX_ENTITY_SLUG_LENGTH = 64     # task entity_slug
+MAX_INTERVAL_DAYS = 3650        # 10 years — caps date arithmetic overflow
+MAX_IMPORT_PAYLOAD_BYTES = 1_048_576  # 1 MB for csv_content / json_content
+MAX_SCHEDULE_TIME_LENGTH = 5    # "HH:MM"
 
 # --- Trigger Entity Availability ---
 STARTUP_GRACE_PERIOD_SECONDS = 300  # 5 minutes
