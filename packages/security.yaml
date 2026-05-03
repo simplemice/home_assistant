@@ -56,7 +56,6 @@ binary_sensor:
     entities:
       - binary_sensor.livingroom_motion_occupancy
       - binary_sensor.porch_motion_occupancy
-      - binary_sensor.entrance_motion_occupancy
       - binary_sensor.backyard_motion_occupancy
 
 template:
