@@ -61,3 +61,12 @@
 - Github Subtle enhancements deployed. You probably won’t notice.
 - fix mikrotik integration
 
+
+## v2026.05.04-0816
+- Github optimization completed. Try to keep up.
+- add changes to security package
+- add mcp server
+- some changes to presense sensors
+- some changes to media package
+- fix gas package
+
