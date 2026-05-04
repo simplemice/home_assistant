@@ -131,21 +131,23 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2829 |
-| Number of sensors | 1637 |
-| Current Version | 2026.4.2 |
-| Total Automations | 121 |
+| Number of entities | 2802 |
+| Number of sensors | 1619 |
+| Current Version | 2026.4.4 |
+| Total Automations | 120 |
 | Total Scripts | 38 |
-| Total Lights | 39 |
-| Total Switches | 204 |
+| Total Lights | 37 |
+| Total Switches | 196 |
 | Total Scenes | 12 |
-| Total Players | 19 |
+| Total Players | 21 |
 
 ---
 
 ## 🧩 Add-ons
 
 - Advanced SSH & Web Terminal
+
+- Home Assistant MCP Server
 
 - Matter Server
 
@@ -204,13 +206,15 @@ This repository is treated as:
 
 - [Hass Favicon](https://github.com/thomasloven/hass-favicon)
 
-- [Hyperhdr](https://github.com/mjoshd/hyperhdr-ha)
+- [Hyperhdr](https://github.com/Shaffer-Softworks/hyperhdr-ha)
 
 - [Ing Stocks Plus](https://github.com/Sundancer78/hacs_ingstocksplus)
 
 - [Jellyha](https://github.com/zupancicmarko/JellyHA)
 
 - [Llm Vision](https://github.com/valentinfrlch/ha-llmvision)
+
+- [Maintenance Supporter](https://github.com/iluebbe/maintenance_supporter)
 
 - [Mikrotik Router](https://github.com/tomaae/homeassistant-mikrotik_router)
 

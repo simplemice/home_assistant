@@ -28,9 +28,6 @@ input_text:
   last_seen_plate:
     name: Frigate Last Seen Plate
     max: 255
-  frigate_description_cache:
-    name: Frigate Description Cache
-    max: 255
 
 binary_sensor:
   - platform: group
