@@ -22,7 +22,6 @@ input_select:
       - tts.piper
       - tts.google_translate_en_com
       - tts.home_assistant_cloud
-    initial: tts.home_assistant_cloud
 
 input_boolean:
   audible_notifications:
