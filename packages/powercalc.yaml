@@ -174,15 +174,15 @@ template:
   - binary_sensor:
       - default_entity_id: binary_sensor.rice_cooker_cooking
         name: Rice Cooker Cooking
-        state: "{{ states('sensor.chunmi_eh3_e09c_cooker') == 'cooking' }}"
+        state: "{{ states('sensor.chunmi_c301_522e_cooker') == 'cooking' }}"
   - binary_sensor:
       - default_entity_id: binary_sensor.rice_cooker_keepwarm
         name: Rice Cooker KeepWarm
-        state: "{{ states('sensor.chunmi_eh3_e09c_cooker') == 'keepwarm' }}"
+        state: "{{ states('sensor.chunmi_c301_522e_cooker') == 'keepwarm' }}"
   - binary_sensor:
       - default_entity_id: binary_sensor.microwave_heating
         name: Microwave Heating
-        state: "{{ states('sensor.chunmi_n23l01_bcf8_left_time') | int > 0 }}"
+        state: "{{ states('sensor.chunmi_c301_522e_left_time') | int > 0 }}"
 
 powercalc:
   sensors:
@@ -252,7 +252,7 @@ powercalc:
     # 1. Chunmi Cooker (Fixed Model) - FIX APPLIED
     # Removed 'power_model:' and moved 'fixed:' up one level.
     # -------------------------------------------------------------------
-    - entity_id: sensor.chunmi_eh3_e09c_cooker
+    - entity_id: sensor.chunmi_c301_522e_cooker
       manufacturer: Chunmi
       model: chunmi.cooker.eh3
       name: "Rice Cooker Power"

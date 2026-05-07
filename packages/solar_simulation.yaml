@@ -1,47 +1,77 @@
-###############################################################################
-# @package     : Solar
-# @description : High-Precision Solar Simulation
-###############################################################################
-
 template:
-  - sensor:
-      - name: "Solar Live Power (Simulated)"
-        unique_id: solar_live_power_simulated
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        icon: mdi:solar-power
-        availability: >
-          {{ is_number(states('sensor.pirateweather_cloud_coverage')) and 
-             is_number(state_attr('sun.sun', 'elevation')) }}
-        state: >
-          {% set panel_wp = 11200 %}
-          {% set sun_elev = state_attr('sun.sun', 'elevation') | float(0) %}
-          {% if sun_elev <= 0 %}
-            0
-          {% else %}
-            {% set clouds = states('sensor.pirateweather_cloud_coverage') | float(0) / 100 %}
-            {% set rain = states('sensor.pirateweather_precip_probability') | float(0) / 100 %}
-            {% set sun_factor = (sun_elev / 90) ** 1.35 %}
-            {% set cloud_loss = 1 - (clouds * 0.65) %}
-            {% set rain_loss = 1 - (rain * 0.55) %}
-            {% set thermal_loss = 0.78 %}
-            {% set inverter_eff = 0.96 %}
-            {% set realism = [1 - ((clouds * 0.4) + (rain * 0.35)), 0.25] | max %}
-            {% set total_factor = sun_factor * cloud_loss * rain_loss * thermal_loss * inverter_eff * realism %}
-            {{ (panel_wp * total_factor) | round(1) }}
-          {% endif %}
+- sensor:
+  - name: "Solar Live Power"
+    unique_id: solar_live_power_simulated
+    state: >
+      {# Real-world light sensor (rain detector LDR) as primary source.
+         Full bright sun day peaks at ~5600 mV.
+         Panel system: 3000W rated capacity.
+         Minimum sun elevation 5° to filter twilight.
+      #}
+      {% set mv       = states('sensor.rain_detector_illuminance_average_20min') |
+      float(0) %}
+      {% set elev     = states('sensor.astroweather_home_sun_altitude') | float(0)
+      %}
+      {% set max_mv   = 5600 %}
+      {% set panel_w  = 3000 %}
+      {% set eff      = 0.85 %}
+      {% if elev < 5 %}{{ 0 }}
+      {% else %}
+        {{ [mv / max_mv * panel_w * eff, panel_w] | min | round(1) }}
+      {% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-power
 
-sensor:
-  - platform: integration
-    source: sensor.solar_live_power_simulated
-    name: "Solar Energy Accumulated (Simulated)"
+  - name: "Solar Power to Home"
+    unique_id: solar_power_to_home
+    state: >
+      {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+      {% set home  = states('sensor.sim_home_power') | float(0) %}
+      {{ [solar, home] | min | round(1) }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:home-lightning-bolt
+
+  - name: "Solar Power to Battery"
+    unique_id: solar_power_to_battery
+    state: >
+      {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+      {% set home  = states('sensor.sim_home_power') | float(0) %}
+      {% set soc   = states('sensor.battery_soc_simulated') | float(0) %}
+      {% if soc >= 100 %}{{ 0 }}
+      {% else %}{{ [solar - home, 0] | max | round(1) }}{% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:solar-power-variant
+
+  - name: "Solar Energy Accumulated (Simulated)"
     unique_id: solar_energy_accumulated_simulated
-    unit_prefix: k
-    method: left
-    round: 3
+    state: >
+      {{ states('sensor.total_solar_energy_in') | float(0) | round(3) }}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    icon: mdi:solar-power
+sensor:
+- platform: integration
+  source: sensor.solar_live_power_simulated
+  name: total_solar_energy_in
+  unique_id: total_solar_energy_in
+  unit_prefix: k
+  round: 3
+  method: left
 
 utility_meter:
   solar_energy_daily:
-    source: sensor.solar_energy_accumulated_simulated
+    source: sensor.total_solar_energy_in
     cycle: daily
+    name: solar_energy_daily
+
+  solar_energy_monthly:
+    source: sensor.total_solar_energy_in
+    cycle: monthly
+    name: solar_energy_monthly

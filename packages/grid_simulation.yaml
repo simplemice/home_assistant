@@ -1,145 +1,161 @@
-###############################################################################
-# @author      : Simplemice
-# @package     : Energy
-# @description : Realistic Grid Simulation (Hybrid Inverter Logic, STABLE)
-###############################################################################
+# ============================================================
+# GRID SIMULATION PACKAGE
+#
+# IMPORT RULE: Grid activates ONLY when:
+#   - battery SOC ≤ 10%  (low battery)
+#   - AND solar power = 0 W (night or overcast)
+#   When active: grid covers the FULL home load
+#
+# EXPORT RULE: Excess energy pushed to grid ONLY when:
+#   - battery is FULL (SOC = 100%)
+#   - AND (solar + wind) > home load
+#
+# This package references:
+#   sensor.solar_live_power_simulated   (from solar_simulation.yaml)
+#   sensor.solar_power_to_home          (from solar_simulation.yaml)
+#   sensor.wind_battery_charge_power    (from wind_turbine_simulation.yaml)
+#   sensor.battery_discharge_power_home (from battery_simulation.yaml)
+#   sensor.battery_soc_simulated        (from battery_simulation.yaml)
+#   sensor.sim_home_power               (from other package)
+# ============================================================
 
 template:
-  ###########################################################################
-  # 1️⃣ GRID IMPORT (LAST RESORT ONLY)
-  ###########################################################################
-  - sensor:
-      - name: "Grid Power Import (Simulated)"
-        unique_id: grid_power_import_simulated
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        icon: mdi:transmission-tower
-        state: >
-          {% set load  = states('sensor.sim_home_power') | float(0) %}
-          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
-          {% set energy = states('sensor.battery_energy_remaining') | float(0) %}
-          {% set CAP = 50 %}
-          {% set MIN_ENERGY = CAP * 0.10 %}
-          {% if energy <= MIN_ENERGY %}
-            {{ [load - solar, 0] | max | round(0) }}
-          {% else %}
-            0
-          {% endif %}
+- sensor:
+  - name: "Grid Power Import (Simulated)"
+    unique_id: grid_power_import_simulated
+    state: >
+      {% set soc   = states('sensor.battery_soc_simulated') | float(50) %}
+      {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+      {% set home  = states('sensor.sim_home_power') | float(0) %}
+      {% if soc <= 10 and solar < 10 %}{{ home | round(1) }}
+      {% else %}{{ 0 }}{% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:transmission-tower
 
-      ###########################################################################
-      # 2️⃣ GRID EXPORT (ONLY TRUE EXCESS)
-      ###########################################################################
-      - name: "Grid Power Export (Simulated)"
-        unique_id: grid_power_export_simulated
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        icon: mdi:transmission-tower-export
-        state: >
-          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
-          {% set load  = states('sensor.sim_home_power') | float(0) %}
-          {% set batt_charge = states('sensor.battery_charge_power_solar') | float(0) %}
-          {% set soc = states('sensor.battery_soc_simulated') | float(0) %}
-          {% set surplus = solar - load - batt_charge %}
-          {% if soc >= 98 and surplus > 0 %}
-            {{ surplus | round(0) }}
-          {% else %}
-            0
-          {% endif %}
+  - name: "Grid Power Export (Simulated)"
+    unique_id: grid_power_export_simulated
+    state: >
+      {% set soc   = states('sensor.battery_soc_simulated') | float(0) %}
+      {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+      {% set wind  = states('sensor.wind_turbine_power_simulated') | float(0) %}
+      {% set home  = states('sensor.sim_home_power') | float(0) %}
+      {% if soc >= 100 and (solar + wind) > home %}{{ (solar + wind - home) | round(1)
+      }}
+      {% else %}{{ 0 }}{% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:transmission-tower-export
 
-      ###########################################################################
-      # 3️⃣ 24H AVERAGE METRICS (DISPLAY ONLY)
-      ###########################################################################
-      - name: "Net Grid Power to Home (24h Avg)"
-        unique_id: net_grid_power_24h_avg
-        unit_of_measurement: "W"
-        device_class: power
-        icon: mdi:transmission-tower
-        state: >
-          {{ (states('sensor.grid_import_daily') | float(0) * 1000 / 24) | round(0) }}
+  - name: "Net Grid Power to Home 24h Avg"
+    unique_id: net_grid_power_to_home_24h_avg
+    state: >
+      {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
+      {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
+      {{ (imp - exp) | round(1) }}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:transmission-tower
 
-      - name: "Net Home Power (24h Avg)"
-        unique_id: net_home_power_24h_avg
-        unit_of_measurement: "W"
-        device_class: power
-        icon: mdi:home-lightning-bolt
-        state: >
-          {{ (states('sensor.home_energy_daily') | float(0) * 1000 / 24) | round(0) }}
+  - name: "Grid Status"
+    unique_id: grid_status
+    state: >
+      {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
+      {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
+      {% if imp > 0 %}Importing
+      {% elif exp > 0 %}Exporting
+      {% else %}Off-Grid{% endif %}
+    icon: >
+      {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
+      {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
+      {% if imp > 0 %}mdi:transmission-tower-import
+      {% elif exp > 0 %}mdi:transmission-tower-export
+      {% else %}mdi:transmission-tower-off{% endif %}
 
-      - name: "Home Energy Total"
-        state: "{{ states('sensor.home_energy_consumed') }}"
-        unit_of_measurement: "kWh"
-        device_class: energy
-        state_class: total_increasing
-
-      - name: "Hybrid Inverter Power"
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        state: >
-          {{
-            states('sensor.solar_live_power_simulated') | float(0)
-            -
-            states('sensor.grid_power_export_simulated') | float(0)
-          }}
-###############################################################################
-# 4️⃣ ENERGY INTEGRATION (PHYSICS-CORRECT)
-###############################################################################
-sensor:
-  - platform: integration
-    source: sensor.grid_power_import_simulated
-    name: Grid Energy Imported
+  - name: "Grid Energy Imported"
     unique_id: grid_energy_imported
-    unit_prefix: k
-    round: 3
-  - platform: integration
-    source: sensor.grid_power_export_simulated
-    name: Grid Energy Exported
-    unique_id: grid_energy_exported
-    unit_prefix: k
-    round: 3
-    method: left
-  - platform: integration
-    source: sensor.sim_home_power
-    name: Home Energy Consumed
-    unique_id: home_energy_consumed
-    unit_prefix: k
-    round: 3
+    state: >
+      {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    icon: mdi:transmission-tower
 
-###############################################################################
-# 5️⃣ UTILITY METERS (ENERGY DASHBOARD SAFE)
-###############################################################################
+  - name: "Total Grid Energy Import Safe"
+    unique_id: total_grid_energy_import_safe
+    state: >
+      {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    icon: mdi:transmission-tower
+
+  - name: "Total Grid Energy Export Safe"
+    unique_id: total_grid_energy_export_safe
+    state: >
+      {{ states('sensor.total_grid_energy_export') | float(0) | round(3) }}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    icon: mdi:transmission-tower-export
+sensor:
+- platform: integration
+  source: sensor.grid_power_import_simulated
+  name: total_grid_energy_import
+  unique_id: total_grid_energy_import
+  unit_prefix: k
+  round: 3
+  method: left
+
+- platform: integration
+  source: sensor.grid_power_export_simulated
+  name: total_grid_energy_export
+  unique_id: total_grid_energy_export
+  unit_prefix: k
+  round: 3
+  method: left
+
+# ── Utility Meters ────────────────────────────────────────
 utility_meter:
+  # Daily import split by tariff (peak/off-peak)
   grid_import_daily:
-    source: sensor.grid_energy_imported
+    source: sensor.total_grid_energy_import
     cycle: daily
+    name: grid_import_daily
     tariffs:
-      - peak
-      - offpeak
+    - peak
+    - offpeak
 
   grid_import_monthly:
-    source: sensor.grid_energy_imported
+    source: sensor.total_grid_energy_import
     cycle: monthly
+    name: grid_import_monthly
     tariffs:
-      - peak
-      - offpeak
+    - peak
+    - offpeak
 
   grid_import_yearly:
-    source: sensor.grid_energy_imported
+    source: sensor.total_grid_energy_import
     cycle: yearly
+    name: grid_import_yearly
     tariffs:
-      - peak
-      - offpeak
-
-  home_energy_daily:
-    source: sensor.home_energy_consumed
-    cycle: daily
+    - peak
+    - offpeak
 
   grid_export_daily:
-    source: sensor.grid_energy_exported
+    source: sensor.total_grid_energy_export
     cycle: daily
+    name: grid_export_daily
 
   grid_export_monthly:
-    source: sensor.grid_energy_exported
+    source: sensor.total_grid_energy_export
     cycle: monthly
+    name: grid_export_monthly
+
+  grid_export_yearly:
+    source: sensor.total_grid_energy_export
+    cycle: yearly
+    name: grid_export_yearly

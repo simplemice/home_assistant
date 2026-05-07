@@ -1,104 +1,114 @@
-###############################################################################
-# @package     : Wind Turbine
-# @description : Rooftop 300W Wind Turbine Simulation
-###############################################################################
-
 template:
-  - sensor:
-      - name: "Air Density"
-        unique_id: air_density
-        unit_of_measurement: "kg/m³"
-        icon: mdi:cloud
-        state: >
-          {% set T = states('sensor.outside_temp') | float(25) + 273.15 %}
-          {% set P_mmHg = states('sensor.bedroom_temp_pressure') | float(760) %}
-          {% set P = P_mmHg * 133.322 %}
-          {{ (P / (287.05 * T)) | round(3) }}
+- sensor:
+  - name: "Wind Speed Hub"
+    unique_id: wind_speed_hub
+    state: >
+      {% set v10 = states('sensor.astroweather_astroweather_10m_wind_speed') | float(0)
+      %}
+      {{ (v10 * (20.0 / 10.0) ** (1.0 / 7.0)) | round(4) }}
+    unit_of_measurement: "m/s"
+    state_class: measurement
+    icon: mdi:weather-windy
 
-      - name: "Wind Speed Hub"
-        unique_id: wind_speed_hub
-        unit_of_measurement: "m/s"
-        icon: mdi:weather-windy
-        state: >
-          {% set v2 = states('sensor.pirateweather_wind_speed') | float(0) %}
-          {% set v10 = states('sensor.astroweather_astroweather_10m_wind_speed') | float(0) %}
-          {% set h = 6 %}
-          {% set shear = 0.22 %}
-          {% if v2 > 0 and v10 > 0 %}
-            {{ ((v2 * (h/2)**shear) + (v10 * (h/10)**shear)) / 2 | round(2) }}
-          {% else %}
-            {{ ([v2, v10] | max) | round(2) }}
-          {% endif %}
+  - name: "Wind Yaw Efficiency"
+    unique_id: wind_yaw_efficiency
+    state: >
+      {% set speed = states('sensor.pirateweather_wind_speed') | float(0) %}
+      {% set gust  = states('sensor.pirateweather_wind_gust')  | float(0) %}
+      {% if speed < 0.1 %}{{ 1.0 }}
+      {% else %}
+        {% set ratio = [gust / speed, 3.0] | min %}
+        {{ [1.1 - (ratio - 1.0) * 0.15, 0.70] | max | round(3) }}
+      {% endif %}
+    state_class: measurement
+    icon: mdi:rotate-3d-variant
 
-      - name: "Wind Yaw Efficiency"
-        unique_id: wind_yaw_efficiency
-        icon: mdi:compass
-        state: >
-          {% set d1 = states('sensor.pirateweather_wind_bearing') | float(0) %}
-          {% set raw = states('sensor.astroweather_home_10m_wind_direction') %}
-          {% set map = {'N':0,'NE':45,'E':90,'SE':135,'S':180,'SW':225,'W':270,'NW':315} %}
-          {% set d2 = map.get(raw, raw | float(0)) %}
-          {% set diff = (d1 - d2) | abs %}
-          {% set angle = diff if diff <= 180 else 360 - diff %}
-          {# Using cos in radians #}
-          {{ [ (cos(angle * pi / 180) ** 1.8), 0 ] | max | round(3) }}
+  - name: "Phuket Day Thunder Probability"
+    unique_id: phuket_day_probability_thunder
+    state: >
+      {% set cond = states('weather.pirateweather') | lower %}
+      {% set gust = states('sensor.pirateweather_wind_gust') | float(0) %}
+      {% set hour = now().hour %}
+      {% set daytime = hour >= 6 and hour < 18 %}
+      {% if 'thunder' in cond or 'lightning' in cond %}85
+      {% elif gust > 20 and daytime %}60
+      {% elif gust > 12 and daytime %}35
+      {% elif gust > 7 and daytime %}20
+      {% else %}5{% endif %}
+    unit_of_measurement: "%"
+    state_class: measurement
+    icon: mdi:weather-lightning
 
-      - name: "Weather Efficiency"
-        unique_id: weather_efficiency
-        icon: mdi:weather-lightning
-        state: >
-          {% set rain_int = states('sensor.rain_detector_rain_intensity') | float(0) %}
-          {% set thunder = states('sensor.phuket_day_probability_thunder') | float(0) %}
-          {% if thunder > 60 %} 0
-          {% elif is_state('binary_sensor.rain_detector_rain', 'on') %}
-            {{ [ (1 - rain_int / 20), 0.7 ] | max | round(2) }}
-          {% else %} 1
-          {% endif %}
+  - name: "Phuket Night Thunder"
+    unique_id: phuket_night_thunder
+    state: >
+      {% set cond     = states('weather.pirateweather') | lower %}
+      {% set gust     = states('sensor.pirateweather_wind_gust') | float(0) %}
+      {% set hour     = now().hour %}
+      {% set nighttime = hour < 6 or hour >= 18 %}
+      {% if 'thunder' in cond or 'lightning' in cond %}85
+      {% elif gust > 20 and nighttime %}60
+      {% elif gust > 12 and nighttime %}35
+      {% elif gust > 7 and nighttime %}20
+      {% else %}5{% endif %}
+    unit_of_measurement: "%"
+    state_class: measurement
+    icon: mdi:weather-night
 
-      - name: "Wind Turbine Power (Simulated)"
-        unique_id: wind_turbine_power_simulated
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        icon: mdi:wind-turbine
-        state: >
-          {% set v = states('sensor.wind_speed_hub') | float(0) %}
-          {% set rho = states('sensor.air_density') | float(1.225) %}
-          {% set yaw = states('sensor.wind_yaw_efficiency') | float(1) %}
-          {% set weather = states('sensor.weather_efficiency') | float(1) %}
-          {% set cut_in = 2.5 %}
-          {% set rated = 12 %}
-          {% set cut_out = 18 %}
-          {% set rated_power = 300 %}
-          {% if v < cut_in or v > cut_out %} 0
-          {% elif v >= rated %}
-            {{ (rated_power * yaw * weather * rho / 1.225) | round(1) }}
-          {% else %}
-            {% set r = (v - cut_in) / (rated - cut_in) %}
-            {{ (rated_power * (r ** 3) * yaw * weather * rho / 1.225) | round(1) }}
-          {% endif %}
+  - name: "Wind Turbine Power"
+    unique_id: wind_turbine_power_simulated
+    state: >
+      {% set v       = states('sensor.wind_speed_hub') | float(0) %}
+      {% set eff     = states('sensor.wind_yaw_efficiency') | float(1.0) %}
+      {% set cond    = states('weather.pirateweather') | lower %}
+      {% set thunder = 'thunder' in cond or 'lightning' in cond %}
+      {% set cut_in  = 2.5 %}
+      {% set rated_v = 12.0 %}
+      {% set cut_out = 25.0 %}
+      {% set rated_p = 800 %}
+      {% if thunder or v < cut_in or v > cut_out %}{{ 0 }}
+      {% elif v >= rated_v %}{{ (rated_p * eff) | round(1) }}
+      {% else %}{{ (rated_p * ((v - cut_in) / (rated_v - cut_in)) ** 3 * eff) | round(1)
+      }}{% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:wind-turbine
 
-      - name: "Wind Battery Charge Power"
-        unique_id: wind_battery_charge_power
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        icon: mdi:battery-arrow-up
-        state: >
-          {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
-          {# Limit to 24V system constraints (~720W) #}
-          {{ [wind, 720] | min | round(1) }}
-
+  - name: "Wind Battery Charge Power"
+    unique_id: wind_battery_charge_power
+    state: >
+      {% set soc  = states('sensor.battery_soc_simulated') | float(0) %}
+      {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
+      {% if soc >= 100 %}{{ 0 }}{% else %}{{ wind }}{% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:battery-arrow-up
 sensor:
-  - platform: integration
-    source: sensor.wind_turbine_power_simulated
-    name: "Wind Energy Raw"
-    unique_id: wind_energy_raw
-    unit_prefix: k
-    method: left
-    round: 2
+- platform: integration
+  source: sensor.wind_turbine_power_simulated
+  name: wind_energy_raw
+  unique_id: wind_energy_raw
+  unit_prefix: k
+  round: 3
+  method: left
+
+- platform: integration
+  source: sensor.wind_battery_charge_power
+  name: wind_battery_charge_energy_raw
+  unique_id: wind_battery_charge_energy_raw
+  unit_prefix: k
+  round: 3
+  method: left
 
 utility_meter:
   wind_energy_daily:
     source: sensor.wind_energy_raw
     cycle: daily
+    name: wind_energy_daily
+
+  battery_charge_wind_daily:
+    source: sensor.wind_battery_charge_energy_raw
+    cycle: daily
+    name: battery_charge_wind_daily

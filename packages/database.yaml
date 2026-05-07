@@ -1,8 +1,14 @@
 ###############################################################################
 #   @author         :   Simplemice
-#   @date           :   19/08/2025 (updated 22/08/2025, revised 31/08/2025)
+#   @date           :   19/08/2025 (fixed duplicate include key 07/05/2026)
 #   @package        :   Recorder
 #   @description    :   Recorder Settings
+#
+#   FIXES:
+#   1. Merged two duplicate 'include:' blocks into one
+#      (duplicate YAML keys silently drop the first block)
+#   2. Removed 'sensor.*_battery*' from exclude globs
+#      (it was matching sensor.total_battery_energy_in/out)
 ###############################################################################
 
 recorder:
@@ -11,7 +17,6 @@ recorder:
   purge_interval: 1
   commit_interval: 30
 
-  # If you stay on SQLite, at least don’t abuse it
   db_url: sqlite:////config/home-assistant_v2.db
 
   include:
@@ -29,6 +34,16 @@ recorder:
       - sensor.*_temperature
       - sensor.*_humidity
 
+    entities:
+      - sensor.total_battery_energy_in
+      - sensor.total_battery_energy_out
+      - sensor.total_solar_energy_in
+      - sensor.total_grid_energy_import
+      - sensor.total_grid_energy_export
+      - sensor.solar_energy_accumulated_simulated
+      - sensor.battery_soc_simulated
+      - sensor.battery_energy_remaining
+
   exclude:
     entity_globs:
       - sensor.*_signal_strength
@@ -36,7 +51,6 @@ recorder:
       - sensor.*_linkquality
       - sensor.*_uptime
       - sensor.*_last_seen
-      - sensor.*_battery*
       - sensor.*_voltage*
       - sensor.*_free_memory
       - sensor.*_heap*
