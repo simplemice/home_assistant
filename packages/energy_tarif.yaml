@@ -1,0 +1,45 @@
+template:
+- sensor:
+  - name: "Solar Export Revenue Today"
+    unique_id: solar_export_revenue_today
+    unit_of_measurement: "THB"
+    icon: mdi:cash-plus
+    state_class: measurement
+    state: >
+      {% set exported = states('sensor.solar_export_daily') | float(0) %}
+      {% set rate     = states('input_number.cost_export') | float(0) %}
+      {{ (exported * rate) | round(2) }}
+
+  - name: "Solar Export Revenue Month"
+    unique_id: solar_export_revenue_month
+    unit_of_measurement: "THB"
+    icon: mdi:cash-plus
+    state_class: measurement
+    state: >
+      {% set exported = states('sensor.solar_export_monthly') | float(0) %}
+      {% set rate     = states('input_number.cost_export') | float(0) %}
+      {{ (exported * rate) | round(2) }}
+
+  - name: "Grid Import Cost Today"
+    unique_id: grid_import_cost_today
+    unit_of_measurement: "THB"
+    icon: mdi:cash-minus
+    state_class: measurement
+    state: >
+      {% set peak_kwh  = states('sensor.grid_import_daily_peak') | float(0) %}
+      {% set off_kwh   = states('sensor.grid_import_daily_offpeak') | float(0) %}
+      {% set peak_rate = states('input_number.electricity_rate_peak') | float(0) %}
+      {% set off_rate  = states('input_number.electricity_rate_offpeak') | float(0)
+      %}
+      {{ ((peak_kwh * peak_rate) + (off_kwh * off_rate)) | round(2) }}
+
+  - name: "Net Energy Cost Today"
+    unique_id: net_energy_cost_today
+    unit_of_measurement: "THB"
+    icon: mdi:scale-balance
+    state_class: measurement
+    state: >
+      {% set import_cost = states('sensor.grid_import_cost_today') | float(0) %}
+      {% set export_rev  = states('sensor.solar_export_revenue_today') | float(0)
+      %}
+      {{ (import_cost - export_rev) | round(2) }}

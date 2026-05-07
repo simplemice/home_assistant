@@ -26,6 +26,15 @@ input_number:
     unit_of_measurement: THB/kWh
     initial: 2.6369
 
+  cost_export:
+    name: "Solar Export Rate"
+    initial: 2.20
+    min: 0
+    max: 10
+    step: 0.01
+    unit_of_measurement: "THB/kWh"
+    icon: mdi:solar-power-variant
+
 input_select:
   grid_energy_tariff:
     name: Grid Energy Tariff

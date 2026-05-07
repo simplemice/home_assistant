@@ -2,16 +2,18 @@ template:
 - sensor:
   - name: "Wind Speed Hub"
     unique_id: wind_speed_hub
+    unit_of_measurement: "m/s"
+    state_class: measurement
+    icon: mdi:weather-windy
     state: >
       {% set v10 = states('sensor.astroweather_astroweather_10m_wind_speed') | float(0)
       %}
       {{ (v10 * (20.0 / 10.0) ** (1.0 / 7.0)) | round(4) }}
-    unit_of_measurement: "m/s"
-    state_class: measurement
-    icon: mdi:weather-windy
 
   - name: "Wind Yaw Efficiency"
     unique_id: wind_yaw_efficiency
+    state_class: measurement
+    icon: mdi:rotate-3d-variant
     state: >
       {% set speed = states('sensor.pirateweather_wind_speed') | float(0) %}
       {% set gust  = states('sensor.pirateweather_wind_gust')  | float(0) %}
@@ -20,43 +22,45 @@ template:
         {% set ratio = [gust / speed, 3.0] | min %}
         {{ [1.1 - (ratio - 1.0) * 0.15, 0.70] | max | round(3) }}
       {% endif %}
-    state_class: measurement
-    icon: mdi:rotate-3d-variant
 
   - name: "Phuket Day Thunder Probability"
     unique_id: phuket_day_probability_thunder
+    unit_of_measurement: "%"
+    state_class: measurement
+    icon: mdi:weather-lightning
     state: >
-      {% set cond = states('weather.pirateweather') | lower %}
-      {% set gust = states('sensor.pirateweather_wind_gust') | float(0) %}
-      {% set hour = now().hour %}
+      {% set cond    = states('weather.pirateweather') | lower %}
+      {% set gust    = states('sensor.pirateweather_wind_gust') | float(0) %}
+      {% set hour    = now().hour %}
       {% set daytime = hour >= 6 and hour < 18 %}
       {% if 'thunder' in cond or 'lightning' in cond %}85
       {% elif gust > 20 and daytime %}60
       {% elif gust > 12 and daytime %}35
       {% elif gust > 7 and daytime %}20
       {% else %}5{% endif %}
-    unit_of_measurement: "%"
-    state_class: measurement
-    icon: mdi:weather-lightning
 
   - name: "Phuket Night Thunder"
     unique_id: phuket_night_thunder
+    unit_of_measurement: "%"
+    state_class: measurement
+    icon: mdi:weather-night
     state: >
-      {% set cond     = states('weather.pirateweather') | lower %}
-      {% set gust     = states('sensor.pirateweather_wind_gust') | float(0) %}
-      {% set hour     = now().hour %}
+      {% set cond      = states('weather.pirateweather') | lower %}
+      {% set gust      = states('sensor.pirateweather_wind_gust') | float(0) %}
+      {% set hour      = now().hour %}
       {% set nighttime = hour < 6 or hour >= 18 %}
       {% if 'thunder' in cond or 'lightning' in cond %}85
       {% elif gust > 20 and nighttime %}60
       {% elif gust > 12 and nighttime %}35
       {% elif gust > 7 and nighttime %}20
       {% else %}5{% endif %}
-    unit_of_measurement: "%"
-    state_class: measurement
-    icon: mdi:weather-night
 
   - name: "Wind Turbine Power"
     unique_id: wind_turbine_power_simulated
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:wind-turbine
     state: >
       {% set v       = states('sensor.wind_speed_hub') | float(0) %}
       {% set eff     = states('sensor.wind_yaw_efficiency') | float(1.0) %}
@@ -70,21 +74,17 @@ template:
       {% elif v >= rated_v %}{{ (rated_p * eff) | round(1) }}
       {% else %}{{ (rated_p * ((v - cut_in) / (rated_v - cut_in)) ** 3 * eff) | round(1)
       }}{% endif %}
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:wind-turbine
 
   - name: "Wind Battery Charge Power"
     unique_id: wind_battery_charge_power
-    state: >
-      {% set soc  = states('sensor.battery_soc_simulated') | float(0) %}
-      {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
-      {% if soc >= 100 %}{{ 0 }}{% else %}{{ wind }}{% endif %}
     unit_of_measurement: "W"
     device_class: power
     state_class: measurement
     icon: mdi:battery-arrow-up
+    state: >
+      {% set soc  = states('sensor.battery_soc_simulated') | float(0) %}
+      {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
+      {% if soc >= 100 %}{{ 0 }}{% else %}{{ wind }}{% endif %}
 sensor:
 - platform: integration
   source: sensor.wind_turbine_power_simulated

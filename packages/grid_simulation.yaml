@@ -23,19 +23,23 @@ template:
 - sensor:
   - name: "Grid Power Import (Simulated)"
     unique_id: grid_power_import_simulated
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:transmission-tower
     state: >
       {% set soc   = states('sensor.battery_soc_simulated') | float(50) %}
       {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
       {% set home  = states('sensor.sim_home_power') | float(0) %}
       {% if soc <= 10 and solar < 10 %}{{ home | round(1) }}
       {% else %}{{ 0 }}{% endif %}
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:transmission-tower
 
   - name: "Grid Power Export (Simulated)"
     unique_id: grid_power_export_simulated
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:transmission-tower-export
     state: >
       {% set soc   = states('sensor.battery_soc_simulated') | float(0) %}
       {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
@@ -44,63 +48,59 @@ template:
       {% if soc >= 100 and (solar + wind) > home %}{{ (solar + wind - home) | round(1)
       }}
       {% else %}{{ 0 }}{% endif %}
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:transmission-tower-export
 
   - name: "Net Grid Power to Home 24h Avg"
     unique_id: net_grid_power_to_home_24h_avg
-    state: >
-      {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
-      {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
-      {{ (imp - exp) | round(1) }}
     unit_of_measurement: "W"
     device_class: power
     state_class: measurement
     icon: mdi:transmission-tower
-
-  - name: "Grid Status"
-    unique_id: grid_status
     state: >
       {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
       {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
-      {% if imp > 0 %}Importing
-      {% elif exp > 0 %}Exporting
-      {% else %}Off-Grid{% endif %}
+      {{ (imp - exp) | round(1) }}
+
+  - name: "Grid Status"
+    unique_id: grid_status
     icon: >
       {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
       {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
       {% if imp > 0 %}mdi:transmission-tower-import
       {% elif exp > 0 %}mdi:transmission-tower-export
       {% else %}mdi:transmission-tower-off{% endif %}
+    state: >
+      {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
+      {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
+      {% if imp > 0 %}Importing
+      {% elif exp > 0 %}Exporting
+      {% else %}Off-Grid{% endif %}
 
   - name: "Grid Energy Imported"
     unique_id: grid_energy_imported
-    state: >
-      {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
     unit_of_measurement: "kWh"
     device_class: energy
     state_class: total_increasing
     icon: mdi:transmission-tower
+    state: >
+      {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
 
   - name: "Total Grid Energy Import Safe"
     unique_id: total_grid_energy_import_safe
-    state: >
-      {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
     unit_of_measurement: "kWh"
     device_class: energy
     state_class: total_increasing
     icon: mdi:transmission-tower
+    state: >
+      {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
 
   - name: "Total Grid Energy Export Safe"
     unique_id: total_grid_energy_export_safe
-    state: >
-      {{ states('sensor.total_grid_energy_export') | float(0) | round(3) }}
     unit_of_measurement: "kWh"
     device_class: energy
     state_class: total_increasing
     icon: mdi:transmission-tower-export
+    state: >
+      {{ states('sensor.total_grid_energy_export') | float(0) | round(3) }}
 sensor:
 - platform: integration
   source: sensor.grid_power_import_simulated

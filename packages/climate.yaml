@@ -27,73 +27,103 @@ input_datetime:
 
 # ─── Devices ────────────────────────────────────────────────────────────────
 climate:
-  - platform: smartir
-    name: Bedroom Aircon
-    unique_id: bedroom_aircon
-    device_code: 9991
-    controller_data: remote.bedroom_remote_hub
-    temperature_sensor: sensor.bedroom_temp_temperature
-    humidity_sensor: sensor.bedroom_temp_humidity
-
-# ─── Groups (Modern Method) ──────────────────────────────────────────────────
+- platform: smartir
+  name: Aircon
+  unique_id: bedroom_aircon
+  device_code: 9991
+  controller_data: remote.bedroom_remote_hub
+  temperature_sensor: sensor.bedroom_temp_temperature
+  humidity_sensor: sensor.bedroom_temp_humidity
 group:
   all_fans:
     name: All Fans
     entities:
-      - fan.livingroom_fan
-      - fan.kitchen_fan
+    - fan.livingroom_fan
+    - fan.kitchen_fan
 
 # ─── Runtime Tracking ───────────────────────────────────────────────────────
 sensor:
-  - platform: history_stats
-    name: AC Runtime Today Dry
-    unique_id: ac_runtime_today_dry
-    entity_id: climate.bedroom_aircon
-    state: "dry"
-    type: time
-    start: "{{ today_at() }}"
-    end: "{{ now() }}"
+- platform: history_stats
+  name: AC Runtime Today Dry
+  unique_id: ac_runtime_today_dry
+  entity_id: climate.aircon
+  state: "dry"
+  type: time
+  start: "{{ today_at() }}"
+  end: "{{ now() }}"
 
-  - platform: history_stats
-    name: AC Runtime Today Cool
-    unique_id: ac_runtime_today_cool
-    entity_id: climate.bedroom_aircon
-    state: "cool"
-    type: time
-    start: "{{ today_at() }}"
-    end: "{{ now() }}"
+- platform: history_stats
+  name: AC Runtime Today Cool
+  unique_id: ac_runtime_today_cool
+  entity_id: climate.aircon
+  state: "cool"
+  type: time
+  start: "{{ today_at() }}"
+  end: "{{ now() }}"
 
-# ─── Template Sensors (Modern) ──────────────────────────────────────────────
+- platform: history_stats
+  name: AC Runtime Today Power
+  unique_id: ac_runtime_today_power
+  entity_id: binary_sensor.bedroom_aircon_running
+  state: "on"
+  type: time
+  start: "{{ today_at() }}"
+  end: "{{ now() }}"
 template:
-  - sensor:
-      - name: House Temperature
-        unique_id: house_temperature
-        unit_of_measurement: "°C"
-        state: >
-          {{
-            [
-              states('sensor.livingroom_temp_temperature')|float(0),
-              states('sensor.bedroom_temp_temperature')|float(0)
-            ] | average | round(1)
-          }}
+- binary_sensor:
+  - name: "Bedroom Aircon Running"
+    unique_id: bedroom_aircon_running
+    device_class: running
+    icon: mdi:air-conditioner
+    state: >
+      {{ states('sensor.bedroom_aircon_power_power') | float(0) > 50 }}
 
-      - name: AC Runtime Today
-        unique_id: ac_runtime_today
-        unit_of_measurement: h
-        state: >
-          {% set dry = states('sensor.ac_runtime_today_dry')|float(0) %}
-          {% set cool = states('sensor.ac_runtime_today_cool')|float(0) %}
-          {{ (dry + cool) | round(2) }}
-        attributes:
-          minutes: >
-            {% set dry = states('sensor.ac_runtime_today_dry')|float(0) %}
-            {% set cool = states('sensor.ac_runtime_today_cool')|float(0) %}
-            {{ ((dry + cool) * 60) | int }}
+- sensor:
+  - name: House Temperature
+    unique_id: house_temperature
+    unit_of_measurement: "°C"
+    state: >
+      {{
+        [
+          states('sensor.livingroom_temp_temperature') | float(0),
+          states('sensor.bedroom_temp_temperature') | float(0)
+        ] | average | round(1)
+      }}
 
-# ─── Utility Meter ──────────────────────────────────────────────────────────
+  - name: AC Runtime Today
+    unique_id: ac_runtime_today
+    unit_of_measurement: h
+    state: >
+      {% set power_h = states('sensor.ac_runtime_today_power') | float(0) %}
+      {% set cool_h  = states('sensor.ac_runtime_today_cool')  | float(0) %}
+      {% set dry_h   = states('sensor.ac_runtime_today_dry')   | float(0) %}
+      {% if power_h > 0 %}
+        {{ power_h | round(2) }}
+      {% else %}
+        {{ (cool_h + dry_h) | round(2) }}
+      {% endif %}
+    attributes:
+      minutes: >
+        {% set power_h = states('sensor.ac_runtime_today_power') | float(0) %}
+        {% set cool_h  = states('sensor.ac_runtime_today_cool')  | float(0) %}
+        {% set dry_h   = states('sensor.ac_runtime_today_dry')   | float(0) %}
+        {% set total = power_h if power_h > 0 else (cool_h + dry_h) %}
+        {{ (total * 60) | int }}
+      source: >
+        {% if states('sensor.ac_runtime_today_power') | float(0) > 0 %}
+          power
+        {% else %}
+          climate_state
+        {% endif %}
 utility_meter:
   monthly_climate:
     name: Monthly AC Runtime
     unique_id: monthly_climate
     source: sensor.ac_runtime_today
+    cycle: monthly
+
+  monthly_ac_runtime:
+    name: Monthly AC Runtime (Power)
+    unique_id: monthly_ac_runtime
+    source: sensor.ac_runtime_today_power
     cycle: monthly

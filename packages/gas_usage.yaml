@@ -1,36 +1,157 @@
 ###############################################################################
 #   @author         :   Simplemice
 #   @package        :   Gas Usage
-#   @description    :   Gas tracking with filtering, delta usage, cost
+#   @description    :   Gas tracking, cost, Energy Dashboard integration
+#
+#   Energy Dashboard setup:
+#     Gas source : sensor.gas_consumed_m3   (total_increasing, m3)
+#     Cost sensor: sensor.gas_cost_total    (total_increasing, THB)
+#
+#   Sensor chain:
+#     kitchen_gas_scale_volume (L remaining)
+#     -> derivative -> gas_consumption_rate (L/h consumed)
+#     -> integration -> gas_used_total (L consumed, cumulative)
+#     -> template   -> gas_consumed_m3 (m3 consumed, Energy Dashboard)
+#     -> template   -> gas_cost_total  (THB cumulative, Energy Dashboard)
 ###############################################################################
 
+sensor:
+- platform: derivative
+  source: sensor.kitchen_gas_scale_volume
+  name: "Gas Volume Derivative"
+  unique_id: gas_volume_derivative
+  unit_time: h
+  round: 4
+  time_window: "00:10:00"
 template:
-  - trigger:
-      - platform: state
-        entity_id: sensor.kitchen_gas_scale_gas_volume
-        not_to:
-          - "unknown"
-          - "unavailable"
-    sensor:
-      - name: "Gas Used Total"
-        unique_id: gas_used_total
-        unit_of_measurement: "L"
-        device_class: gas
-        state_class: total_increasing
-        state: >
-          {% set current = states('sensor.kitchen_gas_scale_gas_volume') | float(0) %}
-          {% set previous = trigger.from_state.state | float(0) if trigger.from_state else current %}
-          {% set used = previous - current %}
-          {% if used > 0 %}
-            {{ (states('sensor.gas_used_total') | float(0) + used) | round(3) }}
-          {% else %}
-            {{ states('sensor.gas_used_total') | float(0) }}
-          {% endif %}
+- trigger:
+  - platform: homeassistant
+    event: start
+  - platform: state
+    entity_id: sensor.kitchen_gas_scale_volume
+    not_to:
+    - "unknown"
+    - "unavailable"
+    not_from:
+    - "unknown"
+    - "unavailable"
+  sensor:
+  - name: "Gas Used Total"
+    unique_id: gas_used_total
+    unit_of_measurement: "L"
+    state_class: total_increasing
+    icon: mdi:gas-burner
+    state: >
+      {% if trigger.platform == 'homeassistant' %}
+        {{ states('sensor.gas_used') | float(0) | round(3) }}
+      {% else %}
+        {% set current  = trigger.to_state.state | float(0) %}
+        {% set previous = trigger.from_state.state | float(current) %}
+        {% set delta    = previous - current %}
+        {% set running  = states('sensor.gas_used') | float(0) %}
+        {% if 0 < delta < 2 %}
+          {{ (running + delta) | round(3) }}
+        {% else %}
+          {{ running | round(3) }}
+        {% endif %}
+      {% endif %}
 
-  - trigger:
-      - platform: state
-        entity_id: sensor.kitchen_gas_scale_gas_volume
-    binary_sensor:
-      - name: "Gas Tank Refilled"
-        state: >
-          {{ (trigger.to_state.state | float(0)) > (trigger.from_state.state | float(0) + 1) }}
+- sensor:
+  - name: "Gas Consumption Rate"
+    unique_id: gas_consumption_rate
+    unit_of_measurement: "L/h"
+    icon: mdi:gas-burner
+    state_class: measurement
+    state: >
+      {% set deriv = states('sensor.gas_volume_derivative') | float(0) %}
+      {{ [-deriv, 0] | max | round(4) }}
+
+  - name: "Gas Level"
+    unique_id: gas_level
+    unit_of_measurement: "%"
+    icon: mdi:gas-cylinder
+    state_class: measurement
+    state: >
+      {% set brutto = states('sensor.kitchen_gas_scale_brutto_weight') | float(0)
+      %}
+      {% set net    = [brutto - 7.0, 0] | max %}
+      {{ [[net / 15.0 * 100, 0] | max, 100] | min | round(1) }}
+
+  - name: "Gas Consumed m3"
+    unique_id: gas_consumed_m3
+    unit_of_measurement: "m³"
+    device_class: gas
+    state_class: total_increasing
+    icon: mdi:gas-cylinder
+    state: >
+      {% set used_l = states('sensor.gas_used') | float(0) %}
+      {{ (used_l * 0.001964) | round(5) }}
+
+  - name: "Gas Days Remaining"
+    unique_id: gas_days_remaining
+    unit_of_measurement: "days"
+    icon: mdi:calendar-clock
+    state: >
+      {% set remaining = states('sensor.kitchen_gas_scale_volume') | float(0) %}
+      {% set daily     = states('sensor.gas_consumption_daily') | float(0) %}
+      {% if daily > 0.01 %}
+        {{ (remaining / daily) | round(1) }}
+      {% else %}
+        999
+      {% endif %}
+
+  - name: "Gas Cost Today"
+    unique_id: gas_cost_today
+    unit_of_measurement: "THB"
+    icon: mdi:cash
+    state_class: measurement
+    state: >
+      {% set used_l = states('sensor.gas_consumption_daily') | float(0) %}
+      {% set rate   = states('input_number.gas_tariff_rate') | float(430.0) %}
+      {{ (used_l * rate / 29.4) | round(2) }}
+
+  - name: "Gas Cost Total"
+    unique_id: gas_cost_total
+    unit_of_measurement: "THB"
+    state_class: total_increasing
+    icon: mdi:cash-multiple
+    state: >
+      {% set used_l = states('sensor.gas_used') | float(0) %}
+      {% set rate   = states('input_number.gas_tariff_rate') | float(430.0) %}
+      {{ (used_l * rate / 29.4) | round(2) }}
+
+- trigger:
+  - platform: state
+    entity_id: sensor.kitchen_gas_scale_volume
+    not_from:
+    - "unknown"
+    - "unavailable"
+    not_to:
+    - "unknown"
+    - "unavailable"
+  binary_sensor:
+  - name: "Gas Tank Refilled"
+    unique_id: gas_tank_refilled
+    icon: mdi:gas-cylinder
+    state: >
+      {% set new = trigger.to_state.state | float(0) %}
+      {% set old = trigger.from_state.state | float(0) %}
+      {{ new > old + 5 and old > 0 }}
+utility_meter:
+  gas_consumption_daily:
+    name: Gas Consumption Daily
+    unique_id: gas_consumption_daily
+    source: sensor.gas_used
+    cycle: daily
+
+  gas_consumption_monthly:
+    name: Gas Consumption Monthly
+    unique_id: gas_consumption_monthly
+    source: sensor.gas_used
+    cycle: monthly
+
+  gas_consumption_yearly:
+    name: Gas Consumption Yearly
+    unique_id: gas_consumption_yearly
+    source: sensor.gas_used
+    cycle: yearly
