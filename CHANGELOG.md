@@ -70,3 +70,11 @@
 - some changes to media package
 - fix gas package
 
+
+## v2026.05.07-2211
+- Github Adjustments complete. The house grows smarter.
+- add fixes to all packages by claude.ai
+- add fixes to simulation packages and fixing sensors
+- fixed template notify
+- remove c.a.f.e
+
