@@ -131,15 +131,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2802 |
-| Number of sensors | 1619 |
-| Current Version | 2026.4.4 |
-| Total Automations | 120 |
+| Number of entities | 2839 |
+| Number of sensors | 1646 |
+| Current Version | 2026.5.0 |
+| Total Automations | 131 |
 | Total Scripts | 38 |
 | Total Lights | 37 |
-| Total Switches | 196 |
+| Total Switches | 203 |
 | Total Scenes | 12 |
-| Total Players | 21 |
+| Total Players | 19 |
 
 ---
 
@@ -147,7 +147,7 @@ This repository is treated as:
 
 - Advanced SSH & Web Terminal
 
-- Home Assistant MCP Server
+- Home Assistant MCP Server (Dev)
 
 - Matter Server
 
@@ -187,8 +187,6 @@ This repository is treated as:
 - [Blitzortung.Org Lightning Detector](https://github.com/mrk-its/homeassistant-blitzortung)
 
 - [Browser Mod](https://github.com/thomasloven/hass-browser_mod)
-
-- [C.A.F.E.](https://github.com/FezVrasta/cafe-hass)
 
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test)
 
