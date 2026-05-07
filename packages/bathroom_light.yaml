@@ -27,7 +27,7 @@ input_boolean:
 timer:
   bathroom_long_occupancy:
     name: Bathroom Long Occupancy
-    duration: "00:15:00"
+    duration: "00:25:00"
 
 ###############################################################################
 # Automation 1 - Start session (motion or door opens)
