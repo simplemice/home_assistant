@@ -1,14 +1,25 @@
 ###############################################################################
-#   @author         :   Simplemice
-#   @date           :   27/01/2024
-#   @package        :   Water usage
-#   @description    :   Water consumption tracking & Energy Dashboard integration
+#   @package        :   Water Usage
+#   @description    :   Water tracking, flow rate, cost, Energy Dashboard
+#
+#   Energy Dashboard setup:
+#     Water source : sensor.water_consumed_m3  (total_increasing, m³)
+#     Cost sensor  : sensor.water_cost_total   (total_increasing, THB)
 ###############################################################################
 
-#############################################
-# UTILITY METERS (Daily / Monthly / Yearly)
-#############################################
+# Water tariff rate (THB/m³)
+input_number:
+  water_tariff_rate:
+    name: "Water Tariff Rate"
+    initial: 1
+    min: 0
+    max: 100
+    step: 0.1
+    unit_of_measurement: "THB/m³"
+    icon: mdi:water
+    mode: box
 
+# ── Utility Meters ────────────────────────────────────────────────────────────
 utility_meter:
   water_daily:
     source: sensor.water_usage_total_l
@@ -25,3 +36,76 @@ utility_meter:
   water_yearly:
     source: sensor.water_usage_total_l
     cycle: yearly
+
+# ── Template Sensors ──────────────────────────────────────────────────────────
+template:
+  - sensor:
+      # Energy Dashboard water source — must be m³, device_class: water
+      # 1 L = 0.001 m³
+      - name: "Water Consumed m3"
+        unique_id: water_consumed_m3
+        unit_of_measurement: "m³"
+        device_class: water
+        state_class: total_increasing
+        icon: mdi:water-pump
+        state: >
+          {{ (states('sensor.water_usage_total_l') | float(0) * 0.001) | round(5) }}
+
+      # Water flow rate — derived from volume sensor derivative
+      # Shows current consumption rate in L/min
+      - name: "Water Flow Rate"
+        unique_id: water_flow_rate
+        unit_of_measurement: "m³/h"
+        device_class: water
+        state_class: measurement
+        icon: mdi:water-flow
+        state: >
+          {% set deriv = states('sensor.water_volume_derivative') | float(0) %}
+          {{ [-deriv * 0.001 * 3600.0, 0] | max | round(5) }}
+
+      # Daily water cost in THB
+      # MWA Bangkok rate ~8.5 THB/m³ — adjust via input_number.water_tariff_rate
+      - name: "Water Cost Today"
+        unique_id: water_cost_today
+        unit_of_measurement: "THB/m³"
+        icon: mdi:cash
+        state_class: measurement
+        state: >
+          {% set used_l = states('sensor.water_daily') | float(0) %}
+          {% set rate   = states('input_number.water_tariff_rate') | float(8.5) %}
+          {{ (used_l * 0.001 * rate) | round(2) }}
+
+      # Cumulative cost — Energy Dashboard cost sensor
+      - name: "Water Cost Total"
+        unique_id: water_cost_total
+        unit_of_measurement: "THB/m³"
+        state_class: total_increasing
+        icon: mdi:cash-multiple
+        state: >
+          {% set used_l = states('sensor.water_usage_total_l') | float(0) %}
+          {% set rate   = states('input_number.water_tariff_rate') | float(8.5) %}
+          {{ (used_l * 0.001 * rate) | round(2) }}
+
+      # Days until tank empty based on daily usage
+      - name: "Water Days Remaining"
+        unique_id: water_days_remaining
+        unit_of_measurement: "days"
+        icon: mdi:calendar-clock
+        state: >
+          {% set remaining = states('sensor.water_sensor_water_volume') | float(0) %}
+          {% set daily     = states('sensor.water_daily') | float(0) %}
+          {% if daily > 0.01 %}
+            {{ (remaining / daily) | round(1) }}
+          {% else %}
+            999
+          {% endif %}
+
+# ── Derivative for flow rate ──────────────────────────────────────────────────
+sensor:
+  - platform: derivative
+    source: sensor.water_sensor_water_volume
+    name: "Water Volume Derivative"
+    unique_id: water_volume_derivative
+    unit_time: s
+    round: 4
+    time_window: "00:01:00"

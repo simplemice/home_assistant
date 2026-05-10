@@ -23,8 +23,8 @@ light:
     entities:
       - light.closet_lamp
       - light.wled_wall_light
-      - light.wled_closet_strip_l
-      - light.wled_closet_strip_r
+      - light.wled_closet_strip_l_main
+      - light.wled_closet_strip_r_main
       - light.wled_table
       - light.wled_undertv
 

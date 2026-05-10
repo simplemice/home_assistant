@@ -2,8 +2,8 @@
 # Bathroom Light Package
 # - Motion + door based entry detection
 # - Smooth light on
-# - After 10 minutes → red flash warning
-# - After 2 minutes of no motion → turn off
+# - After 20 minutes -> red flash warning
+# - After 5 minutes of no motion -> turn off
 ###############################################################################
 
 binary_sensor:
@@ -27,22 +27,27 @@ input_boolean:
 timer:
   bathroom_long_occupancy:
     name: Bathroom Long Occupancy
-    duration: "00:25:00"
+    duration: "00:20:00"
 
-###############################################################################
-# Automation 1 - Start session (motion or door opens)
-###############################################################################
 automation:
+  ###############################################################################
+  # Automation 1 - Start session on door open OR motion detected
+  # FIX: added motion trigger so session starts even if door doesn't open
+  # FIX: changed condition from motion=off to occupied=off
+  ###############################################################################
   - id: bathroom_start_session
     alias: "Bathroom - Start Session"
-    mode: restart
+    mode: single
     trigger:
       - platform: state
         entity_id: binary_sensor.bathroom_door_contact
         to: "on"
+      - platform: state
+        entity_id: binary_sensor.bathroom_motion_occupancy
+        to: "on"
     condition:
       - condition: state
-        entity_id: binary_sensor.bathroom_motion_occupancy
+        entity_id: input_boolean.bathroom_occupied
         state: "off"
     action:
       - service: input_boolean.turn_on
@@ -58,35 +63,90 @@ automation:
           entity_id: timer.bathroom_long_occupancy
 
   ###############################################################################
-  # Automation 2 - End session (no motion 2 min)
+  # Automation 2 - Keep session alive: reset 20-min timer on every motion event
+  # FIX: new automation - prevents timer finishing while person is still moving
+  ###############################################################################
+  - id: bathroom_motion_keepalive
+    alias: "Bathroom - Motion Keep Alive"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.bathroom_motion_occupancy
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: input_boolean.bathroom_occupied
+        state: "on"
+    action:
+      - service: timer.start
+        target:
+          entity_id: timer.bathroom_long_occupancy
+
+  ###############################################################################
+  # Automation 3 - End session (no motion for 5 min AND timer not active)
+  # FIX: was 2min - 5min gives stationary users more time before light turns off
+  # FIX: added condition timer=idle so session doesn't end DURING active 20-min session
   ###############################################################################
   - id: bathroom_end_session
-    alias: "Bathroom - End Session (no motion 2min)"
+    alias: "Bathroom - End Session (no motion 5min)"
     mode: restart
     trigger:
       - platform: state
         entity_id: binary_sensor.bathroom_motion_occupancy
         to: "off"
-        for: "00:02:00"
+        for: "00:05:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.bathroom_occupied
+        state: "on"
+      - condition: state
+        entity_id: timer.bathroom_long_occupancy
+        state: "idle"
     action:
       - service: light.turn_off
         target:
           entity_id: light.bathroom_bulb
-
       - service: input_boolean.turn_off
         target:
           entity_id: input_boolean.bathroom_occupied
 
+  ###############################################################################
+  # Automation 4 - End session after alert fired (cleanup)
+  ###############################################################################
+  - id: bathroom_end_session_post_alert
+    alias: "Bathroom - End Session After Alert"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.bathroom_motion_occupancy
+        to: "off"
+        for: "00:05:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.bathroom_occupied
+        state: "on"
+      - condition: state
+        entity_id: timer.bathroom_long_occupancy
+        state: "active"
+    action:
+      - service: light.turn_off
+        target:
+          entity_id: light.bathroom_bulb
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.bathroom_occupied
       - service: timer.cancel
         target:
           entity_id: timer.bathroom_long_occupancy
 
   ###############################################################################
-  # Automation 3 - Long occupancy alert (10 min)
+  # Automation 5 - Long occupancy alert at 20 minutes
+  # FIX: was labeled 10min - now correctly 20min
+  # FIX: removed timer.start at end - was restarting timer causing repeat alerts
   ###############################################################################
   - id: bathroom_long_occupancy_alert
-    alias: "Bathroom - Long Occupancy Alert"
-    mode: restart
+    alias: "Bathroom - Long Occupancy Alert (20min)"
+    mode: single
     trigger:
       - platform: event
         event_type: timer.finished
@@ -96,16 +156,13 @@ automation:
       - condition: state
         entity_id: input_boolean.bathroom_occupied
         state: "on"
-      - condition: state
-        entity_id: light.bathroom_bulb
-        state: "on"
     action:
       - service: light.turn_on
         target:
           entity_id: light.bathroom_bulb
         data:
           color_name: "red"
-
+          brightness: 255
       - repeat:
           count: 3
           sequence:
@@ -115,7 +172,9 @@ automation:
               data:
                 flash: short
             - delay: "00:00:02"
-
-      - service: timer.start
+      - service: light.turn_on
         target:
-          entity_id: timer.bathroom_long_occupancy
+          entity_id: light.bathroom_bulb
+        data:
+          brightness: 200
+          color_temp: 4000
