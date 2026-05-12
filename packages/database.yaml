@@ -49,9 +49,7 @@ recorder:
       - sensor.*_signal_strength
       - sensor.*_rssi
       - sensor.*_linkquality
-      - sensor.*_uptime
       - sensor.*_last_seen
-      - sensor.*_voltage*
       - sensor.*_free_memory
       - sensor.*_heap*
       - sensor.*_loop*

@@ -131,15 +131,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2839 |
-| Number of sensors | 1646 |
-| Current Version | 2026.5.0 |
-| Total Automations | 131 |
+| Number of entities | 2827 |
+| Number of sensors | 1633 |
+| Current Version | 2026.5.1 |
+| Total Automations | 132 |
 | Total Scripts | 38 |
 | Total Lights | 37 |
 | Total Switches | 203 |
 | Total Scenes | 12 |
-| Total Players | 19 |
+| Total Players | 20 |
 
 ---
 
@@ -299,8 +299,8 @@ This repository is treated as:
 - [Trend Analysis Card](https://github.com/Riscue/trend-analysis-card)
 - [Tv Remote Card](https://github.com/marrobHD/tv-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
-- [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
 - [Upcoming Media Card](https://github.com/custom-cards/upcoming-media-card)
+- [Upcoming Media Card](https://github.com/NemesisRE/upcoming-media-card)
 - [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 - [Weather Alerts Card](https://github.com/seevee/weather_alerts_card)
