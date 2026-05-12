@@ -78,3 +78,12 @@
 - fixed template notify
 - remove c.a.f.e
 
+
+## v2026.05.12-1816
+- Github Subtle enhancements deployed. You probably won’t notice.
+- add fixes to powercalc sensors
+- add fixes to bathroom light
+- add fixes to weather packages
+- add fixes to packages
+- add fixes to some packages
+
