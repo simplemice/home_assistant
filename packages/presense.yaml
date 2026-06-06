@@ -74,8 +74,8 @@ template:
         icon: mdi:account-group
         state: >
           {{ states.person
-             | selectattr('state','eq','home')
-             | list | count }}
+            | selectattr('state','in',['home','house'])
+            | list | count }}
 
       - name: Family Home
         unique_id: family_home
@@ -87,7 +87,7 @@ template:
           {% else %} mdi:account-group
           {% endif %}
         state: >
-          {{ is_state('group.family', 'home') }}
+          {{ is_state('group.family', 'home') or is_state('group.family', 'house') }}
 
   ###########################################################################
   # TIME AWAY (LIVE)
@@ -138,7 +138,6 @@ template:
         state: >
           {% set area = states('sensor.micemob_area') %}
           {% set charging = states('sensor.micemob_battery_state') %}
-
           {% if area not in ['not_home','unknown','unavailable',''] and charging != 'charging' %}
             {{ area }}
           {% else %}
@@ -150,18 +149,17 @@ template:
         state: >
           {% set area = states('sensor.micemob_area') | trim %}
           {% set fallback = states('person.simplemice') %}
-
-          {% set location = area if area not in ['unknown','unavailable',''] else fallback %}
-
+          {% set location = area if area not in ['unknown','unavailable','not_home',''] else fallback %}
           {% if location == 'Bedroom' and (now().hour >= 22 or now().hour < 8) %}
             Sleep
-          {% elif location in ['Bangtao Office','Maya Beach'] %}
+          {% elif location in ['Jangceylon'] %}
             At Work
           {% elif location in ['SuperCheap','Tops Rawai','Makro Rawai','Makro Chalong'] %}
             At Food Store
           {% elif location in ['unknown','unavailable','not_home',''] %}
-            {{ state_attr('sensor.micemob_location','sub_administrative_area') }}
-            {{ state_attr('sensor.micemob_location','location') }}
+            {{ state_attr('sensor.micemob_location','sub_administrative_area')
+               or state_attr('sensor.micemob_location','location')
+               or 'Away' }}
           {% else %}
             {{ location }}
           {% endif %}

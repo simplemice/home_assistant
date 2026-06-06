@@ -49,3 +49,4 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 shell_command: !include_dir_merge_named shell_commands/
 template: !include_dir_merge_named template/
+zone: !include zones.yaml

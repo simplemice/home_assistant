@@ -1,0 +1,282 @@
+# Media control config/custom_sentences/en/media.yaml
+language: "en"
+intents:
+  MusicAssistantArtist:
+    data:
+      - sentences:
+          - "(Play|played) (music|songs|tracks) (by|from) [the] {media_artist} (on|in) [the] {media_player}"
+  MusicAssistantArtistSameArea:
+    data:
+      - sentences:
+          - "(Play|played) (music|songs|tracks) (by|from) [the] {media_artist}"
+        requires_context:
+          area:
+            slot: true
+  MusicAssistantArtistRadio:
+    data:
+      - sentences:
+          - "(Play|played|create|make|build) [(a|an)] (music|playlist|artist radio|artist radio station|radio station|track list|mix) (from|using|inspired by|influenced by|based on) [the] {media_artist} (on|in) [the] {media_player}"
+  MusicAssistantArtistRadioSameArea:
+    data:
+      - sentences:
+          - "(Play|played|create|make|build) [(a|an)] (music|playlist|artist radio|artist radio station|radio station|track list|mix) (from|using|inspired by|influenced by|based on) [the] {media_artist}"
+        requires_context:
+          area:
+            slot: true
+  MusicAssistantAlbum:
+    data:
+      - sentences:
+          - "(Play|played) [the] album {media_album} (on|in) [the] {media_player}"
+  MusicAssistantAlbumSameArea:
+    data:
+      - sentences:
+          - "(Play|played) [the] album {media_album}"
+        requires_context:
+          area:
+            slot: true
+  MusicAssistantAlbumArtist:
+    data:
+      - sentences:
+          - "(Play|played) [the] album {media_album} by [the] {media_artist} (on|in) [the] {media_player}"
+  MusicAssistantAlbumArtistSameArea:
+    data:
+      - sentences:
+          - "(Play|played) [the] album {media_album} by [the] {media_artist}"
+        requires_context:
+          area:
+            slot: true
+  MusicAssistantRadio:
+    data:
+      - sentences:
+          - "(Play|played|Turn on) [the] radio [to] [station] {media_radio} (on|in) [the] {media_player}"
+          - "(Play|played|Turn on) {media_radio} radio (on|in) [the] {media_player}"
+          - "(Tune into) {media_radio} (on|in) [the] {media_player}"
+  MusicAssistantRadioSameArea:
+    data:
+      - sentences:
+          - "(Play|played|Turn on) [the] radio [to] [station] {media_radio}"
+          - "(Play|played|Turn on) {media_radio} radio"
+          - "(Tune into) {media_radio}"
+        requires_context:
+          area:
+            slot: true
+  SetVolume:
+    data:
+      - sentences:
+          - "[(set|change)] [the] {media_player} [volume] to {volume} [%|percent]"
+          - "[(set|change)] [the] volume for [the] {media_player} to {volume} [%|percent]"
+          - "[(set|change)] [the] volume [to] {volume} [%|percent] [in] [for] [the] {media_player} "
+  SetVolumeSameArea:
+    data:
+      - sentences:
+          - "[(set|change)] [the] volume to {volume} [%|percent]"
+        requires_context:
+          area:
+            slot: true
+  QuietVolume:
+    data:
+      - sentences:
+          - "(set|change) [the] {media_player} [to] quiet"
+          - "(set|change) [the] volume [to] quiet [for] [the] {media_player}"
+          - "Quiet [volume] [the] {media_player}"
+          - "Quiet [volume] (on|in) [the] {media_player}"
+          - "[Enable] quiet [mode] (on|in) [the] {media_player}"
+  QuietVolumeSameArea:
+    data:
+      - sentences:
+          - "Quiet [volume]"
+          - "(set|change) [to] quiet"
+          - "Enable quiet [mode]"
+        requires_context:
+          area:
+            slot: true
+  VolumeUp:
+    data:
+      - sentences:
+          - "[Turn] [the] (music up|Increase volume|Increase the volume|Volume Up|volume higher|higher volume|Louder) [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] [the] (music up|Increase volume|Increase the volume|Volume Up|volume higher|higher volume|Louder)"
+          - "[Turn] up [the] (sound|volume|music) [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] up [the] (sound|volume|music)"
+  VolumeUpSameArea:
+    data:
+      - sentences:
+          - "[Turn] [the] (music up|Increase volume|Increase the volume|Volume Up|volume higher|higher volume|Louder)"
+          - "[Turn] up [the] (sound|volume|music)"
+        requires_context:
+          area:
+            slot: true
+  VolumeUpLots:
+    data:
+      - sentences:
+          - "[Turn] [the] (music up|Increase volume|Increase the volume|Volume Up|volume higher|higher volume|Louder) [by] (a lot|lots|loads|masses|quickly) [more] [again] [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] [the] (music up|Increase volume|Increase the volume|Volume Up|volume higher|higher volume|Louder) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "[Turn] up [the] (sound|volume|music) (a lot|lots|loads|masses|quickly) [more] [again] [by] [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] up [the] (sound|volume|music) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "(a lot|lots|loads|masses|massively) (louder|higher) [In] [the] {media_player}"
+  VolumeUpLotsSameArea:
+    data:
+      - sentences:
+          - "[Turn][the] (music up|Increase volume|Increase the volume|Volume Up|volume higher|higher volume|Louder) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "[Turn] up [the] (sound|volume|music) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "(a lot|lots|loads|masses|massively) (louder|higher)"
+        requires_context:
+          area:
+            slot: true
+  VolumeDown:
+    data:
+      - sentences:
+          - "[Turn] [the] (music down|decrease volume|decrease the volume|Volume down|volume lower|lower volume|quieter) [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] [the] (music down|decrease volume|decrease the volume|Volume down|volume lower|lower volume|quieter)"
+          - "[Turn] down [the] (sound|volume|music) [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] down [the] (sound|volume|music)"
+  VolumeDownSameArea:
+    data:
+      - sentences:
+          - "[Turn] [the] (music down|decrease volume|decrease the volume|Volume down|volume lower|lower volume|quieter)"
+          - "[Turn] down [the] (sound|volume|music)"
+        requires_context:
+          area:
+            slot: true
+  VolumeDownLots:
+    data:
+      - sentences:
+          - "[Turn] [the] (music down|decrease volume|decrease the volume|Volume down|volume lower|lower volume|quieter) [by] (a lot|lots|loads|masses|quickly) [more] [again] [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] [the] (music down|decrease volume|decrease the volume|Volume down|volume lower|lower volume|quieter) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "[Turn] down [the] (sound|volume|music) (a lot|lots|loads|masses|quickly) [more] [again] [by] [(on|in|to|for)] [the] {media_player}"
+          - "[In] [the] {media_player} [Turn] down [the] (sound|volume|music) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "(a lot|lots|loads|masses|massively) (quieter|lower) [In] [the] {media_player}"
+  VolumeDownLotsSameArea:
+    data:
+      - sentences:
+          - "[Turn][the] (music down|decrease volume|decrease the volume|Volume down|volume lower|lower volume|quieter) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "[Turn] down [the] (sound|volume|music) [by] (a lot|lots|loads|masses|quickly) [more] [again]"
+          - "(a lot|lots|loads|masses|massively) (quieter|lower)"
+        requires_context:
+          area:
+            slot: true
+  StopMedia:
+    data:
+      - sentences:
+          - "(Stop|Pause|Turn off|Disable) [the] (radio|music|audio|song|songs|playlist|file|playback) (on|in) [the] {media_player}"
+  StopMediaSameArea:
+    data:
+      - sentences:
+          - "(Stop|Pause|Turn off|Disable) [the] (radio|music|audio|song|songs|playlist|file|playback)"
+        requires_context:
+          area:
+            slot: true
+  PlayMedia:
+    data:
+      - sentences:
+          - "(Play|played|resume|Turn on) [the] (radio|music|audio|song|songs|playlist|file|playback) (on|in) [the] {media_player}"
+  PlayMediaSameArea:
+    data:
+      - sentences:
+          - "(Play|played|resume|Turn on) [the] (radio|music|audio|song|songs|playlist|file|playback)"
+        requires_context:
+          area:
+            slot: true
+  NextTrack:
+    data:
+      - sentences:
+          - "[(Play|played)] [the] (next|skip) (track|song|songs|file) (on|in) [the] {media_player}"
+  NextTrackSameArea:
+    data:
+      - sentences:
+          - "[(Play|played)] [the] (next|skip) (track|song|songs|file|files|audio|audio file)"
+        requires_context:
+          area:
+            slot: true
+  PreviousTrack:
+    data:
+      - sentences:
+          - "[(Play|played)] [the] (previous|last) (track|song|songs|file|files|audio|audio file) (on|in) [the] {media_player}"
+  PreviousTrackSameArea:
+    data:
+      - sentences:
+          - "[(Play|played)] [the] (previous|last) (track|song|songs|file|files|audio|audio file)"
+        requires_context:
+          area:
+            slot: true
+  MuteMedia:
+    data:
+      - sentences:
+          - "Mute [the] (radio|music|audio|audio file|audio files|track|song|songs|media|file) (on|in) [the] {media_player}"
+  MuteMediaSameArea:
+    data:
+      - sentences:
+          - "Mute [the] (radio|music|audio|audio file|audio files|track|song|songs|media|file)"
+        requires_context:
+          area:
+            slot: true
+  UnmuteMedia:
+    data:
+      - sentences:
+          - "Unmute [the] (radio|music|audio|audio file|audio files|track|song|songs|media|file) (on|in) [the] {media_player}"
+  UnmuteMediaSameArea:
+    data:
+      - sentences:
+          - "Unmute [the] (radio|music|audio|audio file|audio files|track|song|songs|media|file)"
+        requires_context:
+          area:
+            slot: true
+  ShuffleMedia:
+    data:
+      - sentences:
+          - "[Turn on] Shuffle (on|in) [the] {media_player}"
+          - "[Turn on] Shuffle [the] (music|audio|audio file|audio files|track|song|songs|media|file) (on|in) [the] {media_player}"
+  ShuffleMediaSameArea:
+    data:
+      - sentences:
+          - "[Turn on] Shuffle [the] (music|audio|audio file|audio files|track|song|songs|media|file)"
+          - "[Turn on] Shuffle"
+        requires_context:
+          area:
+            slot: true
+  StopShuffleMedia:
+    data:
+      - sentences:
+          - "(Un-shuffle|UnShuffle|Stop shuffling|Stop shuffle|Turn off shuffle) (on|in) [the] {media_player}"
+          - "(Un-shuffle|UnShuffle|Stop shuffling|Stop shuffle|Turn off shuffle) [the] (music|audio|audio file|audio files|track|song|songs|media|file) (on|in) [the] {media_player}"
+  StopShuffleMediaSameArea:
+    data:
+      - sentences:
+          - "(Un-shuffle|UnShuffle|Stop shuffling|Stop shuffle|Turn off shuffle) [the] (music|audio|audio file|audio files|track|song|songs|media|file)"
+          - "(Un-shuffle|UnShuffle|Stop shuffling|Stop shuffle|Turn off shuffle)"
+        requires_context:
+          area:
+            slot: true
+lists:
+  media_radio:
+    wildcard: true
+    values:
+      - in: "(kerrang|kerrang radio)"
+        out: "Kerrang! radio"
+      - in: "(planet rock)"
+        out: "Planet Rock"
+      - in: "(absolute radio)"
+        out: "Absolute Radio"
+      - in: "(scala radio)"
+        out: "Scala Radio"
+      - in: "(absolute radio 90's)"
+        out: "Absolute Radio 90's"
+      - in: "(absolute classic rock|absolute radio classic rock)"
+        out: "Absolute Classic Rock"
+  media_album:
+    wildcard: true
+  media_artist:
+    wildcard: true
+  media_player:
+    values:
+      - in: "(living room|front room|dining room)"
+        out: "media_player.*entity_id*"
+      - in: "(study|office)"
+        out: "media_player.*entity_id*"
+      - in: "(kitchen)"
+        out: "media_player.*entity_id*"
+      - in: "(bedroom|master bedroom)"
+        out: "media_player.*entity_id*"
+  volume:
+    range:
+      from: 0
+      to: 100

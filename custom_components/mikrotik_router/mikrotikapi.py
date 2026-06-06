@@ -2,7 +2,6 @@
 
 import logging
 import ssl
-from librouteros.login import plain, token
 from time import time
 from threading import Lock
 from voluptuous import Optional
@@ -116,38 +115,25 @@ class MikrotikAPI:
         self._connected = False
         self._connection_epoch = time()
 
-        login_method = self._login_method
-        if login_method == "plain":
-            login_method = plain
-        elif login_method == "token":
-            login_method = token
-
         kwargs = {
             "encoding": self._encoding,
-            "login_method": login_method,
+#            "login_methods": self._login_method,
             "port": self._port,
         }
 
         self.lock.acquire()
         try:
             if self._use_ssl:
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-
-                if self._ssl_verify:
-                    ssl_context.verify_mode = ssl.CERT_REQUIRED
-                    ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
-                    from functools import partial
-                    ssl_wrapper = partial(
-                        ssl_context.wrap_socket,
-                        server_hostname=self._host,
-                    )
-                else:
-                    ssl_context.verify_mode = ssl.CERT_NONE
-                    ssl_context.set_ciphers("ADH:@SECLEVEL=0")
-                    ssl_wrapper = ssl_context.wrap_socket
-
-                kwargs["ssl_wrapper"] = ssl_wrapper
+                if self._ssl_wrapper is None:
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.check_hostname = False
+                    if self._ssl_verify:
+                        ssl_context.verify_mode = ssl.CERT_REQUIRED
+                        ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+                    else:
+                        ssl_context.verify_mode = ssl.CERT_NONE
+                    self._ssl_wrapper = ssl_context.wrap_socket
+                kwargs["ssl_wrapper"] = self._ssl_wrapper
             self._connection = librouteros.connect(
                 self._host, self._username, self._password, **kwargs
             )

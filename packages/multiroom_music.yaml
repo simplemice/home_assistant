@@ -204,7 +204,7 @@ automation:
   - alias: Join kitchen when occupied
     trigger:
       - platform: state
-        entity_id: binary_sensor.kitchen_presence
+        entity_id: binary_sensor.kitchen_wall_presense_detector_presence
         to: "on"
     action:
       - service: script.ma_toggle_room

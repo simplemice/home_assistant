@@ -211,24 +211,20 @@ powercalc:
         min_power: 1.0
         max_power: 24.0
       # Kitchen Closet Ambient (2m LED strip)
-    - entity_id: light.kitchen_closet_ambient
-      name: "Kitchen Closet Ambient Power"
-      standby_power: 0.1
+    - entity_id: light.kitchen_closet_up_light
+      name: "Kitchen Closet Up Light Power"
+      standby_power: 0.5
       fixed:
         power: 20
       # Kitchen Wall Ambient (2m LED strip)
-    - entity_id: light.kitchen_closet_ambient_wall
-      name: "Kitchen Wall Ambient Power"
-      standby_power: 0.1
-      fixed:
-        power: 20
-      # Closet Strip (1m LED strip)
-    - entity_id: light.closet_strip
-      name: "Closet Strip 1m Power"
+
+      # Fridge Strip (1m LED strip)
+    - entity_id: light.kitchen_fridge_light
+      name: "Kitchen Fridge Light Power"
       standby_power: 0.05
       fixed:
         power: 10
-    - entity_id: light.gateway_light
+    - entity_id: light.bedroom_alarm_gateway_light
       name: "Bedroom Alarm Gateway Power"
       standby_power: 2.8
       fixed:
@@ -357,11 +353,11 @@ powercalc:
         power: 1200.0 # Estimated active power (W) when heating
       standby_power: 1.0 # Estimated power (W) when in standby/off
 
-    - entity_id: light.bedroom_strip # Change entity_id as needed
+    - entity_id: light.bedroom_bed_strip # Change entity_id as needed
       manufacturer: Yeelink
       model: yeelink.light.strip2
       name:
-        "Bedroom Bed Strip Power"
+        "Bedroom Bed Night Strip Power"
         # Use the Linear power model for lights with variable brightness
       linear:
         min_power: 1.0 # Power (W) at 1% brightness

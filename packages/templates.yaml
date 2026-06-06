@@ -35,7 +35,7 @@ template:
   - sensor:
       - name: "ThinkPad T580 Power State"
         state: >
-          {% set p = states('sensor.thinkpad_t580_power')|float %}
+          {% set p = states('sensor.thinkpad_t580_power')| float(0) %}
           {% if p == 0 %} off
           {% elif p < 8 %} idle
           {% elif p < 20 %} light

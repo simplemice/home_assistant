@@ -15,6 +15,9 @@ input_boolean:
   awtrix_laundry_notify:
     name: "Awtrix Laundry Notification"
     icon: mdi:washing-machine-off
+  laundry_helper:
+    name: "Laundry Helper"
+    icon: mdi:washing-machine-alert
 
 input_text:
   laundry_zone:

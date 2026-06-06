@@ -8,6 +8,12 @@ input_boolean:
   house_cctv_mode:
     name: "House CCTV Mode"
     icon: mdi:cctv
+  follow_me_music:
+    name: "Follow Me Music Mode"
+    icon: mdi:cast-audio
+  tv_cheat:
+    name: "TV Auto Control"
+    icon: mdi:television-box
 
 remote:
   - platform: xiaomi_miio
@@ -42,14 +48,6 @@ media_player:
       - media_player.livingroom_player
       - media_player.bedroom_player
       - media_player.kitchen_player
-
-input_boolean:
-  follow_me_music:
-    name: "Follow Me Music Mode"
-    icon: mdi:cast-audio
-  tv_cheat:
-    name: "TV Auto Control"
-    icon: mdi:television-box
 
 input_number:
   notify_low_volume:

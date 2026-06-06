@@ -45,9 +45,9 @@ class CloudflareSpeedTestFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 ): vol.All(cv.positive_int, vol.Range(min=10, max=1440)),
                 vol.Required(
                     CONF_CONNECTION_TIMEOUT, default=DEFAULT_CONNECTION_TIMEOUT
-                ): vol.All(cv.positive_int, vol.Range(min=5, max=300)),
+                ): vol.All(cv.positive_int, vol.Range(min=30, max=300)),
                 vol.Required(CONF_READ_TIMEOUT, default=DEFAULT_READ_TIMEOUT): vol.All(
-                    cv.positive_int, vol.Range(min=10, max=600)
+                    cv.positive_int, vol.Range(min=30, max=600)
                 ),
             }
         )

@@ -6,7 +6,7 @@
         minutes:
           "{% set dry = states('sensor.ac_runtime_today_dry') | float(0) %}
           {% set cool = states('sensor.ac_runtime_today_cool') | float(0) %} {{ ((dry
-          + cool) * 60) | int }}"
+          + cool) * 60) | int(0) }}"
       name: AC Runtime Today
       state:
         "{% set dry = states('sensor.ac_runtime_today_dry') | float(0) %} {%

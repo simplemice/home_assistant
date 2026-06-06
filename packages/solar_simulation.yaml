@@ -7,15 +7,82 @@ template:
     state_class: measurement
     icon: mdi:solar-power
     state: >
-      {% set mv      = states('sensor.rain_detector_illuminance_average_20min') |
-      float(0) %}
-      {% set elev    = states('sensor.astroweather_home_sun_altitude') | float(0)
-      %}
-      {% set max_mv  = 5600 %}
+      {# ── Constants ───────────────────────────────────────────── #}
       {% set panel_w = 3000 %}
-      {% set eff     = 0.85 %}
-      {% if elev < 5 %}{{ 0 }}
-      {% else %}{{ [mv / max_mv * panel_w * eff, panel_w] | min | round(1) }}
+      {% set eff     = 0.85  %}
+
+      {# ── Sun geometry ─────────────────────────────────────────── #}
+      {% set elev = states('sensor.astroweather_astroweather_sun_altitude') | float(0)
+      %}
+      {% if elev < 5 %}
+        {{ 0 }}
+      {% else %}
+
+        {# Air-mass angle factor: sin of elevation (1.0 at zenith, ~0.09 at 5°) #}
+        {% set pi       = 3.14159265 %}
+        {% set elev_rad = elev * pi / 180 %}
+        {% set angle_f  = elev_rad | sin %}
+
+        {# ── Cloud layers (weighted transmission) ─────────────────── #}
+        {# High (cirrus): 15% block — Medium (cumulus): 45% — Low (stratus): 75% #}
+        {% set c_high = states('sensor.astroweather_astroweather_clouds_area_high')   |
+      float(0) / 100 %}
+        {% set c_mid  = states('sensor.astroweather_astroweather_clouds_area_medium')
+      | float(0) / 100 %}
+        {% set c_low  = states('sensor.astroweather_astroweather_clouds_area_low')    |
+      float(0) / 100 %}
+        {% set cloud_trans = (1 - c_high * 0.15) * (1 - c_mid * 0.45) * (1 - c_low
+      * 0.75) %}
+
+        {# ── Fog attenuation ──────────────────────────────────────── #}
+        {% set fog   = states('sensor.astroweather_astroweather_fog_area') | float(0)
+      %}
+        {% set fog_f = 0.05 if fog > 30 else (1 - fog / 100 * 0.8) %}
+
+        {# ── Rain attenuation (progressive): 15 mm/h = 85% block ───── #}
+        {% set rain_mh = states('sensor.pirateweather_precip_intensity') | float(0)
+      %}
+        {% set rain_f  = [1 - (rain_mh / 15), 0.15] | max %}
+
+        {# ── Active thunderstorm hard cutoff ──────────────────────── #}
+        {# Only kill output when weather entity reports active thunderstorm #}
+        {# or precip type is hail/sleet/snow (not applicable in Thailand)  #}
+        {% set precip_typ   = states('sensor.pirateweather_precip') | lower %}
+        {% set weather_cond = states('weather.pirateweather') | lower %}
+        {% set active_storm = 'thunder' in weather_cond or 'lightning' in weather_cond
+                              or precip_typ in ['hail','sleet','snow'] %}
+
+        {# Thunder probability: graduated attenuation only (not a hard cutoff) #}
+        {# 0% → factor 1.0 — 100% → factor 0.30 (panels still produce at ~30%) #}
+        {% set thunder_p = states('sensor.phuket_day_thunder_probability') | float(0)
+      %}
+        {% set thunder_f = 1.0 - (thunder_p / 100 * 0.70) %}
+
+        {% if active_storm %}
+          {{ 0 }}
+        {% else %}
+
+          {# ── UV index cross-check (Tomorrow.io) ───────────────────── #}
+          {# UV 11 = ~1000 W/m² clear sky; blend at 30% weight #}
+          {% set uv   = states('sensor.tomorrow_io_home_uv_index') | float(0) %}
+          {% set uv_f = [uv / 11.0, 1.0] | min %}
+
+          {# ── Physical irradiance anchor from rain detector (mV) ───── #}
+          {# 5600 mV ≈ full sun ~1000 W/m²; blend at 20% weight #}
+          {% set mv_raw = states('sensor.rain_detector_illuminance_raw') | float(0)
+      %}
+          {% set mv_f   = [mv_raw / 5600, 1.0] | min %}
+
+          {# ── Composite irradiance factor ───────────────────────────── #}
+          {# geometry × clouds × fog × rain × thunder = 50% weight       #}
+          {# UV index = 30% weight, physical mV = 20% weight             #}
+          {% set geo_f   = angle_f * cloud_trans * fog_f * rain_f * thunder_f %}
+          {% set final_f = [geo_f * 0.50 + uv_f * 0.30 + mv_f * 0.20, 0.0] | max %}
+
+          {# ── Output power ─────────────────────────────────────────── #}
+          {{ [final_f * panel_w * eff, panel_w * eff] | min | round(1) }}
+
+        {% endif %}
       {% endif %}
 
   - name: "Solar Power to Home"

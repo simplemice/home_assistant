@@ -117,8 +117,6 @@ sensor:
   unit_prefix: k
   round: 3
   method: left
-
-# ── Utility Meters ────────────────────────────────────────
 utility_meter:
   # Daily import split by tariff (peak/off-peak)
   grid_import_daily:

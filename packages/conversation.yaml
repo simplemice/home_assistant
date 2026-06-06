@@ -28,6 +28,24 @@ intent_script:
 
   whattheweather:
     action:
+      action: weather.get_forecasts
+      data:
+        type: daily
+      target:
+        entity_id: weather.pirateweather
+      response_variable: pw_forecast
+    speech:
+      text: >
+        Today: {{ states('weather.pirateweather') }},
+        {{ state_attr('weather.pirateweather', 'temperature') }}°C,
+        humidity {{ state_attr('weather.pirateweather', 'humidity') }}%.
+        Tomorrow: {{ action_response['weather.pirateweather']['forecast'][1]['condition'] }},
+        high {{ action_response['weather.pirateweather']['forecast'][1]['temperature'] }}°C,
+        rain chance {{ action_response['weather.pirateweather']['forecast'][1]['precipitation_probability'] }}%,
+        precipitation {{ action_response['weather.pirateweather']['forecast'][1]['precipitation'] }}mm.
+
+  fullweather:
+    action:
       - service: script.tts_jarvis_weather_forecast
 
   whatthetraffic:

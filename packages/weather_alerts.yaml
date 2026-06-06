@@ -121,13 +121,6 @@ sensor:
     calibration_factor: 2.0
     unique_id: bedroom_mold_indicator
   - platform: mold_indicator
-    name: "Kitchen Mold Indicator"
-    indoor_temp_sensor: sensor.kitchen_temp
-    indoor_humidity_sensor: sensor.kitchen_humidity
-    outdoor_temp_sensor: sensor.backyard_temp_temperature
-    calibration_factor: 2.0
-    unique_id: kitchen_mold_indicator
-  - platform: mold_indicator
     name: "Bathroom Mold Indicator"
     indoor_temp_sensor: sensor.bathroom_clock_temperature
     indoor_humidity_sensor: sensor.bathroom_clock_humidity
@@ -217,7 +210,7 @@ template:
   - sensor:
       - name: "Nearest Storm Bearing Human Readable"
         state: >
-          {% set bearing = states('sensor.pirateweather_nearest_storm_bearing') | float %}
+          {% set bearing = states('sensor.pirateweather_nearest_storm_bearing') | float(0) %}
           {% if bearing >= 337.5 or bearing < 22.5 %}
             North
           {% elif bearing >= 22.5 and bearing < 67.5 %}
@@ -239,29 +232,32 @@ template:
       - name: "Phuket Season"
         unique_id: phuket_season
         icon: >
-          {% if is_state('sensor.phuket_season', 'Dry Season') %}
+          {% if is_state('sensor.phuket_season', 'High Season') %}
             mdi:weather-sunny
           {% elif is_state('sensor.phuket_season', 'Hot Season') %}
             mdi:weather-sunny-alert
+          {% elif is_state('sensor.phuket_season', 'Monsoon Peak') %}
+            mdi:weather-hurricane
           {% else %}
             mdi:weather-pouring
           {% endif %}
         state: >
           {% set month = now().month %}
-          {% if month in [11, 12, 1, 2] %}
-            Hight Season
-          {% elif month in [3, 4, 5] %}
+          {% set day = now().day %}
+          {% if month in [11, 12, 1, 2, 3] %}
+            High Season
+          {% elif month == 4 or (month == 5 and day < 15) %}
             Hot Season
-          {% elif month in [6, 7, 8] %}
-            Wet Season
+          {% elif month in [9, 10] %}
+            Monsoon Peak
           {% else %}
-            Monsoon Flood Peak
+            Wet Season
           {% endif %}
   - sensor:
       - name: "Rain Intensity"
         unique_id: rain_intensity_stat
         state: >
-          {% set intensity = states('sensor.rain_detector_rain_intensity') | int %}
+          {% set intensity = states('sensor.rain_detector_rain_intensity') | int(0) %}
           {% if intensity < 30 %}
             No Rain
           {% elif intensity <= 1000 %}
@@ -284,7 +280,7 @@ template:
               'S', 'SSW', 'SW', 'WSW',
               'W', 'WNW', 'NW', 'NNW'
             ] %}
-            {% set index = (((bearing + 11.25) % 360) / 22.5) | round(0, 'floor') | int %}
+            {% set index = (((bearing + 11.25) % 360) / 22.5) | round(0, 'floor') | int(0) %}
             {{ directions[index] }}
           {% else %}
             unknown
@@ -320,7 +316,7 @@ template:
           {% if li is none %}
             {% set nums = raw | regex_findall_index('-?[0-9]+\.?[0-9]*') %}
             {% if nums %}
-              {% set li = nums | first | float %}
+              {% set li = nums | first | float(0) %}
             {% endif %}
           {% endif %}
           {% if li is none %}

@@ -21,59 +21,36 @@ light:
     name: "Livingroom Ambient"
     unique_id: livingroom_ambient
     entities:
-      - light.closet_lamp
-      - light.wled_wall_light
-      - light.wled_closet_strip_l_main
-      - light.wled_closet_strip_r_main
+      - light.wled_closet_l_main
+      - light.wled_closet_r_main
       - light.wled_table
-      - light.wled_undertv
-
-  - platform: group
-    unique_id: all_lights
-    name: "All Lights"
-    entities:
-      #      - light.bathroom_bulb
-      - light.gateway_light
-      - light.fridge_side_strip
-      - light.kitchen_closet_ambient
-      - light.kitchen_closet_ambient_wall
-      - light.porch_bulb
-      - light.closet_lamp
-      - light.wled_wall_light
-      - light.bedroom_strip
-      - light.wled_closet_strip_l
-      - light.wled_closet_strip_l
-      - light.wled_table
-      - light.wled_panel
-      - light.wled_undertv
-      - light.backyard_light
       - light.wled_tv
+      - light.wled_wall_light
+      - light.closet_lamp
 
   - platform: group
     unique_id: lights
     name: "Lights"
     entities:
-      #      - light.bathroom_bulb
-      - light.gateway_light
+      #- light.bathroom_bulb
       - light.porch_bulb
       - light.closet_lamp
-      - light.bedroom_strip
       - light.backyard_light
 
   - platform: group
     unique_id: kitchen_ambient
     name: "Kitchen Ambient"
     entities:
-      - light.kitchen_closet_ambient
-      - light.kitchen_closet_ambient_wall
-      - light.fridge_side_strip
+      - light.kitchen_closet_down_light
+      - light.kitchen_closet_up_light
+      - light.kitchen_fridge_light
 
   - platform: group
     unique_id: bedroom_ambient
     name: "Bedroom Ambient"
     entities:
-      - light.gateway_light
-      - light.bedroom_strip
+      - light.bedroom_alarm_gateway_light
+      - light.bedroom_bed_strip
 
   - platform: group
     unique_id: outside_lights
@@ -86,11 +63,11 @@ light:
     unique_id: wled_ambient
     name: "WLED Ambient"
     entities:
-      - light.wled_closet_strip_l
-      - light.wled_closet_strip_r
-      - light.wled_wall_light
+      - light.wled_closet_l_main
+      - light.wled_closet_r_main
       - light.wled_table
-      - light.wled_undertv
+      - light.wled_tv
+      - light.wled_wall_light
 
 switch:
   - platform: group

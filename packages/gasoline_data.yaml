@@ -10,9 +10,9 @@ template:
       - name: Lowest 91 Gas Price
         unique_id: 91_low_price
         state: >
-          {% set ptt_price = states('sensor.gas_91_price_ptt') | replace('฿', '') | float %}
-          {% set bcp_price = states('sensor.gas_91_price_bcp') | replace('฿', '') | float %}
-          {% set shell_price = states('sensor.gas_91_price_shell') | replace('฿', '') | float %}
+          {% set ptt_price = states('sensor.gas_91_price_ptt') | replace('฿', '') | float(0) %}
+          {% set bcp_price = states('sensor.gas_91_price_bcp') | replace('฿', '') | float(0) %}
+          {% set shell_price = states('sensor.gas_91_price_shell') | replace('฿', '') | float(0) %}
 
           {% if ptt_price <= bcp_price and ptt_price <= shell_price %}
               {{ states('sensor.gas_91_price_ptt') }} at PTT Station
@@ -27,9 +27,9 @@ template:
       - name: Lowest 95 Gas Price
         unique_id: 95_low_price
         state: >
-          {% set ptt_price = states('sensor.gas_95_price_ptt') | replace('฿', '') | float %}
-          {% set bcp_price = states('sensor.gas_95_price_bcp') | replace('฿', '') | float %}
-          {% set shell_price = states('sensor.gas_95_price_shell') | replace('฿', '') | float %}
+          {% set ptt_price = states('sensor.gas_95_price_ptt') | replace('฿', '') | float(0) %}
+          {% set bcp_price = states('sensor.gas_95_price_bcp') | replace('฿', '') | float(0) %}
+          {% set shell_price = states('sensor.gas_95_price_shell') | replace('฿', '') | float(0) %}
 
           {% if ptt_price <= bcp_price and ptt_price <= shell_price %}
               {{ states('sensor.gas_95_price_ptt') }} at PTT Station

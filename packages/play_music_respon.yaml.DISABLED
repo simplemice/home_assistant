@@ -1,0 +1,429 @@
+#Resonse to media.yaml config/custom_sentences_response/media_response.yaml
+# Music Assistant Artist Search
+MusicAssistantArtist:
+  speech:
+    text: "Playing {{media_artist}} on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        entity_id: "{{media_player}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        entity_id: "{{media_player}}"
+        media_id: "{{media_artist}}"
+        media_type: "artist"
+
+MusicAssistantArtistSameArea:
+  speech:
+    text: "Playing {{media_artist}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        area_id: "{{area}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        area_id: "{{area}}"
+        media_id: "{{media_artist}}"
+        media_type: "artist"
+
+# Music Assistant Artist Search - Create radio
+MusicAssistantArtistRadio:
+  speech:
+    text: "Playing {{media_artist}} and similar artists on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        area_id: "{{area}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        entity_id: "{{media_player}}"
+        media_id: "{{media_artist}}"
+        media_type: "artist"
+        radio_mode: true
+
+MusicAssistantArtistRadioSameArea:
+  speech:
+    text: "Playing {{media_artist}} and similar artists."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        area_id: "{{area}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        area_id: "{{area}}"
+        media_id: "{{media_artist}}"
+        media_type: "artist"
+        radio_mode: true
+
+#MusicAssistant play album
+MusicAssistantAlbum:
+  speech:
+    text: "Playing the album {{media_album}} on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        entity_id: "{{media_player}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        entity_id: "{{media_player}}"
+        media_id: "{{media_album}}"
+        media_type: "album"
+
+MusicAssistantAlbumSameArea:
+  speech:
+    text: "Playing the album {{media_album}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        area_id: "{{area}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        area_id: "{{area}}"
+        media_id: "{{media_album}}"
+        media_type: "album"
+
+#MusicAssistant play album by specific artist
+MusicAssistantAlbumArtist:
+  speech:
+    text: "Playing the album {{media_album}} by {{media_artist}} on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        entity_id: "{{media_player}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        entity_id: "{{media_player}}"
+        media_type: "album"
+        artist: "{{media_artist}}"
+        media_id: "{{media_album}}"
+
+MusicAssistantAlbumArtistSameArea:
+  speech:
+    text: "Playing the album {{media_album}} by {{media_artist}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        area_id: "{{area}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        area_id: "{{area}}"
+        media_type: "album"
+        artist: "{{media_artist}}"
+        media_id: "{{media_album}}"
+
+#MusicAssistant play radio
+MusicAssistantRadio:
+  speech:
+    text: "Playing {{media_radio}} on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        entity_id: "{{media_player}}"
+        shuffle: false
+
+    - service: mass.play_media
+      data:
+        entity_id: "{{media_player}}"
+        media_type: "radio"
+        media_id: "{{media_radio}}"
+MusicAssistantRadioSameArea:
+  speech:
+    text: "Playing {{media_radio}}."
+  action:
+    - service: media_player.shuffle_set
+      data:
+        area_id: "{{area}}"
+        shuffle: false
+    - service: mass.play_media
+      data:
+        area_id: "{{area}}"
+        media_type: "radio"
+        media_id: "{{media_radio}}"
+
+# Media
+#Volume
+SetVolume:
+  speech:
+    text: "OK, setting {{state_attr(media_player, 'friendly_name')}} to {{volume}} percent."
+  action:
+    service: "media_player.volume_set"
+    data:
+      entity_id: "{{media_player}}"
+      volume_level: "{{volume/100.0}}"
+
+SetVolumeSameArea:
+  speech:
+    text: "OK, setting volume to {{volume}} percent."
+  action:
+    service: "media_player.volume_set"
+    data:
+      area_id: "{{area}}"
+      volume_level: "{{volume/100.0}}"
+
+QuietVolume:
+  speech:
+    text: "OK, quiet mode enabled on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: "media_player.volume_set"
+    data:
+      entity_id: "{{media_player}}"
+      volume_level: "0.1"
+
+QuietVolumeSameArea:
+  speech:
+    text: "OK, quiet mode enabled."
+  action:
+    service: "media_player.volume_set"
+    data:
+      area_id: "{{area}}"
+      volume_level: "0.1"
+
+VolumeUp:
+  speech:
+    text: "OK, increasing volume on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: "media_player.volume_up"
+    data:
+      entity_id: "{{media_player}}"
+
+VolumeUpSameArea:
+  speech:
+    text: "OK, increasing volume."
+  action:
+    service: "media_player.volume_up"
+    data:
+      area_id: "{{area}}"
+
+VolumeUpLots:
+  speech:
+    text: "OK, increasing volume a lot on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: "media_player.volume_up"
+      data:
+        entity_id: "{{media_player}}"
+    - service: "media_player.volume_up"
+      data:
+        entity_id: "{{media_player}}"
+    - service: "media_player.volume_up"
+      data:
+        entity_id: "{{media_player}}"
+    - service: "media_player.volume_up"
+      data:
+        entity_id: "{{media_player}}"
+
+VolumeUpLotsSameArea:
+  speech:
+    text: "OK, increasing volume a lot."
+  action:
+    - service: "media_player.volume_up"
+      data:
+        area_id: "{{area}}"
+    - service: "media_player.volume_up"
+      data:
+        area_id: "{{area}}"
+    - service: "media_player.volume_up"
+      data:
+        area_id: "{{area}}"
+    - service: "media_player.volume_up"
+      data:
+        area_id: "{{area}}"
+
+VolumeDown:
+  speech:
+    text: "OK, lowering volume on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: "media_player.volume_down"
+    data:
+      entity_id: "{{media_player}}"
+
+VolumeDownSameArea:
+  speech:
+    text: "OK, lowering volume."
+  action:
+    service: "media_player.volume_down"
+    data:
+      area_id: "{{area}}"
+
+VolumeDownLots:
+  speech:
+    text: "OK, lowering volume a lot on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    - service: "media_player.volume_down"
+      data:
+        entity_id: "{{media_player}}"
+    - service: "media_player.volume_down"
+      data:
+        entity_id: "{{media_player}}"
+    - service: "media_player.volume_down"
+      data:
+        entity_id: "{{media_player}}"
+    - service: "media_player.volume_down"
+      data:
+        entity_id: "{{media_player}}"
+
+VolumeDownLotsSameArea:
+  speech:
+    text: "OK, lowering volume a lot."
+  action:
+    - service: "media_player.volume_down"
+      data:
+        area_id: "{{area}}"
+    - service: "media_player.volume_down"
+      data:
+        area_id: "{{area}}"
+    - service: "media_player.volume_down"
+      data:
+        area_id: "{{area}}"
+    - service: "media_player.volume_down"
+      data:
+        area_id: "{{area}}"
+
+#Stop playback
+StopMedia:
+  speech:
+    text: "OK, stopping the music on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: "media_player.media_pause"
+    data:
+      entity_id: "{{media_player}}"
+
+StopMediaSameArea:
+  speech:
+    text: "OK, stopping the music."
+  action:
+    service: "media_player.media_pause"
+    data:
+      area_id: "{{area}}"
+
+#Start playback
+PlayMedia:
+  speech:
+    text: "OK, playing music on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: "media_player.media_play"
+    data:
+      entity_id: "{{media_player}}"
+
+PlayMediaSameArea:
+  speech:
+    text: "OK, playing music."
+  action:
+    service: "media_player.media_play"
+    data:
+      area_id: "{{area}}"
+
+#Next track
+NextTrack:
+  speech:
+    text: "OK, playing next track on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: media_player.media_next_track
+    data:
+      entity_id: "{{media_player}}"
+
+NextTrackSameArea:
+  speech:
+    text: "OK, playing next track."
+  action:
+    service: media_player.media_next_track
+    data:
+      area_id: "{{area}}"
+
+#Previous track
+PreviousTrack:
+  speech:
+    text: "OK, playing previous track on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: media_player.media_previous_track
+    data:
+      entity_id: "{{media_player}}"
+
+PreviousTrackSameArea:
+  speech:
+    text: "OK, playing previous track."
+  action:
+    service: media_player.media_previous_track
+    data:
+      area_id: "{{area}}"
+
+#Mute
+MuteMedia:
+  speech:
+    text: "OK, muted music on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: media_player.volume_mute
+    data:
+      entity_id: "{{media_player}}"
+      is_volume_muted: true
+
+MuteMediaSameArea:
+  speech:
+    text: "OK, muted music."
+  action:
+    service: media_player.volume_mute
+    data:
+      area_id: "{{area}}"
+      is_volume_muted: true
+
+UnmuteMedia:
+  speech:
+    text: "OK, unmuted music on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: media_player.volume_mute
+    data:
+      entity_id: "{{media_player}}"
+      is_volume_muted: false
+
+UnmuteMediaSameArea:
+  speech:
+    text: "OK, unmuted music."
+  action:
+    service: media_player.volume_mute
+    data:
+      area_id: "{{area}}"
+      is_volume_muted: false
+
+#Shuffle
+ShuffleMedia:
+  speech:
+    text: "OK, shuffling music on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: media_player.shuffle_set
+    data:
+      entity_id: "{{media_player}}"
+      shuffle: true
+
+ShuffleMediaSameArea:
+  speech:
+    text: "OK, shuffling music."
+  action:
+    service: media_player.shuffle_set
+    data:
+      area_id: "{{area}}"
+      shuffle: true
+
+StopShuffleMedia:
+  speech:
+    text: "OK, stopping music shuffle on {{state_attr(media_player, 'friendly_name')}}."
+  action:
+    service: media_player.shuffle_set
+    data:
+      entity_id: "{{media_player}}"
+      shuffle: false
+
+StopShuffleMediaSameArea:
+  speech:
+    text: "OK, stopping music shuffle."
+  action:
+    service: media_player.shuffle_set
+    data:
+      area_id: "{{area}}"
+      shuffle: false

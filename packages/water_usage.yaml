@@ -22,19 +22,16 @@ input_number:
 # ── Utility Meters ────────────────────────────────────────────────────────────
 utility_meter:
   water_daily:
-    source: sensor.water_usage_total_l
+    source: sensor.water_tank_sensor_water_usage_total_l
     cycle: daily
-
   water_weekly:
-    source: sensor.water_usage_total_l
+    source: sensor.water_tank_sensor_water_usage_total_l
     cycle: weekly
-
   water_monthly:
-    source: sensor.water_usage_total_l
+    source: sensor.water_tank_sensor_water_usage_total_l
     cycle: monthly
-
   water_yearly:
-    source: sensor.water_usage_total_l
+    source: sensor.water_tank_sensor_water_usage_total_l
     cycle: yearly
 
 # ── Template Sensors ──────────────────────────────────────────────────────────
@@ -56,7 +53,7 @@ template:
       - name: "Water Flow Rate"
         unique_id: water_flow_rate
         unit_of_measurement: "m³/h"
-        device_class: water
+        device_class: volume_flow_rate
         state_class: measurement
         icon: mdi:water-flow
         state: >

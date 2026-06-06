@@ -27,6 +27,8 @@ recorder:
       - device_tracker
       - switch
       - light
+      - fan
+      - climate
 
     entity_globs:
       - sensor.*_energy

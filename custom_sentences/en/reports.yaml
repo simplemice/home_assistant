@@ -9,10 +9,21 @@ intents:
           - "check the tank level"
           - "tank level"
 
+  fullweather:
+    data:
+      - sentences:
+          - "full weather now"
+
   whattheweather:
     data:
       - sentences:
           - "(what's | what is | tell me) [the] (weather | temperature) [outside | now]"
+          - "will it rain [tomorrow | today]"
+          - "is it going to rain [today | tomorrow]"
+          - "what's the weather tomorrow"
+          - "what is the weather tomorrow"
+          - "tell me the weather tomorrow"
+          - "is it rainy [today | tomorrow]"
 
   whatthetraffic:
     data:

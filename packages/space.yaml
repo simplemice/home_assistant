@@ -75,16 +75,16 @@ template:
         icon: mdi:latitude
         unit_of_measurement: "°"
         state: >
-          {{ state_attr('sensor.iss_raw', 'iss_position').latitude | float }}
+          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('latitude', 0) | float(0)(0) }}
       - name: "ISS Longitude"
         icon: mdi:longitude
         unit_of_measurement: "°"
         state: >
-          {{ state_attr('sensor.iss_raw', 'iss_position').longitude | float }}
+          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('longitude', 0) | float(0)(0) }}
       - name: "ISS Timestamp"
         icon: mdi:clock
         state: >
-          {{ state_attr('sensor.iss_raw', 'timestamp') | int | timestamp_local }}
+          {{ state_attr('sensor.iss_raw', 'timestamp') | int(0) | timestamp_local }}
 
 automation:
   #Publish ISS Location data to MQTT Topic
@@ -103,6 +103,6 @@ automation:
           retain: true
           payload: >
             {
-              "latitude": {{ states('sensor.iss_latitude') | float }},
-              "longitude": {{ states('sensor.iss_longitude') | float }}
+              "latitude": {{ states('sensor.iss_latitude') | float(0) }},
+              "longitude": {{ states('sensor.iss_longitude') | float(0) }}
             }
