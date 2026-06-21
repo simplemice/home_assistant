@@ -1,4 +1,8 @@
 
+
+## v2026.05.-1803 - 2026-06-21
+- Committed changes. Some of them make me uncomfortable. You know which ones.
+
 ## v2026.04.09-1028
 - Github Configuration updated. Systems evolving as expected.
 

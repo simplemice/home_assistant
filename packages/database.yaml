@@ -45,6 +45,7 @@ recorder:
       - sensor.solar_energy_accumulated_simulated
       - sensor.battery_soc_simulated
       - sensor.battery_energy_remaining
+      - alarm_control_panel.home
 
   exclude:
     entity_globs:

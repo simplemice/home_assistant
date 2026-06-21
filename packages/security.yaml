@@ -7,8 +7,8 @@
 
 mqtt:
   sensor:
-    - name: "Frigate Plate"
-      state_topic: frigate/plates/latest
+  - name: "Frigate Plate"
+    state_topic: frigate/plates/latest
 
 input_boolean:
   alarm_pause_mode:
@@ -30,66 +30,85 @@ input_text:
     max: 255
 
 binary_sensor:
-  - platform: group
-    unique_id: all_doors
-    name: "All Doors"
-    device_class: opening
-    entities:
-      - binary_sensor.porch_door_contact
-      - binary_sensor.bedroom_door_contact
-      - binary_sensor.bathroom_door_contact
-      - binary_sensor.backyard_door_contact
-  - platform: group
-    name: "Security Doors"
-    unique_id: security_doors
-    device_class: opening
-    entities:
-      - binary_sensor.porch_door_contact
-      - binary_sensor.backyard_door_contact
-  - platform: group
-    unique_id: security_motion
-    name: "Security Motion"
-    device_class: motion
-    entities:
-      - binary_sensor.livingroom_motion_occupancy
-      - binary_sensor.porch_motion_occupancy
-      - binary_sensor.backyard_motion_occupancy
+- platform: group
+  unique_id: all_doors
+  name: "All Doors"
+  device_class: opening
+  entities:
+  - binary_sensor.porch_door_contact
+  - binary_sensor.bedroom_door_contact
+  - binary_sensor.bathroom_door_contact
+  - binary_sensor.backyard_door_contact
+- platform: group
+  name: "Security Doors"
+  unique_id: security_doors
+  device_class: opening
+  entities:
+  - binary_sensor.porch_door_contact
+  - binary_sensor.backyard_door_contact
+- platform: group
+  unique_id: security_motion
+  name: "Security Motion"
+  device_class: motion
+  entities:
+  - binary_sensor.livingroom_motion_occupancy
+  - binary_sensor.porch_motion_occupancy
+  - binary_sensor.backyard_motion_occupancy
 
 template:
-  - sensor:
-      - name: "Last Alarm Trigger"
-        state: >
-          {% set alarm = states.alarm_control_panel.home %}
-          {{ alarm.attributes.last_triggered if alarm and alarm.attributes.last_triggered else 'Never' }}
+- binary_sensor:
+  - name: "Home Problem Detector"
+    unique_id: home_problem_detector
+    device_class: problem
+    availability: >
+      {{
+        has_value('binary_sensor.kitchen_water_leak_detector') and
+        has_value('binary_sensor.bathroom_water_leak_detector') and
+        has_value('binary_sensor.kitchen_smoke_detector') and
+        has_value('binary_sensor.kitchen_gas_detector') and
+        has_value('binary_sensor.aircon_leak_detector')
+      }}
+    state: >
+      {{
+        is_state('binary_sensor.kitchen_water_leak_detector', 'on') or
+        is_state('binary_sensor.bathroom_water_leak_detector', 'on') or
+        is_state('binary_sensor.kitchen_smoke_detector', 'on') or
+        is_state('binary_sensor.kitchen_gas_detector', 'on') or
+        is_state('binary_sensor.aircon_leak_detector', 'on')
+      }}
+    attributes:
+      active_sensors: >
+        {% set problems = [] %}
+        {% if is_state('binary_sensor.kitchen_smoke_detector', 'on') %}
+          {% set problems = problems + ['Smoke Detected'] %}
+        {% endif %}
+        {% if is_state('binary_sensor.kitchen_water_leak_detector', 'on')
+        %}
+          {% set problems = problems + ['Kitchen Leak Detected'] %}
+        {% endif %}
+        {% if is_state('binary_sensor.bathroom_water_leak_detector', 'on')
+        %}
+          {% set problems = problems + ['Bathroom Leak Detected'] %}
+        {% endif %}
+        {% if is_state('binary_sensor.aircon_leak_detector', 'on') %}
+          {% set problems = problems + ['Aircon Leak Detected'] %}
+        {% endif %}
+        {% if is_state('binary_sensor.kitchen_gas_detector', 'on') %}
+          {% set problems = problems + ['Gas Leak Detected'] %}
+        {% endif %}
+        {{ problems | join(', ') if problems else 'None' }}
 
-  - binary_sensor:
-      - name: "Home Problem Detector"
-        unique_id: home_problem_detector
-        device_class: problem
-        state: >
-          {{
-            is_state('binary_sensor.kitchen_water_leak_detector_water_leak', 'on') or
-            is_state('binary_sensor.bathroom_water_leak_detector_water_leak', 'on') or
-            is_state('binary_sensor.kitchen_smoke_detector', 'on') or
-            is_state('binary_sensor.kitchen_gas_detector', 'on') or
-            is_state('binary_sensor.aircon_leak_detector', 'on')
-          }}
-        attributes:
-          active_sensors: >
-            {% set problems = [] %}
-            {% if is_state('binary_sensor.kitchen_smoke_detector', 'on') %}
-              {% set problems = problems + ['Smoke Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.kitchen_water_leak_detector_water_leak', 'on') %}
-              {% set problems = problems + ['Kitchen Leak Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.bathroom_water_leak_detector_water_leak', 'on') %}
-              {% set problems = problems + ['Bathroom Leak Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.aircon_leak_detector', 'on') %}
-              {% set problems = problems + ['Aircon Leak Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.kitchen_gas_detector', 'on') %}
-              {% set problems = problems + ['Gas Leak Detected'] %}
-            {% endif %}
-            {{ problems | join(', ') if problems else 'None' }}
+command_line:
+- sensor:
+    name: Frigate Daily Report Data
+    unique_id: frigate_daily_report_data
+    command: "sh /config/www/frigate_daily.sh"
+    scan_interval: 3600
+    value_template: "{{ value_json.count }}"
+    json_attributes:
+    - events
+    - count
+shell_command:
+  frigate_log_reset: "echo '' > /config/www/frigate_daily_log.txt"
+  frigate_log_append: "sh /config/www/frigate_log_append.sh '{{ camera }}' '{{ summary
+    }}'"

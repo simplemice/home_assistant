@@ -30,3 +30,4 @@ timer:
     name: "Laundry Timer"
     icon: mdi:washing-machine
     duration: "00:02:30"
+    restore: true

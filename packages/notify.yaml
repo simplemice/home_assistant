@@ -52,11 +52,12 @@ input_boolean:
 #    engine: neural
 
 notify:
-  - name: simplemice
+  - name: mice_group_notification
     platform: group
     services:
       - service: mobile_app_micemob
       - service: telegram_log_channel
+      - service: livingroom_tv
 
   - name: TvOverlayNotify
     platform: rest

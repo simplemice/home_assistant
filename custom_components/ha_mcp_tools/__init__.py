@@ -10,11 +10,13 @@ import errno
 import fnmatch
 import logging
 import os
-import re
+import posixpath
+import secrets
 import shutil
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from io import StringIO
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import voluptuous as vol
@@ -27,15 +29,21 @@ from homeassistant.core import (
     SupportsResponse,
 )
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.storage import Store
+from homeassistant.loader import async_get_integration
 from ruamel.yaml import YAMLError
 
 from .const import (
     ALLOWED_READ_DIRS,
+    ALLOWED_VOLUME_ROOTS,
     ALLOWED_WRITE_DIRS,
     ALLOWED_YAML_CONFIG_FILES,
     ALLOWED_YAML_KEYS,
     DASHBOARD_URL_PATH_PATTERN,
+    DENY_PATH_SEGMENTS,
+    DENY_READ_BASENAMES,
     DOMAIN,
+    PACKAGES_ONLY_YAML_KEYS,
     RESERVED_DASHBOARD_URL_PATHS,
     YAML_KEY_DEFAULT_POST_ACTION,
     YAML_KEY_POST_ACTIONS,
@@ -50,6 +58,27 @@ SERVICE_READ_FILE = "read_file"
 SERVICE_WRITE_FILE = "write_file"
 SERVICE_DELETE_FILE = "delete_file"
 SERVICE_EDIT_YAML_CONFIG = "edit_yaml_config"
+SERVICE_GET_CALLER_TOKEN = "get_caller_token"
+SERVICE_GET_ALLOWED_PATHS = "get_allowed_paths"
+SERVICE_SET_ALLOWED_PATHS = "set_allowed_paths"
+
+# Caller-token auth (PR: restrict ha_mcp_tools.* to ha-mcp callers).
+# ha-mcp injects this field in every service-call payload; non-ha-mcp callers
+# (HA UI, automations, other integrations, the ha_call_service LLM bypass)
+# omit it and are rejected with a structured unauthorized response.
+CALLER_TOKEN_FIELD = "_ha_mcp_token"
+_TOKEN_STORAGE_KEY = f"{DOMAIN}_auth"
+_TOKEN_STORAGE_VERSION = 1
+_HASS_DATA_TOKEN_KEY = "caller_token"
+
+# User-configurable extra read/write directories (issue #1567). Persisted in a
+# SEPARATE Store from the caller token so a corrupt/edited allowlist can never
+# affect token bootstrap, and the security credential is never mixed with user
+# config. Loaded into hass.data at setup and updated in place by
+# set_allowed_paths so enforcement picks up changes with no HA restart.
+_ALLOWED_PATHS_STORAGE_KEY = f"{DOMAIN}_allowed_paths"
+_ALLOWED_PATHS_STORAGE_VERSION = 1
+_HASS_DATA_ALLOWED_PATHS_KEY = "allowed_paths"
 
 # Service schemas
 SERVICE_EDIT_YAML_CONFIG_SCHEMA = vol.Schema(
@@ -59,6 +88,17 @@ SERVICE_EDIT_YAML_CONFIG_SCHEMA = vol.Schema(
         vol.Required("yaml_path"): cv.string,
         vol.Optional("content"): cv.string,
         vol.Optional("backup", default=True): cv.boolean,
+        # Caller-provided list of PACKAGES_ONLY_YAML_KEYS that the
+        # caller wants the component to reject. Empty list (the
+        # default) means no extra restrictions on top of the
+        # component's existing allowlist. ha-mcp populates this from
+        # its per-key Settings flags so the wrapper and the component
+        # stay symmetric — if ha-mcp's flag is off, the component also
+        # refuses, defending against bypass attempts.
+        vol.Optional("disabled_packages_keys", default=list): vol.All(
+            cv.ensure_list, [cv.string]
+        ),
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
     }
 )
 
@@ -66,6 +106,7 @@ SERVICE_LIST_FILES_SCHEMA = vol.Schema(
     {
         vol.Required("path"): cv.string,
         vol.Optional("pattern"): cv.string,
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
     }
 )
 
@@ -73,6 +114,7 @@ SERVICE_READ_FILE_SCHEMA = vol.Schema(
     {
         vol.Required("path"): cv.string,
         vol.Optional("tail_lines"): vol.Coerce(int),
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
     }
 )
 
@@ -82,12 +124,42 @@ SERVICE_WRITE_FILE_SCHEMA = vol.Schema(
         vol.Required("content"): cv.string,
         vol.Optional("overwrite", default=False): cv.boolean,
         vol.Optional("create_dirs", default=True): cv.boolean,
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
     }
 )
 
 SERVICE_DELETE_FILE_SCHEMA = vol.Schema(
     {
         vol.Required("path"): cv.string,
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
+    }
+)
+
+# get_caller_token is the bootstrap surface: ha-mcp does not know the token
+# yet on first run, so this service intentionally does NOT require the token
+# itself. HA's default admin-auth still applies to the service call.
+SERVICE_GET_CALLER_TOKEN_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
+    }
+)
+
+# get_allowed_paths / set_allowed_paths back the ha-mcp settings UI's custom
+# filesystem-directory editor (issues #1567, #1586). Both are caller-token +
+# admin gated. set_allowed_paths receives the FULL replacement list (mirrors how
+# disabled_packages_keys sends the whole set each call); the handler validates
+# and drops any entry that hits the deny floor, or that escapes the config dir
+# without being one of the fixed HAOS sibling-volume roots (#1586).
+SERVICE_GET_ALLOWED_PATHS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
+    }
+)
+
+SERVICE_SET_ALLOWED_PATHS_SCHEMA = vol.Schema(
+    {
+        vol.Optional("paths", default=list): vol.All(cv.ensure_list, [cv.string]),
+        vol.Optional(CALLER_TOKEN_FIELD): cv.string,
     }
 )
 
@@ -105,10 +177,414 @@ ALLOWED_READ_FILES = [
 DEFAULT_LOG_TAIL_LINES = 1000
 
 
+async def _load_or_create_caller_token(hass: HomeAssistant) -> str:
+    """Return the persisted caller token, generating + saving one on first use.
+
+    The token authorizes a caller as ha-mcp. It's stored under
+    ``.storage/ha_mcp_tools_auth`` and remains stable across restarts so the
+    ha-mcp server can re-bootstrap without user intervention.
+
+    A corrupt/unreadable store must NOT propagate out of async_setup_entry and
+    take down the integration: on a load failure we log and fall through to
+    generating a fresh token (same path as first run), overwriting the bad
+    blob. ha-mcp transparently re-bootstraps the new token via its
+    unauthorized-retry, so the only cost is a one-time token rotation.
+    """
+    store: Store = Store(hass, _TOKEN_STORAGE_VERSION, _TOKEN_STORAGE_KEY)
+    try:
+        data = await store.async_load()
+    except Exception:
+        _LOGGER.warning(
+            "ha_mcp_tools: could not load the caller-token store; generating a "
+            "fresh token and overwriting it.",
+            exc_info=True,
+        )
+        data = None
+    if isinstance(data, dict):
+        existing = data.get("token")
+        if isinstance(existing, str) and existing:
+            return existing
+    token = secrets.token_urlsafe(32)
+    await store.async_save({"token": token})
+    return token
+
+
+async def _load_allowed_paths(hass: HomeAssistant) -> list[str]:
+    """Return the persisted user-configurable extra directories.
+
+    Each stored entry is re-validated through :func:`_normalize_extra_dir`, so a
+    hand-edited or corrupted store can never load a traversal / deny-floor /
+    out-of-config entry into ``hass.data`` (defense in depth — the deny floor is
+    also re-checked at enforcement time). Anything dropped is logged so a
+    "my custom directories disappeared" case is one grep away. Empty list on
+    first run or a malformed store — fail safe to "no extra access" rather than
+    raising, mirroring :func:`_load_or_create_caller_token`.
+    """
+    store: Store = Store(
+        hass, _ALLOWED_PATHS_STORAGE_VERSION, _ALLOWED_PATHS_STORAGE_KEY
+    )
+    try:
+        data = await store.async_load()
+    except Exception:
+        # Honour the documented fail-safe contract: a corrupt/unreadable
+        # allowed-paths blob must NOT propagate out of async_setup_entry and
+        # take down the integration. Log loudly and fall back to no extra
+        # access.
+        _LOGGER.warning(
+            "ha_mcp_tools: could not load the allowed-paths store; ignoring it "
+            "and granting no extra directories.",
+            exc_info=True,
+        )
+        return []
+    if not isinstance(data, dict):
+        return []
+    raw = data.get("paths")
+    if not isinstance(raw, list):
+        if raw is not None:
+            _LOGGER.warning(
+                "ha_mcp_tools allowed-paths store is malformed (paths is %s, "
+                "expected list); ignoring it.",
+                type(raw).__name__,
+            )
+        return []
+    config_dir = Path(hass.config.config_dir)
+    normalized: list[str] = []
+    dropped: list[Any] = []
+    for entry in raw:
+        norm = (
+            _normalize_extra_dir(entry, config_dir) if isinstance(entry, str) else None
+        )
+        if norm is None:
+            dropped.append(entry)
+        elif norm not in normalized:
+            normalized.append(norm)
+    if dropped:
+        _LOGGER.warning(
+            "ha_mcp_tools: dropped %d invalid entr%s from the persisted "
+            "allowed-paths store: %r",
+            len(dropped),
+            "y" if len(dropped) == 1 else "ies",
+            dropped,
+        )
+    return normalized
+
+
+async def _save_allowed_paths(hass: HomeAssistant, paths: list[str]) -> None:
+    """Persist the user-configurable extra directories to .storage."""
+    store: Store = Store(
+        hass, _ALLOWED_PATHS_STORAGE_VERSION, _ALLOWED_PATHS_STORAGE_KEY
+    )
+    await store.async_save({"paths": paths})
+
+
+def _unauthorized_response(service_name: str, **extra: Any) -> dict[str, Any]:
+    """Structured 'unauthorized' response.
+
+    ha-mcp clients detect this via ``error_code == "unauthorized"`` and
+    re-fetch the token before retrying.
+    """
+    return {
+        "success": False,
+        "error": (
+            f"Unauthorized: caller token missing or invalid for "
+            f"{DOMAIN}.{service_name}. This service is restricted to the "
+            "ha-mcp server; other callers should not invoke it directly."
+        ),
+        "error_code": "unauthorized",
+        **extra,
+    }
+
+
+def _caller_token_ok(hass: HomeAssistant, call: ServiceCall) -> bool:
+    """Return True if the caller presented the configured token."""
+    domain_data = hass.data.get(DOMAIN)
+    expected = (
+        domain_data.get(_HASS_DATA_TOKEN_KEY) if isinstance(domain_data, dict) else None
+    )
+    presented = call.data.get(CALLER_TOKEN_FIELD)
+    # token_urlsafe(32) is 256-bit; the timing-side-channel risk is already
+    # negligible, but secrets.compare_digest is the right reflex regardless.
+    if not isinstance(expected, str) or not isinstance(presented, str):
+        return False
+    return secrets.compare_digest(expected, presented)
+
+
+async def _caller_is_admin(hass: HomeAssistant, call: ServiceCall) -> bool:
+    """Return True if the caller is an admin user (or a no-user-context call).
+
+    HA's service registry has no built-in admin requirement — `Service`
+    has no admin flag, `async_call` performs no permission check, and
+    WS / REST `call_service` lack `@require_admin`. Gate explicitly here.
+
+    Calls without `context.user_id` (system-internal events) are treated
+    as trusted, matching HA's `async_admin_handler_factory` convention.
+    The supported deployment shapes all use admin tokens: addon's
+    SUPERVISOR_TOKEN maps to HA's `hassio_user`, which HA force-promotes
+    into `GROUP_ID_ADMIN` (hassio/__init__.py); standalone Docker/pip
+    deployments use a user-supplied admin LLAT.
+    """
+    if not call.context.user_id:
+        return True
+    user = await hass.auth.async_get_user(call.context.user_id)
+    return user is not None and bool(user.is_admin)
+
+
+def _is_within_config_dir(config_dir: Path, normalized: str) -> bool:
+    """Resolve ``config_dir / normalized`` and confirm it stays within
+    ``config_dir`` (symlink-aware).
+
+    Uses ``Path.is_relative_to`` rather than a string prefix so a sibling like
+    ``<config>-evil`` can't masquerade as being inside the config dir. Fails
+    closed on any resolution error.
+    """
+    try:
+        resolved = (config_dir / normalized).resolve()
+        config_resolved = config_dir.resolve()
+    except (OSError, ValueError):
+        return False
+    return resolved == config_resolved or resolved.is_relative_to(config_resolved)
+
+
+def _violates_deny_floor(config_dir: Path, normalized: str) -> bool:
+    """True if ``normalized`` (a ``normpath``'d, config-relative path) hits the
+    non-overridable deny floor (issue #1567).
+
+    Checked BEFORE any allow decision on every read/write/list/delete, so a
+    user-configured extra directory — whether stored or supplied in-flight —
+    can never reach these locations. See ``const.DENY_PATH_SEGMENTS`` /
+    ``const.DENY_READ_BASENAMES`` for the rationale.
+    """
+    # All comparisons are case-insensitive: on a case-insensitive filesystem
+    # (macOS APFS, some Docker bind mounts / SMB) ".STORAGE" opens the real
+    # ".storage", so an exact-case match would let a mixed-case entry slip
+    # through. The deny sets are already lowercase, so lowering the input is
+    # enough. This only ever denies MORE — no legitimate path is a case-variant
+    # of ".storage"/"secrets.yaml".
+    parts = [p for p in normalized.split(os.sep) if p]
+    # A .storage segment anywhere in the relative path (".storage",
+    # ".storage/auth", "x/.storage/y").
+    if any(p.lower() in DENY_PATH_SEGMENTS for p in parts):
+        return True
+    # Symlink defence: resolve and reject if the real target passes THROUGH a
+    # denied segment (e.g. an in-config symlink pointing at .storage). Scan ONLY
+    # the portion of the resolved path that is *under the config dir* — not the
+    # full absolute path — so the floor doesn't blanket-ban every access when the
+    # config dir itself happens to live below a ".storage" component (e.g.
+    # ``/var/.storage/config``). This mirrors the pre-PR allowlist model, which
+    # likewise only ever reasons about the config-relative path. ``relative_to``
+    # raising ValueError means the resolved target escaped the config dir (e.g. a
+    # symlink out) — fail closed. Fail closed on any resolution error too.
+    try:
+        resolved = (config_dir / normalized).resolve()
+        rel_parts = resolved.relative_to(config_dir.resolve()).parts
+    except (OSError, ValueError):
+        return True
+    if any(seg.lower() in DENY_PATH_SEGMENTS for seg in rel_parts):
+        return True
+    # secrets.yaml — by basename of BOTH the requested path AND the resolved
+    # target, so a renamed symlink (``www/notes.txt`` → ``secrets.yaml``) can't
+    # dodge it and then escape masking (the read handler masks only the literal
+    # ``secrets.yaml``). The canonical config-root file is the one exception,
+    # matched EXACTLY (not lowercased) because that is the only path the handler
+    # masks — a mixed-case ``SECRETS.YAML`` at the root is NOT masked, so it
+    # must be denied.
+    return (
+        os.path.basename(normalized).lower() in DENY_READ_BASENAMES
+        or resolved.name.lower() in DENY_READ_BASENAMES
+    ) and normalized != "secrets.yaml"
+
+
+def _volume_root_for(abs_path: str) -> str | None:
+    """Return the HAOS sibling-volume root (``const.ALLOWED_VOLUME_ROOTS``) that
+    ``abs_path`` falls within, or ``None`` (issue #1586).
+
+    Boundary-aware on a path-separator: ``/share`` and ``/share/x`` match
+    ``/share``; ``/shared`` and ``/backups`` do NOT (a string-prefix match would
+    wrongly admit them). ``abs_path`` must already be ``posixpath.normpath``'d —
+    the volume roots are inherently POSIX and the component only runs on HA Core
+    (Linux), so we never use the host ``os.sep`` here.
+    """
+    for root in ALLOWED_VOLUME_ROOTS:
+        if abs_path == root or abs_path.startswith(root + "/"):
+            return root
+    return None
+
+
+def _resolves_within(base: Path, raw_path: str) -> bool:
+    """Resolve ``raw_path`` exactly as ``open(2)`` will — following symlinks,
+    THEN applying ``..`` against the real target — and confirm it stays within
+    ``base`` (symlink-safe containment; issue #1586 review).
+
+    The lexical allow checks run on ``os.path.normpath(raw_path)``, which
+    collapses ``..`` *textually* and so erases an intermediate symlink component
+    (``<allowed>/<symlink>/..``) that the kernel would actually traverse at open
+    time — the divergence that let a configured volume reach arbitrary files.
+    Resolving the RAW input (not the normpath-collapsed form) closes it, because
+    the handlers open ``config_dir / raw_path`` and the OS resolves it the same
+    way ``Path.resolve()`` does. Fails closed on any resolution error.
+    """
+    try:
+        candidate = Path(raw_path) if raw_path.startswith("/") else base / raw_path
+        real = candidate.resolve()
+        base_real = base.resolve()
+    except (OSError, ValueError):
+        return False
+    return real == base_real or real.is_relative_to(base_real)
+
+
+def _violates_volume_deny_floor(abs_path: str) -> bool:
+    """True if an absolute HAOS volume path hits the non-overridable deny floor
+    (issue #1586).
+
+    The same floor as the config dir — a ``.storage`` segment anywhere, or a
+    ``secrets.yaml`` basename — applied to both the requested path and its
+    symlink-resolved target, case-insensitively. Unlike the config dir there is
+    NO canonical ``secrets.yaml`` exception: volume reads are never masked, so a
+    ``secrets.yaml`` on any volume is always denied. Fails closed on any
+    resolution error.
+    """
+    req = PurePosixPath(abs_path)
+    if any(seg.lower() in DENY_PATH_SEGMENTS for seg in req.parts):
+        return True
+    if req.name.lower() in DENY_READ_BASENAMES:
+        return True
+    try:
+        resolved = Path(abs_path).resolve()
+    except (OSError, ValueError):
+        return True
+    if any(seg.lower() in DENY_PATH_SEGMENTS for seg in resolved.parts):
+        return True
+    return resolved.name.lower() in DENY_READ_BASENAMES
+
+
+def _normalize_volume_dir(entry: str) -> str | None:
+    """Validate one absolute HAOS sibling-volume directory (issue #1586).
+
+    Returns the cleaned absolute path, or ``None`` if it is not at/under a known
+    volume root or hits the deny floor. POSIX-normalized regardless of host OS
+    (the roots are inherently POSIX and the component only runs on HA Core).
+    Existence is NOT required (mirrors config-relative extra dirs); an unmounted
+    volume just yields ``not found`` at use time.
+    """
+    normalized = posixpath.normpath(entry)
+    root = _volume_root_for(normalized)
+    if root is None:
+        return None
+    if _violates_volume_deny_floor(normalized):
+        return None
+    return normalized
+
+
+def _is_volume_path_allowed(abs_path: str, extra_dirs: list[str] | None) -> bool:
+    """Enforce a read/write/list/delete against an absolute HAOS volume path
+    (issue #1586).
+
+    Allowed iff the path is at/under a configured extra dir that is itself a
+    volume path, clears the deny floor, and — after FULL symlink + ``..``
+    resolution of the RAW path (matching ``open(2)``) — stays within its volume
+    root. Resolving the raw path rather than the lexically ``normpath``'d form
+    closes the ``<volume>/<symlink>/..`` escape (issue #1586 review). Read and
+    write share this gate — a configured volume grants read+write (#1567).
+    """
+    normalized = posixpath.normpath(abs_path)
+    root = _volume_root_for(normalized)
+    if root is None:
+        return False
+    if _violates_volume_deny_floor(normalized):
+        return False
+    # POSIX-explicit allowlist match (not _matches_extra_dir, which joins on
+    # os.sep): a volume path is inherently "/"-separated, so match on a "/"
+    # boundary so a configured "/share" grants "/share" and "/share/..." but
+    # never "/shared". Config-relative entries in the mixed list never match an
+    # absolute path here.
+    if not extra_dirs or not any(
+        normalized == d or normalized.startswith(d + "/") for d in extra_dirs
+    ):
+        return False
+    return _resolves_within(Path(root), abs_path)
+
+
+def _normalize_extra_dir(entry: str, config_dir: Path) -> str | None:
+    """Validate and normalize one user-supplied extra directory (issues #1567,
+    #1586).
+
+    Returns the cleaned directory, or ``None`` if the entry must be rejected.
+    Two accepted shapes:
+
+    * A config-relative directory (issue #1567) — rejected if empty, the config
+      root, uses ``..`` traversal, resolves outside the config dir, or hits the
+      deny floor.
+    * An absolute HAOS sibling-volume path (issue #1586) — kept absolute and
+      validated against its volume root (``const.ALLOWED_VOLUME_ROOTS``) instead
+      of the config dir. Any other absolute path is still rejected.
+
+    Rejected entries are dropped (mirrors the filter-to-known-good discipline
+    used for ``disabled_packages_keys``).
+    """
+    if not isinstance(entry, str):
+        return None
+    stripped = entry.strip()
+    if not stripped:
+        return None
+    # Absolute HAOS sibling-volume path (issue #1586) — validated against its
+    # volume root, not the config dir. Detected by a POSIX-absolute leading "/"
+    # (not os.path.isabs, which is False for "/share" on a non-POSIX host) so the
+    # logic is identical on every OS the tests run on. Any non-volume absolute
+    # path is rejected inside _normalize_volume_dir.
+    if stripped.startswith("/"):
+        return _normalize_volume_dir(stripped)
+    cleaned = stripped.strip("/")
+    if not cleaned:
+        return None
+    normalized = os.path.normpath(cleaned)
+    if (
+        normalized in (".", "")
+        or normalized.startswith("..")
+        or normalized.startswith("/")
+    ):
+        return None
+    if not _is_within_config_dir(config_dir, normalized):
+        return None
+    if _violates_deny_floor(config_dir, normalized):
+        return None
+    return normalized
+
+
+def _matches_extra_dir(normalized: str, extra_dirs: list[str] | None) -> bool:
+    """True if ``normalized`` IS one of the user-configured extra directories
+    or a path under one (issue #1567).
+
+    Prefix match on a path-separator boundary so a multi-segment entry like
+    ``foo/bar`` grants ``foo/bar`` and ``foo/bar/...`` exactly as configured
+    (the built-in allowlists are single-segment and matched on ``parts[0]``,
+    but extra dirs may be nested), while ``foo`` never matches ``foobar``.
+    """
+    if not extra_dirs:
+        return False
+    return any(normalized == d or normalized.startswith(d + os.sep) for d in extra_dirs)
+
+
 def _is_path_allowed_for_dir(
-    config_dir: Path, rel_path: str, allowed_dirs: list[str]
+    config_dir: Path,
+    rel_path: str,
+    allowed_dirs: list[str],
+    extra_dirs: list[str] | None = None,
 ) -> bool:
-    """Check if a path is within allowed directories."""
+    """Check if a path is within allowed directories.
+
+    ``extra_dirs`` are the user-configured custom directories (issue #1567),
+    granted in addition to ``allowed_dirs``. The non-overridable deny floor is
+    checked first, so a custom directory can never grant access to ``.storage``
+    or other floored paths.
+    """
+    # Absolute HAOS sibling-volume path (issue #1586) — enforced against its
+    # volume root rather than the config dir. Detected by a POSIX-absolute
+    # leading "/" and passed RAW (not normpath'd) so symlink resolution matches
+    # what the handler's open() does. Any non-volume absolute path is rejected
+    # inside the helper.
+    if rel_path.startswith("/"):
+        return _is_volume_path_allowed(rel_path, extra_dirs)
+
     # Normalize the path
     normalized = os.path.normpath(rel_path)
 
@@ -116,29 +592,52 @@ def _is_path_allowed_for_dir(
     if normalized.startswith("..") or normalized.startswith("/"):
         return False
 
-    # Check if path starts with an allowed directory
+    # NON-OVERRIDABLE deny floor — before any allow decision (issue #1567).
+    if _violates_deny_floor(config_dir, normalized):
+        return False
+
+    # Built-in allowlist matches on the first segment; user-configured extra
+    # dirs match on a path-boundary prefix (so nested entries work).
     parts = normalized.split(os.sep)
-    if not parts or parts[0] not in allowed_dirs:
+    builtin_ok = bool(parts) and parts[0] in allowed_dirs
+    if not builtin_ok and not _matches_extra_dir(normalized, extra_dirs):
+        return False
+
+    # Symlink-safe containment on the REAL path the handler will open (issue
+    # #1586 review): resolve the RAW rel_path — open(2) follows symlinks then
+    # applies "..", which the lexical normpath above cannot model — and confirm
+    # it stays under the config dir. Closes the `<allowed>/<symlink>/../escape`
+    # traversal the lexical checks miss.
+    if not _resolves_within(config_dir, rel_path):
         return False
 
     # Resolve full path and verify it's still under config_dir
-    full_path = config_dir / normalized
-    try:
-        resolved = full_path.resolve()
-        config_resolved = config_dir.resolve()
-        return str(resolved).startswith(str(config_resolved))
-    except (OSError, ValueError):
-        return False
+    return _is_within_config_dir(config_dir, normalized)
 
 
-def _is_path_allowed_for_read(config_dir: Path, rel_path: str) -> bool:
+def _is_path_allowed_for_read(
+    config_dir: Path, rel_path: str, extra_dirs: list[str] | None = None
+) -> bool:
     """Check if a path is allowed for reading.
 
     Allowed:
     - Files directly in config dir: configuration.yaml, automations.yaml, etc.
     - Files in allowed directories: www/, themes/, custom_templates/
     - Files matching patterns: packages/*.yaml, custom_components/**/*.py
+    - User-configured extra directories (``extra_dirs``), granted read+write
+      (issue #1567)
+
+    The non-overridable deny floor is checked first, so a custom directory can
+    never reach ``.storage`` or an unmasked ``secrets.yaml``.
     """
+    # Absolute HAOS sibling-volume path (issue #1586) — enforced against its
+    # volume root rather than the config dir. Detected by a POSIX-absolute
+    # leading "/" and passed RAW so symlink resolution matches the handler's
+    # open(). A configured volume grants read too, so reads route through the
+    # same gate as dir/write.
+    if rel_path.startswith("/"):
+        return _is_volume_path_allowed(rel_path, extra_dirs)
+
     normalized = os.path.normpath(rel_path)
 
     # Check for path traversal attempts
@@ -146,13 +645,17 @@ def _is_path_allowed_for_read(config_dir: Path, rel_path: str) -> bool:
         return False
 
     # Resolve full path and verify it's still under config_dir
-    full_path = config_dir / normalized
-    try:
-        resolved = full_path.resolve()
-        config_resolved = config_dir.resolve()
-        if not str(resolved).startswith(str(config_resolved)):
-            return False
-    except (OSError, ValueError):
+    if not _is_within_config_dir(config_dir, normalized):
+        return False
+
+    # NON-OVERRIDABLE deny floor — before any allow decision (issue #1567).
+    if _violates_deny_floor(config_dir, normalized):
+        return False
+
+    # Symlink-safe containment on the REAL path the handler will open (issue
+    # #1586 review): resolve the RAW rel_path so a `<allowed>/<symlink>/..` that
+    # lexically stays inside but physically escapes is rejected.
+    if not _resolves_within(config_dir, rel_path):
         return False
 
     # Check if it's one of the explicitly allowed files in config root
@@ -164,43 +667,52 @@ def _is_path_allowed_for_read(config_dir: Path, rel_path: str) -> bool:
     if parts and parts[0] in ALLOWED_READ_DIRS:
         return True
 
-    # Check for packages/*.yaml pattern
+    # Check for packages/*.yaml pattern. ``fnmatch``'s ``*`` matches
+    # ``/`` too, so this pattern alone covers nested paths
+    # (``packages/sub/foo.yaml``) — no explicit recursive variant
+    # needed.
     if fnmatch.fnmatch(normalized, "packages/*.yaml"):
-        return True
-    if fnmatch.fnmatch(normalized, "packages/**/*.yaml"):
         return True
 
     # Check for custom_components/**/*.py pattern
-    return fnmatch.fnmatch(normalized, "custom_components/**/*.py")
+    if fnmatch.fnmatch(normalized, "custom_components/**/*.py"):
+        return True
+
+    # User-configured extra directories (read+write) — issue #1567. Prefix
+    # match so nested entries (e.g. "foo/bar") grant paths under them.
+    return _matches_extra_dir(normalized, extra_dirs)
 
 
 def _mask_secrets_content(content: str) -> str:
-    """Mask secret values in secrets.yaml content.
+    """Return secrets.yaml content with every secret value masked.
 
-    Replaces actual values with [MASKED] to prevent leaking sensitive data.
+    Parses the document structurally (ruamel — the same YAML stack used
+    elsewhere in this component) and emits ``key: [MASKED]`` for each top-level
+    key. This closes the gap in the previous line-by-line regex, which masked
+    only single-line ``key: value`` pairs and leaked multi-line block scalars
+    (``|``, ``>``) whose continuation lines have no colon — SSH keys, TLS
+    material, and service-account JSON are commonly stored that way.
+
+    Fails closed: any content that cannot be parsed and masked as a key-value
+    mapping is withheld rather than returned raw, so a failure on this path never
+    leaks secrets. The catch is deliberately broad — masking is a security
+    boundary, so every failure mode (parse error, a pathological tag constructor,
+    a YAML init/threading error) must withhold, not propagate to the caller with
+    the raw content still in scope.
     """
-    # Pattern to match YAML key-value pairs
-    # Handles: key: value, key: "value", key: 'value'
-    lines = content.split("\n")
-    masked_lines = []
-
-    for line in lines:
-        # Skip comments and empty lines
-        stripped = line.strip()
-        if stripped.startswith("#") or not stripped:
-            masked_lines.append(line)
-            continue
-
-        # Match key: value pattern
-        match = re.match(r"^(\s*)([^:\s]+)(\s*:\s*)(.+)$", line)
-        if match:
-            indent, key, separator, value = match.groups()
-            # Mask the value
-            masked_lines.append(f"{indent}{key}{separator}[MASKED]")
-        else:
-            masked_lines.append(line)
-
-    return "\n".join(masked_lines)
+    try:
+        parsed = make_yaml().load(content)
+        if not isinstance(parsed, dict):
+            # Empty file (None) or a top-level list/scalar: no top-level keys to
+            # mask, so withhold rather than risk returning unmasked content.
+            return (
+                "# secrets.yaml is empty or not a key-value mapping — content withheld"
+            )
+        return "\n".join(f"{key}: [MASKED]" for key in parsed)
+    except YAMLError:
+        return "# secrets.yaml could not be parsed — content withheld to avoid leaking secrets"
+    except Exception:
+        return "# secrets.yaml could not be masked — content withheld to avoid leaking secrets"
 
 
 def _validate_dashboard_filename(filename: str) -> str | None:
@@ -251,10 +763,17 @@ def _list_files_sync(
         if pattern and not fnmatch.fnmatch(item.name, pattern):
             continue
         stat = item.stat()
+        # Config-relative paths report relative to the config dir; absolute
+        # HAOS sibling-volume paths (issue #1586) are not under it, so report
+        # them absolute (the caller passes absolute paths for volumes too).
+        try:
+            reported_path = str(item.relative_to(config_dir))
+        except ValueError:
+            reported_path = str(item)
         files.append(
             {
                 "name": item.name,
-                "path": str(item.relative_to(config_dir)),
+                "path": reported_path,
                 "is_dir": item.is_dir(),
                 "size": stat.st_size if item.is_file() else 0,
                 "modified": stat.st_mtime,
@@ -289,9 +808,16 @@ def _write_file_sync(
     if create_dirs:
         target_file.parent.mkdir(parents=True, exist_ok=True)
     elif not target_file.parent.exists():
+        # Config-relative parents report relative to the config dir; an absolute
+        # HAOS sibling-volume parent (issue #1586) is not under it, so report it
+        # absolute rather than raising ValueError on relative_to.
+        try:
+            parent = str(target_file.parent.relative_to(config_dir))
+        except ValueError:
+            parent = str(target_file.parent)
         return {
             "_error": "no_parent",
-            "parent": str(target_file.parent.relative_to(config_dir)),
+            "parent": parent,
         }
     target_file.write_text(content)
     stat = target_file.stat()
@@ -309,7 +835,9 @@ def _delete_file_sync(target_file: Path) -> dict[str, Any]:
     return {"size": stat.st_size}
 
 
-def _build_edit_yaml_config_handler(hass):
+def _build_edit_yaml_config_handler(
+    hass: HomeAssistant,
+) -> Callable[[ServiceCall], Awaitable[dict[str, Any]]]:
     """Build and return the async handle_edit_yaml_config handler.
 
     Extracted to module level so it can be tested without registering
@@ -319,13 +847,24 @@ def _build_edit_yaml_config_handler(hass):
 
     async def handle_edit_yaml_config(call: ServiceCall) -> dict[str, Any]:
         """Handle the edit_yaml_config service call."""
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_EDIT_YAML_CONFIG)
         rel_path = call.data["file"]
         action = call.data["action"]
         yaml_path = call.data["yaml_path"]
         content = call.data.get("content")
         do_backup = call.data.get("backup", True)
+        # Caller-provided per-key opt-out for PACKAGES_ONLY_YAML_KEYS.
+        # Filter to the recognised set so a caller that types
+        # ``automatoin`` doesn't accidentally pass through; only
+        # actually-known keys count.
+        disabled_packages_keys = {
+            key
+            for key in call.data.get("disabled_packages_keys", [])
+            if key in PACKAGES_ONLY_YAML_KEYS
+        }
 
-        # Validate file path — only configuration.yaml and packages/*.yaml
+        # Validate file path — only configuration.yaml, packages/*.yaml, and themes/*.yaml
         normalized = os.path.normpath(rel_path)  # noqa: ASYNC240
         if normalized.startswith("..") or normalized.startswith("/"):
             return {
@@ -334,20 +873,63 @@ def _build_edit_yaml_config_handler(hass):
             }
 
         is_config_yaml = normalized in ALLOWED_YAML_CONFIG_FILES
-        is_package = fnmatch.fnmatch(normalized, "packages/*.yaml") or fnmatch.fnmatch(
-            normalized, "packages/**/*.yaml"
-        )
-        if not is_config_yaml and not is_package:
+        # ``fnmatch``'s ``*`` matches ``/`` too, so this single
+        # pattern covers both flat ``packages/foo.yaml`` and nested
+        # ``packages/sub/foo.yaml``. The recursive variant
+        # ``packages/**/*.yaml`` is mathematically a subset of this
+        # one (``**`` reduces to ``*`` in fnmatch), so it's omitted.
+        is_package = fnmatch.fnmatch(normalized, "packages/*.yaml")
+        is_theme = fnmatch.fnmatch(normalized, "themes/*.yaml")
+        if not is_config_yaml and not is_package and not is_theme:
             return {
                 "success": False,
                 "error": (
                     f"File '{rel_path}' is not allowed. "
-                    f"Only {', '.join(ALLOWED_YAML_CONFIG_FILES)} and packages/*.yaml are supported."
+                    f"Only {', '.join(ALLOWED_YAML_CONFIG_FILES)}, packages/*.yaml, and themes/*.yaml are supported."
+                ),
+            }
+
+        # ``themes/*.yaml`` matches dot-prefixed paths (fnmatch's ``*`` matches a
+        # leading ``.`` and spans ``/``), but HA's ``!include_dir_merge_named``
+        # loader skips them: ``annotatedyaml``'s ``_find_files`` filters every
+        # walked directory AND file basename through ``_is_file_valid`` (which
+        # is ``return not name.startswith(".")``), so a dot-prefixed file
+        # (``themes/.hidden.yaml``) OR directory (``themes/.foo/bar.yaml``) is
+        # pruned and the theme never loads — a phantom ``reload_performed``.
+        # Reject if any path segment is dot-prefixed, mirroring the loader,
+        # rather than only checking the basename.
+        if is_theme and any(seg.startswith(".") for seg in normalized.split("/")):
+            return {
+                "success": False,
+                "error": (
+                    f"Theme path '{rel_path}' has a dot-prefixed file or "
+                    "directory segment. Home Assistant's !include_dir_merge_named "
+                    "skips any path segment whose name starts with '.', so it "
+                    "would never load. Use a path with no dot-prefixed segment."
+                ),
+            }
+
+        # Per-key gate fires only for packages/*.yaml writes. Writes to
+        # configuration.yaml fall through to ``_parse_and_validate_yaml_path``
+        # which rejects PACKAGES_ONLY_YAML_KEYS with the storage-mode-
+        # tools advisory regardless of this flag.
+        top_segment = yaml_path.split(".", 1)[0] if yaml_path else ""
+        if is_package and top_segment in disabled_packages_keys:
+            return {
+                "success": False,
+                "error": (
+                    f"yaml_path key {top_segment!r} is disabled by the "
+                    f"caller's runtime configuration. Re-enable it in the "
+                    f"caller (the ha-mcp Server Settings → YAML config "
+                    f"editing → 'Allow {top_segment} in packages/*.yaml' "
+                    f"toggle), or use the storage-mode equivalent."
                 ),
             }
 
         # Parse and validate yaml_path (replaces the old ALLOWED_YAML_KEYS check)
-        kind, path_parts, path_err = _parse_and_validate_yaml_path(yaml_path)
+        kind, path_parts, path_err = _parse_and_validate_yaml_path(
+            yaml_path, is_package=is_package, is_theme=is_theme
+        )
         if path_err is not None:
             return {"success": False, "error": path_err}
 
@@ -372,6 +954,12 @@ def _build_edit_yaml_config_handler(hass):
                 return {
                     "success": False,
                     "error": "Content parsed as null/empty. Provide non-empty YAML.",
+                }
+            # Theme content must be a YAML mapping (theme variables)
+            if kind == "theme" and not isinstance(parsed_content, dict):
+                return {
+                    "success": False,
+                    "error": "Theme content must be a YAML mapping (theme variables).",
                 }
 
         target_file = config_dir / normalized
@@ -487,8 +1075,12 @@ def _build_edit_yaml_config_handler(hass):
                         del data["lovelace"]
 
             else:
-                # Single-key apply logic
+                # Single-key apply logic, shared by plain config keys and
+                # theme names (kind == "theme"): a theme file is a mapping of
+                # theme-name -> variables, and theme content is pre-validated
+                # as a mapping above, so the list-merge arm never fires for it.
                 yaml_key = path_parts[0]
+                label = "Theme" if kind == "theme" else "Key"
                 if action == "add":
                     if yaml_key in data:
                         existing = data[yaml_key]
@@ -505,7 +1097,7 @@ def _build_edit_yaml_config_handler(hass):
                             return {
                                 "success": False,
                                 "error": (
-                                    f"Type mismatch for key '{yaml_key}': "
+                                    f"Type mismatch for {label.lower()} '{yaml_key}': "
                                     f"existing is {type(existing).__name__}, "
                                     f"new content is {type(parsed_content).__name__}. "
                                     "Use action='replace' to overwrite."
@@ -519,7 +1111,7 @@ def _build_edit_yaml_config_handler(hass):
                     if yaml_key not in data:
                         return {
                             "success": False,
-                            "error": f"Key '{yaml_key}' not found in '{rel_path}'.",
+                            "error": f"{label} '{yaml_key}' not found in '{rel_path}'.",
                         }
                     del data[yaml_key]
 
@@ -583,6 +1175,29 @@ def _build_edit_yaml_config_handler(hass):
             # Surface the post-edit action required to activate the change
             if kind == "lovelace_dashboard":
                 post_info = {"post_action": "restart_required"}
+            elif kind == "theme":
+                # Trigger frontend.reload_themes to load the theme change
+                try:
+                    await hass.services.async_call(
+                        "frontend",
+                        "reload_themes",
+                        {},
+                        blocking=True,
+                    )
+                    post_info = {
+                        "post_action": "reload_performed",
+                        "reload_service": "frontend.reload_themes",
+                    }
+                except Exception as reload_err:
+                    post_info = {
+                        "post_action": "reload_available",
+                        "reload_service": "frontend.reload_themes",
+                        "reload_error": str(reload_err),
+                    }
+                    _LOGGER.warning(
+                        "frontend.reload_themes failed after theme edit: %s",
+                        reload_err,
+                    )
             else:
                 post_info = YAML_KEY_POST_ACTIONS.get(
                     path_parts[0], YAML_KEY_DEFAULT_POST_ACTION
@@ -635,12 +1250,18 @@ def _build_edit_yaml_config_handler(hass):
 
 def _parse_and_validate_yaml_path(
     yaml_path: str,
+    *,
+    is_package: bool = False,
+    is_theme: bool = False,
 ) -> tuple[str, tuple[str, ...], str | None]:
     """Parse and validate a yaml_path argument.
 
-    Two accepted shapes:
+    Three accepted shapes:
     1. Single segment in ALLOWED_YAML_KEYS -> kind='single'
+       When ``is_package=True``, single segments in PACKAGES_ONLY_YAML_KEYS
+       (automation, script, scene) are also accepted.
     2. Exactly 'lovelace.dashboards.<url_path>' -> kind='lovelace_dashboard'
+    3. Single segment theme name (no dots) when ``is_theme=True`` -> kind='theme'
 
     Returns (kind, parts, error). On error, kind is '' and parts is ().
     """
@@ -649,17 +1270,54 @@ def _parse_and_validate_yaml_path(
 
     parts = tuple(yaml_path.split("."))
 
+    # Shape 3: theme name (single segment, no dots)
+    if is_theme:
+        if len(parts) == 1:
+            return "theme", parts, None
+        return (
+            "",
+            (),
+            (
+                f"Theme name '{yaml_path}' cannot contain dots. "
+                "Provide a simple theme name (e.g., 'my-theme', not 'my.theme')."
+            ),
+        )
+
     # Shape 1: single key
     if len(parts) == 1:
         key = parts[0]
         if key in ALLOWED_YAML_KEYS:
             return "single", parts, None
+        if is_package and key in PACKAGES_ONLY_YAML_KEYS:
+            return "single", parts, None
+        # Reaching here means the key was not accepted. If it is a
+        # PACKAGES_ONLY key, we know is_package=False (otherwise the
+        # preceding branch would have returned) — emit the targeted
+        # "move it to a package file" guidance instead of the generic
+        # allowlist dump below.
+        if key in PACKAGES_ONLY_YAML_KEYS:
+            return (
+                "",
+                (),
+                (
+                    f"Key '{yaml_path}' is only allowed in packages/*.yaml "
+                    "files, not in configuration.yaml. Move the edit to a "
+                    "package file (e.g., packages/automations.yaml) or use "
+                    "ha_config_set_automation, ha_config_set_script, or "
+                    "ha_config_set_scene for storage-mode."
+                ),
+            )
+        allowed = (
+            ALLOWED_YAML_KEYS | PACKAGES_ONLY_YAML_KEYS
+            if is_package
+            else ALLOWED_YAML_KEYS
+        )
         return (
             "",
             (),
             (
                 f"Key '{yaml_path}' is not in the allowed list. "
-                f"Allowed keys: {', '.join(sorted(ALLOWED_YAML_KEYS))}. "
+                f"Allowed keys: {', '.join(sorted(allowed))}. "
                 "For YAML-mode dashboards use 'lovelace.dashboards.<url_path>'."
             ),
         )
@@ -767,6 +1425,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HA MCP Tools from a config entry."""
     config_dir = Path(hass.config.config_dir)
 
+    # Bootstrap the caller-auth token. Generated on first setup, persisted
+    # to .storage/ha_mcp_tools_auth, cached in hass.data for fast handler
+    # access. ha-mcp fetches it via the get_caller_token service.
+    caller_token = await _load_or_create_caller_token(hass)
+    hass.data.setdefault(DOMAIN, {})[_HASS_DATA_TOKEN_KEY] = caller_token
+
+    # Load the user-configurable extra read/write directories (issue #1567)
+    # into hass.data so the file handlers read them with no I/O. set_allowed_paths
+    # updates this in place, so changes apply live (no HA restart).
+    hass.data.setdefault(DOMAIN, {})[
+        _HASS_DATA_ALLOWED_PATHS_KEY
+    ] = await _load_allowed_paths(hass)
+
+    def _current_extra_dirs() -> list[str]:
+        """Return the live user-configured extra directories from hass.data."""
+        domain_data = hass.data.get(DOMAIN)
+        if isinstance(domain_data, dict):
+            paths = domain_data.get(_HASS_DATA_ALLOWED_PATHS_KEY)
+            if isinstance(paths, list):
+                return paths
+        return []
+
     # One-time migration of pre-fix YAML backups out of the publicly-served
     # www/ directory (GHSA-g39v-cvjh-8fpf). Wrapped so a migration failure
     # cannot prevent the integration from loading — the integration's
@@ -830,15 +1510,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_list_files(call: ServiceCall) -> ServiceResponse:
         """Handle the list_files service call."""
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_LIST_FILES, files=[])
         rel_path = call.data["path"]
         pattern = call.data.get("pattern")
 
         # Security check
-        if not _is_path_allowed_for_dir(config_dir, rel_path, ALLOWED_READ_DIRS):
+        extra_dirs = _current_extra_dirs()
+        if not _is_path_allowed_for_dir(
+            config_dir, rel_path, ALLOWED_READ_DIRS, extra_dirs
+        ):
             _LOGGER.warning("Attempted to list files in disallowed path: %s", rel_path)
             return {
                 "success": False,
-                "error": f"Path not allowed. Must be in: {', '.join(ALLOWED_READ_DIRS)}",
+                "error": f"Path not allowed. Must be in: {', '.join(ALLOWED_READ_DIRS + extra_dirs)}",
                 "files": [],
             }
 
@@ -888,16 +1573,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_read_file(call: ServiceCall) -> ServiceResponse:
         """Handle the read_file service call."""
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_READ_FILE)
         rel_path = call.data["path"]
         tail_lines = call.data.get("tail_lines")
 
         # Security check
-        if not _is_path_allowed_for_read(config_dir, rel_path):
+        extra_dirs = _current_extra_dirs()
+        if not _is_path_allowed_for_read(config_dir, rel_path, extra_dirs):
             _LOGGER.warning("Attempted to read disallowed path: %s", rel_path)
             allowed_patterns = (
                 ALLOWED_READ_FILES
                 + [f"{d}/**" for d in ALLOWED_READ_DIRS]
                 + ["packages/*.yaml", "custom_components/**/*.py"]
+                + [f"{d}/**" for d in extra_dirs]
             )
             return {
                 "success": False,
@@ -987,17 +1676,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_write_file(call: ServiceCall) -> ServiceResponse:
         """Handle the write_file service call."""
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_WRITE_FILE)
         rel_path = call.data["path"]
         content = call.data["content"]
         overwrite = call.data.get("overwrite", False)
         create_dirs = call.data.get("create_dirs", True)
 
         # Security check - only allow writes to specific directories
-        if not _is_path_allowed_for_dir(config_dir, rel_path, ALLOWED_WRITE_DIRS):
+        extra_dirs = _current_extra_dirs()
+        if not _is_path_allowed_for_dir(
+            config_dir, rel_path, ALLOWED_WRITE_DIRS, extra_dirs
+        ):
             _LOGGER.warning("Attempted to write to disallowed path: %s", rel_path)
             return {
                 "success": False,
-                "error": f"Write not allowed. Must be in: {', '.join(ALLOWED_WRITE_DIRS)}",
+                "error": f"Write not allowed. Must be in: {', '.join(ALLOWED_WRITE_DIRS + extra_dirs)}",
             }
 
         target_file = config_dir / rel_path
@@ -1053,14 +1747,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_delete_file(call: ServiceCall) -> ServiceResponse:
         """Handle the delete_file service call."""
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_DELETE_FILE)
         rel_path = call.data["path"]
 
         # Security check - only allow deletes from specific directories
-        if not _is_path_allowed_for_dir(config_dir, rel_path, ALLOWED_WRITE_DIRS):
+        extra_dirs = _current_extra_dirs()
+        if not _is_path_allowed_for_dir(
+            config_dir, rel_path, ALLOWED_WRITE_DIRS, extra_dirs
+        ):
             _LOGGER.warning("Attempted to delete from disallowed path: %s", rel_path)
             return {
                 "success": False,
-                "error": f"Delete not allowed. Must be in: {', '.join(ALLOWED_WRITE_DIRS)}",
+                "error": f"Delete not allowed. Must be in: {', '.join(ALLOWED_WRITE_DIRS + extra_dirs)}",
             }
 
         target_file = config_dir / rel_path
@@ -1104,6 +1803,136 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     handle_edit_yaml_config = _build_edit_yaml_config_handler(hass)
 
+    async def handle_get_caller_token(call: ServiceCall) -> ServiceResponse:
+        """Return the caller-auth token to the ha-mcp bootstrap caller.
+
+        Admin-gated explicitly (see `_caller_is_admin`): HA's service
+        registry has no built-in admin requirement, so the gate prevents
+        a non-admin caller from bootstrapping the token. The supported
+        deployments (addon supervisor user, standalone admin LLAT) all
+        pass this gate.
+        """
+        if not await _caller_is_admin(hass, call):
+            return {
+                "success": False,
+                "error_code": "unauthorized",
+                "error": "ha_mcp_tools.get_caller_token requires admin auth.",
+            }
+        domain_data = hass.data.get(DOMAIN)
+        token = (
+            domain_data.get(_HASS_DATA_TOKEN_KEY)
+            if isinstance(domain_data, dict)
+            else None
+        )
+        if not isinstance(token, str) or not token:
+            return {
+                "success": False,
+                "error_code": "not_initialized",
+                "error": (
+                    "Caller token not initialized — integration may not have "
+                    "completed setup. Reload the ha_mcp_tools integration."
+                ),
+            }
+        # Report the manifest version so ha-mcp can enforce a minimum
+        # compatible component version. The integration loader reads
+        # ``manifest.json`` once at startup; ``async_get_integration``
+        # is cheap and avoids hard-coding the version twice.
+        # Pathological-but-belt-and-suspenders: a corrupted manifest
+        # would otherwise surface as HA's generic handler error rather
+        # than the actionable structured response shape this service
+        # uses everywhere else.
+        try:
+            integration = await async_get_integration(hass, DOMAIN)
+            version = str(integration.version)
+        except Exception as exc:  # pragma: no cover — manifest sanity
+            _LOGGER.warning(
+                "Could not read ha_mcp_tools manifest version for "
+                "get_caller_token response: %s",
+                exc,
+            )
+            return {
+                "success": False,
+                "error_code": "manifest_unreadable",
+                "error": (
+                    "ha_mcp_tools manifest version could not be read. "
+                    "Reinstall the integration via HACS."
+                ),
+            }
+        return {
+            "success": True,
+            "token": token,
+            "version": version,
+        }
+
+    async def handle_get_allowed_paths(call: ServiceCall) -> ServiceResponse:
+        """Return the user-configurable extra directories plus the built-in
+        allowlists and the non-overridable deny floor (issue #1567).
+
+        Backs the ha-mcp settings UI's custom filesystem-directory editor.
+        Caller-token + admin gated (matching get_caller_token): it reveals the
+        filesystem layout, so it is not a public read.
+        """
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_GET_ALLOWED_PATHS, paths=[])
+        if not await _caller_is_admin(hass, call):
+            return {
+                "success": False,
+                "error_code": "unauthorized",
+                "error": "ha_mcp_tools.get_allowed_paths requires admin auth.",
+                "paths": [],
+            }
+        return {
+            "success": True,
+            "paths": _current_extra_dirs(),
+            "builtin_read_dirs": list(ALLOWED_READ_DIRS),
+            "builtin_write_dirs": list(ALLOWED_WRITE_DIRS),
+            "deny_floor": sorted(DENY_PATH_SEGMENTS | DENY_READ_BASENAMES),
+        }
+
+    async def handle_set_allowed_paths(call: ServiceCall) -> ServiceResponse:
+        """Replace the user-configurable extra directories (issues #1567, #1586).
+
+        Receives the FULL replacement list. Each entry is validated and
+        normalized; entries that use traversal, escape the config directory, or
+        hit the non-overridable deny floor are dropped and reported in
+        ``rejected``. Config-relative dirs (#1567) and the fixed HAOS
+        sibling-volume roots (#1586 — see ``const.ALLOWED_VOLUME_ROOTS``) are
+        accepted; any other absolute path is dropped. Persists to .storage AND
+        updates hass.data so enforcement applies live with no HA restart.
+        Caller-token + admin gated.
+        """
+        if not _caller_token_ok(hass, call):
+            return _unauthorized_response(SERVICE_SET_ALLOWED_PATHS, paths=[])
+        if not await _caller_is_admin(hass, call):
+            return {
+                "success": False,
+                "error_code": "unauthorized",
+                "error": "ha_mcp_tools.set_allowed_paths requires admin auth.",
+                "paths": [],
+            }
+        raw_paths = call.data.get("paths", [])
+        normalized: list[str] = []
+        rejected: list[str] = []
+        for entry in raw_paths:
+            norm = _normalize_extra_dir(entry, config_dir)
+            if norm is None:
+                rejected.append(entry)
+            elif norm not in normalized:
+                normalized.append(norm)
+
+        await _save_allowed_paths(hass, normalized)
+        hass.data.setdefault(DOMAIN, {})[_HASS_DATA_ALLOWED_PATHS_KEY] = normalized
+        _LOGGER.info(
+            "Updated ha_mcp_tools custom filesystem directories: %s (%d rejected)",
+            normalized,
+            len(rejected),
+        )
+        return {
+            "success": True,
+            "paths": normalized,
+            "rejected": rejected,
+        }
+
     # Register all services with response support
     hass.services.async_register(
         DOMAIN,
@@ -1145,6 +1974,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         supports_response=SupportsResponse.ONLY,
     )
 
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_CALLER_TOKEN,
+        handle_get_caller_token,
+        schema=SERVICE_GET_CALLER_TOKEN_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_ALLOWED_PATHS,
+        handle_get_allowed_paths,
+        schema=SERVICE_GET_ALLOWED_PATHS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_ALLOWED_PATHS,
+        handle_set_allowed_paths,
+        schema=SERVICE_SET_ALLOWED_PATHS_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
+    )
+
     _LOGGER.info("HA MCP Tools initialized with file management services")
     return True
 
@@ -1157,4 +2010,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_READ_FILE)
     hass.services.async_remove(DOMAIN, SERVICE_WRITE_FILE)
     hass.services.async_remove(DOMAIN, SERVICE_DELETE_FILE)
+    hass.services.async_remove(DOMAIN, SERVICE_GET_CALLER_TOKEN)
+    hass.services.async_remove(DOMAIN, SERVICE_GET_ALLOWED_PATHS)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_ALLOWED_PATHS)
+
+    # Drop the cached token + allowlist from hass.data so a subsequent
+    # setup_entry re-reads from storage (covers the reload-after-rotate path).
+    domain_data = hass.data.get(DOMAIN)
+    if isinstance(domain_data, dict):
+        domain_data.pop(_HASS_DATA_TOKEN_KEY, None)
+        domain_data.pop(_HASS_DATA_ALLOWED_PATHS_KEY, None)
     return True

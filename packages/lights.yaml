@@ -41,8 +41,7 @@ light:
     unique_id: kitchen_ambient
     name: "Kitchen Ambient"
     entities:
-      - light.kitchen_closet_down_light
-      - light.kitchen_closet_up_light
+      - light.kitchen_wled_kitchen_closet_down
       - light.kitchen_fridge_light
 
   - platform: group
