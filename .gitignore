@@ -52,7 +52,7 @@ secrets.yaml
 automations.yaml
 scripts.yaml
 git_backup.sh
-
+.ssh/
 home-assistant*.db*
 home-assistant.log*
 *.log
