@@ -127,6 +127,13 @@ sensor:
     outdoor_temp_sensor: sensor.backyard_temp_temperature
     calibration_factor: 2.0
     unique_id: bathroom_mold_indicator
+  - platform: mold_indicator
+    name: "Kitchen Mold Indicator"
+    indoor_temp_sensor: sensor.kitchen_temperature
+    indoor_humidity_sensor: sensor.kitchen_humidity
+    outdoor_temp_sensor: sensor.backyard_temp_temperature
+    calibration_factor: 2.0
+    unique_id: kitchen_mold_indicator
 
 ###########
 multiscrape:

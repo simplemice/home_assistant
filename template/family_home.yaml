@@ -1,8 +1,0 @@
-- sensor:
-    - unique_id: family_home
-      default_entity_id: sensor.family_home
-      icon: "{% if is_state('sensor.family_home','0') %} mdi:account-off {% elif
-        is_state('sensor.family_home','1') %} mdi:account {% elif is_state('sensor.family_home','2')
-        %} mdi:account-multiple {% else %} mdi:account-group {% endif %}"
-      name: Family Home
-      state: "{{ is_state('group.family', 'home') }}"

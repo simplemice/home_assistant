@@ -158,17 +158,16 @@ template:
             states('sensor.wled_closet_strip_r_power') | float(0) +
             states('sensor.wled_wall_light_power') | float(0) +
             states('sensor.wled_table_power') | float(0) +
-            states('sensor.wled_thunderstorm_main_power') | float(0) +
             states('sensor.wled_tv_power') | float(0) +
+            states('sensor.wled_undertv_power') | float(0) +
             states('sensor.wled_panel_power') | float(0) +
             states('sensor.porch_bulb_power') | float(0) +
             states('sensor.closet_lamp_power_power') | float(0) +
-            states('sensor.kitchen_closet_ambient_power_power') | float(0) +
-            states('sensor.kitchen_wall_ambient_power_power') | float(0) +
-            states('sensor.closet_strip_1m_power_power') | float(0) +
-            states('sensor.awtrix_44dff8_power_power') | float(0) +
+            states('sensor.wled_kitchen_closet_down_power') | float(0) +
+            states('sensor.kitchen_fridge_light_power_power') | float(0) +
+            states('sensor.awtrix_44dff8_power') | float(0) +
             states('sensor.bedroom_alarm_gateway_power') | float(0) +
-            states('sensor.bedroom_bed_strip_power_power') | float(0)
+            states('sensor.bedroom_bed_night_strip_power') | float(0)
           }}
 
         # Lighting Power kept as alias for backward compatibility

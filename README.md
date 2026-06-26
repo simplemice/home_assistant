@@ -131,13 +131,13 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 1903 |
-| Number of sensors | 1031 |
+| Number of entities | 1911 |
+| Number of sensors | 1033 |
 | Current Version | 2026.6.4 |
-| Total Automations | unknown |
-| Total Scripts | unknown |
-| Total Lights | unknown |
-| Total Switches | unknown |
+| Total Automations | 123 |
+| Total Scripts | 38 |
+| Total Lights | 33 |
+| Total Switches | 135 |
 | Total Scenes | 14 |
 | Total Players | 16 |
 

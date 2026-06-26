@@ -39,10 +39,10 @@ intent_script:
         Today: {{ states('weather.pirateweather') }},
         {{ state_attr('weather.pirateweather', 'temperature') }}°C,
         humidity {{ state_attr('weather.pirateweather', 'humidity') }}%.
-        Tomorrow: {{ action_response['weather.pirateweather']['forecast'][1]['condition'] }},
-        high {{ action_response['weather.pirateweather']['forecast'][1]['temperature'] }}°C,
-        rain chance {{ action_response['weather.pirateweather']['forecast'][1]['precipitation_probability'] }}%,
-        precipitation {{ action_response['weather.pirateweather']['forecast'][1]['precipitation'] }}mm.
+        Tomorrow: {{ pw_forecast['weather.pirateweather']['forecast'][1]['condition'] }},
+        high {{ pw_forecast['weather.pirateweather']['forecast'][1]['temperature'] }}°C,
+        rain chance {{ pw_forecast['weather.pirateweather']['forecast'][1]['precipitation_probability'] }}%,
+        precipitation {{ pw_forecast['weather.pirateweather']['forecast'][1]['precipitation'] }}mm.
 
   fullweather:
     action:

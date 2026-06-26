@@ -75,12 +75,12 @@ template:
         icon: mdi:latitude
         unit_of_measurement: "°"
         state: >
-          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('latitude', 0) | float(0)(0) }}
+          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('latitude', 0) | float }}
       - name: "ISS Longitude"
         icon: mdi:longitude
         unit_of_measurement: "°"
         state: >
-          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('longitude', 0) | float(0)(0) }}
+          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('longitude', 0) | float }}
       - name: "ISS Timestamp"
         icon: mdi:clock
         state: >
