@@ -16,11 +16,16 @@
   <img src="https://img.shields.io/badge/status-WIP-orange">
   <img src="https://img.shields.io/github/last-commit/simplemice/home_assistant">
   <img src="https://img.shields.io/github/repo-size/simplemice/home_assistant">
+  <img src="https://img.shields.io/badge/Automations-118-success">
+  <img src="https://img.shields.io/badge/Scripts-39-blue'>
+  <img src="https://img.shields.io/badge/Frigate_NVR-Coral_TPU-orange">
 </p>
 
 ---
 
-## ⚠️ PLEASE READ LICENSE
+## ⚠️ PLEASE READ [License](https://github.com/simplemice/home_assistant/blob/main/LICENSE)
+
+## ⚠️ PLEASE READ [Documentation](https://github.com/simplemice/home_assistant/blob/docs/README.md)
 
 ---
 
@@ -131,10 +136,10 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 1911 |
-| Number of sensors | 1033 |
+| Number of entities | 1890 |
+| Number of sensors | 1013 |
 | Current Version | 2026.6.4 |
-| Total Automations | 123 |
+| Total Automations | 125 |
 | Total Scripts | 38 |
 | Total Lights | 33 |
 | Total Switches | 135 |

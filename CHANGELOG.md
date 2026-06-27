@@ -1,5 +1,9 @@
 
 
+## v2026.06.27-1448 - 2026-06-27
+- add some documentation about
+
+
 ## v2026.06.26-0955 - 2026-06-26
 - Subtle enhancements deployed. You probably won't notice. I did.
 
