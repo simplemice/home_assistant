@@ -25,7 +25,7 @@
 
 ## ⚠️ PLEASE READ [License](https://github.com/simplemice/home_assistant/blob/main/LICENSE)
 
-## ⚠️ PLEASE READ [Documentation](https://github.com/simplemice/home_assistant/blob/docs/README.md)
+## ⚠️ PLEASE READ [Documentation](https://github.com/simplemice/home_assistant/blob/main/docs/README.md)
 
 ---
 
