@@ -5,13 +5,6 @@
 #   @description    :   A Collection of Presence Related Trackers and Sensors
 ###############################################################################
 
-group:
-  family:
-    name: Family
-    icon: mdi:account-group
-    entities:
-      - person.simplemice
-
 ###############################################################################
 # INPUTS
 ###############################################################################
@@ -74,7 +67,8 @@ template:
         icon: mdi:account-group
         state: >
           {{ states.person
-            | selectattr('state','in',['home','house'])
+            | rejectattr('state', 'in', ['unavailable', 'unknown'])
+            | selectattr('state', 'in', ['home', 'house'])
             | list | count }}
 
       - name: Family Home
@@ -87,7 +81,7 @@ template:
           {% else %} mdi:account-group
           {% endif %}
         state: >
-          {{ is_state('group.family', 'home') or is_state('group.family', 'house') }}
+          {{ 'on' if states('sensor.family_home_count')|int(0) > 0 else 'off' }}
 
   ###########################################################################
   # TIME AWAY (LIVE)

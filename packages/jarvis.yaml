@@ -15,6 +15,12 @@ mqtt:
     - name: "Jarvis Last Msg Time"
       unique_id: jarvis_last_msg_time
       state_topic: "house/polly/msgtime"
+    - name: "Mobile Last Msg"
+      state_topic: "mobile/polly/lastmsg"
+      unique_id: mobile_last_msg
+    - name: "Mobile Last Msg Time"
+      unique_id: mobile_last_msg_time
+      state_topic: "mobile/polly/msgtime"
 
 template:
   - binary_sensor:
