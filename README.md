@@ -24,7 +24,7 @@
 
 ---
 
-# Casa De Ratton is not just automated technology. It is a living system designed to assist without demanding attention.
+# Casa De Ratton is not just automated technology. <br> It is a living system designed to assist without demanding attention.
 
 ---
 
@@ -35,6 +35,21 @@ Like all other Home Assistant instances this is also a Work in Progress :D
 ## ⚠️ PLEASE READ [License](https://github.com/simplemice/home_assistant/blob/main/LICENSE)
 
 ## ⚠️ PLEASE READ [Documentation](https://github.com/simplemice/home_assistant/blob/main/docs/README.md)
+
+---
+
+## ⚖️ Casa de Rattón's Three Laws of Home Automation
+
+When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
+
+### 🥇 First Law
+**Every automation or action should be the result of a passive sensor or indirect action**.
+
+### 🥈 Second Law
+**An automation can be triggered by voice command only when Law 1 cannot be achieved**.
+
+### 🥉 Third Law
+**An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
 
 ---
 
@@ -73,21 +88,6 @@ This is primarily a private configuration project. External inspiration is welco
 # 📦 GitHub Repository Information
 
 This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
-
----
-
-## ⚖️ Casa de Rattón's Three Laws of Home Automation
-
-When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
-
-### 🥇 First Law
-**Every automation or action should be the result of a passive sensor or indirect action**.
-
-### 🥈 Second Law
-**An automation can be triggered by voice command only when Law 1 cannot be achieved**.
-
-### 🥉 Third Law
-**An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
 
 ---
 
