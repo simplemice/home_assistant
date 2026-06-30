@@ -136,14 +136,14 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 1895 |
-| Number of sensors | 1018 |
+| Number of entities | 1900 |
+| Number of sensors | 1024 |
 | Current Version | 2026.6.4 |
 | Total Automations | 125 |
 | Total Scripts | 38 |
 | Total Lights | 33 |
 | Total Switches | 135 |
-| Total Scenes | 14 |
+| Total Scenes | 13 |
 | Total Players | 16 |
 
 ---

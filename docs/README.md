@@ -86,7 +86,7 @@ Occupancy is tracked session-by-session. A watchdog timer fires an alert if a ba
 <b>🍳 Kitchen</b>
 <br>
 
-A full kitchen timer system supports start, pause, resume, and auto-alert on completion. A gas cylinder weight sensor (HX711 load cell on the gas bottle) monitors remaining LPG and alerts before it runs out.
+A full automatic kitchen timer system supports start, pause, resume, and auto-alert on completion. A gas cylinder weight sensor (HX711 load cell on the gas bottle) monitors remaining LPG and alerts before it runs out. Water also monitored.
 
 </details>
 
@@ -95,21 +95,21 @@ A full kitchen timer system supports start, pause, resume, and auto-alert on com
 <b>🧺 Laundry</b>
 <br>
 
-Laundry sessions are tracked via GPS zone detection at remote laundry facilities in the area. When the occupant enters a laundry zone, a session timer starts. When they leave, the session is closed and logged.
+Laundry sessions are tracked via zone detection at laundry facilities in the area. When the occupant enters a laundry zone, a session timer starts. When they leave, the session is closed and logged.
 
 ---
 
 <b>⚡ Energy</b>
 <br>
 
-Electricity is tracked against Thailand's PEA time-of-use tariff — peak (weekday daytime) and off-peak (evenings, weekends) rates are applied automatically. Utility meters track daily, monthly, and yearly consumption in each tariff band. Water consumption is tracked separately. Solar and wind simulation sensors allow energy modelling on the dashboard.
+Electricity is tracked against time-of-use tariff — peak (weekday daytime) and off-peak (evenings, weekends) rates are applied automatically. Utility meters track daily, monthly, and yearly consumption in each tariff band. Water consumption is tracked separately. Solar and wind simulation sensors allow energy modelling on the dashboard.
 
 ---
 
 <b>🌿 Nature & Social</b>
 <br>
 
-Bird detections from the garden cameras are automatically identified and posted to the connected [Mastodon](https://joinmastodon.org/) account and a public Telegram channel. The house also generates and posts periodic AI-written status updates about its own state.
+Bird detections from the garden cameras are automatically identified and posted to the connected [Mastodon](https://social.nightdestiny.com/@house) account and a public [Telegram channel](https://t.me/live_phuket). The house also generates and posts periodic AI-written status updates about its own state.
 
 ---
 
