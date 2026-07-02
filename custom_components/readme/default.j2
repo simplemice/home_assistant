@@ -153,6 +153,11 @@ This repository is treated as:
 - {{ addon.name }}
 {% endfor %}
 
+## 🧩 Installed Integrations
+{%- for integration in custom_components | default([]) | sort(attribute='name') %}
+- [{{ integration.name }}]({{ integration.documentation }}) (v{{ integration.version }})
+{%- endfor %}
+
 ## 🔗 Custom integrations
 {% for component in hacs_components | default([]) | selectattr('category','equalto','integration') | sort(attribute='name') %}
 - [{{ component.name }}]({{ component.documentation }})

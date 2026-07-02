@@ -14,10 +14,6 @@ input_boolean:
     name: House Sleep Mode
     icon: mdi:bed-clock
 
-  family_home:
-    name: Family Home
-    icon: mdi:account-group
-
 input_datetime:
   mice_wakeup_alarm_time:
     name: WakeUp Alarm Time
@@ -60,7 +56,6 @@ template:
   ###########################################################################
   # FAMILY
   ###########################################################################
-
   - sensor:
       - name: Family Home Count
         unique_id: family_home_count
@@ -71,8 +66,10 @@ template:
             | selectattr('state', 'in', ['home', 'house'])
             | list | count }}
 
-      - name: Family Home
-        unique_id: family_home
+  - binary_sensor:
+      - name: Family Presence
+        unique_id: family_presence
+        device_class: presence
         icon: >
           {% set c = states('sensor.family_home_count')|int(0) %}
           {% if c == 0 %} mdi:account-off
@@ -80,9 +77,7 @@ template:
           {% elif c == 2 %} mdi:account-multiple
           {% else %} mdi:account-group
           {% endif %}
-        state: >
-          {{ 'on' if states('sensor.family_home_count')|int(0) > 0 else 'off' }}
-
+        state: "{{ states('sensor.family_home_count') | int(0) > 0 }}"
   ###########################################################################
   # TIME AWAY (LIVE)
   ###########################################################################
