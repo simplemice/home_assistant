@@ -136,10 +136,10 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 1900 |
+| Number of entities | 1899 |
 | Number of sensors | 1024 |
-| Current Version | 2026.6.4 |
-| Total Automations | 125 |
+| Current Version | 2026.7.0 |
+| Total Automations | 124 |
 | Total Scripts | 38 |
 | Total Lights | 33 |
 | Total Switches | 135 |
@@ -170,6 +170,33 @@ This repository is treated as:
 
 - Whisper
 
+
+## 🧩 Installed Integrations
+- [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting#readme) (v1.30.1)
+- [Alarmo](https://github.com/nielsfaber/alarmo) (v1.10.17)
+- [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
+- [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
+- [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
+- [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv1.34.2)
+- [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
+- [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
+- [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
+- [Home Assistant MCP Server Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v0.10.0)
+- [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
+- [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.6.0)
+- [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
+- [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
+- [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
+- [Passive BLE monitor](https://github.com/custom-components/ble_monitor) (v13.12.0)
+- [Pirate Weather](https://github.com/alexander0042/pirate-weather-ha) (v1.8.9)
+- [Powercalc](https://docs.powercalc.nl) (vv1.20.14)
+- [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
+- [Spook](https://spook.boo) (v5.0.0)
+- [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
+- [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
+- [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
+- [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
 
 ## 🔗 Custom integrations
 

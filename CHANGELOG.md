@@ -1,5 +1,9 @@
 
 
+## v2026.07.02-1216 - 2026-07-02
+- reconfiguring family presence and update system to new version
+
+
 ## v2026.06.30-2359 - 2026-06-30
 - Backup done. 112 automations. 112 things that could go wrong. Sleep well.
 
