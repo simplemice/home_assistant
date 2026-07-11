@@ -109,9 +109,9 @@ template:
         unique_id: sofa_presence
         device_class: occupancy
         state: >
-          {{ is_state('binary_sensor.sofa_presence_detector', 'on') }}
+          {{ is_state('binary_sensor.livingroom_sofa_presense_contact', 'off') }}
         icon: >
-          {% if is_state('binary_sensor.sofa_presence_detector', 'on') %}
+          {% if is_state('binary_sensor.livingroom_sofa_presense_contact', 'off') %}
             mdi:sofa-single
           {% else %}
             mdi:sofa-single-outline

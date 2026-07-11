@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Настройка метеостанции",
+        "description": "Выберите датчики для вашей модели прогнозирования.",
+        "data": {
+          "pressure_sensor": "Датчик давления",
+          "wind_sensor": "Датчик направления ветра (опционально)",
+          "wind_speed_sensor": "Датчик скорости ветра (опционально)",
+          "temperature_sensor": "Датчик температуры (опционально)",
+          "humidity_sensor": "Датчик влажности (опционально)",
+          "use_sea_level_correction": "Включить поправку на давление на уровне моря",
+          "location": "Местоположение"
+        },
+        "data_description": {
+          "pressure_sensor": "Выберите датчик барометрического давления",
+          "wind_sensor": "Опционально: датчик направления ветра (в градусах)",
+          "wind_speed_sensor": "Опционально: специальный датчик скорости ветра",
+          "temperature_sensor": "Опционально: используется для поправки на давление на уровне моря",
+          "humidity_sensor": "Дополнительно: повышает точность прогноза вероятности осадков",
+          "use_sea_level_correction": "Включите, если используете датчик абсолютного давления над уровнем моря",
+          "location": "Нажмите на карту, чтобы указать своё местоположение для расчёта высоты над уровнем моря"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Не удалось установить соединение",
+      "unknown": "Неожиданная ошибка"
+    },
+    "abort": {
+      "already_configured": "Эта метеостанция уже настроена"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Настройка датчиков",
+        "description": "Обновите датчики, используемые для расчётов по методам Замбретти и Сагера.",
+        "data": {
+          "pressure_sensor": "Датчик давления",
+          "wind_sensor": "Датчик направления ветра (опционально)",
+          "wind_speed_sensor": "Датчик скорости ветра (опционально)",
+          "temperature_sensor": "Датчик температуры (опционально)",
+          "humidity_sensor": "Датчик влажности (опционально)",
+          "use_sea_level_correction": "Включить поправку на давление на уровне моря",
+          "location": "Местоположение"
+        },
+        "data_description": {
+          "pressure_sensor": "Выберите датчик барометрического давления",
+          "wind_sensor": "Опционально: датчик направления ветра (в градусах)",
+          "wind_speed_sensor": "Опционально: специальный датчик скорости ветра",
+          "temperature_sensor": "Опционально: используется для поправки на давление на уровне моря",
+          "humidity_sensor": "Дополнительно: повышает точность прогноза вероятности осадков",
+          "use_sea_level_correction": "Включите, если используете датчик абсолютного давления над уровнем моря",
+          "location": "Нажмите на карту, чтобы указать своё местоположение для расчёта высоты над уровнем моря"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Стабильно ясно",
+          "fine_weather": "Ясная погода",
+          "fine_becoming_less_settled": "Ясно, становится менее стабильно",
+          "fairly_fine_showery_later": "Довольно ясно, позже возможны переливные дожди",
+          "showery_becoming_more_unsettled": "Переливные дожди, становится более нестабильно",
+          "unsettled_rain_later": "Нестабильно, позже дождь",
+          "rain_at_times_worse_later": "Периодически дождь, позже ухудшение",
+          "rain_at_times_becoming_very_unsettled": "Периодически дождь, становится очень нестабильно",
+          "very_unsettled_rain": "Очень нестабильно, дождь",
+          "fine_possibly_showers": "Ясно, возможны ливни",
+          "fairly_fine_showers_likely": "Довольно ясно, вероятны ливни",
+          "showery_bright_intervals": "Ливни, с прояснениями",
+          "changeable_some_rain": "Переменная погода, местами дождь",
+          "unsettled_rain_at_times": "Нестабильно, временами дождь",
+          "rain_at_frequent_intervals": "Частые дожди",
+          "stormy_much_rain": "Грозовая погода, сильный дождь",
+          "becoming_fine": "Становится ясно",
+          "fairly_fine_improving": "Довольно ясно, улучшается",
+          "fairly_fine_possibly_showers_early": "Довольно ясно, утром возможны ливни",
+          "showery_early_improving": "Ранним утром дожди, улучшение погоды",
+          "changeable_mending": "Переменчиво, улучшается",
+          "rather_unsettled_clearing_later": "Довольно нестабильно, позже проясняется",
+          "unsettled_probably_improving": "Нестабильно, вероятно, улучшится",
+          "unsettled_short_fine_intervals": "Нестабильно, короткие прояснения",
+          "very_unsettled_finer_at_times": "Очень нестабильно, временами проясняется",
+          "stormy_possibly_improving": "Грозово, возможно, улучшится",
+          "stable": "Стабильно"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Ясно, улучшается",
+          "sager_fair_tending_to_deteriorate": "Сейчас ясно, тенденция к ухудшению",
+          "sager_fair_no_change": "Ясно, без существенных изменений",
+          "sager_unsettled_rain_likely": "Нестабильно, вероятен дождь",
+          "sager_unsettled_probably_improving": "Нестабильно, вероятно, улучшится",
+          "sager_unsettled_rain_at_times": "Нестабильно, временами дождь",
+          "sager_changeable_becoming_fairer": "Переменчиво, становится яснее",
+          "sager_changeable_becoming_more_unsettled": "Переменчиво, становится более нестабильно",
+          "sager_variable_slowly_improving": "Переменчиво, постепенно улучшается",
+          "sager_variable_slowly_deteriorating": "Переменчиво, постепенно ухудшается",
+          "sager_variable_some_change": "Переменчиво, ожидаются некоторые изменения"
+        }
+      }
+    }
+  }
+}

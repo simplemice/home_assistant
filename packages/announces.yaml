@@ -31,8 +31,8 @@ script:
                 "Dark cycle evaded. Morning operations now accessible. Excellent work, as always."
               ] | random }}
           home_status: >
-            {% set doors = expand('group.doors') | selectattr('state','eq','on') | list | count %}
-            {% set leaks = expand('group.water_leak_sensors') | selectattr('state','eq','on') | list | count %}
+            {% set doors = expand('binary_sensor.security_doors') | selectattr('state','eq','on') | list | count %}
+            {% set leaks = expand('binary_sensor.security_water_leak') | selectattr('state','eq','on') | list | count %}
             {% set gas = is_state('binary_sensor.kitchen_gas_detector_gas','on') %}
             {% set smoke = is_state('binary_sensor.smoke_detector_smoke','on') %}
             {% set alarm = states('alarm_control_panel.home') %}

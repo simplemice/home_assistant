@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "기상 관측소 설정",
+        "description": "예보 모델에 사용할 센서를 선택하세요.",
+        "data": {
+          "pressure_sensor": "기압 센서",
+          "wind_sensor": "풍향 센서 (선택 사항)",
+          "wind_speed_sensor": "풍속 센서 (선택 사항)",
+          "temperature_sensor": "온도 센서 (선택 사항)",
+          "humidity_sensor": "습도 센서 (선택 사항)",
+          "use_sea_level_correction": "해수면 기압 보정 활성화",
+          "location": "위치"
+        },
+        "data_description": {
+          "pressure_sensor": "기압 센서를 선택하십시오",
+          "wind_sensor": "선택 사항: 풍향 센서 (도 단위)",
+          "wind_speed_sensor": "선택 사항: 전용 풍속 센서",
+          "temperature_sensor": "선택 사항: 해수면 기압 보정에 사용",
+          "humidity_sensor": "선택 사항: 강수 확률 정확도 향상",
+          "use_sea_level_correction": "해수면 이상의 절대 기압 센서를 사용하는 경우 활성화",
+          "location": "지도에서 클릭하여 고도 계산을 위한 위치를 설정하세요"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "연결 실패",
+      "unknown": "예기치 않은 오류"
+    },
+    "abort": {
+      "already_configured": "이 기상 관측소는 이미 구성되어 있습니다"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "센서 조정",
+        "description": "Zambretti 및 Sager 계산에 사용되는 센서를 업데이트하세요.",
+        "data": {
+          "pressure_sensor": "기압 센서",
+          "wind_sensor": "풍향 센서 (선택 사항)",
+          "wind_speed_sensor": "풍속 센서 (선택 사항)",
+          "temperature_sensor": "온도 센서 (선택 사항)",
+          "humidity_sensor": "습도 센서 (선택 사항)",
+          "use_sea_level_correction": "해수면 기압 보정 활성화",
+          "location": "위치"
+        },
+        "data_description": {
+          "pressure_sensor": "기압 센서를 선택하십시오",
+          "wind_sensor": "선택 사항: 풍향 센서 (도 단위)",
+          "wind_speed_sensor": "선택 사항: 전용 풍속 센서",
+          "temperature_sensor": "선택 사항: 해수면 기압 보정에 사용",
+          "humidity_sensor": "선택 사항: 강수 확률 정확도 향상",
+          "use_sea_level_correction": "해수면 이상의 절대 기압 센서를 사용하는 경우 활성화",
+          "location": "지도에서 클릭하여 고도 계산을 위한 위치를 설정하세요"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "안정적, 맑음",
+          "fine_weather": "맑음",
+          "fine_becoming_less_settled": "맑음, 점차 불안정해짐",
+          "fairly_fine_showery_later": "비교적 맑음, 나중에 소나기",
+          "showery_becoming_more_unsettled": "소나기, 점차 더 불안정해짐",
+          "unsettled_rain_later": "불안정, 나중에 비",
+          "rain_at_times_worse_later": "때때로 비, 나중에 악화",
+          "rain_at_times_becoming_very_unsettled": "때때로 비, 매우 불안정해짐",
+          "very_unsettled_rain": "매우 불안정, 비",
+          "fine_possibly_showers": "맑음, 소나기 가능성",
+          "fairly_fine_showers_likely": "비교적 맑음, 소나기 예상",
+          "showery_bright_intervals": "소나기, 맑은 시간대",
+          "changeable_some_rain": "변덕스러운 날씨, 비 약간",
+          "unsettled_rain_at_times": "변덕스러운 날씨, 때때로 비",
+          "rain_at_frequent_intervals": "빈번한 비",
+          "stormy_much_rain": "폭풍우, 많은 비",
+          "becoming_fine": "맑아짐",
+          "fairly_fine_improving": "비교적 맑음, 점차 좋아짐",
+          "fairly_fine_possibly_showers_early": "비교적 맑음, 이른 시간대 소나기 가능성",
+          "showery_early_improving": "아침에 소나기, 점차 호전",
+          "changeable_mending": "변덕스러운 날씨, 점차 호전",
+          "rather_unsettled_clearing_later": "다소 변덕스러운 날씨, 오후에 맑아짐",
+          "unsettled_probably_improving": "변덕스러운 날씨, 호전될 전망",
+          "unsettled_short_fine_intervals": "변덕스러운 날씨, 잠시 맑은 시간대",
+          "very_unsettled_finer_at_times": "매우 변덕스러운 날씨, 때때로 맑아짐",
+          "stormy_possibly_improving": "폭풍우, 호전될 가능성",
+          "stable": "안정적"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "맑음, 점차 좋아짐",
+          "sager_fair_tending_to_deteriorate": "현재 맑으나 점차 나빠질 전망",
+          "sager_fair_no_change": "맑음, 큰 변화 없음",
+          "sager_unsettled_rain_likely": "변덕스러운 날씨, 비 올 가능성 있음",
+          "sager_unsettled_probably_improving": "변덕스러운 날씨, 점차 좋아질 전망",
+          "sager_unsettled_rain_at_times": "변덕스러운 날씨, 때때로 비가 내림",
+          "sager_changeable_becoming_fairer": "변덕스러운 날씨, 점차 맑아짐",
+          "sager_changeable_becoming_more_unsettled": "변덕스러운 날씨, 점차 더 변덕스러워짐",
+          "sager_variable_slowly_improving": "변덕스러운 날씨, 서서히 좋아짐",
+          "sager_variable_slowly_deteriorating": "변덕스러운 날씨, 서서히 나빠짐",
+          "sager_variable_some_change": "변덕스러운 날씨, 약간의 변화 예상"
+        }
+      }
+    }
+  }
+}

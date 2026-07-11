@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurazione della stazione meteorologica",
+        "description": "Seleziona i sensori per il tuo modello di previsione.",
+        "data": {
+          "pressure_sensor": "Sensore di pressione",
+          "wind_sensor": "Sensore di direzione del vento (opzionale)",
+          "wind_speed_sensor": "Sensore di velocità del vento (opzionale)",
+          "temperature_sensor": "Sensore di temperatura (opzionale)",
+          "humidity_sensor": "Sensore di umidità (opzionale)",
+          "use_sea_level_correction": "Abilita la correzione della pressione a livello del mare",
+          "location": "Posizione"
+        },
+        "data_description": {
+          "pressure_sensor": "Seleziona il sensore di pressione barometrica",
+          "wind_sensor": "Opzionale: sensore di direzione del vento (in gradi)",
+          "wind_speed_sensor": "Opzionale: sensore dedicato alla velocità del vento",
+          "temperature_sensor": "Opzionale: utilizzato per la correzione della pressione a livello del mare",
+          "humidity_sensor": "Opzionale: migliora la precisione della probabilità di precipitazioni",
+          "use_sea_level_correction": "Abilitare se si utilizza un sensore di pressione assoluta al di sopra del livello del mare",
+          "location": "Clicca sulla mappa per impostare la tua posizione per il calcolo dell'altitudine"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connessione non riuscita",
+      "unknown": "Errore imprevisto"
+    },
+    "abort": {
+      "already_configured": "Questa stazione meteorologica è già configurata"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Regola i sensori",
+        "description": "Aggiorna i sensori utilizzati per i calcoli di Zambretti e Sager.",
+        "data": {
+          "pressure_sensor": "Sensore di pressione",
+          "wind_sensor": "Sensore di direzione del vento (opzionale)",
+          "wind_speed_sensor": "Sensore di velocità del vento (opzionale)",
+          "temperature_sensor": "Sensore di temperatura (opzionale)",
+          "humidity_sensor": "Sensore di umidità (opzionale)",
+          "use_sea_level_correction": "Abilita la correzione della pressione a livello del mare",
+          "location": "Posizione"
+        },
+        "data_description": {
+          "pressure_sensor": "Seleziona il sensore di pressione barometrica",
+          "wind_sensor": "Opzionale: sensore di direzione del vento (in gradi)",
+          "wind_speed_sensor": "Opzionale: sensore dedicato alla velocità del vento",
+          "temperature_sensor": "Opzionale: utilizzato per la correzione della pressione a livello del mare",
+          "humidity_sensor": "Opzionale: migliora la precisione della probabilità di precipitazioni",
+          "use_sea_level_correction": "Abilitare se si utilizza un sensore di pressione assoluta al di sopra del livello del mare",
+          "location": "Clicca sulla mappa per impostare la tua posizione per il calcolo dell'altitudine"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Stabile e sereno",
+          "fine_weather": "Sereno",
+          "fine_becoming_less_settled": "Sereno, ma in via di instabilità",
+          "fairly_fine_showery_later": "Abbastanza sereno, con rovesci in seguito",
+          "showery_becoming_more_unsettled": "Rovesci, in via di instabilità",
+          "unsettled_rain_later": "Instabile, pioggia in seguito",
+          "rain_at_times_worse_later": "Pioggia a tratti, peggioramento in seguito",
+          "rain_at_times_becoming_very_unsettled": "Pioggia a tratti, in via di forte instabilità",
+          "very_unsettled_rain": "Molto instabile, pioggia",
+          "fine_possibly_showers": "Sereno, possibili rovesci",
+          "fairly_fine_showers_likely": "Abbastanza sereno, rovesci probabili",
+          "showery_bright_intervals": "Rovesci, intervalli soleggiati",
+          "changeable_some_rain": "Variabile, qualche pioggia",
+          "unsettled_rain_at_times": "Instabile, pioggia a tratti",
+          "rain_at_frequent_intervals": "Pioggia a intervalli frequenti",
+          "stormy_much_rain": "Tempestoso, pioggia abbondante",
+          "becoming_fine": "In via di miglioramento",
+          "fairly_fine_improving": "Abbastanza sereno, in miglioramento",
+          "fairly_fine_possibly_showers_early": "Abbastanza sereno, possibili rovesci al mattino",
+          "showery_early_improving": "Rovesci al mattino, in miglioramento",
+          "changeable_mending": "Variabile, in miglioramento",
+          "rather_unsettled_clearing_later": "Piuttosto instabile, schiarite più tardi",
+          "unsettled_probably_improving": "Instabile, probabilmente in miglioramento",
+          "unsettled_short_fine_intervals": "Instabile, brevi intervalli di bel tempo",
+          "very_unsettled_finer_at_times": "Molto instabile, a tratti più sereno",
+          "stormy_possibly_improving": "Tempestoso, forse in miglioramento",
+          "stable": "Stabile"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Sereno, in miglioramento",
+          "sager_fair_tending_to_deteriorate": "Sereno ora, con tendenza al peggioramento",
+          "sager_fair_no_change": "Sereno, nessun cambiamento significativo",
+          "sager_unsettled_rain_likely": "Instabile, probabile pioggia",
+          "sager_unsettled_probably_improving": "Instabile, probabilmente in miglioramento",
+          "sager_unsettled_rain_at_times": "Instabile, pioggia a tratti",
+          "sager_changeable_becoming_fairer": "Variabile, in via di miglioramento",
+          "sager_changeable_becoming_more_unsettled": "Variabile, in via di peggioramento",
+          "sager_variable_slowly_improving": "Variabile, in lento miglioramento",
+          "sager_variable_slowly_deteriorating": "Variabile, in lento peggioramento",
+          "sager_variable_some_change": "Variabile, previsti alcuni cambiamenti"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "気象観測ステーションの設定",
+        "description": "予報モデルに使用するセンサーを選択してください。",
+        "data": {
+          "pressure_sensor": "気圧センサー",
+          "wind_sensor": "風向センサー（オプション）",
+          "wind_speed_sensor": "風速センサー（オプション）",
+          "temperature_sensor": "温度センサー（オプション）",
+          "humidity_sensor": "湿度センサー（オプション）",
+          "use_sea_level_correction": "海面気圧補正を有効にする",
+          "location": "設置場所"
+        },
+        "data_description": {
+          "pressure_sensor": "気圧センサーを選択してください",
+          "wind_sensor": "オプション：風向センサー（度単位）",
+          "wind_speed_sensor": "オプション：専用風速センサー",
+          "temperature_sensor": "オプション：海面気圧補正に使用されます",
+          "humidity_sensor": "オプション：降水確率の精度を向上させます",
+          "use_sea_level_correction": "海抜以上の絶対気圧センサーを使用する場合は有効にしてください",
+          "location": "地図をクリックして、高度計算用の位置を設定してください"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "接続に失敗しました",
+      "unknown": "予期せぬエラーが発生しました"
+    },
+    "abort": {
+      "already_configured": "この気象観測所はすでに設定済みです"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "センサーの調整",
+        "description": "ZambrettiおよびSagerの計算に使用するセンサーを更新します。",
+        "data": {
+          "pressure_sensor": "気圧センサー",
+          "wind_sensor": "風向センサー（オプション）",
+          "wind_speed_sensor": "風速センサー（オプション）",
+          "temperature_sensor": "温度センサー（オプション）",
+          "humidity_sensor": "湿度センサー（オプション）",
+          "use_sea_level_correction": "海面気圧補正を有効にする",
+          "location": "設置場所"
+        },
+        "data_description": {
+          "pressure_sensor": "気圧センサーを選択してください",
+          "wind_sensor": "オプション：風向センサー（度単位）",
+          "wind_speed_sensor": "オプション：専用風速センサー",
+          "temperature_sensor": "オプション：海面気圧補正に使用されます",
+          "humidity_sensor": "オプション：降水確率の精度を向上させます",
+          "use_sea_level_correction": "海抜以上の絶対気圧センサーを使用する場合は有効にしてください",
+          "location": "地図をクリックして、高度計算用の位置を設定してください"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "安定して晴れ",
+          "fine_weather": "晴れ",
+          "fine_becoming_less_settled": "晴れ、次第に不安定に",
+          "fairly_fine_showery_later": "概ね晴れ、後ほどににわか雨",
+          "showery_becoming_more_unsettled": "にわか雨、次第に不安定に",
+          "unsettled_rain_later": "不安定、後ほどに雨",
+          "rain_at_times_worse_later": "時折雨、後ほど悪化",
+          "rain_at_times_becoming_very_unsettled": "時折雨、次第に非常に不安定に",
+          "very_unsettled_rain": "非常に不安定、雨",
+          "fine_possibly_showers": "晴れ、にわか雨の可能性あり",
+          "fairly_fine_showers_likely": "比較的晴れ、にわか雨の可能性大",
+          "showery_bright_intervals": "にわか雨、晴れ間あり",
+          "changeable_some_rain": "変わりやすい、所々で雨",
+          "unsettled_rain_at_times": "不安定、時折雨",
+          "rain_at_frequent_intervals": "頻繁に雨が降る",
+          "stormy_much_rain": "嵐、大雨",
+          "becoming_fine": "晴れに向かっている",
+          "fairly_fine_improving": "比較的晴れ、回復傾向",
+          "fairly_fine_possibly_showers_early": "比較的晴れ、早朝ににわか雨の可能性あり",
+          "showery_early_improving": "朝はにわか雨、その後回復",
+          "changeable_mending": "変わりやすい、回復傾向",
+          "rather_unsettled_clearing_later": "やや不安定、後半は晴れ間",
+          "unsettled_probably_improving": "不安定、おそらく回復",
+          "unsettled_short_fine_intervals": "不安定、短い晴れ間あり",
+          "very_unsettled_finer_at_times": "非常に不安定、時折晴れ間",
+          "stormy_possibly_improving": "荒天、回復の可能性あり",
+          "stable": "安定"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "晴れ、回復傾向",
+          "sager_fair_tending_to_deteriorate": "現在は晴れ、悪化傾向",
+          "sager_fair_no_change": "晴れ、大きな変化なし",
+          "sager_unsettled_rain_likely": "不安定、雨の可能性あり",
+          "sager_unsettled_probably_improving": "不安定、回復の見込み",
+          "sager_unsettled_rain_at_times": "不安定、時折雨",
+          "sager_changeable_becoming_fairer": "変わりやすい、次第に晴れ間が増える",
+          "sager_changeable_becoming_more_unsettled": "変わりやすい、次第に不安定になる",
+          "sager_variable_slowly_improving": "変わりやすい、徐々に回復",
+          "sager_variable_slowly_deteriorating": "変わりやすい、徐々に悪化",
+          "sager_variable_some_change": "変わりやすい、多少の変化が見込まれる"
+        }
+      }
+    }
+  }
+}

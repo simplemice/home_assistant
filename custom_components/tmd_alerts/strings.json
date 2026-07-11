@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Thailand Weather Alerts (TMD)",
+        "description": "Connect to the Thai Meteorological Department Weather Warning API. Leave credentials as default to use the public demo account.",
+        "data": {
+          "uid": "API User ID",
+          "ukey": "API Key",
+          "language": "Sensor language"
+        },
+        "data_description": {
+          "language": "Language used for warning text in sensors and attributes"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to TMD API. Please check your credentials or network.",
+      "unknown": "Unexpected error. Please try again."
+    },
+    "abort": {
+      "already_configured": "Thailand Weather Alerts is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Thailand Weather Alerts — Options",
+        "data": {
+          "language": "Sensor language"
+        },
+        "data_description": {
+          "language": "Language used for warning text in sensors and attributes"
+        }
+      }
+    }
+  }
+}

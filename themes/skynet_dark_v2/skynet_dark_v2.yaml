@@ -1,0 +1,827 @@
+skynet_dark_v2:
+  card-mod-theme: skynet_dark_v2
+
+  # card-mod-view: |
+  #   .group-header {
+  #     font-weight: 800;
+  #     font-size: 18px;
+  #     color: #FFC10A;
+  #   }
+  card-mod-view: |
+    ha-card > header > div > h2,
+    header h2 {
+      color: #02a9f4 !important;
+    }
+    .mdc-data-table__cell.group-header,
+    .group-header {
+      color: #ffc107 !important;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+    }
+  card-mod-root-yaml: |
+    "ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-config-entities $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-automation-picker $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-script-picker $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-scene-dashboard $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-config-helpers $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-config-devices-dashboard $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "* $":
+      "ha-data-table $": |
+        .mdc-data-table__header-row {
+          background-color: #161A23 !important;
+        }
+        .mdc-data-table__header-cell,
+        .mdc-data-table__cell.group-header,
+        .group-header {
+          color: #ffc107 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+  card-mod-config-yaml: |
+    "ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-config-entities $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-automation-picker $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-script-picker $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-scene-dashboard $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-config-helpers $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "ha-config-devices-dashboard $ hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "* $":
+      "ha-data-table $": |
+        .mdc-data-table__header-row {
+          background-color: #161A23 !important;
+        }
+        .mdc-data-table__header-cell,
+        .mdc-data-table__cell.group-header,
+        .group-header {
+          color: #ffc107 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+  card-mod-view-yaml: |
+    "ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "hass-tabs-subpage-data-table $ ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "* $":
+      "ha-data-table $": |
+        .mdc-data-table__header-row {
+          background-color: #161A23 !important;
+        }
+        .mdc-data-table__header-cell,
+        .mdc-data-table__cell.group-header,
+        .group-header {
+          color: #ffc107 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+
+  # make fan icons rotate based on their speed
+  # make fan icons rotate based on their speed
+  card-mod-card: |
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(359deg);
+      }
+    }
+    ha-icon[data-domain="fan"][data-state="on"] {
+      animation: spin 4s infinite linear;
+    }
+    ha-card > header > div > h2,
+    header h2 {
+      color: #02a9f4 !important;
+    }
+    .mdc-data-table__cell.group-header,
+    .group-header {
+      color: #ffc107 !important;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+    }
+  card-mod-card-yaml: |
+    "ha-data-table $": |
+      .mdc-data-table__header-row {
+        background-color: #161A23 !important;
+      }
+      .mdc-data-table__header-cell,
+      .mdc-data-table__cell.group-header,
+      .group-header {
+        color: #ffc107 !important;
+        font-size: 14px !important;
+        font-weight: 400 !important;
+      }
+    "* $":
+      "ha-data-table $": |
+        .mdc-data-table__header-row {
+          background-color: #161A23 !important;
+        }
+        .mdc-data-table__header-cell,
+        .mdc-data-table__cell.group-header,
+        .group-header {
+          color: #ffc107 !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+        }
+
+  # animations
+  card-mod-row-yaml: |
+    ".": |
+      div.wrapper ha-slider {
+        margin-right: 14px;
+      }
+      {% if config is defined and config.entity is defined and (is_state(config.entity, 'off') or is_state(config.entity, 'closed')) %}
+      ha-slider {
+        --md-slider-handle-color: #2e3a4f !important;
+        --md-slider-focused-handle-color: #2e3a4f !important;
+        --md-slider-hover-handle-color: #2e3a4f !important;
+        --md-slider-active-track-color: #0d4e70 !important;
+        --md-slider-inactive-track-color: #0d4e70 !important;
+      }
+      {% endif %}
+    "*:first-child$": |
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(359deg);
+        }
+      }
+      state-badge {
+        {% if config is defined and config.entity is defined and config.entity.startswith('fan.') and is_state(config.entity, 'on') %}
+          animation: {% set perc = state_attr(config.entity, 'percentage')|int %}
+                    {% set base = 'spin infinite linear' %}
+                    {% if perc <= 33 %} 3.6s {{ base }};
+                    {%- elif perc <= 66 %} 2.5s {{ base }};
+                    {%- elif perc <= 99 %} 1.5s {{ base }};
+                    {%- else %} 0.75s {{ base }};
+                    {% endif %}
+        {% endif %}
+      }
+
+  # Background image
+  lovelace-background: 'url("/local/triangles.jpg") #191f2b no-repeat fixed top left'
+  accent-color: "#02a9f4"
+  text-accent-color: "#030406"
+
+  #Header
+  app-header-background-color: "#202937"
+  app-header-text-color: "#02a9f4"
+  ha-view-sections-column-gap: 7px
+  #ha-section-grid-row-height: 18px
+
+  #Fonts
+  primary-font-family: "ProximaNova-Regular,Raleway,Roboto,sans-serif"
+  paper-font-common-base_-_font-family: "var(--primary-font-family)"
+  paper-font-common-code_-_font-family: "var(--primary-font-family)"
+  paper-font-body1_-_font-family: "var(--primary-font-family)"
+  paper-font-subhead_-_font-family: "var(--primary-font-family)"
+  paper-font-headline_-_font-family: "var(--primary-font-family)"
+  paper-font-caption_-_font-family: "var(--primary-font-family)"
+  paper-font-title_-_font-family: "var(--primary-font-family)"
+  ha-card-header-font-family: "var(--primary-font-family)"
+
+  # Main Interface Colors
+  primary-color: "#ffc107"
+  dark-primary-color: "#b07a08"
+  darker-primary-color: "#735007"
+  light-primary-color: var(--primary-color)
+  primary-background-color: "#191f2b"
+  secondary-background-color: "#161A23"
+  divider-color: "#344256"
+  outline-color: "#344256"
+  outline-hover-color: "#4a6185"
+  scrollbar-thumb-color: "#344256"
+  black-color: "#020203"
+  white-color: "#ffffff"
+  red-color: "#FF4348"
+  pink-color: "#ff6a6e"
+  purple-color: "#8e5cff"
+  deep-purple-color: "#735007"
+  indigo-color: "#4a6185"
+  blue-color: "#02a9f4"
+  light-blue-color: "#02a9f4"
+  cyan-color: "#02a9f4"
+  teal-color: "#0d668e"
+  green-color: "#80C884"
+  light-green-color: "#96d59a"
+  lime-color: "#afe0b2"
+  yellow-color: "#ffc107"
+  amber-color: "#ffc107"
+  orange-color: "#FF8A00"
+  deep-orange-color: "#c46c00"
+  brown-color: "#735007"
+  light-grey-color: "#6981a8"
+  grey-color: "#4a6185"
+  dark-grey-color: "#2e3a4f"
+  blue-grey-color: "#344256"
+
+  # Home Assistant 2025+ core color palette
+  ha-color-primary-05: "#191204"
+  ha-color-primary-10: "#261a05"
+  ha-color-primary-20: "#3e2a06"
+  ha-color-primary-30: "#735007"
+  ha-color-primary-40: "#b07a08"
+  ha-color-primary-50: "#ffc107"
+  ha-color-primary-60: "#ffd24a"
+  ha-color-primary-70: "#ffdf7a"
+  ha-color-primary-80: "#ffe8a3"
+  ha-color-primary-90: "#fff3cc"
+  ha-color-primary-95: "#fff8e6"
+
+  ha-color-neutral-05: "#020203"
+  ha-color-neutral-10: "#030406"
+  ha-color-neutral-20: "#161A23"
+  ha-color-neutral-30: "#191f2b"
+  ha-color-neutral-40: "#202937"
+  ha-color-neutral-50: "#2e3a4f"
+  ha-color-neutral-60: "#344256"
+  ha-color-neutral-70: "#4a6185"
+  ha-color-neutral-80: "#6981a8"
+  ha-color-neutral-90: "#8ea1c2"
+  ha-color-neutral-95: "#c7d3e8"
+
+  ha-color-orange-05: "#231101"
+  ha-color-orange-10: "#331900"
+  ha-color-orange-20: "#5a2d00"
+  ha-color-orange-30: "#8d4d00"
+  ha-color-orange-40: "#c46c00"
+  ha-color-orange-50: "#ff8a00"
+  ha-color-orange-60: "#ffa11c"
+  ha-color-orange-70: "#ffb84d"
+  ha-color-orange-80: "#ffd08a"
+  ha-color-orange-90: "#ffe6bf"
+  ha-color-orange-95: "#fff3df"
+
+  ha-color-red-05: "#260507"
+  ha-color-red-10: "#3a090c"
+  ha-color-red-20: "#650f16"
+  ha-color-red-30: "#971720"
+  ha-color-red-40: "#c8232d"
+  ha-color-red-50: "#ff4348"
+  ha-color-red-60: "#ff6a6e"
+  ha-color-red-70: "#ff8e91"
+  ha-color-red-80: "#ffb6b8"
+  ha-color-red-90: "#ffdada"
+  ha-color-red-95: "#ffeded"
+
+  ha-color-green-05: "#071807"
+  ha-color-green-10: "#0d250e"
+  ha-color-green-20: "#173f19"
+  ha-color-green-30: "#215f25"
+  ha-color-green-40: "#2d7e31"
+  ha-color-green-50: "#80c884"
+  ha-color-green-60: "#96d59a"
+  ha-color-green-70: "#afe0b2"
+  ha-color-green-80: "#c8ebca"
+  ha-color-green-90: "#e0f5e2"
+  ha-color-green-95: "#f0faf1"
+
+  # Home Assistant 2025+ semantic colors
+  ha-color-focus: "#ffa11c"
+  ha-color-text-primary: var(--primary-text-color)
+  ha-color-text-secondary: var(--secondary-text-color)
+  ha-color-text-disabled: var(--disabled-text-color)
+  ha-color-text-link: "#02a9f4"
+
+  ha-color-border-primary-quiet: "#3e2a06"
+  ha-color-border-primary-normal: "#735007"
+  ha-color-border-primary-loud: "#ffc107"
+  ha-color-border-quiet: var(--ha-color-border-primary-quiet)
+  ha-color-border-normal: var(--ha-color-border-primary-normal)
+  ha-color-border-loud: var(--ha-color-border-primary-loud)
+  ha-color-border-neutral-quiet: "#2e3a4f"
+  ha-color-border-neutral-normal: "#344256"
+  ha-color-border-neutral-loud: "#6981a8"
+  ha-color-border-danger-quiet: "#650f16"
+  ha-color-border-danger-normal: "#971720"
+  ha-color-border-danger-loud: "#ff4348"
+  ha-color-border-warning-quiet: "#5a2d00"
+  ha-color-border-warning-normal: "#8d4d00"
+  ha-color-border-warning-loud: "#ff8a00"
+  ha-color-border-success-quiet: "#173f19"
+  ha-color-border-success-normal: "#215f25"
+  ha-color-border-success-loud: "#80c884"
+
+  ha-color-fill-primary-quiet-resting: "#191204"
+  ha-color-fill-primary-quiet-hover: "#261a05"
+  ha-color-fill-primary-quiet-active: "#191204"
+  ha-color-fill-primary-normal-resting: "#261a05"
+  ha-color-fill-primary-normal-hover: "#3e2a06"
+  ha-color-fill-primary-normal-active: "#261a05"
+  ha-color-fill-primary-loud-resting: "#ffc107"
+  ha-color-fill-primary-loud-hover: "#ffd24a"
+  ha-color-fill-primary-loud-active: "#ffc107"
+  ha-color-fill-neutral-quiet-resting: "#161A23"
+  ha-color-fill-neutral-quiet-hover: "#191f2b"
+  ha-color-fill-neutral-quiet-active: "#161A23"
+  ha-color-fill-neutral-normal-resting: "#202937"
+  ha-color-fill-neutral-normal-hover: "#2e3a4f"
+  ha-color-fill-neutral-normal-active: "#202937"
+  ha-color-fill-neutral-loud-resting: "#4a6185"
+  ha-color-fill-neutral-loud-hover: "#6981a8"
+  ha-color-fill-neutral-loud-active: "#4a6185"
+  ha-color-fill-disabled-quiet-resting: "#030406"
+  ha-color-fill-disabled-normal-resting: "#161A23"
+  ha-color-fill-disabled-loud-resting: "#2e3a4f"
+  ha-color-fill-danger-quiet-resting: "#260507"
+  ha-color-fill-danger-quiet-hover: "#3a090c"
+  ha-color-fill-danger-quiet-active: "#260507"
+  ha-color-fill-danger-normal-resting: "#650f16"
+  ha-color-fill-danger-normal-hover: "#971720"
+  ha-color-fill-danger-normal-active: "#650f16"
+  ha-color-fill-danger-loud-resting: "#ff4348"
+  ha-color-fill-danger-loud-hover: "#ff6a6e"
+  ha-color-fill-danger-loud-active: "#ff4348"
+  ha-color-fill-warning-quiet-resting: "#231101"
+  ha-color-fill-warning-quiet-hover: "#331900"
+  ha-color-fill-warning-quiet-active: "#231101"
+  ha-color-fill-warning-normal-resting: "#5a2d00"
+  ha-color-fill-warning-normal-hover: "#8d4d00"
+  ha-color-fill-warning-normal-active: "#5a2d00"
+  ha-color-fill-warning-loud-resting: "#ff8a00"
+  ha-color-fill-warning-loud-hover: "#ffa11c"
+  ha-color-fill-warning-loud-active: "#ff8a00"
+  ha-color-fill-success-quiet-resting: "#071807"
+  ha-color-fill-success-quiet-hover: "#0d250e"
+  ha-color-fill-success-quiet-active: "#071807"
+  ha-color-fill-success-normal-resting: "#173f19"
+  ha-color-fill-success-normal-hover: "#215f25"
+  ha-color-fill-success-normal-active: "#173f19"
+  ha-color-fill-success-loud-resting: "#80c884"
+  ha-color-fill-success-loud-hover: "#96d59a"
+  ha-color-fill-success-loud-active: "#80c884"
+
+  ha-color-on-primary-quiet: "#ffdf7a"
+  ha-color-on-primary-normal: "#ffd24a"
+  ha-color-on-primary-loud: "#030406"
+  ha-color-on-neutral-quiet: "#8ea1c2"
+  ha-color-on-neutral-normal: "#c7d3e8"
+  ha-color-on-neutral-loud: "#ffffff"
+  ha-color-on-disabled-quiet: "#344256"
+  ha-color-on-disabled-normal: "#4a6185"
+  ha-color-on-disabled-loud: "#6981a8"
+  ha-color-on-danger-quiet: "#ff8e91"
+  ha-color-on-danger-normal: "#ff6a6e"
+  ha-color-on-danger-loud: "#030406"
+  ha-color-on-warning-quiet: "#ffb84d"
+  ha-color-on-warning-normal: "#ffa11c"
+  ha-color-on-warning-loud: "#030406"
+  ha-color-on-success-quiet: "#afe0b2"
+  ha-color-on-success-normal: "#96d59a"
+  ha-color-on-success-loud: "#030406"
+  ha-color-surface-default: "#202937"
+  ha-color-on-surface-default: "#8ea1c2"
+  ha-color-form-background: "#202937"
+  ha-color-form-background-hover: "#2e3a4f"
+  ha-color-form-background-disabled: "#161A23"
+  ha-color-shadow-scrollable-fade: rgba(0, 0, 0, 0.32)
+
+  # Text
+  primary-text-color: "#8ea1c2"
+  secondary-text-color: "#3f5477"
+  text-primary-color: "#02a9f4"
+  disabled-text-color: "#4a6185" #1b2336
+  rgb-primary-color: 255, 193, 7
+  rgb-accent-color: 2, 169, 244
+  rgb-primary-text-color: 142, 161, 194
+  rgb-secondary-text-color: 63, 84, 119
+  rgb-card-background-color: 27, 35, 54
+  rgb-warning-color: 255, 193, 7
+  rgb-error-color: 255, 67, 72
+  rgb-success-color: 128, 200, 132
+  rgb-info-color: 2, 169, 244
+  error-color: "#FF4348"
+  warning-color: "#ffc107"
+  success-color: "#80C884"
+  info-color: "#02a9f4"
+
+  # Sidebar Menu
+  sidebar-icon-color: "#4a6185"
+  sidebar-text-color: "#8ea1c2"
+  sidebar-background-color: "#202937"
+  sidebar-selected-background-color: var(--primary-background-color)
+  sidebar-selected-icon-color: "#02a9f4"
+  sidebar-selected-text-color: var(--sidebar-selected-icon-color)
+  # States and Badges
+  state-icon-color: "#4a6185"
+  state-icon-active-color: "#ffc107"
+  state-active-color: "#ffc107"
+  state-inactive-color: "#4a6185"
+  state-light-active-color: "#ffc107"
+  state-switch-active-color: "#ffc107"
+  state-input_boolean-active-color: "#ffc107"
+  state-fan-active-color: "#02a9f4"
+  state-cover-active-color: "#02a9f4"
+  state-lock-active-color: "#80C884"
+  state-icon-unavailable-color: var(--disabled-text-color)
+
+  # Sliders
+  paper-slider-knob-color: var(--switch-checked-button-color)
+  paper-slider-knob-start-color: var(--switch-unchecked-button-color)
+  paper-slider-pin-color: var(--paper-slider-knob-color)
+  paper-slider-active-color: "#0D668E"
+  paper-slider-secondary-color: var(--light-primary-color)
+  paper-slider-container-color: var(--disabled-text-color)
+  mini-media-player-overlay-color: rgba(0, 0, 0, 0.55)
+
+  md-slider-inactive-track-color: "#181e29"
+  md-slider-active-track-color: "#02a9f4"
+  md-slider-handle-color: "#2e3a4f"
+
+  # Text Dividers from text-divier-row card
+  text-divider-color: var(--divider-color)
+  text-divider-font-size: "13px"
+  text-divider-line-size: "1px"
+
+  # Labels
+  label-badge-background-color: "#202937"
+  label-badge-text-color: "#8ea1c2"
+  label-badge-red: "#FF4348"
+  label-badge-green: "#80C884"
+  label-badge-blue: "#02a9f4"
+  label-badge-yellow: "#ffc107"
+  label-badge-gray: "#6981a8"
+  label-badge-orange: "#FF8A00"
+
+  # Cards
+  ha-card-border-radius: "6px"
+  ha-card-header-font-size: 20px
+  # ha-card-header-letter-spacing: "1.49px"
+  ha-card-box-shadow: 1px 1px 10px 0px rgba(14, 14, 22, 0.32)
+  ha-card-header-color: "#02a9f4"
+  ha-card-background: "#202937"
+  card-background-color: "#1b2336"
+  paper-listbox-background-color: "#202937"
+  paper-font-button_-_text-transform: "uppercase"
+  mdc-theme-surface: "#202937"
+  mdc-theme-background: "#191f2b"
+  mdc-theme-primary: "#ffc107"
+  mdc-theme-secondary: "#02a9f4"
+  mdc-theme-on-primary: "#030406"
+  mdc-theme-on-secondary: "#030406"
+  mdc-theme-on-surface: "#8ea1c2"
+  mdc-ripple-color: "#02a9f4"
+
+  # WebAwesome components used by newer Home Assistant controls
+  wa-color-brand-fill-loud: var(--ha-color-fill-primary-loud-resting)
+  wa-color-brand-fill-normal: var(--ha-color-fill-primary-normal-resting)
+  wa-color-brand-fill-quiet: var(--ha-color-fill-primary-quiet-hover)
+  wa-color-brand-border-loud: var(--ha-color-border-loud)
+  wa-color-brand-border-normal: var(--ha-color-primary-50)
+  wa-color-brand-border-quiet: var(--ha-color-border-quiet)
+  wa-color-brand-on-loud: var(--ha-color-on-primary-loud)
+  wa-color-brand-on-normal: var(--ha-color-on-primary-normal)
+  wa-color-brand-on-quiet: var(--ha-color-on-primary-quiet)
+  wa-color-neutral-fill-loud: var(--ha-color-fill-neutral-loud-resting)
+  wa-color-neutral-fill-normal: var(--ha-color-fill-neutral-normal-resting)
+  wa-color-neutral-fill-quiet: var(--ha-color-fill-neutral-quiet-hover)
+  wa-color-neutral-border-loud: var(--ha-color-border-neutral-loud)
+  wa-color-neutral-border-normal: var(--ha-color-border-neutral-normal)
+  wa-color-neutral-border-quiet: var(--ha-color-border-neutral-quiet)
+  wa-color-neutral-on-loud: var(--ha-color-on-neutral-loud)
+  wa-color-neutral-on-normal: var(--ha-color-on-neutral-normal)
+  wa-color-neutral-on-quiet: var(--ha-color-on-neutral-quiet)
+  wa-color-success-fill-loud: var(--ha-color-fill-success-loud-resting)
+  wa-color-success-fill-normal: var(--ha-color-fill-success-normal-resting)
+  wa-color-success-fill-quiet: var(--ha-color-fill-success-quiet-hover)
+  wa-color-success-border-loud: var(--ha-color-border-success-loud)
+  wa-color-success-border-normal: var(--ha-color-border-success-normal)
+  wa-color-success-border-quiet: var(--ha-color-border-success-quiet)
+  wa-color-success-on-loud: var(--ha-color-on-success-loud)
+  wa-color-success-on-normal: var(--ha-color-on-success-normal)
+  wa-color-success-on-quiet: var(--ha-color-on-success-quiet)
+  wa-color-warning-fill-loud: var(--ha-color-fill-warning-loud-resting)
+  wa-color-warning-fill-normal: var(--ha-color-fill-warning-normal-resting)
+  wa-color-warning-fill-quiet: var(--ha-color-fill-warning-quiet-hover)
+  wa-color-warning-border-loud: var(--ha-color-border-warning-loud)
+  wa-color-warning-border-normal: var(--ha-color-border-warning-normal)
+  wa-color-warning-border-quiet: var(--ha-color-border-warning-quiet)
+  wa-color-warning-on-loud: var(--ha-color-on-warning-loud)
+  wa-color-warning-on-normal: var(--ha-color-on-warning-normal)
+  wa-color-warning-on-quiet: var(--ha-color-on-warning-quiet)
+  wa-color-danger-fill-loud: var(--ha-color-fill-danger-loud-resting)
+  wa-color-danger-fill-normal: var(--ha-color-fill-danger-normal-resting)
+  wa-color-danger-fill-quiet: var(--ha-color-fill-danger-quiet-hover)
+  wa-color-danger-border-loud: var(--ha-color-border-danger-loud)
+  wa-color-danger-border-normal: var(--ha-color-border-danger-normal)
+  wa-color-danger-border-quiet: var(--ha-color-border-danger-quiet)
+  wa-color-danger-on-loud: var(--ha-color-on-danger-loud)
+  wa-color-danger-on-normal: var(--ha-color-on-danger-normal)
+  wa-color-danger-on-quiet: var(--ha-color-on-danger-quiet)
+  wa-color-text-quiet: var(--ha-color-text-secondary)
+  wa-color-text-normal: var(--primary-text-color)
+  wa-color-surface-default: var(--card-background-color)
+  wa-color-surface-raised: var(--mdc-theme-surface)
+  wa-color-surface-border: var(--ha-color-border-neutral-quiet)
+  wa-focus-ring-color: "#02a9f4"
+  wa-form-control-background-color: var(--ha-color-form-background)
+  wa-form-control-border-color: var(--ha-color-border-neutral-normal)
+  wa-form-control-value-color: var(--primary-text-color)
+  wa-form-control-placeholder-color: "#6981a8"
+
+  # Entity lists, menus, and editor rows
+  material-background-color: "#191f2b"
+  material-secondary-background-color: "#202937"
+  ha-card-border-color: "#344256"
+  ha-list-background: "#202937"
+  ha-list-item-border-color: "#344256"
+  ha-list-item-selected-background-color: "#191f2b"
+  ha-list-item-selected-text-color: "#02a9f4"
+  paper-item-icon-color: "#4a6185"
+  paper-item-icon-active-color: "#ffc107"
+  paper-item-selected_-_background-color: "#191f2b"
+  paper-tabs-selection-bar-color: "#02a9f4"
+  app-header-edit-background-color: "#202937"
+  app-header-edit-text-color: "#ffc107"
+
+  # Pills, chips, and badges
+  chip-background-color: "#202937"
+  chip-text-color: "#8ea1c2"
+  chip-icon-color: "#02a9f4"
+  chip-selected-background-color: "#0d4e70"
+  chip-selected-text-color: "#c7d3e8"
+  chip-selected-icon-color: "#ffc107"
+  ha-chip-background-color: "#202937"
+  ha-chip-text-color: "#8ea1c2"
+  ha-chip-icon-color: "#02a9f4"
+  ha-chip-selected-background-color: "#0d4e70"
+  ha-chip-selected-text-color: "#c7d3e8"
+  ha-chip-selected-icon-color: "#ffc107"
+  mush-chip-background-color: "#202937"
+  mush-chip-border-radius: "999px"
+  mush-chip-box-shadow: "none"
+  mush-chip-font-size: "13px"
+
+  #HACS
+  hcv-color-new: "#202937"
+
+  # Switches
+  switch-checked-color: "#02a9f4"
+  switch-checked-button-color: "#02a9f4"
+  switch-checked-track-color: "#0d4e70"
+  switch-unchecked-color: "#2E3A4F"
+  switch-unchecked-button-color: "#2E3A4F"
+  switch-unchecked-track-color: "#020203"
+  switch-disabled-button-color: "#344256"
+  switch-disabled-track-color: "#161A23"
+
+  # Toggles
+  paper-toggle-button-checked-button-color: var(--switch-checked-button-color)
+  paper-toggle-button-checked-bar-color: var(--switch-checked-track-color)
+  paper-toggle-button-unchecked-button-color: var(--switch-unchecked-button-color)
+  paper-toggle-button-unchecked-bar-color: var(--switch-unchecked-track-color)
+  paper-toggle-button-disabled-button-color: var(--switch-disabled-button-color)
+  paper-toggle-button-disabled-bar-color: var(--switch-disabled-track-color)
+  mdc-switch-selected-focus-state-layer-color: "#02a9f4"
+  mdc-switch-selected-handle-color: "#02a9f4"
+  mdc-switch-selected-hover-handle-color: "#02a9f4"
+  mdc-switch-selected-pressed-handle-color: "#02a9f4"
+  mdc-switch-selected-focus-handle-color: "#02a9f4"
+  mdc-switch-selected-track-color: "#0d4e70"
+  mdc-switch-selected-hover-track-color: "#0d668e"
+  mdc-switch-selected-pressed-track-color: "#0d668e"
+  mdc-switch-selected-focus-track-color: "#0d668e"
+  mdc-switch-unselected-handle-color: "#2E3A4F"
+  mdc-switch-unselected-hover-handle-color: "#344256"
+  mdc-switch-unselected-pressed-handle-color: "#344256"
+  mdc-switch-unselected-focus-handle-color: "#344256"
+  mdc-switch-unselected-track-color: "#020203"
+  mdc-switch-unselected-hover-track-color: "#161A23"
+  mdc-switch-unselected-pressed-track-color: "#161A23"
+  mdc-switch-unselected-focus-track-color: "#161A23"
+  toggle-icon-width: 30px
+
+  # Table
+  table-row-background-color: "#202937"
+  table-row-alternative-background-color: "#191f2b"
+  data-table-background-color: "#191f2b"
+  data-table-header-background-color: "#161A23"
+  data-table-row-hover-background-color: "#2e3a4f"
+  data-table-selected-color: "#0d4e70"
+
+  # Input fields
+  input-idle-line-color: "#344256"
+  input-hover-line-color: "#02a9f4"
+  input-disabled-line-color: "#161A23"
+  input-outlined-idle-border-color: "#344256"
+  input-outlined-hover-border-color: "#02a9f4"
+  input-outlined-disabled-border-color: "#161A23"
+  input-fill-color: "#202937"
+  input-disabled-fill-color: "#161A23"
+  input-ink-color: "#8ea1c2"
+  input-label-ink-color: "#6981a8"
+  input-disabled-ink-color: "#4a6185"
+  input-dropdown-icon-color: "#02a9f4"
+  input-focused-label-color: "#02a9f4"
+  input-error-color: "#FF4348"
+
+  # Legacy Input fields
+  mdc-select-idle-line-color: "#344256"
+  mdc-select-hover-line-color: "#02a9f4"
+  mdc-select-disabled-line-color: "#161A23"
+  mdc-select-outlined-idle-border-color: "#344256"
+  mdc-select-outlined-hover-border-color: "#02a9f4"
+  mdc-select-outlined-disabled-border-color: "#161A23"
+  mdc-select-fill-color: "#202937"
+  mdc-select-disabled-fill-color: "#161A23"
+  mdc-select-ink-color: "#8ea1c2"
+  mdc-select-label-ink-color: "#6981a8"
+  mdc-select-disabled-ink-color: "#4a6185"
+  mdc-select-dropdown-icon-color: "#02a9f4"
+  mdc-text-field-fill-color: "#202937"
+  mdc-text-field-disabled-fill-color: "#161A23"
+  mdc-text-field-ink-color: "#8ea1c2"
+  mdc-text-field-label-ink-color: "#6981a8"
+  mdc-text-field-disabled-ink-color: "#4a6185"
+  mdc-text-field-idle-line-color: "#344256"
+  mdc-text-field-hover-line-color: "#02a9f4"
+  mdc-text-field-outlined-idle-border-color: "#344256"
+  mdc-text-field-outlined-hover-border-color: "#02a9f4"
+
+  ha-card-border-width: "0px"
+
+  modes:
+    dark: {}

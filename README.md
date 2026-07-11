@@ -136,15 +136,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 1899 |
-| Number of sensors | 1024 |
-| Current Version | 2026.7.0 |
-| Total Automations | 124 |
+| Number of entities | 1913 |
+| Number of sensors | 1037 |
+| Current Version | 2026.7.2 |
+| Total Automations | 125 |
 | Total Scripts | 38 |
 | Total Lights | 33 |
-| Total Switches | 135 |
-| Total Scenes | 13 |
-| Total Players | 16 |
+| Total Switches | 127 |
+| Total Scenes | 14 |
+| Total Players | 17 |
 
 ---
 
@@ -162,9 +162,9 @@ This repository is treated as:
 
 - openWakeWord
 
-- Piper
-
 - Samba share
+
+- Silero TTS Enhanced Engine
 
 - Studio Code Server
 
@@ -181,8 +181,8 @@ This repository is treated as:
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv1.34.2)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v0.14.0)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
-- [Home Assistant MCP Server Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v0.10.0)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.6.0)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
@@ -191,18 +191,21 @@ This repository is treated as:
 - [Passive BLE monitor](https://github.com/custom-components/ble_monitor) (v13.12.0)
 - [Pirate Weather](https://github.com/alexander0042/pirate-weather-ha) (v1.8.9)
 - [Powercalc](https://docs.powercalc.nl) (vv1.20.14)
+- [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
 - [Spook](https://spook.boo) (v5.0.0)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
+- [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.71)
 
 ## 🔗 Custom integrations
 
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 
-- [Ha Mcp Tools](https://github.com/homeassistant-ai/ha-mcp)
+- [Ha Mcp Custom Component](https://github.com/homeassistant-ai/ha-mcp)
 
 - [HACS](https://github.com/hacs/integration)
 
@@ -210,7 +213,11 @@ This repository is treated as:
 
 - [Remote Home Assistant](https://github.com/custom-components/remote_homeassistant)
 
+- [Silero Tts Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs)
+
 - [Spook 👻 Your Homie](https://github.com/frenck/spook)
+
+- [Thailand Weather Alerts (Tmd)](https://github.com/simplemice/ha_tmd_alerts)
 
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort)
 
@@ -218,12 +225,25 @@ This repository is treated as:
 
 - [Xiaomi Miio Raw](https://github.com/syssi/xiaomi_raw)
 
+- [Zambretti & Sager Weather Forecaster](https://github.com/ziffmafiya/zambretti_sager)
+
 
 ## 🎛️ Lovelace plugins
+- [Apexcharts Card](https://github.com/RomRider/apexcharts-card)
+- [Better Thermostat Ui](https://github.com/KartoffelToby/better-thermostat-ui-card)
+- [Bubble Card](https://github.com/Clooos/Bubble-Card)
+- [Button Card](https://github.com/custom-cards/button-card)
+- [Flexible Horseshoe Card](https://github.com/AmoebeLabs/flex-horseshoe-card)
+- [Llm Vision Card](https://github.com/valentinfrlch/llmvision-card)
+- [Mini Graph Card](https://github.com/kalkih/mini-graph-card)
 - [Mushroom](https://github.com/piitaya/lovelace-mushroom)
+- [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 
 ## 🎨 Themes
+- [Frosted Glass Theme](https://github.com/wessamlauf/homeassistant-frosted-glass-themes)
+- [Skynet Dark Theme](https://github.com/skynet01/homeassistant-skynet-theme)
+- [Your Name.](https://github.com/Nihvel/your_name)
 
 ---
 

@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Weather Station Setup",
+        "description": "Select the sensors for your forecasting model.",
+        "data": {
+          "pressure_sensor": "Pressure Sensor",
+          "wind_sensor": "Wind Direction Sensor (optional)",
+          "wind_speed_sensor": "Wind Speed Sensor (optional)",
+          "temperature_sensor": "Temperature Sensor (optional)",
+          "humidity_sensor": "Humidity Sensor (optional)",
+          "use_sea_level_correction": "Enable Sea Level Pressure Correction",
+          "location": "Location"
+        },
+        "data_description": {
+          "pressure_sensor": "Select your barometric pressure sensor (absolute or sea level pressure)",
+          "wind_sensor": "Optional: select your wind direction sensor (in degrees)",
+          "wind_speed_sensor": "Optional: dedicated wind speed sensor",
+          "temperature_sensor": "Optional: used for accurate sea level pressure correction",
+          "humidity_sensor": "Optional: improves precipitation probability accuracy",
+          "use_sea_level_correction": "Enable if using an absolute pressure sensor and located above sea level",
+          "location": "Click on the map to select your weather station location for altitude calculation"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This weather station is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Adjust Sensors",
+        "description": "Update the sensors used for Zambretti and Sager calculations.",
+        "data": {
+          "pressure_sensor": "Pressure Sensor",
+          "wind_sensor": "Wind Direction Sensor (optional)",
+          "wind_speed_sensor": "Wind Speed Sensor (optional)",
+          "temperature_sensor": "Temperature Sensor (optional)",
+          "humidity_sensor": "Humidity Sensor (optional)",
+          "use_sea_level_correction": "Enable Sea Level Pressure Correction",
+          "location": "Location"
+        },
+        "data_description": {
+          "pressure_sensor": "Select your barometric pressure sensor (absolute or sea level pressure)",
+          "wind_sensor": "Optional: select your wind direction sensor (in degrees)",
+          "wind_speed_sensor": "Optional: dedicated wind speed sensor",
+          "temperature_sensor": "Optional: used for accurate sea level pressure correction",
+          "humidity_sensor": "Optional: improves precipitation probability accuracy",
+          "use_sea_level_correction": "Enable if using an absolute pressure sensor and located above sea level",
+          "location": "Click on the map to select your weather station location for altitude calculation"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hava İstasyonu Kurulumu",
+        "description": "Tahmin modeliniz için sensörleri seçin.",
+        "data": {
+          "pressure_sensor": "Basınç Sensörü",
+          "wind_sensor": "Rüzgâr Yönü Sensörü (isteğe bağlı)",
+          "wind_speed_sensor": "Rüzgar Hızı Sensörü (isteğe bağlı)",
+          "temperature_sensor": "Sıcaklık Sensörü (isteğe bağlı)",
+          "humidity_sensor": "Nem Sensörü (isteğe bağlı)",
+          "use_sea_level_correction": "Deniz Seviyesi Basınç Düzeltmesini Etkinleştir",
+          "location": "Konum"
+        },
+        "data_description": {
+          "pressure_sensor": "Barometrik basınç sensörünüzü seçin",
+          "wind_sensor": "İsteğe bağlı: rüzgar yönü sensörü (derece cinsinden)",
+          "wind_speed_sensor": "İsteğe bağlı: özel rüzgar hızı sensörü",
+          "temperature_sensor": "İsteğe bağlı: deniz seviyesi basınç düzeltmesi için kullanılır",
+          "humidity_sensor": "İsteğe bağlı: yağış olasılığı doğruluğunu artırır",
+          "use_sea_level_correction": "Deniz seviyesinin üzerinde bir mutlak basınç sensörü kullanıyorsanız etkinleştirin",
+          "location": "Rakım hesaplaması için konumunuzu ayarlamak üzere haritaya tıklayın"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Bağlantı kurulamadı",
+      "unknown": "Beklenmedik hata"
+    },
+    "abort": {
+      "already_configured": "Bu hava istasyonu zaten yapılandırılmış"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensörleri Ayarla",
+        "description": "Zambretti ve Sager hesaplamaları için kullanılan sensörleri güncelleyin.",
+        "data": {
+          "pressure_sensor": "Basınç Sensörü",
+          "wind_sensor": "Rüzgâr Yönü Sensörü (isteğe bağlı)",
+          "wind_speed_sensor": "Rüzgar Hızı Sensörü (isteğe bağlı)",
+          "temperature_sensor": "Sıcaklık Sensörü (isteğe bağlı)",
+          "humidity_sensor": "Nem Sensörü (isteğe bağlı)",
+          "use_sea_level_correction": "Deniz Seviyesi Basınç Düzeltmesini Etkinleştir",
+          "location": "Konum"
+        },
+        "data_description": {
+          "pressure_sensor": "Barometrik basınç sensörünüzü seçin",
+          "wind_sensor": "İsteğe bağlı: rüzgar yönü sensörü (derece cinsinden)",
+          "wind_speed_sensor": "İsteğe bağlı: özel rüzgar hızı sensörü",
+          "temperature_sensor": "İsteğe bağlı: deniz seviyesi basınç düzeltmesi için kullanılır",
+          "humidity_sensor": "İsteğe bağlı: yağış olasılığı doğruluğunu artırır",
+          "use_sea_level_correction": "Deniz seviyesinin üzerinde bir mutlak basınç sensörü kullanıyorsanız etkinleştirin",
+          "location": "Rakım hesaplaması için konumunuzu ayarlamak üzere haritaya tıklayın"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Hava Durumu İyi",
+          "fine_weather": "Hava Güneşli",
+          "fine_becoming_less_settled": "Hava Güneşli, Hava Durumu Bozuluyor",
+          "fairly_fine_showery_later": "Hava Oldukça Güneşli, Daha Sonra Sağanak Yağışlı",
+          "showery_becoming_more_unsettled": "Sağanak Yağışlı, Hava Durumu Daha da Bozuluyor",
+          "unsettled_rain_later": "Hava Durumu Kararsız, Daha Sonra Yağmur",
+          "rain_at_times_worse_later": "Aralıklı Yağmur, Daha Sonra Hava Kötüleşecek",
+          "rain_at_times_becoming_very_unsettled": "Aralıklı Yağmur, Hava Durumu Çok Kararsız Hale Geliyor",
+          "very_unsettled_rain": "Hava Durumu Çok Kararsız, Yağmur",
+          "fine_possibly_showers": "Güzel, Muhtemelen Sağanak Yağışlı",
+          "fairly_fine_showers_likely": "Oldukça Güzel, Sağanak Yağış Olasılığı Yüksek",
+          "showery_bright_intervals": "Sağanak Yağışlı, Ara Ara Güneşli",
+          "changeable_some_rain": "Değişken, Biraz Yağmur",
+          "unsettled_rain_at_times": "Kararsız, Ara Ara Yağmur",
+          "rain_at_frequent_intervals": "Sık Aralıklarla Yağmur",
+          "stormy_much_rain": "Fırtınalı, Bol Yağmur",
+          "becoming_fine": "Güzel Hale Geliyor",
+          "fairly_fine_improving": "Oldukça Güzel, İyileşiyor",
+          "fairly_fine_possibly_showers_early": "Oldukça Güzel, Sabah Saatlerinde Muhtemelen Sağanak Yağışlı",
+          "showery_early_improving": "Sabah saatlerinde sağanak yağışlı, hava düzeliyor",
+          "changeable_mending": "Değişken, düzeliyor",
+          "rather_unsettled_clearing_later": "Oldukça değişken, daha sonra açacak",
+          "unsettled_probably_improving": "Değişken, muhtemelen düzelecek",
+          "unsettled_short_fine_intervals": "Değişken, kısa süreli açık aralıklar",
+          "very_unsettled_finer_at_times": "Çok değişken, ara sıra açık",
+          "stormy_possibly_improving": "Fırtınalı, muhtemelen düzelecek",
+          "stable": "Sabit"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Güneşli, hava düzeliyor",
+          "sager_fair_tending_to_deteriorate": "Şu anda güneşli, kötüleşme eğilimi var",
+          "sager_fair_no_change": "Güneşli, önemli bir değişiklik yok",
+          "sager_unsettled_rain_likely": "Değişken, yağmur olasılığı yüksek",
+          "sager_unsettled_probably_improving": "Değişken, muhtemelen düzelecek",
+          "sager_unsettled_rain_at_times": "Değişken, ara sıra yağmur",
+          "sager_changeable_becoming_fairer": "Değişken, giderek güneşli hale geliyor",
+          "sager_changeable_becoming_more_unsettled": "Değişken, giderek daha değişken hale geliyor",
+          "sager_variable_slowly_improving": "Değişken, yavaş yavaş düzeliyor",
+          "sager_variable_slowly_deteriorating": "Değişken, yavaş yavaş kötüleşiyor",
+          "sager_variable_some_change": "Değişken, bazı değişiklikler bekleniyor"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfiguracja stacji pogodowej",
+        "description": "Wybierz czujniki do swojego modelu prognozowania.",
+        "data": {
+          "pressure_sensor": "Czujnik ciśnienia",
+          "wind_sensor": "Czujnik kierunku wiatru (opcjonalnie)",
+          "wind_speed_sensor": "Czujnik prędkości wiatru (opcjonalnie)",
+          "temperature_sensor": "Czujnik temperatury (opcjonalnie)",
+          "humidity_sensor": "Czujnik wilgotności (opcjonalnie)",
+          "use_sea_level_correction": "Włącz korekcję ciśnienia na poziomie morza",
+          "location": "Lokalizacja"
+        },
+        "data_description": {
+          "pressure_sensor": "Wybierz czujnik ciśnienia barometrycznego",
+          "wind_sensor": "Opcjonalnie: czujnik kierunku wiatru (w stopniach)",
+          "wind_speed_sensor": "Opcjonalnie: dedykowany czujnik prędkości wiatru",
+          "temperature_sensor": "Opcjonalnie: służy do korekcji ciśnienia na poziomie morza",
+          "humidity_sensor": "Opcjonalnie: poprawia dokładność prognozowania prawdopodobieństwa opadów",
+          "use_sea_level_correction": "Włącz, jeśli używasz czujnika ciśnienia bezwzględnego powyżej poziomu morza",
+          "location": "Kliknij na mapie, aby ustawić lokalizację do obliczenia wysokości nad poziomem morza"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie udało się nawiązać połączenia",
+      "unknown": "Nieoczekiwany błąd"
+    },
+    "abort": {
+      "already_configured": "Ta stacja pogodowa jest już skonfigurowana"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Dostosuj czujniki",
+        "description": "Zaktualizuj czujniki używane do obliczeń metodami Zambretti i Sagera.",
+        "data": {
+          "pressure_sensor": "Czujnik ciśnienia",
+          "wind_sensor": "Czujnik kierunku wiatru (opcjonalnie)",
+          "wind_speed_sensor": "Czujnik prędkości wiatru (opcjonalnie)",
+          "temperature_sensor": "Czujnik temperatury (opcjonalnie)",
+          "humidity_sensor": "Czujnik wilgotności (opcjonalnie)",
+          "use_sea_level_correction": "Włącz korekcję ciśnienia na poziomie morza",
+          "location": "Lokalizacja"
+        },
+        "data_description": {
+          "pressure_sensor": "Wybierz czujnik ciśnienia barometrycznego",
+          "wind_sensor": "Opcjonalnie: czujnik kierunku wiatru (w stopniach)",
+          "wind_speed_sensor": "Opcjonalnie: dedykowany czujnik prędkości wiatru",
+          "temperature_sensor": "Opcjonalnie: służy do korekcji ciśnienia na poziomie morza",
+          "humidity_sensor": "Opcjonalnie: poprawia dokładność prognozowania prawdopodobieństwa opadów",
+          "use_sea_level_correction": "Włącz, jeśli używasz czujnika ciśnienia bezwzględnego powyżej poziomu morza",
+          "location": "Kliknij na mapie, aby ustawić lokalizację do obliczenia wysokości nad poziomem morza"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Pogoda stabilna i ładna",
+          "fine_weather": "Ładna pogoda",
+          "fine_becoming_less_settled": "Ładna, pogoda się pogarsza",
+          "fairly_fine_showery_later": "Dość ładna, później przelotne opady",
+          "showery_becoming_more_unsettled": "Przelotne opady, pogoda się pogarsza",
+          "unsettled_rain_later": "Niestabilna, później deszcz",
+          "rain_at_times_worse_later": "Przelotne opady, później pogorszenie",
+          "rain_at_times_becoming_very_unsettled": "Przelotne opady, pogoda staje się bardzo niestabilna",
+          "very_unsettled_rain": "Bardzo niestabilna, deszcz",
+          "fine_possibly_showers": "Pięknie, możliwe przelotne opady",
+          "fairly_fine_showers_likely": "Dość ładnie, prawdopodobne przelotne opady",
+          "showery_bright_intervals": "Przelotne opady, przejaśnienia",
+          "changeable_some_rain": "Zmienna pogoda, miejscami deszcz",
+          "unsettled_rain_at_times": "Niestabilnie, miejscami deszcz",
+          "rain_at_frequent_intervals": "Częste opady deszczu",
+          "stormy_much_rain": "Burzowo, obfite opady deszczu",
+          "becoming_fine": "Pogoda się poprawia",
+          "fairly_fine_improving": "Dość ładnie, pogoda się poprawia",
+          "fairly_fine_possibly_showers_early": "Dość ładnie, rano możliwe przelotne opady",
+          "showery_early_improving": "Początkowo przelotne opady, pogoda się poprawia",
+          "changeable_mending": "Zmienna pogoda, poprawia się",
+          "rather_unsettled_clearing_later": "Dość niestabilna pogoda, później się przejaśnia",
+          "unsettled_probably_improving": "Niestabilna pogoda, prawdopodobnie się poprawi",
+          "unsettled_short_fine_intervals": "Niestabilna pogoda, krótkie przejaśnienia",
+          "very_unsettled_finer_at_times": "Bardzo niestabilna pogoda, miejscami ładniej",
+          "stormy_possibly_improving": "Burzowo, prawdopodobnie się poprawi",
+          "stable": "Stabilna"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Pogodnie, pogoda się poprawia",
+          "sager_fair_tending_to_deteriorate": "Obecnie pogodnie, tendencja do pogorszenia",
+          "sager_fair_no_change": "Pogodnie, bez znaczących zmian",
+          "sager_unsettled_rain_likely": "Niestabilnie, prawdopodobne opady deszczu",
+          "sager_unsettled_probably_improving": "Niestabilnie, prawdopodobnie pogoda się poprawi",
+          "sager_unsettled_rain_at_times": "Niestabilnie, miejscami opady deszczu",
+          "sager_changeable_becoming_fairer": "Zmienna pogoda, stopniowo się poprawia",
+          "sager_changeable_becoming_more_unsettled": "Zmienna pogoda, staje się coraz bardziej niestabilna",
+          "sager_variable_slowly_improving": "Zmienna pogoda, powoli się poprawia",
+          "sager_variable_slowly_deteriorating": "Zmienna pogoda, powoli się pogarsza",
+          "sager_variable_some_change": "Zmienna pogoda, spodziewane pewne zmiany"
+        }
+      }
+    }
+  }
+}

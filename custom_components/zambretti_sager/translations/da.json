@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Opsætning af vejrstation",
+        "description": "Vælg sensorerne til din prognosemodel.",
+        "data": {
+          "pressure_sensor": "Tryksensor",
+          "wind_sensor": "Vindretningssensor (valgfri)",
+          "wind_speed_sensor": "Vindhastighedssensor (valgfri)",
+          "temperature_sensor": "Temperatursensor (valgfri)",
+          "humidity_sensor": "Fugtighedssensor (valgfri)",
+          "use_sea_level_correction": "Aktivér korrektion for havoverfladetryk",
+          "location": "Placering"
+        },
+        "data_description": {
+          "pressure_sensor": "Vælg din barometriske tryksensor",
+          "wind_sensor": "Valgfri: vindretningssensor (i grader)",
+          "wind_speed_sensor": "Valgfri: dedikeret vindhastighedssensor",
+          "temperature_sensor": "Valgfri: bruges til korrektion for havoverfladetryk",
+          "humidity_sensor": "Valgfrit: forbedrer nøjagtigheden af nedbørssandsynligheden",
+          "use_sea_level_correction": "Aktivér, hvis du bruger en absolut tryksensor over havoverfladen",
+          "location": "Klik på kortet for at indstille din placering til højdeberegning"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Det lykkedes ikke at oprette forbindelse",
+      "unknown": "Uventet fejl"
+    },
+    "abort": {
+      "already_configured": "Denne vejrstation er allerede konfigureret"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Juster sensorer",
+        "description": "Opdater de sensorer, der bruges til Zambretti- og Sager-beregninger.",
+        "data": {
+          "pressure_sensor": "Tryksensor",
+          "wind_sensor": "Vindretningssensor (valgfri)",
+          "wind_speed_sensor": "Vindhastighedssensor (valgfri)",
+          "temperature_sensor": "Temperatursensor (valgfri)",
+          "humidity_sensor": "Fugtighedssensor (valgfri)",
+          "use_sea_level_correction": "Aktivér korrektion for havoverfladetryk",
+          "location": "Placering"
+        },
+        "data_description": {
+          "pressure_sensor": "Vælg din barometriske tryksensor",
+          "wind_sensor": "Valgfri: vindretningssensor (i grader)",
+          "wind_speed_sensor": "Valgfri: dedikeret vindhastighedssensor",
+          "temperature_sensor": "Valgfri: bruges til korrektion for havoverfladetryk",
+          "humidity_sensor": "Valgfrit: forbedrer nøjagtigheden af nedbørssandsynligheden",
+          "use_sea_level_correction": "Aktivér, hvis du bruger en absolut tryksensor over havoverfladen",
+          "location": "Klik på kortet for at indstille din placering til højdeberegning"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Stabilt og fint",
+          "fine_weather": "Fint vejr",
+          "fine_becoming_less_settled": "Fint, bliver mindre stabilt",
+          "fairly_fine_showery_later": "Ret fint, byger senere",
+          "showery_becoming_more_unsettled": "Byger, bliver mere ustabilt",
+          "unsettled_rain_later": "Ustabilt, regn senere",
+          "rain_at_times_worse_later": "Regn af og til, værre senere",
+          "rain_at_times_becoming_very_unsettled": "Regn af og til, bliver meget ustabilt",
+          "very_unsettled_rain": "Meget ustabilt, regn",
+          "fine_possibly_showers": "Fint, muligvis byger",
+          "fairly_fine_showers_likely": "Ret fint, sandsynligvis byger",
+          "showery_bright_intervals": "Byger, solrige perioder",
+          "changeable_some_rain": "Skiftende, lidt regn",
+          "unsettled_rain_at_times": "Uroligt, regn af og til",
+          "rain_at_frequent_intervals": "Regn med hyppige mellemrum",
+          "stormy_much_rain": "Stormfuldt, meget regn",
+          "becoming_fine": "Bliver fint",
+          "fairly_fine_improving": "Ret fint, forbedres",
+          "fairly_fine_possibly_showers_early": "Ret fint, muligvis byger tidligt",
+          "showery_early_improving": "Byger tidligt, forbedres",
+          "changeable_mending": "Skiftende, bedres",
+          "rather_unsettled_clearing_later": "Temmelig ustabilt, klarer op senere",
+          "unsettled_probably_improving": "Ustabilt, forbedres sandsynligvis",
+          "unsettled_short_fine_intervals": "Ustabilt, korte klare perioder",
+          "very_unsettled_finer_at_times": "Meget ustabilt, klarere af og til",
+          "stormy_possibly_improving": "Stormfuldt, muligvis bedre",
+          "stable": "Stabilt"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Fint vejr, bliver bedre",
+          "sager_fair_tending_to_deteriorate": "Fint nu, tendens til forværring",
+          "sager_fair_no_change": "Fint vejr, ingen væsentlig ændring",
+          "sager_unsettled_rain_likely": "Uroligt, sandsynligvis regn",
+          "sager_unsettled_probably_improving": "Uroligt, sandsynligvis bedre",
+          "sager_unsettled_rain_at_times": "Uroligt, regn af og til",
+          "sager_changeable_becoming_fairer": "Skiftende, bliver finere",
+          "sager_changeable_becoming_more_unsettled": "Skiftende, bliver mere uroligt",
+          "sager_variable_slowly_improving": "Variabelt, forbedres langsomt",
+          "sager_variable_slowly_deteriorating": "Variabelt, forværres langsomt",
+          "sager_variable_some_change": "Variabelt, forventes en vis ændring"
+        }
+      }
+    }
+  }
+}

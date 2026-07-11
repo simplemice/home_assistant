@@ -1,0 +1,12 @@
+{
+  "domain": "tmd_alerts",
+  "name": "Thailand Weather Alerts (TMD)",
+  "version": "2.2.7",
+  "documentation": "https://github.com/simplemice/tmd_alerts",
+  "requirements": [],
+  "codeowners": [
+    "@simplemice"
+  ],
+  "iot_class": "cloud_polling",
+  "config_flow": true
+}

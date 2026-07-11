@@ -68,5 +68,3 @@ recorder:
       - automation
       - script
 
-logger:
-  default: warning

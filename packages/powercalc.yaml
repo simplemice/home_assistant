@@ -209,14 +209,6 @@ powercalc:
       linear:
         min_power: 1.0
         max_power: 24.0
-      # Kitchen Closet Ambient (2m LED strip)
-    - entity_id: light.kitchen_closet_up_light
-      name: "Kitchen Closet Up Light Power"
-      standby_power: 0.5
-      fixed:
-        power: 20
-      # Kitchen Wall Ambient (2m LED strip)
-
       # Fridge Strip (1m LED strip)
     - entity_id: light.kitchen_fridge_light
       name: "Kitchen Fridge Light Power"

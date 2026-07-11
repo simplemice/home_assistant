@@ -1,5 +1,9 @@
 
 
+## v2026.07.12-0048 - 2026-07-12
+- Pushed. If you tag another v0.0.1 I'm logging an error on purpose.
+
+
 ## v2026.07.02-1216 - 2026-07-02
 - reconfiguring family presence and update system to new version
 

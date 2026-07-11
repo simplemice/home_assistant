@@ -45,9 +45,9 @@ media_player:
   - platform: group
     name: All Players
     entities:
-      - media_player.livingroom_player
-      - media_player.bedroom_player
-      - media_player.kitchen_player
+      - media_player.livingroom_speaker
+      - media_player.bedroom_speaker
+      - media_player.kitchen_speaker
 
 input_number:
   notify_low_volume:

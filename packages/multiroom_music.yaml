@@ -30,9 +30,9 @@ template:
       - name: ma_all_rooms
         state: >
           {{ [
-            'media_player.livingroom_player',
-            'media_player.bedroom_player',
-            'media_player.kitchen_player'
+            'media_player.livingroom_speaker',
+            'media_player.bedroom_speaker',
+            'media_player.kitchen_speaker'
           ] | join(',') }}
 
 ###############################################################################
@@ -49,10 +49,10 @@ script:
     fields:
       master:
         description: Master player entity
-        example: media_player.livingroom_player
+        example: media_player.livingroom_speaker
       members:
         description: Players to join
-        example: media_player.kitchen_player,media_player.bedroom_player
+        example: media_player.kitchen_speaker,media_player.bedroom_speaker
     sequence:
       - service: media_player.join
         target:
@@ -97,19 +97,19 @@ script:
       - service: script.ma_unjoin_rooms
         data:
           members:
-            - media_player.bedroom_player
-            - media_player.kitchen_player
+            - media_player.bedroom_speaker
+            - media_player.kitchen_speaker
       - delay: 1
       - service: script.ma_join_rooms
         data:
-          master: media_player.livingroom_player
+          master: media_player.livingroom_speaker
           members:
-            - media_player.bedroom_player
-            - media_player.kitchen_player
+            - media_player.bedroom_speaker
+            - media_player.kitchen_speaker
       - delay: 2
       - service: media_player.play_media
         target:
-          entity_id: media_player.livingroom_player
+          entity_id: media_player.livingroom_speaker
         data:
           media_content_type: music
           media_content_id: "library://favorites"
@@ -123,12 +123,12 @@ script:
     fields:
       room:
         description: Room player entity
-        example: media_player.kitchen_player
+        example: media_player.kitchen_speaker
     sequence:
       - choose:
           - conditions: >
-              {{ state_attr('media_player.livingroom_player','group_members')
-                 and room in state_attr('media_player.livingroom_player','group_members') }}
+              {{ state_attr('media_player.livingroom_speaker','group_members')
+                 and room in state_attr('media_player.livingroom_speaker','group_members') }}
             sequence:
               - service: media_player.unjoin
                 target:
@@ -136,7 +136,7 @@ script:
         default:
           - service: media_player.join
             target:
-              entity_id: media_player.livingroom_player
+              entity_id: media_player.livingroom_speaker
             data:
               group_members:
                 - "{{ room }}"
@@ -186,15 +186,15 @@ script:
       - service: script.ma_unjoin_rooms
         data:
           members:
-            - media_player.bedroom_player
-            - media_player.kitchen_player
+            - media_player.bedroom_speaker
+            - media_player.kitchen_speaker
       - delay: 1
       - condition: template
         value_template: >
-          {{ is_state('media_player.livingroom_player','paused') }}
+          {{ is_state('media_player.livingroom_speaker','paused') }}
       - service: media_player.media_play
         target:
-          entity_id: media_player.livingroom_player
+          entity_id: media_player.livingroom_speaker
 
 ###############################################################################
 # AUTOMATIONS
@@ -209,19 +209,19 @@ automation:
     action:
       - service: script.ma_toggle_room
         data:
-          room: media_player.kitchen_player
+          room: media_player.kitchen_speaker
 
   - alias: Normalize joined volume
     trigger:
       - platform: state
-        entity_id: media_player.livingroom_player
+        entity_id: media_player.livingroom_speaker
         attribute: group_members
     action:
       - service: media_player.volume_set
         target:
           entity_id:
-            - media_player.bedroom_player
-            - media_player.kitchen_player
+            - media_player.bedroom_speaker
+            - media_player.kitchen_speaker
         data:
           volume_level: 0.35
 
@@ -232,7 +232,7 @@ automation:
     mode: restart
     trigger:
       - platform: state
-        entity_id: media_player.livingroom_player
+        entity_id: media_player.livingroom_speaker
         attribute: media_content_type
         from: "announcement"
     action:

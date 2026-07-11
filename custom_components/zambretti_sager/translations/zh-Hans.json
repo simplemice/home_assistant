@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "气象站设置",
+        "description": "为您的预报模型选择传感器。",
+        "data": {
+          "pressure_sensor": "气压传感器",
+          "wind_sensor": "风向传感器（可选）",
+          "wind_speed_sensor": "风速传感器（可选）",
+          "temperature_sensor": "温度传感器（可选）",
+          "humidity_sensor": "湿度传感器（可选）",
+          "use_sea_level_correction": "启用海平面气压校正",
+          "location": "位置"
+        },
+        "data_description": {
+          "pressure_sensor": "选择您的气压传感器",
+          "wind_sensor": "可选：风向传感器（单位：度）",
+          "wind_speed_sensor": "可选：专用风速传感器",
+          "temperature_sensor": "可选：用于海平面气压校正",
+          "humidity_sensor": "可选：提高降水概率的准确性",
+          "use_sea_level_correction": "若使用海拔以上的绝对压力传感器，请启用此功能",
+          "location": "点击地图以设置您的位置，用于海拔计算"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "连接失败",
+      "unknown": "意外错误"
+    },
+    "abort": {
+      "already_configured": "该气象站已配置完毕"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "调整传感器",
+        "description": "更新用于 Zambretti 和 Sager 计算的传感器。",
+        "data": {
+          "pressure_sensor": "气压传感器",
+          "wind_sensor": "风向传感器（可选）",
+          "wind_speed_sensor": "风速传感器（可选）",
+          "temperature_sensor": "温度传感器（可选）",
+          "humidity_sensor": "湿度传感器（可选）",
+          "use_sea_level_correction": "启用海平面气压校正",
+          "location": "位置"
+        },
+        "data_description": {
+          "pressure_sensor": "选择您的气压传感器",
+          "wind_sensor": "可选：风向传感器（单位：度）",
+          "wind_speed_sensor": "可选：专用风速传感器",
+          "temperature_sensor": "可选：用于海平面气压校正",
+          "humidity_sensor": "可选：提高降水概率的准确性",
+          "use_sea_level_correction": "若使用海拔以上的绝对压力传感器，请启用此功能",
+          "location": "点击地图以设置您的位置，用于海拔计算"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "天气稳定，晴朗",
+          "fine_weather": "晴朗",
+          "fine_becoming_less_settled": "晴朗，逐渐转多云",
+          "fairly_fine_showery_later": "小晴，稍后有阵雨",
+          "showery_becoming_more_unsettled": "阵雨，逐渐转多云",
+          "unsettled_rain_later": "多云，稍后有雨",
+          "rain_at_times_worse_later": "时有阵雨，稍后转差",
+          "rain_at_times_becoming_very_unsettled": "时有阵雨，逐渐转为多云",
+          "very_unsettled_rain": "多云，有雨",
+          "fine_possibly_showers": "晴好，可能有阵雨",
+          "fairly_fine_showers_likely": "相当晴好，可能有阵雨",
+          "showery_bright_intervals": "阵雨，间或放晴",
+          "changeable_some_rain": "天气多变，偶有降雨",
+          "unsettled_rain_at_times": "多变，时有降雨",
+          "rain_at_frequent_intervals": "频繁降雨",
+          "stormy_much_rain": "暴风雨，降雨量大",
+          "becoming_fine": "转晴",
+          "fairly_fine_improving": "相当晴好，天气好转",
+          "fairly_fine_possibly_showers_early": "相当晴好，早晨可能有阵雨",
+          "showery_early_improving": "早晨阵雨，天气好转",
+          "changeable_mending": "天气多变，逐渐好转",
+          "rather_unsettled_clearing_later": "天气较为不稳定，稍后放晴",
+          "unsettled_probably_improving": "天气不稳定，可能好转",
+          "unsettled_short_fine_intervals": "天气不稳定，短暂放晴",
+          "very_unsettled_finer_at_times": "天气极不稳定，间或放晴",
+          "stormy_possibly_improving": "雷雨天气，可能好转",
+          "stable": "天气稳定"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "晴好，天气好转",
+          "sager_fair_tending_to_deteriorate": "目前晴好，但有转差趋势",
+          "sager_fair_no_change": "晴好，无明显变化",
+          "sager_unsettled_rain_likely": "天气多变，可能有雨",
+          "sager_unsettled_probably_improving": "天气多变，可能好转",
+          "sager_unsettled_rain_at_times": "天气多变，时有降雨",
+          "sager_changeable_becoming_fairer": "天气多变，逐渐转晴",
+          "sager_changeable_becoming_more_unsettled": "天气多变，逐渐转差",
+          "sager_variable_slowly_improving": "天气多变，预计会有变化",
+          "sager_variable_slowly_deteriorating": "天气多变，缓慢转差",
+          "sager_variable_some_change": "天气多变，预计会有变化"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration de la station météo",
+        "description": "Sélectionnez les capteurs pour votre modèle de prévision.",
+        "data": {
+          "pressure_sensor": "Capteur de pression",
+          "wind_sensor": "Capteur de direction du vent (en option)",
+          "wind_speed_sensor": "Capteur de vitesse du vent (en option)",
+          "temperature_sensor": "Capteur de température (en option)",
+          "humidity_sensor": "Capteur d'humidité (en option)",
+          "use_sea_level_correction": "Activer la correction de la pression au niveau de la mer",
+          "location": "Emplacement"
+        },
+        "data_description": {
+          "pressure_sensor": "Sélectionnez votre capteur de pression barométrique",
+          "wind_sensor": "En option : capteur de direction du vent (en degrés)",
+          "wind_speed_sensor": "En option : capteur dédié à la vitesse du vent",
+          "temperature_sensor": "En option : utilisé pour la correction de la pression au niveau de la mer",
+          "humidity_sensor": "Facultatif : améliore la précision de la probabilité de précipitations",
+          "use_sea_level_correction": "Activer si vous utilisez un capteur de pression absolue au-dessus du niveau de la mer",
+          "location": "Cliquez sur la carte pour définir votre emplacement afin de calculer l'altitude"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Cette station météo est déjà configurée"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ajuster les capteurs",
+        "description": "Mettez à jour les capteurs utilisés pour les calculs de Zambretti et Sager.",
+        "data": {
+          "pressure_sensor": "Capteur de pression",
+          "wind_sensor": "Capteur de direction du vent (en option)",
+          "wind_speed_sensor": "Capteur de vitesse du vent (en option)",
+          "temperature_sensor": "Capteur de température (en option)",
+          "humidity_sensor": "Capteur d'humidité (en option)",
+          "use_sea_level_correction": "Activer la correction de la pression au niveau de la mer",
+          "location": "Emplacement"
+        },
+        "data_description": {
+          "pressure_sensor": "Sélectionnez votre capteur de pression barométrique",
+          "wind_sensor": "En option : capteur de direction du vent (en degrés)",
+          "wind_speed_sensor": "En option : capteur dédié à la vitesse du vent",
+          "temperature_sensor": "En option : utilisé pour la correction de la pression au niveau de la mer",
+          "humidity_sensor": "Facultatif : améliore la précision de la probabilité de précipitations",
+          "use_sea_level_correction": "Activer si vous utilisez un capteur de pression absolue au-dessus du niveau de la mer",
+          "location": "Cliquez sur la carte pour définir votre emplacement afin de calculer l'altitude"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Temps stable et beau",
+          "fine_weather": "Beau temps",
+          "fine_becoming_less_settled": "Beau, devenant moins stable",
+          "fairly_fine_showery_later": "Assez beau, averses plus tard",
+          "showery_becoming_more_unsettled": "Averses, devenant plus instable",
+          "unsettled_rain_later": "Instable, pluie plus tard",
+          "rain_at_times_worse_later": "Pluie par moments, aggravation plus tard",
+          "rain_at_times_becoming_very_unsettled": "Pluie par moments, devenant très instable",
+          "very_unsettled_rain": "Très instable, pluie",
+          "fine_possibly_showers": "Beau temps, averses possibles",
+          "fairly_fine_showers_likely": "Temps assez beau, averses probables",
+          "showery_bright_intervals": "Averses, éclaircies par moments",
+          "changeable_some_rain": "Temps variable, quelques averses",
+          "unsettled_rain_at_times": "Temps instable, averses par moments",
+          "rain_at_frequent_intervals": "Averses fréquentes",
+          "stormy_much_rain": "Orageux, fortes averses",
+          "becoming_fine": "Temps s'améliorant",
+          "fairly_fine_improving": "Temps assez beau, s'améliorant",
+          "fairly_fine_possibly_showers_early": "Temps assez beau, averses possibles en début de journée",
+          "showery_early_improving": "Averses tôt dans la journée, amélioration",
+          "changeable_mending": "Temps variable, s'améliorant",
+          "rather_unsettled_clearing_later": "Temps plutôt instable, s'éclaircissant plus tard",
+          "unsettled_probably_improving": "Temps instable, s'améliorant probablement",
+          "unsettled_short_fine_intervals": "Temps instable, courtes éclaircies",
+          "very_unsettled_finer_at_times": "Temps très instable, s'améliorant par moments",
+          "stormy_possibly_improving": "Orageux, s'améliorant peut-être",
+          "stable": "Stable"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Temps clair, s'améliorant",
+          "sager_fair_tending_to_deteriorate": "Temps clair actuellement, tendance à la détérioration",
+          "sager_fair_no_change": "Temps clair, pas de changement notable",
+          "sager_unsettled_rain_likely": "Temps instable, pluie probable",
+          "sager_unsettled_probably_improving": "Temps instable, s'améliorant probablement",
+          "sager_unsettled_rain_at_times": "Temps instable, averses par moments",
+          "sager_changeable_becoming_fairer": "Temps changeant, s'éclaircissant progressivement",
+          "sager_changeable_becoming_more_unsettled": "Temps changeant, devenant plus instable",
+          "sager_variable_slowly_improving": "Temps variable, s'améliorant lentement",
+          "sager_variable_slowly_deteriorating": "Temps variable, se détériorant lentement",
+          "sager_variable_some_change": "Temps variable, quelques changements attendus"
+        }
+      }
+    }
+  }
+}

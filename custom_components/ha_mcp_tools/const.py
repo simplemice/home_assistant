@@ -1,8 +1,29 @@
-"""Constants for HA MCP Tools integration."""
+"""Constants for the HA-MCP custom component.
+
+The integration serves two config-entry types under one domain
+(:data:`DOMAIN`), discriminated by ``entry.data[CONF_ENTRY_TYPE]``:
+
+* ``tools`` — the privileged file / YAML services (the original component).
+  Pre-existing entries carry no ``entry_type`` key, so a missing value is
+  treated as ``tools`` (no migration needed).
+* ``server`` — the in-process ha-mcp FastMCP server (issue #1527), exposed
+  through a Home Assistant webhook.
+
+The two halves keep their constants in separate blocks below; the ``server``
+block was folded in from the former standalone ``ha_mcp_server`` integration.
+"""
 
 import re
+from datetime import timedelta
 
 DOMAIN = "ha_mcp_tools"
+
+# Config-entry discriminator (``entry.data[CONF_ENTRY_TYPE]``). A missing value
+# means "tools" so the pre-existing services entry keeps working across the
+# component update with no migration.
+CONF_ENTRY_TYPE = "entry_type"
+ENTRY_TYPE_TOOLS = "tools"
+ENTRY_TYPE_SERVER = "server"
 
 # Allowed directories for file operations (relative to config dir)
 ALLOWED_READ_DIRS = ["www", "themes", "custom_templates", "dashboards"]
@@ -148,3 +169,151 @@ RESERVED_DASHBOARD_URL_PATHS = frozenset(
         "calendar",
     }
 )
+
+
+# ---------------------------------------------------------------------------
+# HA-MCP Server entry (issue #1527)
+#
+# Folded in from the former standalone ``ha_mcp_server`` integration. The
+# "server" config-entry type runs the full ha-mcp FastMCP server in-process
+# inside Home Assistant (a dedicated thread with its own asyncio loop) and
+# exposes it remotely through a Home Assistant webhook, exactly like the
+# webhook-proxy add-on. Creating the entry starts the server; disabling or
+# removing the entry stops it. Everything below is namespaced under the shared
+# ``DOMAIN`` (distinct hass.data sub-keys, distinct entry unique_id).
+# ---------------------------------------------------------------------------
+
+# PyPI distribution names. Stable ships as ``ha-mcp``; the dev channel ships as
+# ``ha-mcp-dev`` — published on every master push. BOTH are installed unpinned,
+# so every install / reload resolves the newest build of the selected channel
+# (the component auto-updates the server rather than pinning a lockstep version
+# — see ``UPDATE_CHECK_INTERVAL`` and
+# ``EmbeddedServerManager._async_ensure_package``). Both wheels contain the
+# *same* ``ha_mcp`` import package (publish-dev.yml only renames the
+# distribution), so only one may be installed at a time — see
+# EmbeddedServerManager's channel-switch handling.
+DIST_NAME_STABLE = "ha-mcp"
+DIST_NAME_DEV = "ha-mcp-dev"
+
+# Default pip requirement for the stable channel: the unpinned ``ha-mcp``
+# distribution, so each install resolves the newest stable release. The options
+# flow's advanced "pip requirement" field overrides this with any pip spec
+# (e.g. a version pin or a GitHub tarball URL) for pre-release testing — an
+# explicit override also disables automatic updates.
+DEFAULT_PIP_SPEC = DIST_NAME_STABLE
+DEV_PIP_SPEC = DIST_NAME_DEV
+
+# Release channels (options-flow selector). ``stable`` installs the unpinned
+# ``ha-mcp`` and ``dev`` installs the unpinned ``ha-mcp-dev``; both refresh to
+# the newest build of that channel on every entry reload / HA restart, and the
+# periodic auto-update check reloads the entry when PyPI publishes a newer one.
+# An explicit OPT_PIP_SPEC override wins over both and disables auto-update.
+CHANNEL_STABLE = "stable"
+CHANNEL_DEV = "dev"
+DEFAULT_CHANNEL = CHANNEL_STABLE
+
+# Automatic server-version updates. Both channels are unpinned, so an entry
+# reload / HA restart already reinstalls the newest build; on top of that the
+# component polls PyPI on this interval and reloads the entry when a newer build
+# is published, so a long-running instance picks up releases without a restart.
+# An explicit pip-spec override disables the check, as does turning off the
+# ``auto_update`` option (OPT_AUTO_UPDATE).
+UPDATE_CHECK_INTERVAL = timedelta(hours=6)
+
+# PyPI JSON API for the latest published version of a distribution. ``{dist}``
+# is DIST_NAME_STABLE or DIST_NAME_DEV depending on the selected channel.
+PYPI_JSON_URL = "https://pypi.org/pypi/{dist}/json"
+
+# Options-flow keys (stored in entry.options).
+OPT_CHANNEL = "channel"
+# Automatic server-version updates toggle (default on). When on, the channel is
+# unpinned and auto-updates (force-install on reload/restart + the periodic
+# check). When off, the server stays on the version currently installed:
+# _resolve_pip_spec pins the channel's dist to that version and the periodic
+# check is skipped. Governs the ha-mcp server package only — component updates
+# still come through HACS. An explicit OPT_PIP_SPEC override wins over both.
+OPT_AUTO_UPDATE = "auto_update"
+DEFAULT_AUTO_UPDATE = True
+OPT_SERVER_PORT = "server_port"
+OPT_BIND_HOST = "bind_host"
+OPT_WEBHOOK_AUTH = "webhook_auth"
+OPT_PIP_SPEC = "pip_spec"
+OPT_SERVER_URL = "server_url"
+# Connect-URL surface + secret management (owner request, parity with the
+# webhook-proxy app's external-URL option and the add-on's secret-path
+# override). All optional; empty string = automatic/keep-current.
+OPT_EXTERNAL_URL = "external_url"
+OPT_WEBHOOK_ID_OVERRIDE = "webhook_id_override"
+OPT_SECRET_PATH_OVERRIDE = "secret_path_override"
+OPT_REGENERATE_SECRETS = "regenerate_secrets"
+# Local-only mode (owner request): when False, the HA webhook is never
+# registered, so nothing - including Nabu Casa remote UI - can reach the
+# server through Home Assistant; only the direct server port (+ the
+# admin-only sidebar panel, which proxies over loopback) remains.
+OPT_ENABLE_WEBHOOK = "enable_webhook"
+
+# entry.data keys (persisted ids + secrets; entry.data is fine for secrets).
+DATA_WEBHOOK_ID = "webhook_id"
+DATA_SECRET_PATH = "secret_path"
+DATA_SERVER_USER_ID = "server_user_id"
+DATA_REFRESH_TOKEN_ID = "refresh_token_id"
+DATA_ACCESS_TOKEN = "access_token"
+# Last pip spec that was successfully installed. Lets a changed spec (the
+# pre-release test channel) force an actual reinstall on the next start instead
+# of hitting the requirements manager's is-installed shortcut.
+DATA_LAST_PIP_SPEC = "last_pip_spec"
+
+# hass.data[DOMAIN] sub-keys for the server runtime. Distinct from the tools
+# entry's sub-keys ("caller_token" / "allowed_paths") so both entry types can
+# share hass.data[DOMAIN] without collision.
+DATA_MANAGER = "manager"
+DATA_WEBHOOK = "webhook"
+DATA_BRINGUP_TASK = "bringup_task"
+# Snapshot of entry.options taken at setup so the update listener reloads only
+# on a genuine options change — the background bring-up persists ids/token/pip
+# spec to entry.data, and those writes must not trigger a self-reload.
+DATA_LAST_OPTIONS = "last_options"
+
+# Webhook auth modes (mirrors the webhook-proxy add-on's default posture).
+WEBHOOK_AUTH_NONE = "none"  # secret webhook URL is the shared secret (default)
+WEBHOOK_AUTH_HA = "ha_auth"  # HA-native bearer (HA core is the OAuth AS)
+
+# Default bind host + port. 9584 (not the add-on's 9583) so this in-process
+# server and an add-on install can coexist on the same box.
+DEFAULT_SERVER_PORT = 9584
+# LAN-reachable by default - parity with the add-on, whose port has always
+# been directly reachable with the secret path as the credential. Loopback
+# is the optional hardening choice, not the default (owner decision).
+DEFAULT_BIND_HOST = "0.0.0.0"
+BIND_HOST_ALL = "0.0.0.0"
+BIND_HOST_LOOPBACK = "127.0.0.1"
+
+# Loopback base URL the server uses to reach HA core (REST + WS).
+DEFAULT_LOOPBACK_URL = "http://127.0.0.1:8123"
+
+# Persistent data dir for the in-process server, under the HA config dir so it
+# survives restarts and is isolated from an add-on's /data. Generic ".ha_mcp"
+# to match the merged integration's naming (unreleased server entry, so no
+# migration from the former ".ha_mcp_server").
+SERVER_CONFIG_SUBDIR = ".ha_mcp"
+
+# Client name recorded on the provisioned long-lived access token, and the name
+# of the local admin user the server logs in as. Stable so a reused token is
+# recognizable in Settings -> People -> <user> -> tokens. "HA-MCP" phrasing (not
+# "Home Assistant MCP Server") to avoid confusion with HA's official MCP Server
+# integration.
+SERVER_TOKEN_CLIENT_NAME = "HA-MCP Server"
+SERVER_USER_NAME = "HA-MCP Server"
+
+# RFC 8414 / RFC 9728 discovery documents for ha_auth mode are served under this
+# namespace (mirrors the webhook-proxy add-on's /api/mcp_proxy/oauth base).
+OAUTH_BASE = "/api/ha_mcp_tools/oauth"
+
+# Repair-issue ids surfaced when server bring-up fails.
+ISSUE_PACKAGE_FAILED = "server_package_install_failed"
+ISSUE_START_FAILED = "server_start_failed"
+# Repair issue surfaced when the installed ha-mcp server requires a newer
+# custom component than the one running. HACS pushes the server package ahead
+# of a component update, so the running component can lag what the server
+# expects; this points the user at the HACS component update (non-blocking).
+ISSUE_COMPONENT_OUTDATED = "component_outdated"

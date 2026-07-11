@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Weerstation instellen",
+        "description": "Selecteer de sensoren voor uw weersvoorspellingsmodel.",
+        "data": {
+          "pressure_sensor": "Luchtdruksensor",
+          "wind_sensor": "Windrichtingssensor (optioneel)",
+          "wind_speed_sensor": "Windsnelheidssensor (optioneel)",
+          "temperature_sensor": "Temperatuursensor (optioneel)",
+          "humidity_sensor": "Vochtigheidssensor (optioneel)",
+          "use_sea_level_correction": "Correctie voor luchtdruk op zeeniveau inschakelen",
+          "location": "Locatie"
+        },
+        "data_description": {
+          "pressure_sensor": "Selecteer uw barometrische druksensor",
+          "wind_sensor": "Optioneel: windrichtingssensor (in graden)",
+          "wind_speed_sensor": "Optioneel: speciale windsnelheidssensor",
+          "temperature_sensor": "Optioneel: wordt gebruikt voor correctie van de luchtdruk op zeeniveau",
+          "humidity_sensor": "Optioneel: verbetert de nauwkeurigheid van de neerslagkans",
+          "use_sea_level_correction": "Inschakelen bij gebruik van een absolute druksensor boven zeeniveau",
+          "location": "Klik op de kaart om uw locatie in te stellen voor de berekening van de hoogte"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbinding mislukt",
+      "unknown": "Onverwachte fout"
+    },
+    "abort": {
+      "already_configured": "Dit weerstation is al geconfigureerd"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensoren aanpassen",
+        "description": "Werk de sensoren bij die worden gebruikt voor Zambretti- en Sager-berekeningen.",
+        "data": {
+          "pressure_sensor": "Luchtdruksensor",
+          "wind_sensor": "Windrichtingssensor (optioneel)",
+          "wind_speed_sensor": "Windsnelheidssensor (optioneel)",
+          "temperature_sensor": "Temperatuursensor (optioneel)",
+          "humidity_sensor": "Vochtigheidssensor (optioneel)",
+          "use_sea_level_correction": "Correctie voor luchtdruk op zeeniveau inschakelen",
+          "location": "Locatie"
+        },
+        "data_description": {
+          "pressure_sensor": "Selecteer uw barometrische druksensor",
+          "wind_sensor": "Optioneel: windrichtingssensor (in graden)",
+          "wind_speed_sensor": "Optioneel: speciale windsnelheidssensor",
+          "temperature_sensor": "Optioneel: wordt gebruikt voor correctie van de luchtdruk op zeeniveau",
+          "humidity_sensor": "Optioneel: verbetert de nauwkeurigheid van de neerslagkans",
+          "use_sea_level_correction": "Inschakelen bij gebruik van een absolute druksensor boven zeeniveau",
+          "location": "Klik op de kaart om uw locatie in te stellen voor de berekening van de hoogte"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "zambretti_forecast": {
+        "state": {
+          "settled_fine": "Opgeklaard",
+          "fine_weather": "Mooi weer",
+          "fine_becoming_less_settled": "Mooi, wordt minder stabiel",
+          "fairly_fine_showery_later": "Redelijk mooi, later buien",
+          "showery_becoming_more_unsettled": "Buien, wordt onstabieler",
+          "unsettled_rain_later": "Onstabiel, later regen",
+          "rain_at_times_worse_later": "Af en toe regen, later slechter",
+          "rain_at_times_becoming_very_unsettled": "Af en toe regen, wordt zeer onstabiel",
+          "very_unsettled_rain": "Zeer onstabiel, regen",
+          "fine_possibly_showers": "Mooi weer, mogelijk buien",
+          "fairly_fine_showers_likely": "Redelijk mooi, waarschijnlijk buien",
+          "showery_bright_intervals": "Buien, af en toe zonnig",
+          "changeable_some_rain": "Wisselvallig, wat regen",
+          "unsettled_rain_at_times": "Onrustig, af en toe regen",
+          "rain_at_frequent_intervals": "Regent regelmatig",
+          "stormy_much_rain": "Stormachtig, veel regen",
+          "becoming_fine": "Wordt mooi weer",
+          "fairly_fine_improving": "Redelijk mooi, trekt op",
+          "fairly_fine_possibly_showers_early": "Redelijk mooi, mogelijk buien in de ochtend",
+          "showery_early_improving": "Vroeg buien, verbeterend",
+          "changeable_mending": "Wisselvallig, opklarend",
+          "rather_unsettled_clearing_later": "Vrij onstabiel, later opklarend",
+          "unsettled_probably_improving": "Onstabiel, waarschijnlijk verbeterend",
+          "unsettled_short_fine_intervals": "Onstabiel, korte opklaringen",
+          "very_unsettled_finer_at_times": "Zeer onstabiel, af en toe beter weer",
+          "stormy_possibly_improving": "Stormachtig, mogelijk verbeterend",
+          "stable": "Stabiel"
+        }
+      },
+      "sager_forecast": {
+        "state": {
+          "sager_fair_improving": "Mooi weer, het wordt beter",
+          "sager_fair_tending_to_deteriorate": "Nu mooi weer, neiging tot verslechtering",
+          "sager_fair_no_change": "Mooi weer, geen belangrijke verandering",
+          "sager_unsettled_rain_likely": "Onstabiel, kans op regen",
+          "sager_unsettled_probably_improving": "Onstabiel, waarschijnlijk beter wordend",
+          "sager_unsettled_rain_at_times": "Onstabiel, af en toe regen",
+          "sager_changeable_becoming_fairer": "Wisselvallig, het wordt mooier",
+          "sager_changeable_becoming_more_unsettled": "Wisselvallig, het wordt onstabieler",
+          "sager_variable_slowly_improving": "Wisselvallig, langzaam beter wordend",
+          "sager_variable_slowly_deteriorating": "Wisselvallig, langzaam verslechterend",
+          "sager_variable_some_change": "Wisselvallig, enige verandering verwacht"
+        }
+      }
+    }
+  }
+}
