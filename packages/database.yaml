@@ -37,6 +37,7 @@ recorder:
       - sensor.*_humidity
 
     entities:
+      - sensor.zigbee2mqtt_networkmap
       - sensor.total_battery_energy_in
       - sensor.total_battery_energy_out
       - sensor.total_solar_energy_in
@@ -54,6 +55,7 @@ recorder:
       - sensor.*_linkquality
       - sensor.*_last_seen
       - sensor.*_free_memory
+      - sensor.flightradar24*
       - sensor.*_heap*
       - sensor.*_loop*
       - sensor.*_internal*
@@ -67,4 +69,3 @@ recorder:
       - persistent_notification
       - automation
       - script
-

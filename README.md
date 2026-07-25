@@ -136,13 +136,13 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 1913 |
-| Number of sensors | 1037 |
-| Current Version | 2026.7.2 |
-| Total Automations | 125 |
-| Total Scripts | 38 |
+| Number of entities | 2208 |
+| Number of sensors | 1222 |
+| Current Version | 2026.7.4 |
+| Total Automations | 127 |
+| Total Scripts | 39 |
 | Total Lights | 33 |
-| Total Switches | 127 |
+| Total Switches | 169 |
 | Total Scenes | 14 |
 | Total Players | 17 |
 
@@ -179,35 +179,41 @@ This repository is treated as:
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv1.34.2)
+- [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v0.14.0)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v1.2.2)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.6.0)
+- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.5.4)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
 - [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
 - [Passive BLE monitor](https://github.com/custom-components/ble_monitor) (v13.12.0)
 - [Pirate Weather](https://github.com/alexander0042/pirate-weather-ha) (v1.8.9)
 - [Powercalc](https://docs.powercalc.nl) (vv1.20.14)
+- [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
 - [Spook](https://spook.boo) (v5.0.0)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
+- [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
-- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.71)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.73)
 
 ## 🔗 Custom integrations
 
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 
-- [Ha Mcp Custom Component](https://github.com/homeassistant-ai/ha-mcp)
+- [Ha Mcp Custom Component](https://github.com/homeassistant-ai/ha-mcp-integration)
 
 - [HACS](https://github.com/hacs/integration)
+
+- [Mikrotik Extended](https://github.com/Csontikka/ha-mikrotik-extended)
 
 - [Mikrotik Router](https://github.com/tomaae/homeassistant-mikrotik_router)
 
@@ -223,22 +229,35 @@ This repository is treated as:
 
 - [Tuya Local](https://github.com/make-all/tuya-local)
 
+- [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant)
+
 - [Xiaomi Miio Raw](https://github.com/syssi/xiaomi_raw)
 
 - [Zambretti & Sager Weather Forecaster](https://github.com/ziffmafiya/zambretti_sager)
 
 
 ## 🎛️ Lovelace plugins
+- [Advanced Camera Card](https://github.com/dermotduffy/advanced-camera-card)
+- [Advanced Room Card](https://github.com/Lawris/advanced-room-card)
 - [Apexcharts Card](https://github.com/RomRider/apexcharts-card)
 - [Better Thermostat Ui](https://github.com/KartoffelToby/better-thermostat-ui-card)
 - [Bubble Card](https://github.com/Clooos/Bubble-Card)
 - [Button Card](https://github.com/custom-cards/button-card)
+- [Compass Card](https://github.com/tomvanswam/compass-card)
 - [Flexible Horseshoe Card](https://github.com/AmoebeLabs/flex-horseshoe-card)
+- [Flightradar Flight Card](https://github.com/plckr/flightradar-flight-card)
 - [Llm Vision Card](https://github.com/valentinfrlch/llmvision-card)
 - [Mini Graph Card](https://github.com/kalkih/mini-graph-card)
+- [Mini Media Player](https://github.com/kalkih/mini-media-player)
 - [Mushroom](https://github.com/piitaya/lovelace-mushroom)
+- [Room Card](https://github.com/lop1505/RoomCard)
+- [Room Card Minimalist](https://github.com/unbekannt3/room-card-minimalist)
+- [Stack In Card](https://github.com/custom-cards/stack-in-card)
+- [Trashcard](https://github.com/idaho/hassio-trash-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
+- [Wind Rose Card](https://github.com/aukedejong/lovelace-windrose-card)
+- [Zigbee Mesh Map Card](https://github.com/lubomir-moric/ha-zigbee-mesh-map)
 
 ## 🎨 Themes
 - [Frosted Glass Theme](https://github.com/wessamlauf/homeassistant-frosted-glass-themes)

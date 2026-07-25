@@ -1,3 +1,5 @@
+"""Config flow for the Zambretti & Sager integration."""
+
 from __future__ import annotations
 
 import voluptuous as vol
@@ -55,7 +57,7 @@ HUMIDITY_SENSOR_SELECTOR = selector.EntitySelector(
 
 
 def _normalize_optional_entities(data: dict) -> dict:
-    """Очистить пустые значения необязательных датчиков."""
+    """Remove empty optional sensor entries from config data."""
     normalized = dict(data)
     for key in OPTIONAL_ENTITY_KEYS:
         if not normalized.get(key):
@@ -64,7 +66,7 @@ def _normalize_optional_entities(data: dict) -> dict:
 
 
 def _apply_location(data: dict) -> dict:
-    """Извлечь координаты из location selector."""
+    """Extract latitude/longitude from the location selector."""
     normalized = dict(data)
     if CONF_LOCATION in normalized:
         location = normalized.pop(CONF_LOCATION)
@@ -74,14 +76,17 @@ def _apply_location(data: dict) -> dict:
 
 
 class ZambrettiSagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Config flow for setting up a new Zambretti & Sager entry."""
+
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
+        """Handle the initial step shown to the user."""
         if user_input is not None:
             user_input = _normalize_optional_entities(_apply_location(user_input))
 
-            # Используем entity_id датчика давления как unique_id,
-            # чтобы предотвратить дублирование одного сенсора в двух экземплярах
+            # Use the pressure sensor entity_id as unique_id to prevent
+            # duplicate entries for the same sensor
             await self.async_set_unique_id(f"{DOMAIN}_{user_input[CONF_PRESSURE_SENSOR]}")
             self._abort_if_unique_id_configured()
 
@@ -110,20 +115,26 @@ class ZambrettiSagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
+        """Return the options flow handler for this entry."""
         return ZambrettiSagerOptionsFlowHandler(config_entry)
 
 
 class ZambrettiSagerOptionsFlowHandler(config_entries.OptionsFlow):
+    """Options flow for updating an existing Zambretti & Sager entry."""
+
     def __init__(self, config_entry) -> None:
+        """Store the config entry being reconfigured."""
         super().__init__()
         self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
+        """Handle the options form, pre-populated with current settings."""
         if user_input is not None:
             user_input = _normalize_optional_entities(_apply_location(user_input))
             return self.async_create_entry(title="", data=user_input)
 
         entry = self._config_entry
+        # Read current values from options first, fall back to data
         current_pressure = entry.options.get(CONF_PRESSURE_SENSOR) or entry.data.get(CONF_PRESSURE_SENSOR)
         current_wind = entry.options.get(CONF_WIND_SENSOR) or entry.data.get(CONF_WIND_SENSOR)
         current_wind_speed = entry.options.get(CONF_WIND_SPEED_SENSOR) or entry.data.get(CONF_WIND_SPEED_SENSOR)
@@ -148,8 +159,8 @@ class ZambrettiSagerOptionsFlowHandler(config_entries.OptionsFlow):
                 "longitude": self.hass.config.longitude,
             }
 
-        # Строим схему — optional поля с None-значением не передаём как default,
-        # чтобы voluptuous не упал на невалидном entity_id
+        # Build schema — optional fields with None default are omitted
+        # to avoid voluptuous validation errors on invalid entity_id
         schema_dict = {
             vol.Required(CONF_PRESSURE_SENSOR, default=current_pressure): PRESSURE_SENSOR_SELECTOR,
         }

@@ -201,30 +201,6 @@ script:
 ###############################################################################
 
 automation:
-  - alias: Join kitchen when occupied
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.kitchen_wall_presense_detector_presence
-        to: "on"
-    action:
-      - service: script.ma_toggle_room
-        data:
-          room: media_player.kitchen_speaker
-
-  - alias: Normalize joined volume
-    trigger:
-      - platform: state
-        entity_id: media_player.livingroom_speaker
-        attribute: group_members
-    action:
-      - service: media_player.volume_set
-        target:
-          entity_id:
-            - media_player.bedroom_speaker
-            - media_player.kitchen_speaker
-        data:
-          volume_level: 0.35
-
   ###############################################################################
   # AUTO FIX AFTER ANNOUNCEMENT
   ###############################################################################

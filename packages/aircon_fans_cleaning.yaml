@@ -11,6 +11,10 @@ input_datetime:
     name: Aircon Last Cleaned
     has_date: true
     has_time: false
+  fans_last_cleaned:
+    name: Fans Last Cleaned
+    has_date: true
+    has_time: false
 
 # ─── Sensors ───────────────────────────────────────────────────────────────
 template:
@@ -37,5 +41,29 @@ template:
               {% set last_ts = as_timestamp(last_clean) %}
               {% if last_ts %}
                 {{ (last_ts + 120*86400) | timestamp_custom('%Y-%m-%d') }}
+              {% endif %}
+            {% endif %}
+      - name: "Fans Days Until Next Clean"
+        unique_id: fans_days_until_next_clean
+        unit_of_measurement: "days"
+        state: >-
+          {% set last_clean = states('input_datetime.fans_last_cleaned') %}
+          {% if last_clean not in ['unknown','unavailable',''] %}
+            {% set last_ts = as_timestamp(last_clean) %}
+            {% if last_ts %}
+              {{ ((last_ts + 60*86400) - now().timestamp()) // 86400 }}
+            {% else %}
+              unknown
+            {% endif %}
+          {% else %}
+            unknown
+          {% endif %}
+        attributes:
+          next_clean_date: >-
+            {% set last_clean = states('input_datetime.fans_last_cleaned') %}
+            {% if last_clean not in ['unknown','unavailable',''] %}
+              {% set last_ts = as_timestamp(last_clean) %}
+              {% if last_ts %}
+                {{ (last_ts + 60*86400) | timestamp_custom('%Y-%m-%d') }}
               {% endif %}
             {% endif %}

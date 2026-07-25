@@ -5,6 +5,16 @@
 #   @description    :   A collection of Home Assistant and Pi Sensors
 ###############################################################################
 
+mqtt:
+  sensor:
+    - name: Zigbee2MQTT Network Map
+      unique_id: zigbee2mqtt_networkmap
+      state_topic: zigbee2mqtt/bridge/response/networkmap
+      unique_id: zigbee2mqtt_networkmap
+      value_template: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      json_attributes_topic: zigbee2mqtt/bridge/response/networkmap
+      json_attributes_template: "{{ value_json.data.value | tojson }}"
+
 ###############################################################################
 # REST COMMAND
 ###############################################################################

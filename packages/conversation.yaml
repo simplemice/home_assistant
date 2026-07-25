@@ -4,6 +4,15 @@
 #   @package        :   Reports
 #   @description    :   Daily Report Announcements.
 ###############################################################################
+intents:
+  housemusic:
+    data:
+      - sentences:
+          - "(Play|played) (somemusic|songs|tracks) (by|from) [the] {media_artist} (on|in) [the] {media_player}"
+          - "play some music"
+          - "play music"
+          - "start some music"
+          - "start music"
 
 intent_script:
   housemusic:
@@ -12,11 +21,11 @@ intent_script:
           player: >
             {% set room = states('sensor.micemob_area') | lower | trim %}
             {% set mapping = {
-              'livingroom': 'media_player.livingroom_player',
+              'livingroom': 'media_player.livingroom_speaker',
               'bedroom': 'media_player.bedroom_speaker',
               'kitchen': 'media_player.kitchen_speaker'
             } %}
-            {{ mapping.get(room, 'media_player.livingroom_player') }}
+            {{ mapping.get(room, 'media_player.livingroom_speaker') }}
       - service: music_assistant.play_media
         target:
           entity_id: "{{ player }}"

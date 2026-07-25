@@ -61,36 +61,6 @@
       - Zen Garden
       friendly_name: WLED-UnderTV Preset
       state: Witching Hour
-    select.wled_tv_preset_2:
-      options:
-      - Aurora Dreams
-      - Autumn Forest
-      - Cosmic Nebula
-      - Crystal Heights
-      - Deep Sea
-      - Depth Tranquility
-      - Desert Sky
-      - Digital Rain
-      - Enchanted Garden
-      - Fiery Sky
-      - Fireflies
-      - Forest Magic
-      - Galactic Train
-      - Lava Stream
-      - Moonlight Clarity
-      - Mystical Twilight
-      - Northern Lights
-      - Northern Lights 2
-      - Ocean Breeze
-      - Sparkling Vineyard
-      - Spring Meadow
-      - Starry Night
-      - Sunset
-      - Valentinesday
-      - Witching Hour
-      - Zen Garden
-      friendly_name: WLED-TV Preset
-      state: unknown
     select.wled_wall_light_preset:
       options:
       - Aurora Dreams
@@ -204,11 +174,11 @@
       xy_color:
       - 0.143
       - 0.081
-      light.color_temperature: 4103
       light.mode: 1
+      light.on: true
+      light.color_temperature: 4103
       light.color: 1986559
       light.brightness: 64
-      light.on: true
       friendly_name: Closet Lamp Light
       supported_features: 4
       state: 'on'
@@ -634,8 +604,6 @@
       - Slow Transition
       supported_color_modes:
       - rgb
-      friendly_name: WLED-Closet-R
-      supported_features: 36
       effect: Pacifica
       color_mode: rgb
       brightness: 163
@@ -649,13 +617,13 @@
       xy_color:
       - 0.225
       - 0.081
+      friendly_name: WLED-Closet-R
+      supported_features: 36
       state: 'on'
   metadata:
     select.wled_table_preset:
       entity_only: true
     select.wled_tv_preset:
-      entity_only: true
-    select.wled_tv_preset_2:
       entity_only: true
     select.wled_wall_light_preset:
       entity_only: true
@@ -763,36 +731,6 @@
       - Zen Garden
       friendly_name: WLED-UnderTV Preset
       state: Zen Garden
-    select.wled_tv_preset_2:
-      options:
-      - Aurora Dreams
-      - Autumn Forest
-      - Cosmic Nebula
-      - Crystal Heights
-      - Deep Sea
-      - Depth Tranquility
-      - Desert Sky
-      - Digital Rain
-      - Enchanted Garden
-      - Fiery Sky
-      - Fireflies
-      - Forest Magic
-      - Galactic Train
-      - Lava Stream
-      - Moonlight Clarity
-      - Mystical Twilight
-      - Northern Lights
-      - Northern Lights 2
-      - Ocean Breeze
-      - Sparkling Vineyard
-      - Spring Meadow
-      - Starry Night
-      - Sunset
-      - Valentinesday
-      - Witching Hour
-      - Zen Garden
-      friendly_name: WLED-TV Preset
-      state: unknown
     select.wled_closet_l_preset:
       options:
       - Aurora Dreams
@@ -897,8 +835,6 @@
       entity_only: true
     select.wled_tv_preset:
       entity_only: true
-    select.wled_tv_preset_2:
-      entity_only: true
     select.wled_closet_l_preset:
       entity_only: true
     select.wled_closet_r_preset:
@@ -942,36 +878,6 @@
       - Zen Garden
       friendly_name: WLED-Table Preset
       state: Sunset
-    select.wled_tv_preset_2:
-      options:
-      - Aurora Dreams
-      - Autumn Forest
-      - Cosmic Nebula
-      - Crystal Heights
-      - Deep Sea
-      - Depth Tranquility
-      - Desert Sky
-      - Digital Rain
-      - Enchanted Garden
-      - Fiery Sky
-      - Fireflies
-      - Forest Magic
-      - Galactic Train
-      - Lava Stream
-      - Moonlight Clarity
-      - Mystical Twilight
-      - Northern Lights
-      - Northern Lights 2
-      - Ocean Breeze
-      - Sparkling Vineyard
-      - Spring Meadow
-      - Starry Night
-      - Sunset
-      - Valentinesday
-      - Witching Hour
-      - Zen Garden
-      friendly_name: WLED-TV Preset
-      state: unknown
     select.wled_tv_preset:
       options:
       - Aurora Dreams
@@ -1125,8 +1031,6 @@
       state: 'on'
   metadata:
     select.wled_table_preset:
-      entity_only: true
-    select.wled_tv_preset_2:
       entity_only: true
     select.wled_tv_preset:
       entity_only: true

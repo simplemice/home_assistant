@@ -1,0 +1,84 @@
+rules:
+  # Bronze
+  action-setup: done
+  appropriate-polling: done
+  brands:
+    status: done
+    comment: |
+      Brand assets (icon.png, logo.png, brand/) ship inside the integration
+      folder. Per the HA 2026.3+ policy custom integrations provide their own
+      brand assets directly, and the home-assistant/brands repository no longer
+      accepts submissions for custom components.
+      See: https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api
+  common-modules: done
+  config-flow: done
+  config-flow-test-coverage: done
+  dependency-transparency: done
+  docs-actions: done
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  entity-event-setup:
+    status: exempt
+    comment: |
+      Entities in this integration do not explicitly subscribe to events.
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions: done
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates: done
+  reauthentication-flow: done
+  test-coverage: done
+
+  # Gold
+  devices: done
+  diagnostics: done
+  discovery:
+    status: exempt
+    comment: |
+      Integration talks to the router over the RouterOS API (librouteros).
+      MikroTik uses the proprietary MNDP discovery protocol, which is not a
+      standard Home Assistant discovery source (zeroconf/ssdp/dhcp/bluetooth).
+      A user-initiated MNDP scan is offered inside the config flow.
+  discovery-update-info:
+    status: exempt
+    comment: |
+      No standard HA discovery is declared (see `discovery`), so there is no
+      re-discovery event that could update an existing entry.
+  docs-data-update: todo
+  docs-examples: done
+  docs-known-limitations: todo
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: todo
+  dynamic-devices: done
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: done
+  entity-translations: done
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow: done
+  repair-issues: done
+  stale-devices: done
+
+  # Platinum
+  async-dependency: todo
+  inject-websession:
+    status: exempt
+    comment: |
+      This integration communicates via the RouterOS API (librouteros),
+      not HTTP/websession.
+  strict-typing: todo

@@ -188,6 +188,48 @@ template:
         state: "{{ states('sensor.rain_last_24_hours_sum') }}"
 
   - sensor:
+      - name: "VPD (kPa)"
+        unique_id: vpd_kpa
+        device_class: pressure
+        unit_of_measurement: "kPa"
+        state_class: measurement
+        state: >
+          {% set temp = states('sensor.outside_temp') | float %}
+          {% set rh = states('sensor.outside_humidity') | float %}
+
+          {# Calculate Saturation Vapor Pressure (SVP) in kPa #}
+          {% set svp = 0.61078 * e**((17.27 * temp) / (temp + 237.3)) %}
+
+          {# Calculate Actual Vapor Pressure (AVP) in kPa #}
+          {% set avp = svp * (rh / 100) %}
+
+          {# Calculate VPD #}
+          {% set vpd = svp - avp %}
+
+          {{ vpd | round(2) }}
+        availability: >
+          {{ states('sensor.outside_temp') not in ['unavailable', 'unknown'] and 
+             states('sensor.outside_humidity') not in ['unavailable', 'unknown'] }}
+
+  - sensor:
+      - name: "VPD Level"
+        unique_id: vpd_level
+        icon: mdi:water-percent
+        state: >
+          {% set vpd = states('sensor.vpd_kpa') | float(0) %}
+          {% if vpd < 0.40 %}
+            Very Wet
+          {% elif vpd < 0.80 %}
+            Wet
+          {% elif vpd < 1.20 %}
+            Good
+          {% elif vpd < 1.60 %}
+            Dry
+          {% else %}
+            Very Dry
+          {% endif %}
+
+  - sensor:
       - name: rain_day_increment
         state: >
           {{ 1 if is_state('binary_sensor.rain_detector_rain', 'on') else 0 }}
