@@ -19,9 +19,9 @@ input_select:
     name: Jarvis Pipeline
     icon: mdi:pipe
     options:
-      - tts.piper
       - tts.google_translate_en_com
-      - tts.home_assistant_cloud
+      - tts.silero_tts_enhanced
+      - tts.google_ai_tts
 
 input_boolean:
   audible_notifications:

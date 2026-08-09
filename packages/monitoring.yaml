@@ -56,7 +56,7 @@ sensor:
   - platform: history_stats
     name: Night Sleep Duration
     unique_id: night_sleep_duration
-    entity_id: binary_sensor.bed_occupancy
+    entity_id: binary_sensor.bedroom_bed_presence
     state: "on"
     type: time
     start: >

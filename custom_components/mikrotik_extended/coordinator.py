@@ -9,27 +9,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from ipaddress import IPv4Network
 
+from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from mac_vendor_lookup import AsyncMacLookup
-
-try:
-    from homeassistant.components.repairs import (
-        IssueSeverity,
-        async_create_issue,
-        async_delete_issue,
-    )
-except ImportError:
-    try:
-        from homeassistant.components.repairs import (
-            async_create_issue,
-            async_delete_issue,
-        )
-        from homeassistant.helpers.issue_registry import IssueSeverity
-    except ImportError:
-        async_create_issue = None
-        async_delete_issue = None
-        IssueSeverity = None
 from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
@@ -41,12 +22,21 @@ from homeassistant.const import (
     CONF_ZONE,
     STATE_HOME,
 )
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.issue_registry import (
+    IssueSeverity,
+    async_create_issue,
+    async_delete_issue,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import slugify
 from homeassistant.util.dt import utcnow
+from mac_vendor_lookup import AsyncMacLookup
 
 from .apiparser import parse_api
 from .const import (
@@ -66,6 +56,7 @@ from .const import (
     CONF_SENSOR_SCRIPTS,
     CONF_SENSOR_SIMPLE_QUEUES,
     CONF_SENSOR_WIREGUARD,
+    CONF_TEXT_ENCODING,
     CONF_TRACK_HOSTS,
     CONF_TRACK_HOSTS_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
@@ -84,10 +75,12 @@ from .const import (
     DEFAULT_SENSOR_SCRIPTS,
     DEFAULT_SENSOR_SIMPLE_QUEUES,
     DEFAULT_SENSOR_WIREGUARD,
+    DEFAULT_TEXT_ENCODING,
     DEFAULT_TRACK_HOST_TIMEOUT,
     DEFAULT_TRACK_HOSTS,
     DOMAIN,
 )
+from .encoding_repair import RAW_SUFFIX, collect_renames
 from .mikrotikapi import MikrotikAPI
 
 _LOGGER = logging.getLogger(__name__)
@@ -131,6 +124,70 @@ def _percent_usage(total, free):
 def _package_enabled(packages: dict, name: str) -> bool:
     """Return True when ``name`` is present and enabled in the packages dict."""
     return name in packages and packages[name]["enabled"]
+
+
+# Newer RouterOS names a container with a generated UUID when the user does
+# not pick one; such a name is useless as a label.
+_GENERATED_CONTAINER_NAME = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.IGNORECASE)
+
+
+def _prefer_comment_uniq_id(store: dict, stale_uids=()) -> None:
+    """Use the comment as the entity reference when the rule has one.
+
+    The generated reference is built from the rule contents, so editing the rule
+    on the router (a port, an address) changes it and Home Assistant registers a
+    new entity while the old one is left behind. The comment survives such
+    edits. The previous reference is kept as legacy-uniq-id so entities created
+    under the old scheme can be pointed at the new one.
+
+    Rows in ``stale_uids`` are skipped entirely: they are no longer refreshed
+    from the router, so rewriting legacy-uniq-id would degrade their stored
+    content signature to the bare comment. That signature is what tells a
+    re-created rule apart from a different rule that happens to share the
+    comment when an entity looks for its successor.
+    """
+    for uid, vals in store.items():
+        if uid in stale_uids:
+            continue
+        vals["legacy-uniq-id"] = str(vals.get("uniq-id", ""))
+        comment = str(vals.get("comment", "")).strip()
+        if comment:
+            vals["uniq-id"] = comment
+
+
+def _disambiguate_uniq_ids(store: dict, stale_uids=()) -> list[str]:
+    """Give colliding uniq-id values a stable suffix; return the collided bases.
+
+    The comment is used when it tells the entries apart, otherwise a positional
+    index. The RouterOS list id is deliberately not used: it changes whenever an
+    entry is removed and re-added, which would register a new entity instead of
+    updating the existing one.
+
+    Rows in ``stale_uids`` are no longer on the router and only survive on the
+    pruning grace period. They must not take part in disambiguation: a rule
+    re-created with the same comment briefly overlaps its own dead row, and
+    suffixing both would mint throwaway entities and strand the original one
+    (its stored uniq-id would never match a live row again).
+    """
+    seen: dict[str, list[str]] = {}
+    for uid, vals in store.items():
+        if uid in stale_uids:
+            continue
+        seen.setdefault(str(vals.get("uniq-id", uid)), []).append(uid)
+
+    collided = []
+    for base, uids in seen.items():
+        if len(uids) < 2:
+            continue
+        collided.append(base)
+        comments = [str(store[uid].get("comment", "")).strip() for uid in uids]
+        if all(comments) and len(set(comments)) == len(comments):
+            for uid, comment in zip(uids, comments, strict=False):
+                store[uid]["uniq-id"] = f"{base} ({comment})"
+        else:
+            for index, uid in enumerate(uids, start=1):
+                store[uid]["uniq-id"] = f"{base} #{index}"
+    return collided
 
 
 def _split_queue_fields(entry: dict, vals: dict) -> None:
@@ -421,6 +478,51 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
 
         self.last_hwinfo_update = datetime(1970, 1, 1)
         self.rebootcheck = 0
+        self._rule_uids_migrated = False
+
+    # Entity keys whose reference moved from the rule contents to the comment.
+    _COMMENT_KEYED_RULES = ("nat", "mangle", "routing_rules", "filter", "queue")
+
+    def _migrate_rule_unique_ids(self) -> None:
+        """Point entities created under the content based scheme at the new id.
+
+        Rewrites the unique_id in place instead of dropping the registry entry,
+        so renames, area, icon and enabled state survive. Runs once per start
+        and is idempotent: once an entity carries the new id there is nothing
+        left to look up.
+        """
+        if self._rule_uids_migrated:
+            return
+        self._rule_uids_migrated = True
+
+        registry = er.async_get(self.hass)
+        entry_id = self.config_entry.entry_id
+        for key in self._COMMENT_KEYED_RULES:
+            for vals in self.ds.get(key, {}).values():
+                current = str(vals.get("uniq-id", ""))
+                if not current:
+                    continue
+                new_uid = f"{entry_id}-{key}-{slugify(current.lower())}"
+                if registry.async_get_entity_id(SWITCH_DOMAIN, DOMAIN, new_uid):
+                    continue
+                # Two earlier schemes can be in place: the reference generated
+                # from the rule contents, and the one built from the comment
+                # before it was decoded.
+                for legacy in (vals.get("legacy-uniq-id"), vals.get(f"comment{RAW_SUFFIX}")):
+                    legacy = str(legacy or "")
+                    if not legacy or legacy == current:
+                        continue
+                    old_uid = f"{entry_id}-{key}-{slugify(legacy.lower())}"
+                    entity_id = registry.async_get_entity_id(SWITCH_DOMAIN, DOMAIN, old_uid)
+                    if entity_id is None:
+                        continue
+                    registry.async_update_entity(entity_id, new_unique_id=new_uid)
+                    _LOGGER.debug(
+                        "Mikrotik %s moved %s to the comment based unique_id",
+                        self.host,
+                        entity_id,
+                    )
+                    break
 
     def _get_stale_counters(self, key: str) -> dict:
         """Get or create stale counter dict for a data path."""
@@ -707,15 +809,16 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         """Update Mikrotik data"""
         _cycle_start = datetime.now()
         _LOGGER.debug("Mikrotik %s starting data update cycle", self.host)
+        # Fetch resource once per cycle, up front, so it is fresh every cycle
+        # and already populated before get_system_routerboard (which reads its
+        # board-name) runs inside the hardware-info block below.
+        await self.hass.async_add_executor_job(self.get_system_resource)
         delta = datetime.now().replace(microsecond=0) - self.last_hwinfo_update
         if self.api.has_reconnected() or delta.total_seconds() > 60 * 60 * 4:
             await self.hass.async_add_executor_job(self.get_access)
 
             if self.api.connected():
                 await self.hass.async_add_executor_job(self.get_firmware_update)
-
-            if self.api.connected():
-                await self.hass.async_add_executor_job(self.get_system_resource)
 
             if self.api.connected():
                 await self.hass.async_add_executor_job(self.get_capabilities)
@@ -733,56 +836,51 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 await self.hass.async_add_executor_job(self.get_dns)
 
             if not self.api.connected():
-                if async_create_issue is not None:
-                    if self.api.error == "wrong_login":
-                        async_create_issue(
-                            self.hass,
-                            DOMAIN,
-                            "wrong_credentials",
-                            is_fixable=False,
-                            severity=IssueSeverity.ERROR,
-                            translation_key="wrong_credentials",
-                            translation_placeholders={"host": self.host},
-                        )
-                    elif self.api.error in ("ssl_handshake_failure", "ssl_verify_failure"):
-                        async_create_issue(
-                            self.hass,
-                            DOMAIN,
-                            "ssl_error",
-                            is_fixable=False,
-                            severity=IssueSeverity.ERROR,
-                            translation_key="ssl_error",
-                            translation_placeholders={"host": self.host},
-                        )
+                if self.api.error == "wrong_login":
+                    async_create_issue(
+                        self.hass,
+                        DOMAIN,
+                        "wrong_credentials",
+                        is_fixable=False,
+                        severity=IssueSeverity.ERROR,
+                        translation_key="wrong_credentials",
+                        translation_placeholders={"host": self.host},
+                    )
+                elif self.api.error in ("ssl_handshake_failure", "ssl_verify_failure"):
+                    async_create_issue(
+                        self.hass,
+                        DOMAIN,
+                        "ssl_error",
+                        is_fixable=False,
+                        severity=IssueSeverity.ERROR,
+                        translation_key="ssl_error",
+                        translation_placeholders={"host": self.host},
+                    )
                 if self.api.error == "wrong_login":
                     raise ConfigEntryAuthFailed(f"Invalid credentials for {self.host}")
                 raise UpdateFailed("Mikrotik Disconnected")
 
             if self.api.connected():
                 self.last_hwinfo_update = datetime.now().replace(microsecond=0)
-                if async_delete_issue is not None:
-                    async_delete_issue(self.hass, DOMAIN, "wrong_credentials")
-                    async_delete_issue(self.hass, DOMAIN, "ssl_error")
-                if async_create_issue is not None:
-                    missing = self.ds.get("access_missing", [])
-                    if missing:
-                        async_create_issue(
-                            self.hass,
-                            DOMAIN,
-                            "insufficient_permissions",
-                            is_fixable=False,
-                            severity=IssueSeverity.WARNING,
-                            translation_key="insufficient_permissions",
-                            translation_placeholders={
-                                "host": self.host,
-                                "username": self.config_entry.data[CONF_USERNAME],
-                                "missing": ", ".join(missing),
-                            },
-                        )
-                    else:
-                        async_delete_issue(self.hass, DOMAIN, "insufficient_permissions")
-
-        await self.hass.async_add_executor_job(self.get_system_resource)
+                async_delete_issue(self.hass, DOMAIN, "wrong_credentials")
+                async_delete_issue(self.hass, DOMAIN, "ssl_error")
+                missing = self.ds.get("access_missing", [])
+                if missing:
+                    async_create_issue(
+                        self.hass,
+                        DOMAIN,
+                        "insufficient_permissions",
+                        is_fixable=False,
+                        severity=IssueSeverity.WARNING,
+                        translation_key="insufficient_permissions",
+                        translation_placeholders={
+                            "host": self.host,
+                            "username": self.config_entry.data[CONF_USERNAME],
+                            "missing": ", ".join(missing),
+                        },
+                    )
+                else:
+                    async_delete_issue(self.hass, DOMAIN, "insufficient_permissions")
 
         if self.api.connected():
             await self.hass.async_add_executor_job(self.get_system_health)
@@ -900,9 +998,121 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             len(self.ds.get("host", {})),
             len(self.ds.get("routing_rules", {})),
         )
+        self._decode_text_fields()
+        self._check_encoding_entity_ids()
+        self._migrate_rule_unique_ids()
         self._refresh_core_device_sw_version()
         async_dispatcher_send(self.hass, f"update_sensors_{self.config_entry.entry_id}", self)
         return self.ds
+
+    # ---------------------------
+    #   text encoding
+    # ---------------------------
+    @property
+    def option_text_encoding(self):
+        """Fallback codepage for free-text fields that are not valid UTF-8."""
+        return self.config_entry.options.get(CONF_TEXT_ENCODING, DEFAULT_TEXT_ENCODING)
+
+    # Free-text fields that a user may fill with non-ASCII characters. The API
+    # connection reads bytes as latin-1 (lossless), so these hold the raw bytes.
+    _TEXT_FIELDS = {
+        "dhcp": ("comment", "host-name"),
+        "dns": ("comment",),
+        "interface": ("comment",),
+        "nat": ("comment",),
+        "mangle": ("comment",),
+        "filter": ("comment",),
+        "routing_rules": ("comment",),
+        "host": ("host-name",),
+        "client_traffic": ("host-name",),
+        # These also surface the comment: netwatch and WireGuard peers use it as
+        # the entity name, containers and queues derive their name or key from
+        # it, and IP addresses expose it as an attribute.
+        "netwatch": ("comment",),
+        "wireguard_peers": ("comment",),
+        "containers": ("comment",),
+        "queue": ("comment",),
+        "ip_address": ("comment",),
+    }
+
+    def _decode_text(self, value):
+        """Re-interpret a latin-1 passthrough string as UTF-8, else fallback codepage."""
+        if not isinstance(value, str):
+            return value
+        try:
+            raw = value.encode("latin-1")
+        except UnicodeEncodeError:
+            return value
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError:
+            fallback = self.option_text_encoding
+            if fallback in ("ISO-8859-1", "latin-1", "latin1"):
+                return value
+            try:
+                return raw.decode(fallback, errors="replace")
+            except (LookupError, UnicodeDecodeError):
+                return value
+
+    def _decode_store(self, store: str) -> None:
+        """Decode the free-text fields of one store in place.
+
+        Call this right after the store is filled and before anything is
+        derived from those fields, so keys and names are built from readable
+        text. When decoding changes a value, the original is kept next to it so
+        entity ids generated from the misdecoded text stay recognisable (see
+        encoding_repair).
+        """
+        fields = self._TEXT_FIELDS.get(store)
+        if not fields:
+            return
+        for entry in self.ds.get(store, {}).values():
+            if not isinstance(entry, dict):
+                continue
+            for field in fields:
+                if field not in entry:
+                    continue
+                raw = entry[field]
+                decoded = self._decode_text(raw)
+                entry[field] = decoded
+                if isinstance(raw, str) and raw != decoded:
+                    entry[f"{field}{RAW_SUFFIX}"] = raw
+                else:
+                    entry.pop(f"{field}{RAW_SUFFIX}", None)
+
+    def _decode_text_fields(self) -> None:
+        """Decode every known free-text field across the data stores."""
+        for store in self._TEXT_FIELDS:
+            self._decode_store(store)
+
+    ENCODING_ISSUE_ID = "encoding_entity_ids"
+
+    def _check_encoding_entity_ids(self) -> None:
+        """Offer a repair when entity ids still hold misdecoded router text.
+
+        Only entities the user never renamed are considered, and nothing is
+        changed here: the rename itself needs an explicit confirmation in the
+        repair dialog.
+        """
+        renames = collect_renames(self.hass, self.config_entry.entry_id, self.ds, self._TEXT_FIELDS)
+        issue_id = f"{self.ENCODING_ISSUE_ID}_{self.config_entry.entry_id}"
+        if not renames:
+            async_delete_issue(self.hass, DOMAIN, issue_id)
+            return
+
+        async_create_issue(
+            self.hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=True,
+            severity=IssueSeverity.WARNING,
+            translation_key="encoding_entity_ids",
+            translation_placeholders={
+                "host": self.host,
+                "count": str(len(renames)),
+            },
+            data={"entry_id": self.config_entry.entry_id},
+        )
 
     # ---------------------------
     #   _refresh_core_device_sw_version
@@ -924,6 +1134,18 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         device = registry.async_get_device(identifiers={(DOMAIN, f"{self.config_entry.entry_id}-{serial}")})
         if device is not None and device.sw_version != version:
             registry.async_update_device(device.id, sw_version=version)
+
+    # ---------------------------
+    #   force_hwinfo_refresh
+    # ---------------------------
+    def force_hwinfo_refresh(self) -> None:
+        """Make the next update cycle re-fetch firmware and hardware info.
+
+        Firmware and update-availability info is only refreshed every few
+        hours (the "check for updates" call is slow). Resetting the marker
+        lets the refresh_data action pull the current versions on demand.
+        """
+        self.last_hwinfo_update = datetime(1970, 1, 1)
 
     # ---------------------------
     #   get_access
@@ -1282,27 +1504,19 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         )
 
         # Handle duplicate NAT entries - suffix uniq-id with RouterOS ID to keep all rules
-        nat_seen = {}
         for uid in self.ds["nat"]:
             self.ds["nat"][uid]["comment"] = str(self.ds["nat"][uid]["comment"])
-            tmp_name = self.ds["nat"][uid]["uniq-id"]
-            if tmp_name not in nat_seen:
-                nat_seen[tmp_name] = [uid]
-            else:
-                nat_seen[tmp_name].append(uid)
+        self._decode_store("nat")
+        _prefer_comment_uniq_id(self.ds["nat"], self._get_stale_counters("nat"))
 
-        for tmp_name, uids in nat_seen.items():
-            if len(uids) > 1:
-                for uid in uids:
-                    router_id = self.ds["nat"][uid].get(".id", uid)
-                    self.ds["nat"][uid]["uniq-id"] = f"{tmp_name} ({router_id})"
-                if tmp_name not in self.nat_removed:
-                    self.nat_removed[tmp_name] = 1
-                    _LOGGER.info(
-                        "Mikrotik %s duplicate NAT rule '%s' — RouterOS ID suffix added. Add unique comments to the rules to remove this warning.",
-                        self.host,
-                        self.ds["nat"][uids[0]]["name"],
-                    )
+        for tmp_name in _disambiguate_uniq_ids(self.ds["nat"], self._get_stale_counters("nat")):
+            if tmp_name not in self.nat_removed:
+                self.nat_removed[tmp_name] = 1
+                _LOGGER.info(
+                    "Mikrotik %s duplicate NAT rule '%s', a suffix was added to keep both entities. Add unique comments to the rules to remove this warning.",
+                    self.host,
+                    tmp_name,
+                )
 
     # ---------------------------
     #   get_mangle
@@ -1375,27 +1589,19 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         )
 
         # Handle duplicate Mangle entries - suffix uniq-id with RouterOS ID to keep all rules
-        mangle_seen = {}
         for uid in self.ds["mangle"]:
             self.ds["mangle"][uid]["comment"] = str(self.ds["mangle"][uid]["comment"])
-            tmp_name = self.ds["mangle"][uid]["uniq-id"]
-            if tmp_name not in mangle_seen:
-                mangle_seen[tmp_name] = [uid]
-            else:
-                mangle_seen[tmp_name].append(uid)
+        self._decode_store("mangle")
+        _prefer_comment_uniq_id(self.ds["mangle"], self._get_stale_counters("mangle"))
 
-        for tmp_name, uids in mangle_seen.items():
-            if len(uids) > 1:
-                for uid in uids:
-                    router_id = self.ds["mangle"][uid].get(".id", uid)
-                    self.ds["mangle"][uid]["uniq-id"] = f"{tmp_name} ({router_id})"
-                if tmp_name not in self.mangle_removed:
-                    self.mangle_removed[tmp_name] = 1
-                    _LOGGER.info(
-                        "Mikrotik %s duplicate Mangle rule '%s' — RouterOS ID suffix added. Add unique comments to the rules to remove this warning.",
-                        self.host,
-                        self.ds["mangle"][uids[0]]["name"],
-                    )
+        for tmp_name in _disambiguate_uniq_ids(self.ds["mangle"], self._get_stale_counters("mangle")):
+            if tmp_name not in self.mangle_removed:
+                self.mangle_removed[tmp_name] = 1
+                _LOGGER.info(
+                    "Mikrotik %s duplicate Mangle rule '%s', a suffix was added to keep both entities. Add unique comments to the rules to remove this warning.",
+                    self.host,
+                    tmp_name,
+                )
 
     # ---------------------------
     #   get_routing_rules
@@ -1459,27 +1665,19 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         )
 
         # Handle duplicate Routing Rules entries - suffix uniq-id with RouterOS ID to keep all rules
-        routing_rules_seen = {}
         for uid in self.ds["routing_rules"]:
             self.ds["routing_rules"][uid]["comment"] = str(self.ds["routing_rules"][uid]["comment"])
-            tmp_name = self.ds["routing_rules"][uid]["uniq-id"]
-            if tmp_name not in routing_rules_seen:
-                routing_rules_seen[tmp_name] = [uid]
-            else:
-                routing_rules_seen[tmp_name].append(uid)
+        self._decode_store("routing_rules")
+        _prefer_comment_uniq_id(self.ds["routing_rules"], self._get_stale_counters("routing_rules"))
 
-        for tmp_name, uids in routing_rules_seen.items():
-            if len(uids) > 1:
-                for uid in uids:
-                    router_id = self.ds["routing_rules"][uid].get(".id", uid)
-                    self.ds["routing_rules"][uid]["uniq-id"] = f"{tmp_name} ({router_id})"
-                if tmp_name not in self.routing_rules_removed:
-                    self.routing_rules_removed[tmp_name] = 1
-                    _LOGGER.info(
-                        "Mikrotik %s duplicate Routing Rule '%s' — RouterOS ID suffix added. Add unique comments to the rules to remove this warning.",
-                        self.host,
-                        self.ds["routing_rules"][uids[0]]["name"],
-                    )
+        for tmp_name in _disambiguate_uniq_ids(self.ds["routing_rules"], self._get_stale_counters("routing_rules")):
+            if tmp_name not in self.routing_rules_removed:
+                self.routing_rules_removed[tmp_name] = 1
+                _LOGGER.info(
+                    "Mikrotik %s duplicate Routing Rule '%s', a suffix was added to keep both entities. Add unique comments to the rules to remove this warning.",
+                    self.host,
+                    tmp_name,
+                )
 
     # ---------------------------
     #   get_wireguard_peers
@@ -1596,14 +1794,40 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     def get_containers(self) -> None:
         """Get Container data from Mikrotik"""
         _LOGGER.debug("Mikrotik %s fetching containers", self.host)
+        source = self.api.query("/container") or []
+        # The RouterOS list id changes when a container is re-created, which
+        # is the standard container upgrade workflow and would spawn duplicate
+        # entities (same pattern as issue #20). Key entries by the veth
+        # interface instead: every container has one and it survives
+        # re-creation. Entries without an interface keep the list id.
+        seen_per_iface: dict = {}
+        for entry in sorted(source, key=lambda e: (str(e.get("interface", "")), str(e.get("root-dir", "")))):
+            ref = str(entry.get("interface", "")) or str(entry.get(".id", "")) or "unknown"
+            count = seen_per_iface.get(ref, 0) + 1
+            seen_per_iface[ref] = count
+            entry["uid-ref"] = ref if count == 1 else f"{ref}-{count}"
+            # RouterOS 7.23 dropped the "status" text in favour of a "stopped"
+            # flag, and like other RouterOS flags it is only present when set:
+            # a stopped container reports stopped=true while a running one
+            # omits the key entirely (verified live on 7.23.3). Map the new
+            # schema onto the old one so everything downstream keeps working
+            # on both generations.
+            if not entry.get("status"):
+                stopped = str(entry.get("stopped", "")).lower() in ("true", "yes", "1")
+                entry["status"] = "stopped" if stopped else "running"
+            if not entry.get("repo") and entry.get("remote-image"):
+                entry["repo"] = entry["remote-image"]
+
         self.ds["containers"] = parse_api(
             data=self.ds["containers"],
-            source=self.api.query("/container"),
-            key=".id",
+            source=source,
+            key="uid-ref",
             vals=[
+                {"name": "uid-ref"},
                 {"name": ".id"},
                 {"name": "name", "default": ""},
                 {"name": "tag", "default": ""},
+                {"name": "repo", "default": ""},
                 {"name": "os", "default": ""},
                 {"name": "arch", "default": ""},
                 {"name": "interface", "default": ""},
@@ -1611,7 +1835,7 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 {"name": "mounts", "default": ""},
                 {"name": "comment", "default": ""},
                 {"name": "start-on-boot", "default": "false"},
-                {"name": "running", "type": "bool", "default": False},
+                {"name": "status", "default": "stopped"},
                 {"name": "memory-current", "default": ""},
                 {"name": "cpu-usage", "default": ""},
             ],
@@ -1619,14 +1843,24 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             stale_counters=self._get_stale_counters("containers"),
         )
 
+        self._decode_store("containers")
+
         for uid in self.ds["containers"]:
             container = self.ds["containers"][uid]
             container["uniq-id"] = uid
-            cname = str(container.get("name", "")).strip()
             comment = str(container.get("comment", "")).strip()
-            tag = str(container.get("tag", "")).strip()
-            container["display-name"] = cname or comment or tag or uid
-            container["status"] = "running" if container.get("running", False) else "stopped"
+            # RouterOS 7.18 reports the image in "repo", older builds in "tag".
+            image = str(container.get("repo", "")).strip() or str(container.get("tag", "")).strip()
+            # A name the user chose is the best label, but newer RouterOS
+            # generates a UUID name on creation and that means nothing to a
+            # human, so only a real name may win (issue 24).
+            cname = str(container.get("name", "")).strip()
+            if _GENERATED_CONTAINER_NAME.fullmatch(cname):
+                cname = ""
+            container["display-name"] = cname or comment or image or uid
+            # The router reports the state in "status" as text; there is no
+            # boolean "running" field, so derive it here.
+            container["running"] = str(container.get("status", "")).lower() == "running"
 
     # ---------------------------
     #   get_filter
@@ -1716,27 +1950,19 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         )
 
         # Handle duplicate filter entries - suffix uniq-id with RouterOS ID to keep all rules
-        filter_seen = {}
         for uid in self.ds["filter"]:
             self.ds["filter"][uid]["comment"] = str(self.ds["filter"][uid]["comment"])
-            tmp_name = self.ds["filter"][uid]["uniq-id"]
-            if tmp_name not in filter_seen:
-                filter_seen[tmp_name] = [uid]
-            else:
-                filter_seen[tmp_name].append(uid)
+        self._decode_store("filter")
+        _prefer_comment_uniq_id(self.ds["filter"], self._get_stale_counters("filter"))
 
-        for tmp_name, uids in filter_seen.items():
-            if len(uids) > 1:
-                for uid in uids:
-                    router_id = self.ds["filter"][uid].get(".id", uid)
-                    self.ds["filter"][uid]["uniq-id"] = f"{tmp_name} ({router_id})"
-                if tmp_name not in self.filter_removed:
-                    self.filter_removed[tmp_name] = 1
-                    _LOGGER.info(
-                        "Mikrotik %s duplicate Filter rule '%s' — RouterOS ID suffix added. Add unique comments to the rules to remove this warning.",
-                        self.host,
-                        self.ds["filter"][uids[0]]["name"],
-                    )
+        for tmp_name in _disambiguate_uniq_ids(self.ds["filter"], self._get_stale_counters("filter")):
+            if tmp_name not in self.filter_removed:
+                self.filter_removed[tmp_name] = 1
+                _LOGGER.info(
+                    "Mikrotik %s duplicate Filter rule '%s', a suffix was added to keep both entities. Add unique comments to the rules to remove this warning.",
+                    self.host,
+                    tmp_name,
+                )
 
     # ---------------------------
     #   get_kidcontrol
@@ -1837,11 +2063,27 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_netwatch(self) -> None:
         """Get netwatch data from Mikrotik"""
+        source = self.api.query("/tool/netwatch") or []
+        # Keying on the host alone collapses several probes watching the same
+        # address (for example an icmp and a tcp check) into one entity, so one
+        # of them disappears. Build the reference from host, type and port, and
+        # fall back to a deterministic suffix when even that is not unique.
+        seen_ref: dict = {}
+        for entry in sorted(source, key=lambda e: (str(e.get("comment", "")), str(e.get(".id", "")))):
+            parts = [str(entry.get("host", "")) or "unknown", str(entry.get("type", "")) or "simple"]
+            if str(entry.get("port", "")):
+                parts.append(str(entry["port"]))
+            ref = "-".join(parts)
+            count = seen_ref.get(ref, 0) + 1
+            seen_ref[ref] = count
+            entry["uid-ref"] = ref if count == 1 else f"{ref}-{count}"
+
         self.ds["netwatch"] = parse_api(
             data=self.ds["netwatch"],
-            source=self.api.query("/tool/netwatch"),
-            key="host",
+            source=source,
+            key="uid-ref",
             vals=[
+                {"name": "uid-ref"},
                 {"name": "host"},
                 {"name": "type"},
                 {"name": "interval"},
@@ -1849,6 +2091,15 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 {"name": "http-codes"},
                 {"name": "status", "type": "bool", "default": "unknown"},
                 {"name": "comment"},
+                {"name": "since"},
+                {"name": "loss-percent", "convert": "int"},
+                {"name": "sent-count", "convert": "int"},
+                {"name": "response-count", "convert": "int"},
+                {"name": "rtt-avg", "convert": "ms_from_duration"},
+                {"name": "rtt-min", "convert": "ms_from_duration"},
+                {"name": "rtt-max", "convert": "ms_from_duration"},
+                {"name": "rtt-jitter", "convert": "ms_from_duration"},
+                {"name": "rtt-stdev", "convert": "ms_from_duration"},
                 {
                     "name": "enabled",
                     "source": "disabled",
@@ -2180,24 +2431,17 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         self._dedupe_queue_uniq_ids()
 
     def _dedupe_queue_uniq_ids(self) -> None:
-        """Suffix uniq-id with RouterOS id when multiple queues share a name."""
-        queue_seen: dict[str, list[str]] = {}
-        for uid in self.ds["queue"]:
-            tmp_name = self.ds["queue"][uid]["uniq-id"]
-            queue_seen.setdefault(tmp_name, []).append(uid)
-
-        for tmp_name, uids in queue_seen.items():
-            if len(uids) > 1:
-                for uid in uids:
-                    router_id = self.ds["queue"][uid].get(".id", uid)
-                    self.ds["queue"][uid]["uniq-id"] = f"{tmp_name} ({router_id})"
-                if tmp_name not in self.queue_removed:
-                    self.queue_removed[tmp_name] = 1
-                    _LOGGER.info(
-                        "Mikrotik %s duplicate Queue rule '%s' — RouterOS ID suffix added. Add unique names to the rules to remove this warning.",
-                        self.host,
-                        tmp_name,
-                    )
+        """Add a stable suffix to uniq-id when multiple queues share a name."""
+        self._decode_store("queue")
+        _prefer_comment_uniq_id(self.ds["queue"], self._get_stale_counters("queue"))
+        for tmp_name in _disambiguate_uniq_ids(self.ds["queue"], self._get_stale_counters("queue")):
+            if tmp_name not in self.queue_removed:
+                self.queue_removed[tmp_name] = 1
+                _LOGGER.info(
+                    "Mikrotik %s duplicate Queue rule '%s', a suffix was added to keep both entities. Add unique names to the rules to remove this warning.",
+                    self.host,
+                    tmp_name,
+                )
 
     # ---------------------------
     #   get_arp
@@ -2361,11 +2605,24 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_ip_address(self) -> None:
         """Get IP address data from Mikrotik"""
+        source = self.api.query("/ip/address") or []
+        # The RouterOS list id is not stable: dynamic addresses (PPPoE, DHCP)
+        # are re-created with a new id on every reconnect, which would spawn a
+        # new entity each time (issue #20). Key entries by interface instead,
+        # with a deterministic suffix when an interface holds more addresses.
+        seen_per_iface: dict = {}
+        for entry in sorted(source, key=lambda e: (str(e.get("interface", "")), str(e.get("address", "")))):
+            iface = str(entry.get("interface", "")) or "unknown"
+            count = seen_per_iface.get(iface, 0) + 1
+            seen_per_iface[iface] = count
+            entry["uid-ref"] = iface if count == 1 else f"{iface}-{count}"
+
         self.ds["ip_address"] = parse_api(
             data=self.ds["ip_address"],
-            source=self.api.query("/ip/address"),
-            key=".id",
+            source=source,
+            key="uid-ref",
             vals=[
+                {"name": "uid-ref"},
                 {"name": ".id"},
                 {"name": "address", "default": ""},
                 {"name": "network", "default": ""},
@@ -2819,50 +3076,71 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     _HA_MONITORING_PROFILE = "ha-monitoring"
 
     def sync_kid_control_monitoring_profile(self) -> None:
-        """Create or remove the ha-monitoring kid-control profile based on integration option."""
-        existing = self.api.query(PATH_IP_KID_CONTROL) or []
-        has_profile = any(p.get("name") == self._HA_MONITORING_PROFILE for p in existing)
+        """Ensure the ha-monitoring kid-control profile exists when client traffic is enabled.
 
-        if self.option_sensor_client_traffic:
-            if not has_profile:
-                success = self.api.execute(
-                    PATH_IP_KID_CONTROL,
-                    "add",
-                    None,
-                    None,
-                    attributes={
-                        "name": self._HA_MONITORING_PROFILE,
-                        "mon": "0s-1d",
-                        "tue": "0s-1d",
-                        "wed": "0s-1d",
-                        "thu": "0s-1d",
-                        "fri": "0s-1d",
-                        "sat": "0s-1d",
-                        "sun": "0s-1d",
-                    },
-                )
-                if success:
-                    _LOGGER.info(
-                        "Mikrotik %s: Created kid-control profile '%s' for device traffic monitoring",
-                        self.host,
-                        self._HA_MONITORING_PROFILE,
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Mikrotik %s: Could not create kid-control profile '%s'. Create it manually: /ip/kid-control/add name=%s mon=0s-1d tue=0s-1d wed=0s-1d thu=0s-1d fri=0s-1d sat=0s-1d sun=0s-1d",
-                        self.host,
-                        self._HA_MONITORING_PROFILE,
-                        self._HA_MONITORING_PROFILE,
-                    )
+        The periodic sync never removes the profile. Another Home Assistant
+        instance or entry pointing at the same router may rely on it, and an
+        instance with the option disabled would otherwise fight the owner in
+        an endless add and remove loop. Removal happens exactly once, from
+        the options flow, when the option is turned off on this entry.
+        """
+        if not self.option_sensor_client_traffic:
+            return
+
+        existing = self.api.query(PATH_IP_KID_CONTROL) or []
+        if any(p.get("name") == self._HA_MONITORING_PROFILE for p in existing):
+            return
+
+        success = self.api.execute(
+            PATH_IP_KID_CONTROL,
+            "add",
+            None,
+            None,
+            attributes={
+                "name": self._HA_MONITORING_PROFILE,
+                "mon": "0s-1d",
+                "tue": "0s-1d",
+                "wed": "0s-1d",
+                "thu": "0s-1d",
+                "fri": "0s-1d",
+                "sat": "0s-1d",
+                "sun": "0s-1d",
+            },
+        )
+        if success:
+            _LOGGER.info(
+                "Mikrotik %s: Created kid-control profile '%s' for device traffic monitoring",
+                self.host,
+                self._HA_MONITORING_PROFILE,
+            )
         else:
-            if has_profile:
-                success = self.api.execute(PATH_IP_KID_CONTROL, "remove", "name", self._HA_MONITORING_PROFILE)
-                if success:
-                    _LOGGER.info(
-                        "Mikrotik %s: Removed kid-control profile '%s'",
-                        self.host,
-                        self._HA_MONITORING_PROFILE,
-                    )
+            _LOGGER.warning(
+                "Mikrotik %s: Could not create kid-control profile '%s'. Create it manually: /ip/kid-control/add name=%s mon=0s-1d tue=0s-1d wed=0s-1d thu=0s-1d fri=0s-1d sat=0s-1d sun=0s-1d",
+                self.host,
+                self._HA_MONITORING_PROFILE,
+                self._HA_MONITORING_PROFILE,
+            )
+
+    # ---------------------------
+    #   remove_kid_control_monitoring_profile
+    # ---------------------------
+    def remove_kid_control_monitoring_profile(self) -> None:
+        """Remove the ha-monitoring kid-control profile from the router.
+
+        Called from the options flow when the client traffic option is
+        turned off on this entry.
+        """
+        existing = self.api.query(PATH_IP_KID_CONTROL) or []
+        if not any(p.get("name") == self._HA_MONITORING_PROFILE for p in existing):
+            return
+
+        success = self.api.execute(PATH_IP_KID_CONTROL, "remove", "name", self._HA_MONITORING_PROFILE)
+        if success:
+            _LOGGER.info(
+                "Mikrotik %s: Removed kid-control profile '%s'",
+                self.host,
+                self._HA_MONITORING_PROFILE,
+            )
 
     # ---------------------------
     #   process_kid_control

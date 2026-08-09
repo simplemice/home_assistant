@@ -136,15 +136,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2208 |
-| Number of sensors | 1222 |
-| Current Version | 2026.7.4 |
-| Total Automations | 127 |
-| Total Scripts | 39 |
-| Total Lights | 33 |
-| Total Switches | 169 |
-| Total Scenes | 14 |
-| Total Players | 17 |
+| Number of entities | 2193 |
+| Number of sensors | 1224 |
+| Current Version | 2026.8.1 |
+| Total Automations | 124 |
+| Total Scripts | 38 |
+| Total Lights | 32 |
+| Total Switches | 170 |
+| Total Scenes | 9 |
+| Total Players | 11 |
 
 ---
 
@@ -159,6 +159,8 @@ This repository is treated as:
 - Matterbridge
 
 - Network UPS Tools
+
+- Ollama-HA
 
 - openWakeWord
 
@@ -178,15 +180,15 @@ This repository is treated as:
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv1.34.2)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.0.1)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v1.2.2)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v1.3.2)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
-- [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.6.0)
-- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.5.4)
+- [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
+- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.6.3)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
 - [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
@@ -203,7 +205,7 @@ This repository is treated as:
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
-- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.73)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.76)
 
 ## 🔗 Custom integrations
 
@@ -212,6 +214,8 @@ This repository is treated as:
 - [Ha Mcp Custom Component](https://github.com/homeassistant-ai/ha-mcp-integration)
 
 - [HACS](https://github.com/hacs/integration)
+
+- [Llm Vision](https://github.com/valentinfrlch/ha-llmvision)
 
 - [Mikrotik Extended](https://github.com/Csontikka/ha-mikrotik-extended)
 
@@ -237,24 +241,31 @@ This repository is treated as:
 
 
 ## 🎛️ Lovelace plugins
+- [Adguard Card](https://github.com/homeassistant-extras/adguard-card)
 - [Advanced Camera Card](https://github.com/dermotduffy/advanced-camera-card)
 - [Advanced Room Card](https://github.com/Lawris/advanced-room-card)
 - [Apexcharts Card](https://github.com/RomRider/apexcharts-card)
+- [Auto Entities](https://github.com/thomasloven/lovelace-auto-entities)
 - [Better Thermostat Ui](https://github.com/KartoffelToby/better-thermostat-ui-card)
 - [Bubble Card](https://github.com/Clooos/Bubble-Card)
 - [Button Card](https://github.com/custom-cards/button-card)
 - [Compass Card](https://github.com/tomvanswam/compass-card)
+- [Digital Clock](https://github.com/wassy92x/lovelace-digital-clock)
 - [Flexible Horseshoe Card](https://github.com/AmoebeLabs/flex-horseshoe-card)
 - [Flightradar Flight Card](https://github.com/plckr/flightradar-flight-card)
+- [Helios](https://github.com/ReikanYsora/Helios)
 - [Llm Vision Card](https://github.com/valentinfrlch/llmvision-card)
 - [Mini Graph Card](https://github.com/kalkih/mini-graph-card)
 - [Mini Media Player](https://github.com/kalkih/mini-media-player)
 - [Mushroom](https://github.com/piitaya/lovelace-mushroom)
 - [Room Card](https://github.com/lop1505/RoomCard)
 - [Room Card Minimalist](https://github.com/unbekannt3/room-card-minimalist)
+- [Room Climate Card](https://github.com/hyperfelixations/room-climate-card)
+- [Simple Swipe Card](https://github.com/nutteloost/simple-swipe-card)
 - [Stack In Card](https://github.com/custom-cards/stack-in-card)
 - [Trashcard](https://github.com/idaho/hassio-trash-card)
 - [Universal Remote Card](https://github.com/Nerwyn/universal-remote-card)
+- [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
 - [Wallpanel](https://github.com/j-a-n/lovelace-wallpanel)
 - [Wind Rose Card](https://github.com/aukedejong/lovelace-windrose-card)
 - [Zigbee Mesh Map Card](https://github.com/lubomir-moric/ha-zigbee-mesh-map)

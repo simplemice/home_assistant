@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry
+from homeassistant.helpers import entity_registry as er
 
 _MAC_RE = re.compile(r"^([0-9A-Fa-f]{2}[:\-]){5}[0-9A-Fa-f]{2}$")
 # RouterOS script environment variable names are identifiers. Restricting the
@@ -168,6 +169,7 @@ def _make_refresh_data(hass: HomeAssistant):
         """Force an immediate data refresh on all (or a specific) router."""
         host_filter = call.data.get("host")
         for _entry, entry_data, _router_host in _iter_runtime_entries(hass, host_filter):
+            entry_data.data_coordinator.force_hwinfo_refresh()
             await entry_data.data_coordinator.async_request_refresh()
             await entry_data.tracker_coordinator.async_request_refresh()
 
@@ -303,9 +305,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 # ---------------------------
 #   async_reload_entry
 # ---------------------------
-async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    """Reload the config entry when it changed."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:  # NOSONAR — HA contract requires async
+    """Reload the config entry when its options changed.
+
+    Scheduling the reload lets Home Assistant run it after the update listener
+    returns. Awaiting the reload here instead would deadlock the very entry
+    being reloaded, which Home Assistant warns about and stops allowing in
+    2026.12.
+    """
+    hass.config_entries.async_schedule_reload(config_entry.entry_id)
 
 
 # ---------------------------
@@ -393,6 +401,41 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry):  
         new_data = {**config_entry.data}
         new_data[CONF_VERIFY_SSL] = DEFAULT_VERIFY_SSL
         hass.config_entries.async_update_entry(config_entry, data=new_data, version=2)
+
+    if config_entry.version < 3:
+        # IP address sensors were keyed on the unstable RouterOS list id and
+        # duplicated on every PPPoE or DHCP reconnect (issue #20). Drop their
+        # registry entries once so they re-register under the interface based
+        # unique_id and the clean entity ids are reclaimed by live entities.
+        registry = er.async_get(hass)
+        for entity in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+            if entity.unique_id.startswith(f"{config_entry.entry_id}-ip_address-"):
+                registry.async_remove(entity.entity_id)
+        hass.config_entries.async_update_entry(config_entry, version=3)
+
+    if config_entry.version < 4:
+        # Container entities were keyed on the unstable RouterOS list id and
+        # duplicated when a container was re-created (the standard upgrade
+        # workflow). Same cleanup as the IP address migration above.
+        registry = er.async_get(hass)
+        prefixes = (
+            f"{config_entry.entry_id}-container-",
+            f"{config_entry.entry_id}-container_status-",
+        )
+        for entity in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+            if entity.unique_id.startswith(prefixes):
+                registry.async_remove(entity.entity_id)
+        hass.config_entries.async_update_entry(config_entry, version=4)
+
+    if config_entry.version < 5:
+        # Netwatch entities were keyed on the watched host alone, so several
+        # probes for the same address collapsed into one entity. They are now
+        # keyed on host, type and port, which changes every unique_id once.
+        registry = er.async_get(hass)
+        for entity in er.async_entries_for_config_entry(registry, config_entry.entry_id):
+            if entity.unique_id.startswith(f"{config_entry.entry_id}-netwatch-"):
+                registry.async_remove(entity.entity_id)
+        hass.config_entries.async_update_entry(config_entry, version=5)
 
     _LOGGER.debug(
         "Migration to configuration version %s.%s successful",

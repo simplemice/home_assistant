@@ -35,6 +35,8 @@ intents:
   housemusic:
     data:
       - sentences:
-          - "play music"
+          - "(play|start) (some music|music)"
           - "play some music"
+          - "play music"
           - "start music"
+          - "(play|start) (some music|songs|tracks) (by|from) {media_artist}"

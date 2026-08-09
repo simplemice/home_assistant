@@ -167,6 +167,7 @@ DEVICE_ATTRIBUTES_PACKAGES = [
 
 DEVICE_ATTRIBUTES_CONTAINER_SENSOR = [
     "tag",
+    "repo",
     "os",
     "arch",
     "interface",
@@ -795,10 +796,10 @@ SENSOR_TYPES: tuple[MikrotikSensorEntityDescription, ...] = (
         ha_connection_value="data__port-mac-address",
         data_path="ip_address",
         data_attribute="ip",
-        data_name=".id",
-        data_uid=".id",
-        data_reference=".id",
-        data_attributes_list=["address", "network", "comment", "disabled"],
+        data_name="interface",
+        data_uid="uid-ref",
+        data_reference="uid-ref",
+        data_attributes_list=["address", "network", "interface", "comment", "disabled"],
         func="MikrotikIPAddressSensor",
     ),
     MikrotikSensorEntityDescription(
@@ -942,8 +943,8 @@ SENSOR_TYPES: tuple[MikrotikSensorEntityDescription, ...] = (
         data_attribute="status",
         data_name="display-name",
         data_name_comment=False,
-        data_uid=".id",
-        data_reference=".id",
+        data_uid="uid-ref",
+        data_reference="uid-ref",
         data_attributes_list=DEVICE_ATTRIBUTES_CONTAINER_SENSOR,
         func="MikrotikSensor",
         enable_on_option=CONF_SENSOR_CONTAINERS,

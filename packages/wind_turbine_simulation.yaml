@@ -1,3 +1,34 @@
+# ============================================================================
+# Wind Package — Casa De Ratton (Simulated)
+# ----------------------------------------------------------------------------
+# CHANGES (2026-08-08 review):
+#   1. "Wind Yaw Efficiency" had no ceiling — steady wind (gust≈speed, ratio=1)
+#      produced eff=1.1 (110%), inflating Wind Turbine Power by up to 10% in
+#      Phuket's typically low-gust conditions. Added a 1.0 ceiling.
+#   2. Added new "Wind Power to Home" sensor, mirroring solar's
+#      to-home/to-battery split. Previously 100% of wind output routed to
+#      battery charging (or was discarded above SOC 100%) with no path to
+#      serve home load directly — meaning the battery could be discharging
+#      to cover load at the same moment wind was charging it with power
+#      that could've gone straight to that same load.
+#   3. "Wind Battery Charge Power" now subtracts wind_power_to_home before
+#      offering the remainder to the battery, consistent with #2.
+#
+# STILL OPEN (flagged, not changed — needs your judgment, not a code fix):
+#   - storm_km_raw == 0 is treated as "no storm data" -> 999 (far away). If
+#     PirateWeather's nearest-storm-distance sensor can ever report a
+#     genuine 0.0 (storm directly overhead), that reading would be silently
+#     discarded instead of maxing the thunder score. I don't know that
+#     sensor's actual null-vs-zero convention — worth checking its docs/
+#     history before touching this, since "fixing" it wrong could make
+#     false-positive 90% thunder readings way more common than the rare
+#     genuine 0km case.
+#   - "Phuket Day Thunder Probability" and "Phuket Night Thunder" are ~95%
+#     duplicate templates (storm/LI/precip/cloud scoring identical, only the
+#     hour-of-day bonus differs). Any future tuning has to be made twice.
+#     Left untouched since collapsing them is a refactor, not a bug fix —
+#     happy to do it if you want.
+# ============================================================================
 template:
 - sensor:
   - name: "Wind Speed Hub"
@@ -20,7 +51,7 @@ template:
       {% if speed < 0.1 %}{{ 1.0 }}
       {% else %}
         {% set ratio = [gust / speed, 3.0] | min %}
-        {{ [1.1 - (ratio - 1.0) * 0.15, 0.70] | max | round(3) }}
+        {{ [[1.1 - (ratio - 1.0) * 0.15, 0.70] | max, 1.0] | min | round(3) }}
       {% endif %}
 
   - name: "Phuket Day Thunder Probability"
@@ -197,6 +228,21 @@ template:
       {% else %}{{ (rated_p * ((v - cut_in) / (rated_v - cut_in)) ** 3 * eff) | round(1)
       }}{% endif %}
 
+  - name: "Wind Power to Home"
+    unique_id: wind_power_to_home
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    icon: mdi:home-lightning-bolt-outline
+    state: >
+      {# Wind serves whatever home load solar hasn't already covered, before
+         any remainder goes to the battery (see Wind Battery Charge Power). #}
+      {% set wind       = states('sensor.wind_turbine_power_simulated') | float(0)
+      %}
+      {% set home       = states('sensor.sim_home_power') | float(0) %}
+      {% set solar_home = states('sensor.solar_power_to_home') | float(0) %}
+      {{ [[wind, home - solar_home] | min, 0] | max | round(1) }}
+
   - name: "Wind Battery Charge Power"
     unique_id: wind_battery_charge_power
     unit_of_measurement: "W"
@@ -204,9 +250,12 @@ template:
     state_class: measurement
     icon: mdi:battery-arrow-up
     state: >
-      {% set soc  = states('sensor.battery_soc_simulated') | float(0) %}
-      {% set wind = states('sensor.wind_turbine_power_simulated') | float(0) %}
-      {% if soc >= 100 %}{{ 0 }}{% else %}{{ wind }}{% endif %}
+      {% set soc       = states('sensor.battery_soc_simulated') | float(0) %}
+      {% set wind      = states('sensor.wind_turbine_power_simulated') | float(0)
+      %}
+      {% set wind_home = states('sensor.wind_power_to_home') | float(0) %}
+      {% if soc >= 100 %}{{ 0 }}
+      {% else %}{{ (wind - wind_home) | round(1) }}{% endif %}
 sensor:
 - platform: integration
   source: sensor.wind_turbine_power_simulated

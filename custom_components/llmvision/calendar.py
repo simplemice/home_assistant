@@ -1,16 +1,24 @@
 import datetime
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.components.calendar import (
     CalendarEntity,
     CalendarEvent,
 )
 from homeassistant.components.calendar.const import CalendarEntityFeature
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.config_entries import ConfigEntry
+from .const import SIGNAL_TIMELINE_UPDATED
 from .timeline import Timeline
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
+# Timeline writes can arrive in rapid bursts (one per analysed camera event) and
+# every refresh reloads the full events DB. Coalesce bursts into a single reload
+# after this quiet period instead of forcing one full reload per event.
+REFRESH_COOLDOWN_SECONDS = 1.5
 
 
 class Calendar(CalendarEntity):
@@ -25,6 +33,7 @@ class Calendar(CalendarEntity):
         self._events = []
         self._current_event = None
         self._attr_supported_features = CalendarEntityFeature.DELETE_EVENT
+        self._refresh_debouncer: Debouncer | None = None
 
     @property
     def icon(self) -> str:  # type: ignore
@@ -44,8 +53,74 @@ class Calendar(CalendarEntity):
             dt = dt.replace(tzinfo=datetime.timezone.utc)
         return dt
 
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to timeline-updated signals so UI state refreshes after writes.
+
+        Writes can arrive in rapid bursts (one per analysed camera event) and each
+        refresh reloads the whole events DB. Debounce the refresh so a burst results
+        in a single reload instead of one full reload per event, which would
+        otherwise starve the event loop.
+        """
+
+        self._refresh_debouncer = Debouncer(
+            self.hass,
+            _LOGGER,
+            cooldown=REFRESH_COOLDOWN_SECONDS,
+            immediate=False,
+            function=self._async_refresh_state,
+        )
+
+        @callback
+        def _handle_timeline_updated() -> None:
+            self.hass.async_create_task(self._refresh_debouncer.async_call())
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass, SIGNAL_TIMELINE_UPDATED, _handle_timeline_updated
+            )
+        )
+
+    async def _async_refresh_state(self) -> None:
+        """Reload events from the database and write updated state (debounced)."""
+        await self.async_update_ha_state(force_refresh=True)
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel any pending debounced refresh when the entity is removed."""
+        if self._refresh_debouncer is not None:
+            await self._refresh_debouncer.async_shutdown()
+
+    @property
+    def extra_state_attributes(self) -> dict:  # type: ignore
+        """Return the state attributes"""
+        sorted_events = sorted(
+            self._events, key=lambda event: event.start, reverse=True
+        )
+        # Only get most recent event
+        event = sorted_events[0] if sorted_events else None
+        _LOGGER.debug(f"Most recent event: {event}")
+
+        return {
+            "title": event.summary if event else None,
+            "description": event.description if event else None,
+            "starts": event.start if event else None,
+            "ends": event.end if event else None,
+            "key_frame": (
+                event.location.split(",")[0] if event and event.location else None
+            ),
+            "camera_name": (
+                (
+                    event.location.split(",")[1]
+                    if len(event.location.split(",")) > 1
+                    else ""
+                )
+                if event and event.location
+                else None
+            ),
+        }
+
     async def async_update(self) -> None:
         """Loads events from database"""
+        await self.timeline.load_events()
         events = await self.timeline.get_all_events()
         calendar_events: list[CalendarEvent] = []
         for event in events:
@@ -53,6 +128,8 @@ class Calendar(CalendarEntity):
                 continue
             event_start = self._ensure_datetime(event.start)
             event_end = self._ensure_datetime(event.end)
+            key_frame = getattr(event, "key_frame", "") or ""
+            camera_name = getattr(event, "camera_name", "") or ""
             calendar_events.append(
                 CalendarEvent(
                     uid=event.uid,
@@ -60,6 +137,7 @@ class Calendar(CalendarEntity):
                     start=event_start,
                     end=event_end,
                     description=event.description,
+                    location=f"{key_frame},{camera_name}",
                 )
             )
         calendar_events.sort(
@@ -74,6 +152,7 @@ class Calendar(CalendarEntity):
         end_date: datetime.datetime,
     ) -> list[CalendarEvent]:
         """Returns calendar events within a datetime range"""
+        await self.timeline.load_events()
         timeline_events = await self.timeline.get_all_events()
         calendar_events: list[CalendarEvent] = []
 
@@ -108,6 +187,7 @@ class Calendar(CalendarEntity):
         """Deletes an event from the calendar."""
         _LOGGER.info(f"Deleting event with UID: {uid}")
         await self.timeline.delete_event(uid)
+        self.async_schedule_update_ha_state(force_refresh=True)
 
 
 async def async_setup_entry(

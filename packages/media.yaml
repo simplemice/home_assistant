@@ -69,17 +69,17 @@ template:
         unique_id: current_music_speaker
         state: >-
           {% if is_state('sensor.micemob_area','Bedroom') %}
-            media_player.bedroom_player
+            media_player.bedroom_speaker
           {% elif is_state('sensor.micemob_area','Livingroom') %}
-            media_player.livingroom_player
+            media_player.livingroom_speaker
           {% elif is_state('sensor.micemob_area','Kitchen') %}
-            media_player.kitchen_player
+            media_player.kitchen_speaker
           {% elif is_state('sensor.micemob_area','Garage') %}
-            media_player.garage_player
+            media_player.garage_speaker
           {% elif is_state('sensor.micemob_area','Backyard') %}
-            media_player.backyard_player
+            media_player.backyard_speaker
           {% else %}
-            media_player.livingroom_player
+            media_player.livingroom_speaker
           {% endif %}
       - name: Last Speaker
         unique_id: last_speaker

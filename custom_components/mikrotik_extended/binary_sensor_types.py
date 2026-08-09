@@ -117,6 +117,15 @@ DEVICE_ATTRIBUTES_NETWATCH = [
     "http-codes",
     "status",
     "comment",
+    "since",
+    "loss-percent",
+    "sent-count",
+    "response-count",
+    "rtt-avg",
+    "rtt-min",
+    "rtt-max",
+    "rtt-jitter",
+    "rtt-stdev",
 ]
 
 
@@ -219,10 +228,10 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
         data_attribute="status",
         data_name="host",
         data_name_comment=True,
-        data_uid="host",
-        data_reference="host",
+        data_uid="uid-ref",
+        data_reference="uid-ref",
         data_attributes_list=DEVICE_ATTRIBUTES_NETWATCH,
-        func="MikrotikBinarySensor",
+        func="MikrotikNetwatchBinarySensor",
     ),
     MikrotikBinarySensorEntityDescription(
         key="wireguard_peer",

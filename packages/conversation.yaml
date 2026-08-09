@@ -4,16 +4,6 @@
 #   @package        :   Reports
 #   @description    :   Daily Report Announcements.
 ###############################################################################
-intents:
-  housemusic:
-    data:
-      - sentences:
-          - "(Play|played) (somemusic|songs|tracks) (by|from) [the] {media_artist} (on|in) [the] {media_player}"
-          - "play some music"
-          - "play music"
-          - "start some music"
-          - "start music"
-
 intent_script:
   housemusic:
     action:
@@ -37,12 +27,12 @@ intent_script:
 
   whattheweather:
     action:
-      action: weather.get_forecasts
-      data:
-        type: daily
-      target:
-        entity_id: weather.pirateweather
-      response_variable: pw_forecast
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.pirateweather
+        data:
+          type: daily
+        response_variable: pw_forecast
     speech:
       text: >
         Today: {{ states('weather.pirateweather') }},
@@ -70,10 +60,10 @@ intent_script:
             {{ states('sensor.water_sensor_water_volume') | float(0) | round(1) }}
     response:
       speech:
-      text: >
-        {% if level|int < 20 %}
-        Warning. Water level is low at {{ level }} percent.
-        {% else %}
-        Water tank level is {{ level }} percent,
-        approximately {{ volume }} liters remaining.
-        {% endif %}
+        text: >
+          {% if level|int < 20 %}
+          Warning. Water level is low at {{ level }} percent.
+          {% else %}
+          Water tank level is {{ level }} percent,
+          approximately {{ volume }} liters remaining.
+          {% endif %}

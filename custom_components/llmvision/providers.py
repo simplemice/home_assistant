@@ -36,6 +36,7 @@ from .const import (
     ENDPOINT_OPENWEBUI,
     ENDPOINT_GROQ,
     ENDPOINT_OPENROUTER,
+    ENDPOINT_MISTRAL,
     ERROR_NOT_CONFIGURED,
     ERROR_GROQ_MULTIPLE_IMAGES,
     ERROR_NO_IMAGE_INPUT,
@@ -50,15 +51,20 @@ from .const import (
     DEFAULT_AWS_MODEL,
     DEFAULT_OPENWEBUI_MODEL,
     DEFAULT_OPENROUTER_MODEL,
+    DEFAULT_MISTRAL_MODEL,
     CONF_KEEP_ALIVE,
     CONF_CONTEXT_WINDOW,
     CONF_TEMPERATURE,
     CONF_TOP_P,
+    CONF_THINKING_BUDGET,
+    CONF_THINK,
+    CONF_REASONING_EFFORT,
     CONF_REQUEST_TIMEOUT,
     CONF_SYSTEM_PROMPT,
     CONF_TITLE_PROMPT,
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_TITLE_PROMPT,
+    GLIMPSE_V1_INSTRUCTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -126,6 +132,7 @@ class Request:
             "AWS": DEFAULT_AWS_MODEL,  # For backwards compatibility
             "Open WebUI": DEFAULT_OPENWEBUI_MODEL,
             "OpenRouter": DEFAULT_OPENROUTER_MODEL,
+            "Mistral": DEFAULT_MISTRAL_MODEL,
         }.get(provider_name)
 
     def validate(self, call: Any) -> None | ServiceValidationError:
@@ -213,7 +220,32 @@ class Request:
                 call.model = None
                 return await self.call(call, _is_fallback_retry=True)
             else:
-                response_text = "Couldn't generate content. Check logs for details."
+                error_message = str(e).strip() or e.__class__.__name__
+                raise ServiceValidationError(error_message) from e
+        # Handle Glimpse-v1 responses
+        try:
+            _LOGGER.debug(
+                f"Provider: {provider_name}, Model: {call.model}, Response: {response_text}"
+            )
+            _LOGGER.debug(f"Is Glimpse Model: {call.model_is_glimpse()}")
+            if hasattr(call, "model_is_glimpse") and call.model_is_glimpse():
+                try:
+                    parsed = json.loads(self.heal_json(response_text))
+                    result = {}
+                    if isinstance(parsed, dict):
+                        title_val = parsed.get("title")
+                        desc_val = parsed.get("description")
+                        if title_val is not None:
+                            result["title"] = re.sub(
+                                r"[^a-zA-Z0-9À-ÖØ-öø-ɏ\s]", "", str(title_val)
+                            )
+                        if desc_val is not None:
+                            result["response_text"] = str(desc_val)
+                        return result
+                except Exception as e:
+                    _LOGGER.debug(f"Ollama Glimpse JSON parse failed: {e}")
+        except Exception:
+            pass
 
         gen_title = None
         try:
@@ -277,6 +309,105 @@ class Request:
         self.base64_images.append(base64_image)
         self.filenames.append(filename)
 
+    def heal_json(self, text):
+        """Attempt to heal malformed JSON for common LLM output issues."""
+        if not isinstance(text, str):
+            return text
+        try:
+            json.loads(text)
+            return text
+        except json.JSONDecodeError:
+            pass
+        healed_chars = []
+        stack = []
+        in_string = False
+        escaped = False
+
+        def _is_value_boundary(ch: str) -> bool:
+            return ch in {",", ":", "}", "]"}
+
+        for idx, ch in enumerate(text):
+            next_char = text[idx + 1] if idx + 1 < len(text) else ""
+
+            if in_string:
+                if escaped:
+                    healed_chars.append(ch)
+                    escaped = False
+                    continue
+                if ch == "\\":
+                    healed_chars.append(ch)
+                    escaped = True
+                    continue
+                if ch == '"':
+                    # If quote is likely part of the string content (e.g. 5"), escape it.
+                    # Keep quote unescaped only when it looks like a real string terminator.
+                    if not (
+                        next_char == ""
+                        or _is_value_boundary(next_char)
+                        or next_char.isspace()
+                    ):
+                        healed_chars.append('\\"')
+                        continue
+
+                    healed_chars.append(ch)
+                    in_string = False
+                    continue
+                healed_chars.append(ch)
+                continue
+            # Outside string
+            if ch == '"':
+                healed_chars.append(ch)
+                in_string = True
+                continue
+            if ch == "{":
+                stack.append("}")
+            elif ch == "[":
+                stack.append("]")
+            elif ch in {"}", "]"}:
+                if stack and stack[-1] == ch:
+                    stack.pop()
+
+            healed_chars.append(ch)
+        # If the payload ends while still in a string, trailing delimiters are often
+        # intended as structure (e.g. ..."description":"text}). Move those outside.
+        trailing_closers = []
+        if in_string:
+            while stack and healed_chars and healed_chars[-1] == stack[-1]:
+                trailing_closers.append(healed_chars.pop())
+                stack.pop()
+        # Close unterminated string first, then close open containers.
+        if in_string:
+            healed_chars.append('"')
+        while trailing_closers:
+            healed_chars.append(trailing_closers.pop())
+        while stack:
+            healed_chars.append(stack.pop())
+        healed = "".join(healed_chars)
+        try:
+            json.loads(healed)
+            return healed
+        except json.JSONDecodeError:
+            pass
+
+        decoder = json.JSONDecoder()
+        idx = 0
+        while idx < len(healed):
+            while idx < len(healed) and healed[idx].isspace():
+                idx += 1
+            if idx >= len(healed):
+                break
+            if healed[idx] not in "{[":
+                idx += 1
+                continue
+            try:
+                _, end_idx = decoder.raw_decode(healed, idx)
+            except json.JSONDecodeError:
+                idx += 1
+                continue
+            return healed[idx:end_idx]
+
+        return text
+
 
 class Provider(ABC):
     """
@@ -336,13 +467,20 @@ class Provider(ABC):
         """Get default parameters from config entry"""
         entry_id = call.provider
         domain_data = self.hass.data.get(DOMAIN) or {}
+
         config = domain_data.get(entry_id) or {}
         default_parameters = {
             "temperature": config.get(CONF_TEMPERATURE, 0.5),
-            "top_p": config.get(CONF_TOP_P, 0.9),
+            "top_p": config.get(CONF_TOP_P, 0.95),
             "keep_alive": config.get(CONF_KEEP_ALIVE, 5),
-            "context_window": config.get(CONF_CONTEXT_WINDOW, 2048),
+            "context_window": config.get(CONF_CONTEXT_WINDOW, 4096),
+            "thinking_budget": config.get(CONF_THINKING_BUDGET, 0),
+            "think": config.get(CONF_THINK, False),
+            "reasoning_effort": config.get(CONF_REASONING_EFFORT, "none"),
         }
+        if call.model_is_glimpse():
+            default_parameters["temperature"] = 0.2
+            default_parameters["top_p"] = 0.95
         return default_parameters
 
     def _get_system_prompt(self) -> str:
@@ -379,7 +517,10 @@ class Provider(ABC):
         return await self._make_request(data)
 
     async def title_request(self, call: Any) -> str:
-        call.max_tokens = 4096
+        if isinstance(call, dict):
+            call["max_tokens"] = 4096
+        else:
+            call.max_tokens = 4096
         data = self._prepare_text_data(call)
         return await self._make_request(data)
 
@@ -464,14 +605,47 @@ class OpenAI(Provider):
         """OpenAI supports structured output via JSON Schema."""
         return True
 
+    def _normalize_reasoning_effort(self, value: Any) -> str:
+        """Normalize reasoning effort to a known value."""
+        effort = str(value).strip().lower() if value is not None else "none"
+        allowed = {"none", "minimal", "low", "medium", "high", "xhigh"}
+        return effort if effort in allowed else "none"
+
+    def _model_supports_thinking(self, max_effort: str) -> str | bool:
+        """Returns the highest supported reasoning effort for the model that is <= the reasoning effort from config"""
+        models = {
+            "gpt-5.5": ["none", "low", "medium", "high", "xhigh"],
+            "gpt-5.4-pro": ["medium", "high", "xhigh"],
+            "gpt-5.4-mini": ["none", "low", "medium", "high", "xhigh"],
+            "gpt-5.4-nano": ["none", "low", "medium", "high", "xhigh"],
+            "gpt-5.4": ["none", "low", "medium", "high", "xhigh"],
+            "gpt-5.2": ["none", "low", "medium", "high", "xhigh"],
+            "gpt-5.1": ["none", "low", "medium", "high"],
+            "gpt-5-pro": ["high"],
+            "gpt-5-mini": ["medium"],
+            "gpt-5-nano": ["medium"],
+        }
+        effort_order = ["none", "minimal", "low", "medium", "high", "xhigh"]
+        normalized_effort = self._normalize_reasoning_effort(max_effort)
+        # Match the most specific model prefix first to avoid broad prefix collisions
+        for model_prefix in sorted(models, key=len, reverse=True):
+            efforts = models[model_prefix]
+            if self.model.startswith(model_prefix):
+                # return the highest reasoning effort supported by the model that is less than or equal to the requested max_effort
+                for effort in reversed(effort_order):
+                    if effort in efforts and effort_order.index(
+                        effort
+                    ) <= effort_order.index(normalized_effort):
+                        return effort
+        return False
+
     def _generate_headers(self) -> dict:
         return {
             "Content-type": "application/json",
             "Authorization": "Bearer " + self.api_key,
         }
 
-    async def _make_request(self, data: dict) -> str:
-        headers = self._generate_headers()
+    def _get_request_url(self) -> str:
         if isinstance(self.endpoint, dict):
             url = self.endpoint.get("base_url")
         else:
@@ -479,6 +653,16 @@ class OpenAI(Provider):
 
         if not isinstance(url, str):
             raise ServiceValidationError("invalid_endpoint")
+
+        normalized_url = url.rstrip("/")
+        if normalized_url.endswith("/v1"):
+            return f"{normalized_url}/chat/completions"
+
+        return url
+
+    async def _make_request(self, data: dict) -> str:
+        headers = self._generate_headers()
+        url = self._get_request_url()
 
         # Debug logging for OpenRouter
         if "openrouter.ai" in url:
@@ -510,6 +694,14 @@ class OpenAI(Provider):
             "temperature": default_parameters.get("temperature"),
             "top_p": default_parameters.get("top_p"),
         }
+
+        # Add reasoning effort if enabled and supported by model
+        max_effort = self._normalize_reasoning_effort(
+            default_parameters.get("reasoning_effort", "none")
+        )
+        supported_effort = self._model_supports_thinking(max_effort)
+        if max_effort != "none" and supported_effort != False:
+            payload["reasoning_effort"] = supported_effort
 
         # Remove temperature and top_p if model is gpt-5
         if self.model in ["gpt-5", "gpt-5-mini", "gpt-5-nano"]:
@@ -588,6 +780,14 @@ class OpenAI(Provider):
             "top_p": default_parameters.get("top_p"),
         }
 
+        # Add reasoning effort if enabled and supported by model
+        max_effort = self._normalize_reasoning_effort(
+            default_parameters.get("reasoning_effort", "none")
+        )
+        supported_effort = self._model_supports_thinking(max_effort)
+        if max_effort != "none" and supported_effort != False:
+            payload["reasoning_effort"] = supported_effort
+
         # Remove temperature and top_p if model is gpt-5
         if self.model in ["gpt-5", "gpt-5-mini", "gpt-5-nano"]:
             payload = {
@@ -604,11 +804,29 @@ class OpenAI(Provider):
                     {"role": "user", "content": [{"type": "text", "text": "Hi"}]}
                 ],
             }
-            await self._post(
-                url=self.endpoint.get("base_url"), headers=headers, data=data
-            )
+            await self._post(url=self._get_request_url(), headers=headers, data=data)
         else:
             raise ServiceValidationError("empty_api_key")
+
+
+class Mistral(OpenAI):
+    """Mistral (https://docs.mistral.ai/api/). OpenAI-compatible but rejects
+    unknown fields, so rename max_completion_tokens to max_tokens."""
+
+    def __init__(self, hass: HomeAssistant, api_key: str, model: str):
+        super().__init__(hass, api_key, model, endpoint={"base_url": ENDPOINT_MISTRAL})
+
+    @staticmethod
+    def _rename_token_field(payload: dict) -> dict:
+        if "max_completion_tokens" in payload:
+            payload["max_tokens"] = payload.pop("max_completion_tokens")
+        return payload
+
+    def _prepare_vision_data(self, call: Any) -> dict:
+        return self._rename_token_field(super()._prepare_vision_data(call))
+
+    def _prepare_text_data(self, call: Any) -> dict:
+        return self._rename_token_field(super()._prepare_text_data(call))
 
 
 class AzureOpenAI(Provider):
@@ -816,18 +1034,116 @@ class Anthropic(Provider):
 
     async def _make_request(self, data: dict) -> str:
         headers = self._generate_headers()
-        response = await self._post(url=ENDPOINT_ANTHROPIC, headers=headers, data=data)
+        response = await self._post(
+            url=ENDPOINT_ANTHROPIC,
+            headers=headers,
+            data=data,
+        )
 
-        # Handle tool use response for structured output
-        if "content" in response and len(response["content"]) > 0:
-            content = response["content"][0]
-            if content.get("type") == "tool_use":
-                # Extract the structured data from tool use
-                return json.dumps(content.get("input", {}))
+        content = response.get("content")
+        if not isinstance(content, list):
+            raise ServiceValidationError("invalid_response")
+
+        # Anthropic returns two blocks if thinking is enabled, so loop over all of them
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                return json.dumps(block.get("input", {}))
+
+        text = "".join(
+            block.get("text", "")
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+        if not text:
+            raise ServiceValidationError("empty_response")
+
+        return text
+
+    def _apply_parameters(self, payload: dict, call: Any) -> dict:
+        parameters = self._get_default_parameters(call)
+        raw_budget = parameters.get("thinking_budget", 0)
+
+        try:
+            numeric_budget = float(raw_budget)
+        except (TypeError, ValueError):
+            raise ServiceValidationError("Anthropic thinking budget must be an integer")
+
+        if not numeric_budget.is_integer() or numeric_budget < 0:
+            raise ServiceValidationError(
+                "Anthropic thinking budget must be a non-negative integer"
+            )
+
+        budget = int(numeric_budget)
+        model = self.model.lower()
+        version_match = re.search(
+            r"claude-(?:opus|sonnet|haiku)-(\d+)(?:-(\d+))?",
+            model,
+        )
+        major = int(version_match.group(1)) if version_match else 0
+        minor = int(version_match.group(2) or 0) if version_match else 0
+        manual_thinking = (
+            "claude-3-7-sonnet" in model
+            or (major == 4 and minor <= 6)
+            or "mythos-preview" in model
+        )
+        adaptive_thinking = (
+            "fable" in model
+            or ("mythos" in model and "mythos-preview" not in model)
+            or major >= 5
+            or (major == 4 and minor >= 7)
+        )
+        tool_choice = payload.get("tool_choice") or {}
+        forced_tool = tool_choice.get("type") in {"any", "tool"}
+
+        if budget == 0:
+            if adaptive_thinking:
+                payload["thinking"] = {"type": "disabled"}
+                for parameter in ("temperature", "top_p", "top_k"):
+                    payload.pop(parameter, None)
+            elif manual_thinking:
+                payload["thinking"] = {"type": "disabled"}
             else:
-                # Regular text response
-                return content.get("text", "")
-        return ""
+                payload.pop("thinking", None)
+            return payload
+
+        if adaptive_thinking:
+            payload["thinking"] = {"type": "adaptive"}
+            for parameter in ("temperature", "top_p", "top_k"):
+                payload.pop(parameter, None)
+            return payload
+
+        if not manual_thinking:
+            raise ServiceValidationError(
+                f"Extended thinking is not supported by {self.model}"
+            )
+
+        if forced_tool:
+            payload["thinking"] = {"type": "disabled"}
+            return payload
+
+        if budget < 1024:
+            raise ServiceValidationError(
+                "Anthropic thinking budget must be 0 or at least 1024"
+            )
+
+        try:
+            max_tokens = int(payload["max_tokens"])
+        except (KeyError, TypeError, ValueError):
+            raise ServiceValidationError("Anthropic max_tokens must be an integer")
+
+        if budget >= max_tokens:
+            raise ServiceValidationError(
+                "Anthropic thinking budget must be less than max_tokens"
+            )
+
+        payload["thinking"] = {
+            "type": "enabled",
+            "budget_tokens": budget,
+        }
+        for parameter in ("temperature", "top_p", "top_k"):
+            payload.pop(parameter, None)
+
+        return payload
 
     def _prepare_vision_data(self, call: Any) -> dict:
         default_parameters = self._get_default_parameters(call)
@@ -896,7 +1212,7 @@ class Anthropic(Provider):
                 payload["messages"].insert(
                     0, {"role": "user", "content": memory_content}
                 )
-        return payload
+        return self._apply_parameters(payload, call)
 
     def _prepare_text_data(self, call: Any) -> dict:
         default_parameters = self._get_default_parameters(call)
@@ -939,7 +1255,7 @@ class Anthropic(Provider):
                     f"Invalid JSON in structure parameter: {str(e)}"
                 )
 
-        return payload
+        return self._apply_parameters(payload, call)
 
     async def validate(self) -> None | ServiceValidationError:
         if not self.api_key:
@@ -958,7 +1274,6 @@ class Anthropic(Provider):
 
 
 class Google(Provider):
-    # 🔥 This is the Google provider that will be tested
     def __init__(
         self,
         hass: HomeAssistant,
@@ -971,6 +1286,9 @@ class Google(Provider):
     def supports_structured_output(self) -> bool:
         """Return True if provider supports structured output."""
         return True
+
+    def _model_supports_thinking(self) -> bool:
+        return any(m in self.model for m in ["gemini-2.5", "gemini-3"])
 
     def _generate_headers(self) -> dict:
         return {"content-type": "application/json"}
@@ -1008,6 +1326,15 @@ class Google(Provider):
                 "topP": default_parameters.get("top_p"),
             },
         }
+
+        # Add thinking budget based on current model and config
+        if (
+            self._model_supports_thinking()
+            and default_parameters.get("thinking_budget", 0) > 0
+        ):
+            payload["generationConfig"]["thinkingConfig"] = {
+                "thinkingBudget": default_parameters.get("thinking_budget", 0)
+            }
 
         # Add structured output support
         if call.response_format == "json" and call.structure:
@@ -1065,6 +1392,15 @@ class Google(Provider):
                 "topP": default_parameters.get("top_p"),
             },
         }
+
+        # Add thinking budget based on current model and config
+        if (
+            self._model_supports_thinking()
+            and default_parameters.get("thinking_budget", 0) > 0
+        ):
+            payload["generationConfig"]["thinkingConfig"] = {
+                "thinkingBudget": default_parameters.get("thinking_budget", 0)
+            }
 
         # Add structured output support
         if call.response_format == "json" and call.structure:
@@ -1422,6 +1758,12 @@ class Ollama(Provider):
         """Return True if provider supports structured output."""
         return True
 
+    def _model_supports_thinking(self) -> bool:
+        thinking_models = ["qwen3.5", "qwen3-vl"]
+        return any(
+            thinking_model in self.model.lower() for thinking_model in thinking_models
+        )
+
     async def _make_request(self, data: dict) -> str:
         https = self.endpoint.get("https")
         ip_address = self.endpoint.get("ip_address")
@@ -1432,10 +1774,9 @@ class Ollama(Provider):
         )
 
         response = await self._post(url=endpoint, headers={}, data=data)
-        message = response.get("message") if isinstance(response, dict) else None
-        if not isinstance(message, dict):
+        if not isinstance(response, dict):
             raise ServiceValidationError("invalid_response")
-        response_text = message.get("content")
+        response_text = response.get("message", {}).get("content")
         if response_text is None:
             raise ServiceValidationError("invalid_response")
         return response_text
@@ -1444,12 +1785,28 @@ class Ollama(Provider):
         default_parameters = self._get_default_parameters(call)
         payload = {
             "model": self.model,
-            "messages": [],
+            "system": self._get_system_prompt() if not call.model_is_glimpse() else "",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        call.message
+                        if not call.model_is_glimpse()
+                        else GLIMPSE_V1_INSTRUCTIONS
+                    ),
+                    "images": call.base64_images,
+                },
+            ],
+            "prompt": (),
+            "images": call.base64_images,
             "stream": False,
             "keep_alive": default_parameters.get("keep_alive"),
+            "think": default_parameters.get("think", False)
+            and self._model_supports_thinking(),
             "options": {
                 "num_predict": call.max_tokens,
                 "temperature": default_parameters.get("temperature"),
+                "top_p": default_parameters.get("top_p"),
                 "num_ctx": default_parameters.get("context_window"),
             },
         }
@@ -1470,20 +1827,6 @@ class Ollama(Provider):
                     f"Invalid JSON in structure parameter: {str(e)}"
                 )
 
-        for image, filename in zip(call.base64_images, call.filenames):
-            tag = (
-                ("Image " + str(call.base64_images.index(image) + 1))
-                if filename == ""
-                else filename
-            )
-            image_message = {"role": "user", "content": tag + ":", "images": [image]}
-            payload["messages"].append(image_message)
-        prompt_message = {"role": "user", "content": call.message}
-        # User message
-        payload["messages"].append(prompt_message)
-        # System prompt
-        payload["system"] = self._get_system_prompt()
-
         # Memory if use_memory is set
         if getattr(call, "use_memory", False):
             memory_content = call.memory._get_memory_images(memory_type="Ollama")
@@ -1503,9 +1846,12 @@ class Ollama(Provider):
             ],
             "stream": False,
             "keep_alive": default_parameters.get("keep_alive", "5m"),
+            "think": default_parameters.get("think", False)
+            and self._model_supports_thinking(),
             "options": {
                 "num_predict": call.max_tokens,
                 "temperature": default_parameters.get("temperature"),
+                "top_p": default_parameters.get("top_p"),
                 "num_ctx": default_parameters.get("context_window"),
             },
         }
@@ -1919,8 +2265,10 @@ class ProviderFactory:
                 model=model,
             )
 
-        if provider_name == "OpenWebUI":
-            endpoint = ENDPOINT_OPENWEBUI.format(
+        if provider_name in ("OpenWebUI", "Open WebUI"):
+            endpoint = config.get(
+                CONF_CUSTOM_OPENAI_ENDPOINT
+            ) or ENDPOINT_OPENWEBUI.format(
                 ip_address=config.get(CONF_IP_ADDRESS),
                 port=config.get(CONF_PORT),
                 protocol="https" if config.get(CONF_HTTPS, False) else "http",
@@ -1938,6 +2286,13 @@ class ProviderFactory:
                 api_key=cast(str, config.get(CONF_API_KEY) or ""),
                 model=model,
                 endpoint={"base_url": ENDPOINT_OPENROUTER},
+            )
+
+        if provider_name == "Mistral":
+            return Mistral(
+                hass,
+                api_key=cast(str, config.get(CONF_API_KEY) or ""),
+                model=model,
             )
 
         raise ServiceValidationError("invalid_provider")

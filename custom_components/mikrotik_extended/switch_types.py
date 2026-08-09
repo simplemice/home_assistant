@@ -214,6 +214,7 @@ DEVICE_ATTRIBUTES_WIREGUARD_PEER = [
 
 DEVICE_ATTRIBUTES_CONTAINER = [
     "tag",
+    "repo",
     "os",
     "arch",
     "interface",
@@ -436,8 +437,8 @@ SENSOR_TYPES: tuple[MikrotikSwitchEntityDescription, ...] = (
         data_switch_path="/container",
         data_name="display-name",
         data_name_comment=False,
-        data_uid=".id",
-        data_reference=".id",
+        data_uid="uid-ref",
+        data_reference="uid-ref",
         data_attributes_list=DEVICE_ATTRIBUTES_CONTAINER,
         func="MikrotikContainerSwitch",
         enable_on_option=CONF_SENSOR_CONTAINERS,

@@ -91,6 +91,7 @@ template:
             mdi:account-group
           {% endif %}
         state: "{{ states('sensor.family_home_count') | int(0) > 0 }}"
+
   ###########################################################################
   # TIME AWAY (LIVE)
   ###########################################################################
@@ -177,3 +178,9 @@ template:
         state: >
           {% set speed = state_attr('device_tracker.micemob','speed') %}
           {{ (speed | float(0) * 3.6) | round(1) }}
+      - name: Simplemice Speed m/s
+        unique_id: simplemice_speed_ms
+        unit_of_measurement: "m/s"
+        state: >
+          {% set speed = state_attr('device_tracker.micemob', 'speed') %}
+          {{ (speed | float(0) / 3.6) | round(1) }}

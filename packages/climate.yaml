@@ -6,7 +6,7 @@
 #                       and consolidated climate sensors.
 ###############################################################################
 
-smartir: # keep integration reference
+smartir:
 
 # ─── Controls ────────────────────────────────────────────────────────────────
 input_boolean:
@@ -34,6 +34,7 @@ climate:
     controller_data: remote.bedroom_remote_hub
     temperature_sensor: sensor.bedroom_temp_temperature
     humidity_sensor: sensor.bedroom_temp_humidity
+
 group:
   all_fans:
     name: All Fans
@@ -125,13 +126,13 @@ template:
             {% else %}
               climate_state
             {% endif %}
+
 utility_meter:
   monthly_climate:
     name: Monthly AC Runtime
     unique_id: monthly_climate
     source: sensor.ac_runtime_today
     cycle: monthly
-
   monthly_ac_runtime:
     name: Monthly AC Runtime (Power)
     unique_id: monthly_ac_runtime

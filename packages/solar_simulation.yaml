@@ -1,153 +1,195 @@
+# ============================================================================
+# Solar Package — Casa De Ratton (Simulated)
+# ----------------------------------------------------------------------------
+# CHANGES (2026-08-08 review):
+#   1. "Solar Export to Grid" is now an INFORMATIONAL split of the
+#      authoritative sensor.grid_power_export_simulated (proportional to
+#      solar's share of total instantaneous generation), instead of an
+#      independently soc/threshold-gated calculation that disagreed with
+#      the grid package's export figure and ignored wind entirely.
+#      -> grid_package.yaml's export sensor is now the single source of
+#         truth for what actually leaves the property.
+#   2. Added "Solar Export Energy Accumulated (Simulated)" wrapper so solar's
+#      export-energy total has a device_class/state_class entity, matching
+#      the pattern already used for "Solar Energy Accumulated (Simulated)".
+#
+# STILL OPEN (not addressed here — needs your input first):
+#   - Inverter-level sensors (AC voltage/freq, load-dependent efficiency
+#     curve, heatsink temp) — pending ambient-temp entity ID + confirmation
+#     of array-vs-inverter sizing (1:1 vs oversized array).
+# ============================================================================
 template:
-- sensor:
-  - name: "Solar Live Power"
-    unique_id: solar_live_power_simulated
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:solar-power
-    state: >
-      {# ── Constants ───────────────────────────────────────────── #}
-      {% set panel_w = 3000 %}
-      {% set eff     = 0.85  %}
+  - sensor:
+      - name: "Solar Live Power"
+        unique_id: solar_live_power_simulated
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-power
+        state: >
+          {# ── Constants ───────────────────────────────────────────── #}
+          {% set panel_w = 3000 %}
+          {% set eff     = 0.85  %}
 
-      {# ── Sun geometry ─────────────────────────────────────────── #}
-      {% set elev = states('sensor.astroweather_astroweather_sun_altitude') | float(0)
-      %}
-      {% if elev < 5 %}
-        {{ 0 }}
-      {% else %}
+          {# ── Sun geometry ─────────────────────────────────────────── #}
+          {% set elev = states('sensor.astroweather_astroweather_sun_altitude') | float(0)
+          %}
+          {% if elev < 5 %}
+            {{ 0 }}
+          {% else %}
 
-        {# Air-mass angle factor: sin of elevation (1.0 at zenith, ~0.09 at 5°) #}
-        {% set pi       = 3.14159265 %}
-        {% set elev_rad = elev * pi / 180 %}
-        {% set angle_f  = elev_rad | sin %}
+            {# Air-mass angle factor: sin of elevation (1.0 at zenith, ~0.09 at 5°) #}
+            {% set pi       = 3.14159265 %}
+            {% set elev_rad = elev * pi / 180 %}
+            {% set angle_f  = elev_rad | sin %}
 
-        {# ── Cloud layers (weighted transmission) ─────────────────── #}
-        {# High (cirrus): 15% block — Medium (cumulus): 45% — Low (stratus): 75% #}
-        {% set c_high = states('sensor.astroweather_astroweather_clouds_area_high')   |
-      float(0) / 100 %}
-        {% set c_mid  = states('sensor.astroweather_astroweather_clouds_area_medium')
-      | float(0) / 100 %}
-        {% set c_low  = states('sensor.astroweather_astroweather_clouds_area_low')    |
-      float(0) / 100 %}
-        {% set cloud_trans = (1 - c_high * 0.15) * (1 - c_mid * 0.45) * (1 - c_low
-      * 0.75) %}
+            {# ── Cloud layers (weighted transmission) ─────────────────── #}
+            {# High (cirrus): 15% block — Medium (cumulus): 45% — Low (stratus): 75% #}
+            {% set c_high = states('sensor.astroweather_astroweather_clouds_area_high')   |
+          float(0) / 100 %}
+            {% set c_mid  = states('sensor.astroweather_astroweather_clouds_area_medium')
+          | float(0) / 100 %}
+            {% set c_low  = states('sensor.astroweather_astroweather_clouds_area_low')    |
+          float(0) / 100 %}
+            {% set cloud_trans = (1 - c_high * 0.15) * (1 - c_mid * 0.45) * (1 - c_low
+          * 0.75) %}
 
-        {# ── Fog attenuation ──────────────────────────────────────── #}
-        {% set fog   = states('sensor.astroweather_astroweather_fog_area') | float(0)
-      %}
-        {% set fog_f = 0.05 if fog > 30 else (1 - fog / 100 * 0.8) %}
+            {# ── Fog attenuation ──────────────────────────────────────── #}
+            {% set fog   = states('sensor.astroweather_astroweather_fog_area') | float(0)
+          %}
+            {% set fog_f = 0.05 if fog > 30 else (1 - fog / 100 * 0.8) %}
 
-        {# ── Rain attenuation (progressive): 15 mm/h = 85% block ───── #}
-        {% set rain_mh = states('sensor.pirateweather_precip_intensity') | float(0)
-      %}
-        {% set rain_f  = [1 - (rain_mh / 15), 0.15] | max %}
+            {# ── Rain attenuation (progressive): 15 mm/h = 85% block ───── #}
+            {% set rain_mh = states('sensor.pirateweather_precip_intensity') | float(0)
+          %}
+            {% set rain_f  = [1 - (rain_mh / 15), 0.15] | max %}
 
-        {# ── Active thunderstorm hard cutoff ──────────────────────── #}
-        {# Only kill output when weather entity reports active thunderstorm #}
-        {# or precip type is hail/sleet/snow (not applicable in Thailand)  #}
-        {% set precip_typ   = states('sensor.pirateweather_precip') | lower %}
-        {% set weather_cond = states('weather.pirateweather') | lower %}
-        {% set active_storm = 'thunder' in weather_cond or 'lightning' in weather_cond
-                              or precip_typ in ['hail','sleet','snow'] %}
+            {# ── Active thunderstorm hard cutoff ──────────────────────── #}
+            {# Only kill output when weather entity reports active thunderstorm #}
+            {# or precip type is hail/sleet/snow (not applicable in Thailand)  #}
+            {% set precip_typ   = states('sensor.pirateweather_precip') | lower %}
+            {% set weather_cond = states('weather.pirateweather') | lower %}
+            {% set active_storm = 'thunder' in weather_cond or 'lightning' in weather_cond
+                                  or precip_typ in ['hail','sleet','snow'] %}
 
-        {# Thunder probability: graduated attenuation only (not a hard cutoff) #}
-        {# 0% → factor 1.0 — 100% → factor 0.30 (panels still produce at ~30%) #}
-        {% set thunder_p = states('sensor.phuket_day_thunder_probability') | float(0)
-      %}
-        {% set thunder_f = 1.0 - (thunder_p / 100 * 0.70) %}
+            {# Thunder probability: graduated attenuation only (not a hard cutoff) #}
+            {# 0% → factor 1.0 — 100% → factor 0.30 (panels still produce at ~30%) #}
+            {% set thunder_p = states('sensor.phuket_day_thunder_probability') | float(0)
+          %}
+            {% set thunder_f = 1.0 - (thunder_p / 100 * 0.70) %}
 
-        {% if active_storm %}
-          {{ 0 }}
-        {% else %}
+            {% if active_storm %}
+              {{ 0 }}
+            {% else %}
 
-          {# ── UV index cross-check (Tomorrow.io) ───────────────────── #}
-          {# UV 11 = ~1000 W/m² clear sky; blend at 30% weight #}
-          {% set uv   = states('sensor.tomorrow_io_home_uv_index') | float(0) %}
-          {% set uv_f = [uv / 11.0, 1.0] | min %}
+              {# ── UV index cross-check (Tomorrow.io) ───────────────────── #}
+              {# UV 11 = ~1000 W/m² clear sky; blend at 30% weight #}
+              {% set uv   = states('sensor.tomorrow_io_home_uv_index') | float(0) %}
+              {% set uv_f = [uv / 11.0, 1.0] | min %}
 
-          {# ── Physical irradiance anchor from rain detector (mV) ───── #}
-          {# 5600 mV ≈ full sun ~1000 W/m²; blend at 20% weight #}
-          {% set mv_raw = states('sensor.rain_detector_illuminance_raw') | float(0)
-      %}
-          {% set mv_f   = [mv_raw / 5600, 1.0] | min %}
+              {# ── Physical irradiance anchor from rain detector (mV) ───── #}
+              {# 5600 mV ≈ full sun ~1000 W/m²; blend at 20% weight #}
+              {% set mv_raw = states('sensor.rain_detector_illuminance_raw') | float(0)
+          %}
+              {% set mv_f   = [mv_raw / 5600, 1.0] | min %}
 
-          {# ── Composite irradiance factor ───────────────────────────── #}
-          {# geometry × clouds × fog × rain × thunder = 50% weight       #}
-          {# UV index = 30% weight, physical mV = 20% weight             #}
-          {% set geo_f   = angle_f * cloud_trans * fog_f * rain_f * thunder_f %}
-          {% set final_f = [geo_f * 0.50 + uv_f * 0.30 + mv_f * 0.20, 0.0] | max %}
+              {# ── Composite irradiance factor ───────────────────────────── #}
+              {# geometry × clouds × fog × rain × thunder = 50% weight       #}
+              {# UV index = 30% weight, physical mV = 20% weight             #}
+              {% set geo_f   = angle_f * cloud_trans * fog_f * rain_f * thunder_f %}
+              {% set final_f = [geo_f * 0.50 + uv_f * 0.30 + mv_f * 0.20, 0.0] | max %}
 
-          {# ── Output power ─────────────────────────────────────────── #}
-          {{ [final_f * panel_w * eff, panel_w * eff] | min | round(1) }}
+              {# ── Output power ─────────────────────────────────────────── #}
+              {{ [final_f * panel_w * eff, panel_w * eff] | min | round(1) }}
 
-        {% endif %}
-      {% endif %}
+            {% endif %}
+          {% endif %}
 
-  - name: "Solar Power to Home"
-    unique_id: solar_power_to_home
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:home-lightning-bolt
-    state: >
-      {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
-      {% set home  = states('sensor.sim_home_power') | float(0) %}
-      {{ [solar, home] | min | round(1) }}
+      - name: "Solar Power to Home"
+        unique_id: solar_power_to_home
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:home-lightning-bolt
+        state: >
+          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set home  = states('sensor.sim_home_power') | float(0) %}
+          {{ [solar, home] | min | round(1) }}
 
-  - name: "Solar Power to Battery"
-    unique_id: solar_power_to_battery
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:solar-power-variant
-    state: >
-      {% set solar   = states('sensor.solar_live_power_simulated') | float(0) %}
-      {% set home    = states('sensor.sim_home_power') | float(0) %}
-      {% set soc     = states('sensor.battery_soc_simulated') | float(0) %}
-      {% set max_chg = 3000 %}
-      {% if soc >= 100 %}{{ 0 }}
-      {% else %}{{ [[solar - home, 0] | max, max_chg] | min | round(1) }}{% endif
-      %}
+      - name: "Solar Power to Battery"
+        unique_id: solar_power_to_battery
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:solar-power-variant
+        state: >
+          {% set solar   = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set home    = states('sensor.sim_home_power') | float(0) %}
+          {% set soc     = states('sensor.battery_soc_simulated') | float(0) %}
+          {% set max_chg = 3000 %}
+          {% if soc >= 100 %}{{ 0 }}
+          {% else %}{{ [[solar - home, 0] | max, max_chg] | min | round(1) }}{% endif
+          %}
+          {# NOTE: this is solar's OWN available contribution, capped at 3000W.
+             sensor.battery_charge_power_total (battery package) applies the true
+             COMBINED cap across solar+wind, so treat this one as "available",
+             not "actually applied." #}
 
-  - name: "Solar Export to Grid"
-    unique_id: solar_export_to_grid
-    unit_of_measurement: "W"
-    device_class: power
-    state_class: measurement
-    icon: mdi:transmission-tower-export
-    state: >
-      {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
-      {% set home  = states('sensor.sim_home_power') | float(0) %}
-      {% set soc   = states('sensor.battery_soc_simulated') | float(0) %}
-      {% if soc >= 100 and solar > home %}{{ (solar - home) | round(1) }}
-      {% else %}{{ 0 }}{% endif %}
+      - name: "Solar Export to Grid"
+        unique_id: solar_export_to_grid
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:transmission-tower-export
+        state: >
+          {# INFORMATIONAL ONLY — solar's proportional share of the authoritative
+             export figure computed in the grid package. Not used for balance math
+             anywhere else; safe to remove if you don't need the solar/wind split. #}
+          {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
+          {% set wind  = states('sensor.wind_turbine_power_simulated') | float(0) %}
+          {% set total_export = states('sensor.grid_power_export_simulated') | float(0)
+          %}
+          {% set gen = solar + wind %}
+          {% if gen > 0 %}{{ (total_export * (solar / gen)) | round(1) }}
+          {% else %}{{ 0 }}{% endif %}
 
-  - name: "Solar Energy Accumulated (Simulated)"
-    unique_id: solar_energy_accumulated_simulated
-    unit_of_measurement: "kWh"
-    device_class: energy
-    state_class: total_increasing
-    icon: mdi:solar-power
-    state: >
-      {{ states('sensor.total_solar_energy_in') | float(0) | round(3) }}
+      - name: "Solar Energy Accumulated (Simulated)"
+        unique_id: solar_energy_accumulated_simulated
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:solar-power
+        state: >
+          {{ states('sensor.total_solar_energy_in') | float(0) | round(3) }}
+
+      - name: "Solar Export Energy Accumulated (Simulated)"
+        unique_id: solar_export_energy_accumulated_simulated
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        icon: mdi:transmission-tower-export
+        state: >
+          {# Wrapper so solar's export-energy total is Energy-Dashboard eligible,
+             same pattern as solar_energy_accumulated_simulated above. This is
+             solar's informational share — sensor.total_grid_energy_export
+             (grid package) is the authoritative whole-property export total. #}
+          {{ states('sensor.total_solar_export_energy') | float(0) | round(3) }}
 sensor:
-- platform: integration
-  source: sensor.solar_live_power_simulated
-  name: total_solar_energy_in
-  unique_id: total_solar_energy_in
-  unit_prefix: k
-  round: 3
-  method: left
+  - platform: integration
+    source: sensor.solar_live_power_simulated
+    name: total_solar_energy_in
+    unique_id: total_solar_energy_in
+    unit_prefix: k
+    round: 3
+    method: left
 
-- platform: integration
-  source: sensor.solar_export_to_grid
-  name: total_solar_export_energy
-  unique_id: total_solar_export_energy
-  unit_prefix: k
-  round: 3
-  method: left
+  - platform: integration
+    source: sensor.solar_export_to_grid
+    name: total_solar_export_energy
+    unique_id: total_solar_export_energy
+    unit_prefix: k
+    round: 3
+    method: left
 utility_meter:
   solar_energy_daily:
     source: sensor.total_solar_energy_in
