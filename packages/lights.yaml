@@ -15,6 +15,9 @@ input_boolean:
   mix_screensaver:
     name: "MIX Screensaver"
     icon: mdi:television
+  livingroom_curtain_lights_saved:
+    name: "livingroom Curtain Lights"
+    icon: mdi:lamps
 
 light:
   - platform: group

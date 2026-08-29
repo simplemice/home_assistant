@@ -63,6 +63,7 @@
           "sensor_containers": "Сенсори контейнерів",
           "sensor_environment": "Сенсори змінних середовища",
           "sensor_filter": "Перемикачі фільтрів",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Батьківський контроль",
           "sensor_mangle": "Перемикачі Mangle",
           "sensor_nat": "Перемикачі NAT",
@@ -82,6 +83,7 @@
           "sensor_containers": "Сенсор і перемикач для кожного контейнера — моніторинг і запуск/зупинка Docker-подібних контейнерів.",
           "sensor_environment": "Сенсори для змінних середовища RouterOS.",
           "sensor_filter": "Перемикач для кожного правила Filter — увімкнення/вимкнення правил фаєрволу з HA. Увага: створює одну сутність на кожне правило фільтра.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Перемикачі для профілів пристроїв Kid Control (призупинення/відновлення доступу до інтернету).",
           "sensor_mangle": "Перемикач для кожного правила Mangle — увімкнення/вимкнення правил маркування пакетів з HA. Увага: створює одну сутність на кожне правило Mangle.",
           "sensor_nat": "Перемикач для кожного правила NAT — увімкнення/вимкнення правил з HA. Увага: створює одну сутність на кожне правило NAT.",
@@ -170,6 +172,7 @@
           "sensor_containers": "Сенсори контейнерів",
           "sensor_environment": "Сенсори змінних середовища",
           "sensor_filter": "Перемикачі фільтрів",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Батьківський контроль",
           "sensor_mangle": "Перемикачі Mangle",
           "sensor_nat": "Перемикачі NAT",
@@ -189,6 +192,7 @@
           "sensor_containers": "Сенсор і перемикач для кожного контейнера — моніторинг і запуск/зупинка Docker-подібних контейнерів.",
           "sensor_environment": "Сенсори для змінних середовища RouterOS.",
           "sensor_filter": "Перемикач для кожного правила Filter — увімкнення/вимкнення правил фаєрволу з HA. Увага: створює одну сутність на кожне правило фільтра.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Перемикачі для профілів пристроїв Kid Control (призупинення/відновлення доступу до інтернету).",
           "sensor_mangle": "Перемикач для кожного правила Mangle — увімкнення/вимкнення правил маркування пакетів з HA. Увага: створює одну сутність на кожне правило Mangle.",
           "sensor_nat": "Перемикач для кожного правила NAT — увімкнення/вимкнення правил з HA. Увага: створює одну сутність на кожне правило NAT.",
@@ -241,6 +245,12 @@
     },
     "missing_value": {
       "message": "A value is required for add or set actions."
+    },
+    "shutdown_host_required": {
+      "message": "Name the router to shut down. This action cannot be undone over the network, so it never applies to every router at once."
+    },
+    "router_not_found": {
+      "message": "No configured router matches the host {host}, nothing was shut down."
     }
   },
   "selector": {
@@ -253,6 +263,41 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "system_ups": {
+        "name": "ДБЖ"
+      },
+      "ppp_tracker": {
+        "name": "PPP"
+      },
+      "interface_connection": {
+        "name": "З'єднання"
+      },
+      "netwatch": {
+        "name": "Netwatch"
+      },
+      "wireguard_peer": {
+        "name": "Підключено"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Configuration backup"
+      },
+      "reboot": {
+        "name": "Перезавантаження"
+      }
+    },
+    "select": {
+      "poe_out": {
+        "name": "PoE out",
+        "state": {
+          "off": "Off",
+          "auto_on": "Automatic",
+          "forced_on": "Forced on"
+        }
+      }
+    },
     "sensor": {
       "system_temperature": {
         "name": "Температура"
@@ -378,23 +423,6 @@
         "name": "Статус"
       }
     },
-    "binary_sensor": {
-      "system_ups": {
-        "name": "ДБЖ"
-      },
-      "ppp_tracker": {
-        "name": "PPP"
-      },
-      "interface_connection": {
-        "name": "З'єднання"
-      },
-      "netwatch": {
-        "name": "Netwatch"
-      },
-      "wireguard_peer": {
-        "name": "Підключено"
-      }
-    },
     "switch": {
       "interface_port": {
         "name": "Порт"
@@ -404,11 +432,6 @@
       },
       "kidcontrol_paused": {
         "name": "Призупинено"
-      }
-    },
-    "button": {
-      "reboot": {
-        "name": "Перезавантаження"
       }
     }
   }

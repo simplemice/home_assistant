@@ -63,6 +63,7 @@
           "sensor_containers": "Αισθητήρες container",
           "sensor_environment": "Αισθητήρες μεταβλητών περιβάλλοντος",
           "sensor_filter": "Διακόπτες φίλτρου",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Γονικός έλεγχος",
           "sensor_mangle": "Διακόπτες Mangle",
           "sensor_nat": "Διακόπτες NAT",
@@ -82,6 +83,7 @@
           "sensor_containers": "Αισθητήρας και διακόπτης ανά container για παρακολούθηση και εκκίνηση/διακοπή containers τύπου Docker.",
           "sensor_environment": "Αισθητήρες για μεταβλητές περιβάλλοντος RouterOS.",
           "sensor_filter": "Διακόπτης ανά κανόνα Filter για ενεργοποίηση/απενεργοποίηση κανόνων τείχους προστασίας από το HA. Προειδοποίηση: δημιουργεί μία οντότητα ανά κανόνα φίλτρου.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Διακόπτες για προφίλ συσκευών Kid Control (παύση/συνέχεια πρόσβασης στο διαδίκτυο).",
           "sensor_mangle": "Διακόπτης ανά κανόνα Mangle για ενεργοποίηση/απενεργοποίηση κανόνων σήμανσης πακέτων από το HA. Προειδοποίηση: δημιουργεί μία οντότητα ανά κανόνα Mangle.",
           "sensor_nat": "Διακόπτης ανά κανόνα NAT για ενεργοποίηση/απενεργοποίηση κανόνων από το HA. Προειδοποίηση: δημιουργεί μία οντότητα ανά κανόνα NAT.",
@@ -170,6 +172,7 @@
           "sensor_containers": "Αισθητήρες container",
           "sensor_environment": "Αισθητήρες μεταβλητών περιβάλλοντος",
           "sensor_filter": "Διακόπτες φίλτρου",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Γονικός έλεγχος",
           "sensor_mangle": "Διακόπτες Mangle",
           "sensor_nat": "Διακόπτες NAT",
@@ -189,6 +192,7 @@
           "sensor_containers": "Αισθητήρας και διακόπτης ανά container για παρακολούθηση και εκκίνηση/διακοπή containers τύπου Docker.",
           "sensor_environment": "Αισθητήρες για μεταβλητές περιβάλλοντος RouterOS.",
           "sensor_filter": "Διακόπτης ανά κανόνα Filter για ενεργοποίηση/απενεργοποίηση κανόνων τείχους προστασίας από το HA. Προειδοποίηση: δημιουργεί μία οντότητα ανά κανόνα φίλτρου.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Διακόπτες για προφίλ συσκευών Kid Control (παύση/συνέχεια πρόσβασης στο διαδίκτυο).",
           "sensor_mangle": "Διακόπτης ανά κανόνα Mangle για ενεργοποίηση/απενεργοποίηση κανόνων σήμανσης πακέτων από το HA. Προειδοποίηση: δημιουργεί μία οντότητα ανά κανόνα Mangle.",
           "sensor_nat": "Διακόπτης ανά κανόνα NAT για ενεργοποίηση/απενεργοποίηση κανόνων από το HA. Προειδοποίηση: δημιουργεί μία οντότητα ανά κανόνα NAT.",
@@ -241,6 +245,12 @@
     },
     "missing_value": {
       "message": "A value is required for add or set actions."
+    },
+    "shutdown_host_required": {
+      "message": "Name the router to shut down. This action cannot be undone over the network, so it never applies to every router at once."
+    },
+    "router_not_found": {
+      "message": "No configured router matches the host {host}, nothing was shut down."
     }
   },
   "selector": {
@@ -253,6 +263,41 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "system_ups": {
+        "name": "UPS"
+      },
+      "ppp_tracker": {
+        "name": "PPP"
+      },
+      "interface_connection": {
+        "name": "Σύνδεση"
+      },
+      "netwatch": {
+        "name": "Netwatch"
+      },
+      "wireguard_peer": {
+        "name": "Συνδεδεμένο"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Configuration backup"
+      },
+      "reboot": {
+        "name": "Επανεκκίνηση"
+      }
+    },
+    "select": {
+      "poe_out": {
+        "name": "PoE out",
+        "state": {
+          "off": "Off",
+          "auto_on": "Automatic",
+          "forced_on": "Forced on"
+        }
+      }
+    },
     "sensor": {
       "system_temperature": {
         "name": "Θερμοκρασία"
@@ -378,23 +423,6 @@
         "name": "Κατάσταση"
       }
     },
-    "binary_sensor": {
-      "system_ups": {
-        "name": "UPS"
-      },
-      "ppp_tracker": {
-        "name": "PPP"
-      },
-      "interface_connection": {
-        "name": "Σύνδεση"
-      },
-      "netwatch": {
-        "name": "Netwatch"
-      },
-      "wireguard_peer": {
-        "name": "Συνδεδεμένο"
-      }
-    },
     "switch": {
       "interface_port": {
         "name": "Θύρα"
@@ -404,11 +432,6 @@
       },
       "kidcontrol_paused": {
         "name": "Σε παύση"
-      }
-    },
-    "button": {
-      "reboot": {
-        "name": "Επανεκκίνηση"
       }
     }
   }

@@ -217,6 +217,61 @@ def _make_set_environment(hass: HomeAssistant):
     return async_set_environment
 
 
+def _make_shutdown(hass: HomeAssistant):
+    async def async_shutdown(call) -> None:
+        """Power off a router.
+
+        Deliberately an action rather than a button: the legitimate uses are
+        automated ones, such as a clean shutdown while a UPS still has charge,
+        and a button on a dashboard would only add the risk of a stray click.
+        The router has to be named, so no single call can take down every
+        router at once, and it cannot be started again over the network.
+        """
+        host_filter = call.data.get("host")
+        # Validated here rather than in the schema so the message is a readable,
+        # translatable one instead of the raw "required key not provided" that
+        # a schema failure produces.
+        if not host_filter:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="shutdown_host_required",
+            )
+
+        matched = False
+        for _entry, entry_data, router_host in _iter_runtime_entries(hass, host_filter):
+            matched = True
+            coordinator = entry_data.data_coordinator
+            if "reboot" not in coordinator.ds["access"]:
+                _LOGGER.warning(
+                    "shutdown: user does not have reboot access rights on %s",
+                    router_host,
+                )
+                continue
+
+            _LOGGER.warning("Shutting down Mikrotik device %s", router_host)
+            success = await hass.async_add_executor_job(coordinator.execute, "/system", "shutdown", None, None)
+            if not success:
+                # A router that obeys takes the API session down with it,
+                # so no confirmation is the expected shape of success here.
+                # Permission was checked above; a genuinely unreachable
+                # router is already reported by the API layer.
+                _LOGGER.info(
+                    "shutdown: no confirmation from %s, which is expected when the router powers off",
+                    router_host,
+                )
+
+        # Saying nothing would look like success on an action that cannot be
+        # undone, so a name that matches no router is an error.
+        if not matched:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="router_not_found",
+                translation_placeholders={"host": host_filter},
+            )
+
+    return async_shutdown
+
+
 # ---------------------------
 #   async_setup
 # ---------------------------
@@ -241,6 +296,15 @@ async def async_setup(hass: HomeAssistant, _config: dict) -> bool:  # NOSONAR â€
         DOMAIN,
         "refresh_data",
         _make_refresh_data(hass),
+        schema=vol.Schema({vol.Optional("host"): cv.string}),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "shutdown",
+        _make_shutdown(hass),
+        # Optional in the schema so the handler can report a readable error;
+        # services.yaml still marks it required for the user interface.
         schema=vol.Schema({vol.Optional("host"): cv.string}),
     )
 

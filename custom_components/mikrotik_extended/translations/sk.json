@@ -63,6 +63,7 @@
           "sensor_containers": "Senzory kontajnerov",
           "sensor_environment": "Senzory prostredia",
           "sensor_filter": "Prepínače filtrov",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Rodičovská kontrola",
           "sensor_mangle": "Prepínače Mangle",
           "sensor_nat": "Prepínače NAT",
@@ -82,6 +83,7 @@
           "sensor_containers": "Senzor a spínač na kontajner pre monitorovanie a spúšťanie/zastavovanie Docker kontajnerov.",
           "sensor_environment": "Senzory premenných prostredia RouterOS.",
           "sensor_filter": "Spínač na pravidlo Filter pre povolenie/zakázanie pravidiel firewallu z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo filtra.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Spínače pre profily zariadení Kid Control (pozastavenie/obnovenie prístupu na internet).",
           "sensor_mangle": "Spínač na pravidlo Mangle pre povolenie/zakázanie pravidiel označovania paketov z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo Mangle.",
           "sensor_nat": "Spínač na pravidlo NAT pre povolenie/zakázanie pravidiel z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo NAT.",
@@ -170,6 +172,7 @@
           "sensor_containers": "Senzory kontajnerov",
           "sensor_environment": "Senzory prostredia",
           "sensor_filter": "Prepínače filtrov",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Rodičovská kontrola",
           "sensor_mangle": "Prepínače Mangle",
           "sensor_nat": "Prepínače NAT",
@@ -189,6 +192,7 @@
           "sensor_containers": "Senzor a spínač na kontajner pre monitorovanie a spúšťanie/zastavovanie Docker kontajnerov.",
           "sensor_environment": "Senzory premenných prostredia RouterOS.",
           "sensor_filter": "Spínač na pravidlo Filter pre povolenie/zakázanie pravidiel firewallu z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo filtra.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Spínače pre profily zariadení Kid Control (pozastavenie/obnovenie prístupu na internet).",
           "sensor_mangle": "Spínač na pravidlo Mangle pre povolenie/zakázanie pravidiel označovania paketov z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo Mangle.",
           "sensor_nat": "Spínač na pravidlo NAT pre povolenie/zakázanie pravidiel z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo NAT.",
@@ -241,6 +245,12 @@
     },
     "missing_value": {
       "message": "A value is required for add or set actions."
+    },
+    "shutdown_host_required": {
+      "message": "Name the router to shut down. This action cannot be undone over the network, so it never applies to every router at once."
+    },
+    "router_not_found": {
+      "message": "No configured router matches the host {host}, nothing was shut down."
     }
   },
   "selector": {
@@ -253,6 +263,41 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "system_ups": {
+        "name": "UPS"
+      },
+      "ppp_tracker": {
+        "name": "PPP"
+      },
+      "interface_connection": {
+        "name": "Pripojenie"
+      },
+      "netwatch": {
+        "name": "Netwatch"
+      },
+      "wireguard_peer": {
+        "name": "Pripojený"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Configuration backup"
+      },
+      "reboot": {
+        "name": "Reštartovať"
+      }
+    },
+    "select": {
+      "poe_out": {
+        "name": "PoE out",
+        "state": {
+          "off": "Off",
+          "auto_on": "Automatic",
+          "forced_on": "Forced on"
+        }
+      }
+    },
     "sensor": {
       "system_temperature": {
         "name": "Teplota"
@@ -378,23 +423,6 @@
         "name": "Stav"
       }
     },
-    "binary_sensor": {
-      "system_ups": {
-        "name": "UPS"
-      },
-      "ppp_tracker": {
-        "name": "PPP"
-      },
-      "interface_connection": {
-        "name": "Pripojenie"
-      },
-      "netwatch": {
-        "name": "Netwatch"
-      },
-      "wireguard_peer": {
-        "name": "Pripojený"
-      }
-    },
     "switch": {
       "interface_port": {
         "name": "Port"
@@ -404,11 +432,6 @@
       },
       "kidcontrol_paused": {
         "name": "Pozastavené"
-      }
-    },
-    "button": {
-      "reboot": {
-        "name": "Reštartovať"
       }
     }
   }

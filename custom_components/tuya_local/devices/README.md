@@ -650,6 +650,7 @@ Either **position**, **action** or **open** should be specified otherwise the co
 
 - **position** (optional, number 0-100): a dp to control the percentage that the cover is open.
     0 means completely close, 100 means completely open.
+- **current_position** (optional, number 0-100): a dp to report the current percentage that the cover is open. This is required to get feedback from the curtain even if **position** is the same dp, as some curtains always report the last user set position even after the curtain is changed from another source so we need to be able to ignore the position reported by those devices.
 - **control** (optional, mapping of strings): a dp to control the cover. Mainly useful if **position** cannot be used.
     Valid values are `open, close, stop`
 - **action** (optional, string): a dp that reports the current state of the cover.
@@ -809,6 +810,7 @@ to use it for other length timers.
 ### `valve`
 - **valve** (required, boolean or integer): a dp that reports the current state of the valve, and if not readonly, can also be used to set the state.  If a number, it should be a percentage between 0 and 100 indicating how far open the valve is.  If a boolean, it should indicate open (true) or closed (false).
 - **switch** (optional, boolean): if the valve dp is an integer, the valve may also have a boolean switch dp for closing and opening the valve without affecting the open valve position.
+- **current_position** (optional, number 0-100): a dp that reports the actual position when the writable **valve** dp is only a target position.
 
 ### `water_heater`
 - **current_temperature** (optional, number): a dp that reports the current water temperature.

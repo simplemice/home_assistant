@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from ipaddress import IPv4Network
+from time import monotonic
 
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.config_entries import ConfigEntry
@@ -46,6 +47,7 @@ from .const import (
     CONF_SENSOR_CONTAINERS,
     CONF_SENSOR_ENVIRONMENT,
     CONF_SENSOR_FILTER,
+    CONF_SENSOR_INTERFACES,
     CONF_SENSOR_KIDCONTROL,
     CONF_SENSOR_MANGLE,
     CONF_SENSOR_NAT,
@@ -65,6 +67,7 @@ from .const import (
     DEFAULT_SENSOR_CONTAINERS,
     DEFAULT_SENSOR_ENVIRONMENT,
     DEFAULT_SENSOR_FILTER,
+    DEFAULT_SENSOR_INTERFACES,
     DEFAULT_SENSOR_KIDCONTROL,
     DEFAULT_SENSOR_MANGLE,
     DEFAULT_SENSOR_NAT,
@@ -88,6 +91,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_TIME_ZONE = None
 
 PATH_INTERFACE_ETHERNET = "/interface/ethernet"
+PATH_INTERFACE_ETHERNET_POE = "/interface/ethernet/poe"
 PATH_IP_KID_CONTROL = "/ip/kid-control"
 PPP_NOT_CONNECTED = "not connected"
 
@@ -319,7 +323,14 @@ class MikrotikTrackerCoordinator(DataUpdateCoordinator[None]):
                 host[key] = default
 
     def _should_ping_host(self, host) -> bool:
-        """Return True if the host should be arp-pinged this refresh."""
+        """Return True if the host should be arp-pinged this refresh.
+
+        A container endpoint is skipped: it is not a client, it answers the
+        ping anyway, and that answer refreshed its last-seen stamp, which is
+        what kept its tracker reporting home.
+        """
+        if host.get("container-port"):
+            return False
         return self.coordinator.host_tracking_initialized and host["source"] not in ["capsman", "wireless"] and host["address"] not in ["unknown", ""] and host["interface"] not in ["unknown", ""]
 
     async def _ping_host(self, uid: str) -> None:
@@ -477,6 +488,9 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         self.accessrights_reported = False
 
         self.last_hwinfo_update = datetime(1970, 1, 1)
+        # When the traffic counters were last read, so the rate can be based on
+        # the gap that really passed rather than on the configured interval.
+        self._traffic_read_at = None
         self.rebootcheck = 0
         self._rule_uids_migrated = False
 
@@ -553,6 +567,14 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     def option_track_network_hosts_timeout(self):
         """Seconds before an unseen wired host is considered offline."""
         return timedelta(seconds=self.config_entry.options.get(CONF_TRACK_HOSTS_TIMEOUT, DEFAULT_TRACK_HOST_TIMEOUT))
+
+    # ---------------------------
+    #   option_sensor_interfaces
+    # ---------------------------
+    @property
+    def option_sensor_interfaces(self):
+        """Config entry option to create entities for network interfaces."""
+        return self.config_entry.options.get(CONF_SENSOR_INTERFACES, DEFAULT_SENSOR_INTERFACES)
 
     # ---------------------------
     #   option_sensor_port_traffic
@@ -891,7 +913,7 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         if self.api.connected():
             await self.hass.async_add_executor_job(self.get_interface)
 
-        if self.api.connected():
+        if self.api.connected() and self.option_sensor_interfaces:
             await self.hass.async_add_executor_job(self.get_ip_address)
 
         if self.api.connected():
@@ -921,7 +943,12 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         if self.api.connected():
             await self.async_process_host()
 
-        if self.api.connected():
+        # Its whole output is the client-ip/client-mac attributes on interface
+        # entities, and it needs the bonding data that the reduced interface
+        # pass does not fetch. With no interface entities there is nothing to
+        # fill and nothing to read it, so the work is skipped rather than run
+        # against data it cannot resolve.
+        if self.api.connected() and self.option_sensor_interfaces:
             await self.hass.async_add_executor_job(self.process_interface_client)
 
         if self.api.connected() and self.option_sensor_nat:
@@ -1148,6 +1175,22 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         self.last_hwinfo_update = datetime(1970, 1, 1)
 
     # ---------------------------
+    #   _remote_login_group
+    # ---------------------------
+    def _remote_login_group(self) -> str:
+        """Return the group RouterOS gives to remotely authenticated logins.
+
+        Empty when the router cannot tell us, in which case the rights stay
+        unresolved rather than being guessed at.
+        """
+        aaa = parse_api(
+            data={},
+            source=self.api.query("/user/aaa"),
+            vals=[{"name": "default-group", "default": ""}],
+        )
+        return str(aaa.get("default-group", "") or "")
+
+    # ---------------------------
     #   get_access
     # ---------------------------
     def get_access(self) -> None:
@@ -1172,8 +1215,26 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             ],
         )
 
-        if tmp_user[self.config_entry.data[CONF_USERNAME]]["group"] in tmp_group:
-            self.ds["access"] = tmp_group[tmp_user[self.config_entry.data[CONF_USERNAME]]["group"]]["policy"].split(",")
+        username = self.config_entry.data[CONF_USERNAME]
+        group_name = tmp_user.get(username, {}).get("group")
+        if not group_name:
+            # Not a local user. RouterOS can validate router logins against a
+            # RADIUS server (/user/aaa use-radius), and such an account exists
+            # on the server rather than on the router, so it is absent from
+            # /user. Those logins get the configured default group, which is
+            # where their policies come from. Indexing /user directly used to
+            # raise KeyError straight out of the update cycle here.
+            group_name = self._remote_login_group()
+
+        policy = tmp_group.get(group_name, {}).get("policy") if group_name else None
+        if policy:
+            self.ds["access"] = policy.split(",")
+        elif not self.ds["access"]:
+            _LOGGER.debug(
+                "Mikrotik %s could not resolve the access rights of user %s, features that require explicit rights stay off",
+                self.host,
+                username,
+            )
 
         required = ("write", "policy", "reboot", "test")
         missing = [p for p in required if p not in self.ds["access"]]
@@ -1245,6 +1306,15 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             stale_counters=self._get_stale_counters("interface"),
         )
 
+        # The plain /interface list above is what host processing needs: it
+        # keeps container veth ports out of the client count and tells a
+        # wifi-type bridge port from a wired one. Host processing always runs,
+        # so this part may never be skipped. Everything below only feeds
+        # interface entities, and skipping it saves one API call per ethernet
+        # port on every cycle, which is where the load on a large switch is.
+        if not self.option_sensor_interfaces:
+            return
+
         if self.option_sensor_port_traffic:
             self._compute_interface_traffic_deltas()
 
@@ -1274,9 +1344,55 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         if bonding:
             self._load_bonding_slaves()
 
+        self._fetch_poe_status()
+
+    def _fetch_poe_status(self) -> None:
+        """Read whether power is actually flowing on the PoE capable ports.
+
+        The port listing only carries the configured mode, so the live status
+        comes from a monitor call. That call takes a list of ports, which keeps
+        this to a single query however many PoE ports the device has, unlike
+        the per port ethernet monitor above.
+        """
+        names = [vals["name"] for vals in self.ds["interface"].values() if vals.get("poe-out") not in (None, "", "N/A")]
+        if not names:
+            return
+
+        self.ds["interface"] = parse_api(
+            data=self.ds["interface"],
+            source=self.api.query(
+                PATH_INTERFACE_ETHERNET_POE,
+                command="monitor",
+                args={"numbers": ",".join(names), "once": True},
+            ),
+            key_search="name",
+            vals=[
+                {"name": "poe-out-status", "default": "unknown"},
+            ],
+        )
+
     def _compute_interface_traffic_deltas(self) -> None:
-        """Convert rx/tx byte counters into per-interval rates."""
-        interval_seconds = self.option_scan_interval.seconds
+        """Convert rx/tx byte counters into per-second rates."""
+        # Measure the gap instead of assuming it. A cycle that runs late, or is
+        # missed entirely, still accumulates bytes on the router, so dividing
+        # by the configured interval reports a rate as many times too high as
+        # the cycle was long, which shows up as traffic that never happened.
+        # monotonic, because a clock change must not turn into a traffic spike.
+        now = monotonic()
+        previous_at, self._traffic_read_at = self._traffic_read_at, now
+        interval_seconds = now - previous_at if previous_at is not None else 0.0
+        if interval_seconds <= 0:
+            # First read of this entry. The per interface priming below already
+            # reports zero here, so this only has to be a sane divisor.
+            # total_seconds, not seconds: the latter is the within-a-day part,
+            # so a day long interval would divide by zero and a longer one by
+            # the wrong number.
+            interval_seconds = self.option_scan_interval.total_seconds()
+        # Two updates can land almost on top of each other, for example a manual
+        # refresh right after a poll. Byte counters cannot describe a window
+        # that short, and dividing a handful of bytes by a few microseconds
+        # reports a rate of billions, so the window has a floor.
+        interval_seconds = max(interval_seconds, 1.0)
         for uid, vals in self.ds["interface"].items():
             entry = self.ds["interface"][uid]
 
@@ -2816,6 +2932,10 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             for uid, vals in self.ds["capsman_hosts"].items():
                 if uid not in self.ds["host"]:
                     self.ds["host"][uid] = {"source": "capsman"}
+                elif self.ds["host"][uid]["source"] == "restored":
+                    # A restored entry yields to live data, same as in the
+                    # DHCP and ARP blocks below (issue 25).
+                    self.ds["host"][uid]["source"] = "capsman"
                 elif self.ds["host"][uid]["source"] != "capsman":
                     continue
 
@@ -2859,6 +2979,10 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
 
             if uid not in self.ds["host"]:
                 self.ds["host"][uid] = {"source": "dhcp"}
+            elif self.ds["host"][uid]["source"] == "restored":
+                # The host is back: hand the entry over to live data at once
+                # instead of leaving it dormant for another cycle (issue 25).
+                self.ds["host"][uid]["source"] = "dhcp"
             elif self.ds["host"][uid]["source"] != "dhcp":
                 continue
 
@@ -2869,21 +2993,31 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         for uid, vals in self.ds["arp"].items():
             if uid not in self.ds["host"]:
                 self.ds["host"][uid] = {"source": "arp"}
+            elif self.ds["host"][uid]["source"] == "restored":
+                # Same as above: a restored entry yields to live ARP data.
+                self.ds["host"][uid]["source"] = "arp"
             elif self.ds["host"][uid]["source"] != "arp":
                 continue
 
             for key in ["address", "mac-address", "interface"]:
                 self.ds["host"][uid][key] = vals[key]
 
-        # Add restored hosts from hass registry
+        # Add restored hosts from hass registry. The keys must stay in the
+        # case RouterOS uses, which is what _mac_from_host_entity already
+        # normalizes to: lowercasing here made the membership test below miss
+        # every time, so a dead "restored" twin was seeded for every known
+        # host and could never be adopted by live data again (issue 25).
+        # The test itself ignores case so that a router reporting lower-case
+        # MACs cannot bring the twin back, and an entry that is already live
+        # keeps the key the router gave it.
         if not self.host_hass_recovered:
             self.host_hass_recovered = True
+            live = {str(uid).upper() for uid in self.ds["host"]}
             for uid in self.ds["host_hass"]:
-                uid_lower = uid.lower()
-                if uid_lower not in self.ds["host"]:
-                    self.ds["host"][uid_lower] = {"source": "restored"}
-                    self.ds["host"][uid_lower]["mac-address"] = uid_lower
-                    self.ds["host"][uid_lower]["host-name"] = self.ds["host_hass"][uid]
+                if str(uid).upper() not in live:
+                    self.ds["host"][uid] = {"source": "restored"}
+                    self.ds["host"][uid]["mac-address"] = uid
+                    self.ds["host"][uid]["host-name"] = self.ds["host_hass"][uid]
 
         for uid, _vals in self.ds["host"].items():
             # Add missing default values
@@ -2911,7 +3045,13 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             if vals.get("source") in ["capsman", "wireless", "restored"]:
                 continue
             # Container veth interfaces are not real clients — never count them.
-            if self.ds["interface"].get(self.ds["host"][uid].get("interface"), {}).get("type") == "veth":
+            # The mark is recomputed every cycle rather than kept, so a host
+            # that moves off a container port is not hidden forever. Without
+            # interface data nothing is marked, which keeps a real device from
+            # disappearing when the types are simply unknown.
+            is_container_port = self.ds["interface"].get(self.ds["host"][uid].get("interface"), {}).get("type") == "veth"
+            self.ds["host"][uid]["container-port"] = is_container_port
+            if is_container_port:
                 self.ds["host"][uid]["available"] = False
                 continue
             arp_entry = self.ds["arp"].get(uid, {})

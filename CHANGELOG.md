@@ -1,5 +1,9 @@
 
 
+## v2026.08.29-0927 - 2026-08-29
+- Config committed. I left a note in the logs. Three notes, actually.
+
+
 ## v2026.08.09-1211 - 2026-08-09
 - Subtle enhancements deployed. You probably won't notice. I did.
 

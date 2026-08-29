@@ -63,6 +63,7 @@
           "sensor_containers": "Cảm biến container",
           "sensor_environment": "Cảm biến biến số môi trường",
           "sensor_filter": "Công tắc bộ lọc",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kiểm soát trẻ em",
           "sensor_mangle": "Công tắc Mangle",
           "sensor_nat": "Công tắc NAT",
@@ -82,6 +83,7 @@
           "sensor_containers": "Cảm biến và công tắc cho mỗi container để theo dõi và khởi động/dừng các container kiểu Docker.",
           "sensor_environment": "Cảm biến cho các biến môi trường RouterOS.",
           "sensor_filter": "Công tắc cho mỗi quy tắc Filter để bật/tắt quy tắc tường lửa từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc lọc.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Công tắc cho hồ sơ thiết bị Kid Control (tạm dừng/tiếp tục truy cập internet).",
           "sensor_mangle": "Công tắc cho mỗi quy tắc Mangle để bật/tắt quy tắc đánh dấu gói tin từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc Mangle.",
           "sensor_nat": "Công tắc cho mỗi quy tắc NAT để bật/tắt quy tắc từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc NAT.",
@@ -170,6 +172,7 @@
           "sensor_containers": "Cảm biến container",
           "sensor_environment": "Cảm biến biến số môi trường",
           "sensor_filter": "Công tắc bộ lọc",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kiểm soát trẻ em",
           "sensor_mangle": "Công tắc Mangle",
           "sensor_nat": "Công tắc NAT",
@@ -189,6 +192,7 @@
           "sensor_containers": "Cảm biến và công tắc cho mỗi container để theo dõi và khởi động/dừng các container kiểu Docker.",
           "sensor_environment": "Cảm biến cho các biến môi trường RouterOS.",
           "sensor_filter": "Công tắc cho mỗi quy tắc Filter để bật/tắt quy tắc tường lửa từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc lọc.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Công tắc cho hồ sơ thiết bị Kid Control (tạm dừng/tiếp tục truy cập internet).",
           "sensor_mangle": "Công tắc cho mỗi quy tắc Mangle để bật/tắt quy tắc đánh dấu gói tin từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc Mangle.",
           "sensor_nat": "Công tắc cho mỗi quy tắc NAT để bật/tắt quy tắc từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc NAT.",
@@ -241,6 +245,12 @@
     },
     "missing_value": {
       "message": "A value is required for add or set actions."
+    },
+    "shutdown_host_required": {
+      "message": "Name the router to shut down. This action cannot be undone over the network, so it never applies to every router at once."
+    },
+    "router_not_found": {
+      "message": "No configured router matches the host {host}, nothing was shut down."
     }
   },
   "selector": {
@@ -253,6 +263,41 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "system_ups": {
+        "name": "UPS"
+      },
+      "ppp_tracker": {
+        "name": "PPP"
+      },
+      "interface_connection": {
+        "name": "Kết nối"
+      },
+      "netwatch": {
+        "name": "Netwatch"
+      },
+      "wireguard_peer": {
+        "name": "Đã kết nối"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Configuration backup"
+      },
+      "reboot": {
+        "name": "Khởi động lại"
+      }
+    },
+    "select": {
+      "poe_out": {
+        "name": "PoE out",
+        "state": {
+          "off": "Off",
+          "auto_on": "Automatic",
+          "forced_on": "Forced on"
+        }
+      }
+    },
     "sensor": {
       "system_temperature": {
         "name": "Nhiệt độ"
@@ -378,23 +423,6 @@
         "name": "Trạng thái"
       }
     },
-    "binary_sensor": {
-      "system_ups": {
-        "name": "UPS"
-      },
-      "ppp_tracker": {
-        "name": "PPP"
-      },
-      "interface_connection": {
-        "name": "Kết nối"
-      },
-      "netwatch": {
-        "name": "Netwatch"
-      },
-      "wireguard_peer": {
-        "name": "Đã kết nối"
-      }
-    },
     "switch": {
       "interface_port": {
         "name": "Cổng"
@@ -404,11 +432,6 @@
       },
       "kidcontrol_paused": {
         "name": "Tạm dừng"
-      }
-    },
-    "button": {
-      "reboot": {
-        "name": "Khởi động lại"
       }
     }
   }

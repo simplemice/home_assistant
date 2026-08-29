@@ -33,6 +33,11 @@ input_datetime:
     has_date: true
     has_time: true
 
+  simplemice_left_time_reminder:
+    name: Left Home Reminder
+    has_date: false
+    has_time: true
+
 input_select:
   simplemice_dashboard:
     name: Dashboard

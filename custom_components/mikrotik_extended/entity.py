@@ -25,10 +25,12 @@ from homeassistant.util import slugify
 
 from .const import (
     ATTRIBUTION,
+    CONF_SENSOR_INTERFACES,
     CONF_SENSOR_NETWATCH_TRACKER,
     CONF_SENSOR_PORT_TRACKER,
     CONF_SENSOR_PORT_TRAFFIC,
     CONF_TRACK_HOSTS,
+    DEFAULT_SENSOR_INTERFACES,
     DEFAULT_SENSOR_NETWATCH_TRACKER,
     DEFAULT_SENSOR_PORT_TRACKER,
     DEFAULT_SENSOR_PORT_TRAFFIC,
@@ -63,6 +65,30 @@ _IFACE_TYPE_CATEGORY = {
 }
 
 
+def _skip_non_poe_port(entity_description, item) -> bool:
+    """Only a port that can actually supply power gets a PoE selector.
+
+    Ports without the capability report a placeholder instead of a mode, so
+    creating a selector for them would offer a control that does nothing.
+    """
+    if entity_description.func != "MikrotikPoeSelect":
+        return False
+    return item.get("poe-out") in (None, "", "N/A", "unknown")
+
+
+def _skip_interface_entity(config_entry, entity_description) -> bool:
+    """Skip every interface-derived entity when interface entities are disabled.
+
+    The store itself can still hold data: host tracking reads it to filter
+    container veth ports out of the client count and to tell a wifi bridge
+    port from a wired one. Entity creation therefore needs its own gate
+    instead of relying on an empty store.
+    """
+    if entity_description.data_path not in ("interface", "ip_address"):
+        return False
+    return not config_entry.options.get(CONF_SENSOR_INTERFACES, DEFAULT_SENSOR_INTERFACES)
+
+
 def _skip_interface_traffic_sensor(config_entry, entity_description, item) -> bool:
     if entity_description.func != "MikrotikInterfaceTrafficSensor":
         return False
@@ -89,12 +115,25 @@ def _skip_netwatch(config_entry, entity_description) -> bool:
     return entity_description.data_path == "netwatch" and not config_entry.options.get(CONF_SENSOR_NETWATCH_TRACKER, DEFAULT_SENSOR_NETWATCH_TRACKER)
 
 
-def _skip_host_tracker(config_entry, entity_description) -> bool:
-    return entity_description.func == "MikrotikHostDeviceTracker" and not config_entry.options.get(CONF_TRACK_HOSTS, DEFAULT_TRACK_HOSTS)
+def _skip_host_tracker(config_entry, entity_description, item) -> bool:
+    if entity_description.func != "MikrotikHostDeviceTracker":
+        return False
+    if not config_entry.options.get(CONF_TRACK_HOSTS, DEFAULT_TRACK_HOSTS):
+        return True
+    # A container endpoint is not a client. The client counters have excluded
+    # these since the overcounting work, but the tracker never applied the
+    # same rule, so every container kept a tracker entity, and a device, that
+    # reported home permanently. The mark is set where that check already
+    # lives, so the rule stays in one place.
+    return bool(item.get("container-port"))
 
 
 def _skip_sensor(config_entry, entity_description, data, uid) -> bool:
     item = data[uid]
+    if _skip_interface_entity(config_entry, entity_description):
+        return True
+    if _skip_non_poe_port(entity_description, item):
+        return True
     if _skip_interface_traffic_sensor(config_entry, entity_description, item):
         return True
     if _skip_client_traffic(entity_description, item):
@@ -103,7 +142,7 @@ def _skip_sensor(config_entry, entity_description, data, uid) -> bool:
         return True
     if _skip_netwatch(config_entry, entity_description):
         return True
-    return _skip_host_tracker(config_entry, entity_description)
+    return _skip_host_tracker(config_entry, entity_description, item)
 
 
 # ---------------------------

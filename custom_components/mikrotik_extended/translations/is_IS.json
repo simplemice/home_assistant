@@ -63,6 +63,7 @@
           "sensor_containers": "Gámaskynjarar",
           "sensor_environment": "Umhverfisbreytu skynjarar",
           "sensor_filter": "Síurofar",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Barnastjórnun",
           "sensor_mangle": "Mangle rofar",
           "sensor_nat": "NAT rofar",
@@ -82,6 +83,7 @@
           "sensor_containers": "Skynjari og rofi fyrir hvern gám til að fylgjast með og ræsa/stöðva Docker-líka gáma.",
           "sensor_environment": "Skynjarar fyrir RouterOS umhverfisbreytur.",
           "sensor_filter": "Rofi fyrir hverja Filter-reglu til að virkja/slökkva á eldveggssíureglum frá HA. Viðvörun: býr til eina einingu fyrir hverja síureglu.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Rofar fyrir tækjasnið Kid Control (gera hlé á/halda áfram netaðgangi).",
           "sensor_mangle": "Rofi fyrir hverja Mangle-reglu til að virkja/slökkva á pakkamerkingareglum frá HA. Viðvörun: býr til eina einingu fyrir hverja Mangle-reglu.",
           "sensor_nat": "Rofi fyrir hverja NAT-reglu til að virkja/slökkva á reglum frá HA. Viðvörun: býr til eina einingu fyrir hverja NAT-reglu.",
@@ -170,6 +172,7 @@
           "sensor_containers": "Gámaskynjarar",
           "sensor_environment": "Umhverfisbreytu skynjarar",
           "sensor_filter": "Síurofar",
+          "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Barnastjórnun",
           "sensor_mangle": "Mangle rofar",
           "sensor_nat": "NAT rofar",
@@ -189,6 +192,7 @@
           "sensor_containers": "Skynjari og rofi fyrir hvern gám til að fylgjast með og ræsa/stöðva Docker-líka gáma.",
           "sensor_environment": "Skynjarar fyrir RouterOS umhverfisbreytur.",
           "sensor_filter": "Rofi fyrir hverja Filter-reglu til að virkja/slökkva á eldveggssíureglum frá HA. Viðvörun: býr til eina einingu fyrir hverja síureglu.",
+          "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Rofar fyrir tækjasnið Kid Control (gera hlé á/halda áfram netaðgangi).",
           "sensor_mangle": "Rofi fyrir hverja Mangle-reglu til að virkja/slökkva á pakkamerkingareglum frá HA. Viðvörun: býr til eina einingu fyrir hverja Mangle-reglu.",
           "sensor_nat": "Rofi fyrir hverja NAT-reglu til að virkja/slökkva á reglum frá HA. Viðvörun: býr til eina einingu fyrir hverja NAT-reglu.",
@@ -241,6 +245,12 @@
     },
     "missing_value": {
       "message": "A value is required for add or set actions."
+    },
+    "shutdown_host_required": {
+      "message": "Name the router to shut down. This action cannot be undone over the network, so it never applies to every router at once."
+    },
+    "router_not_found": {
+      "message": "No configured router matches the host {host}, nothing was shut down."
     }
   },
   "selector": {
@@ -253,6 +263,41 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "system_ups": {
+        "name": "UPS"
+      },
+      "ppp_tracker": {
+        "name": "PPP"
+      },
+      "interface_connection": {
+        "name": "Tenging"
+      },
+      "netwatch": {
+        "name": "Netwatch"
+      },
+      "wireguard_peer": {
+        "name": "Tengt"
+      }
+    },
+    "button": {
+      "backup": {
+        "name": "Configuration backup"
+      },
+      "reboot": {
+        "name": "Endurræsa"
+      }
+    },
+    "select": {
+      "poe_out": {
+        "name": "PoE out",
+        "state": {
+          "off": "Off",
+          "auto_on": "Automatic",
+          "forced_on": "Forced on"
+        }
+      }
+    },
     "sensor": {
       "system_temperature": {
         "name": "Hitastig"
@@ -378,23 +423,6 @@
         "name": "Staða"
       }
     },
-    "binary_sensor": {
-      "system_ups": {
-        "name": "UPS"
-      },
-      "ppp_tracker": {
-        "name": "PPP"
-      },
-      "interface_connection": {
-        "name": "Tenging"
-      },
-      "netwatch": {
-        "name": "Netwatch"
-      },
-      "wireguard_peer": {
-        "name": "Tengt"
-      }
-    },
     "switch": {
       "interface_port": {
         "name": "Port"
@@ -404,11 +432,6 @@
       },
       "kidcontrol_paused": {
         "name": "Í bið"
-      }
-    },
-    "button": {
-      "reboot": {
-        "name": "Endurræsa"
       }
     }
   }

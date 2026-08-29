@@ -8,6 +8,8 @@ from threading import Lock
 from time import sleep, time
 
 import librouteros
+import librouteros.login as _rlogin
+from librouteros.exceptions import MultiTrapError, TrapError
 from voluptuous import Optional
 
 from .const import (
@@ -18,6 +20,13 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 SCRIPT_ENVIRONMENT_PATH = "/system/script/environment"
+
+# librouteros expects a *callable* for its ``login_method`` argument (singular).
+# Map the configured method name (see DEFAULT_LOGIN_METHOD) to that callable so a
+# plain config string is never handed straight to librouteros.
+_LOGIN_METHODS = {"plain": _rlogin.plain}
+if hasattr(_rlogin, "token"):  # legacy pre-6.43 challenge login
+    _LOGIN_METHODS["token"] = _rlogin.token
 
 
 # ---------------------------
@@ -47,6 +56,7 @@ class MikrotikAPI:
         self._login_method = login_method
         self._encoding = encoding
         self._ssl_wrapper = None
+        self._refused_paths = set()
         self.lock = Lock()
 
         self._connection = None
@@ -134,9 +144,17 @@ class MikrotikAPI:
 
         kwargs = {
             "encoding": self._encoding,
-            "login_methods": self._login_method,
             "port": self._port,
         }
+        # librouteros wants the callable under ``login_method`` (singular). The
+        # old ``login_methods`` key was silently ignored by librouteros <4 (which
+        # accepted **kwargs) but is rejected outright by librouteros >=4, whose
+        # connect() is keyword-only. That rejection surfaced to the user as a
+        # generic "cannot_connect". Home Assistant ships librouteros 4.x, so
+        # resolve the configured method to a callable and pass it correctly.
+        login_method = _LOGIN_METHODS.get(self._login_method)
+        if login_method is not None:
+            kwargs["login_method"] = login_method
 
         with self.lock:
             try:
@@ -196,6 +214,19 @@ class MikrotikAPI:
     # ---------------------------
     #   query
     # ---------------------------
+    def _note_refusal(self, path, error) -> None:
+        """Report a refused path once, not on every poll."""
+        if path in self._refused_paths:
+            _LOGGER.debug("Mikrotik %s path %s refused again: %s", self._host, path, error)
+            return
+        self._refused_paths.add(path)
+        _LOGGER.warning(
+            "Mikrotik %s refused query %s: %s. Data from this path will be missing, the rest keeps working.",
+            self._host,
+            path,
+            error,
+        )
+
     def _materialize_list(self, response, path):
         """Convert the API generator into a list; returns (response, missing_sentinel).
 
@@ -214,6 +245,13 @@ class MikrotikAPI:
                 return None, True
             if "no such command prefix" in str(e):
                 _LOGGER.debug("Mikrotik %s path %s not available: %s", self._host, path, e)
+                return None, True
+            if isinstance(e, (TrapError, MultiTrapError)):
+                # A trap is the router answering and refusing this one request,
+                # so the connection is fine. Tearing it down here skipped every
+                # remaining step of the update cycle and took the whole router
+                # unavailable over a single unreadable path.
+                self._note_refusal(path, e)
                 return None, True
             self.disconnect(f"building list for path {path}", e)
             return None, False
@@ -247,6 +285,11 @@ class MikrotikAPI:
                 _LOGGER.debug("API query: %s, %s, %s", path, command, args)
                 try:
                     response = list(response(command, **args))
+                except (TrapError, MultiTrapError) as e:
+                    # Same reasoning as above: the router refused the command,
+                    # it did not drop the connection.
+                    self._note_refusal(f"{path} {command}", e)
+                    return None
                 except Exception as e:
                     self.disconnect("path", e)
                     return None

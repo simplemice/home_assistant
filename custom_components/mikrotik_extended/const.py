@@ -8,6 +8,7 @@ PLATFORMS = [
     Platform.DEVICE_TRACKER,
     Platform.SWITCH,
     Platform.BUTTON,
+    Platform.SELECT,
     Platform.UPDATE,
 ]
 
@@ -16,6 +17,9 @@ DEFAULT_NAME = "MikroTik Extended"
 ATTRIBUTION = "Data provided by Mikrotik"
 
 DEFAULT_ENCODING = "ISO-8859-1"
+# Supported login methods: "plain" (RouterOS >=6.43) and "token" (legacy
+# pre-6.43 challenge login). The name is mapped to a librouteros callable in
+# mikrotikapi.py; keep the values in sync with that map.
 DEFAULT_LOGIN_METHOD = "plain"
 
 # Fallback codepage for free-text fields (comments, host names, SSIDs) that are
@@ -43,6 +47,8 @@ DEFAULT_TRACK_HOSTS = False
 CONF_TRACK_HOSTS_TIMEOUT = "track_network_hosts_timeout"
 DEFAULT_TRACK_HOST_TIMEOUT = 180
 
+CONF_SENSOR_INTERFACES = "sensor_interfaces"
+DEFAULT_SENSOR_INTERFACES = True
 CONF_SENSOR_PORT_TRACKER = "sensor_port_tracker"
 DEFAULT_SENSOR_PORT_TRACKER = True
 CONF_SENSOR_PORT_TRAFFIC = "sensor_port_traffic"
@@ -96,7 +102,6 @@ TO_REDACT = {
     "ntp-server",
     "caps-manager",
     "serial-number",
-    "source",
     "from-addresses",
     "to-addresses",
     "src-address",
@@ -106,4 +111,15 @@ TO_REDACT = {
     "caller-id",
     "target",
     "ssid",
+    # The IP Cloud DDNS name is "<serial-number>.sn.mynetname.net": it repeats
+    # the serial redacted above and resolves straight back to the public
+    # address, which would undo masking it.
+    "ddns-hostname",
+    "back-to-home-vpn",
+    # A single public address carries no diagnostic value worth the exposure,
+    # so it is removed outright rather than partially masked.
+    "public-address",
+    # Not a secret, but a stable global identifier that would let separate
+    # dumps and forum posts be tied to the same router.
+    "public-key",
 }

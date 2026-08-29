@@ -89,6 +89,7 @@ class TuyaLocalDevice(object):
         self._api_protocol_version_index = None
         self._api_protocol_working = False
         self._api_working_protocol_failures = 0
+        self.dev_id = dev_id
         self.dev_cid = dev_cid
         try:
             if dev_cid:
@@ -172,8 +173,12 @@ class TuyaLocalDevice(object):
 
     @property
     def unique_id(self):
-        """Return the unique id for this device (the dev_id or dev_cid)."""
-        return self.dev_cid or self._api.id
+        """Return the unique ID for this device."""
+        if self.dev_cid:
+            return get_device_id(
+                {CONF_DEVICE_ID: self.dev_id, CONF_DEVICE_CID: self.dev_cid}
+            )
+        return self._api.id
 
     @property
     def device_info(self):
@@ -301,9 +306,13 @@ class TuyaLocalDevice(object):
             _LOGGER.exception(
                 "%s receive loop terminated by exception %s", self.name, t
             )
+        finally:
+            # Ensure the persistent connection is closed when the loop exits
+            # and device appears as unavailable
             self._api.set_socketPersistent(False)
             if self._api.parent:
                 self._api.parent.set_socketPersistent(False)
+            self._reset_cached_state()
 
     @property
     def should_poll(self):
@@ -661,10 +670,15 @@ class TuyaLocalDevice(object):
         auto = (self._protocol_configured == "auto") and (
             not self._api_protocol_working
         )
+        dev22 = self._protocol_configured in (3.22, 3.42, 3.52)
         connections = (
             self._AUTO_CONNECTION_ATTEMPTS
             if auto
-            else self._SINGLE_PROTO_CONNECTION_ATTEMPTS
+            else (
+                self._SINGLE_PROTO_CONNECTION_ATTEMPTS * 2
+                if dev22
+                else self._SINGLE_PROTO_CONNECTION_ATTEMPTS
+            )
         )
 
         last_err_code = None
@@ -783,18 +797,27 @@ class TuyaLocalDevice(object):
             self.name,
             new_version,
         )
-        # Only enable tinytuya's "device22" auto-detect when using 3.22, 3.4, or 3.5
-        # Enabling this on 3.1 or 3.3 devices can cause them to stop responding to commands.
+        # Only enable tinytuya's "device22" auto-detect when exlpicitly requested
+        # as 3.22, 3.42, or 3.52
+        # Enabling this on other devices can cause them to stop responding to commands,
+        # as once tinytuya decides to switch to it, it never switches back.
         # 3.2 always uses the "device22" protocol variant.
         # 3.22 is a fake version that actually means 3.3 with auto-detect enabled
+        # likewise 3.42 and 3.52 actually mean 3.4 and 3.5 with auto-detect enabled.
         #
         # Note: "device22" is a misnomer for historical reasons. Not all devices with
         # 22 character device ids use this protocol variant.
         if new_version == 3.22:
             new_version = 3.3
             self._api.disabledetect = False
+        elif new_version == 3.42:
+            new_version = 3.4
+            self._api.disabledetect = False
+        elif new_version == 3.52:
+            new_version = 3.5
+            self._api.disabledetect = False
         else:
-            self._api.disabledetect = new_version < 3.4
+            self._api.disabledetect = True
 
         await self._hass.async_add_executor_job(
             self._api.set_version,

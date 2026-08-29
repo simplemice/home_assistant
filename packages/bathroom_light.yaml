@@ -2,22 +2,10 @@
 # Bathroom Light Package
 # - Motion + door based entry detection
 # - Smooth light on
-# - After 15 minutes -> red flash warning
-# - After 2 minutes of no motion -> turn off
+# - After 5 min presence -> start long-occupancy timer (10 min)
+# - After 15 min TOTAL presence (5 + 10) -> red flash warning, stays red
+# - After 2 minutes of no motion -> turn off, reset everything
 ###############################################################################
-
-binary_sensor:
-  - platform: bayesian
-    unique_id: bathroom_occupied_human
-    name: "Bathroom Occupied by Humans"
-    prior: 0.3
-    probability_threshold: 0.5
-    observations:
-      - entity_id: "binary_sensor.bathroom_motion_occupancy"
-        prob_given_true: 0.95
-        prob_given_false: 0.33
-        platform: "state"
-        to_state: "on"
 
 input_boolean:
   bathroom_occupied:
@@ -25,9 +13,22 @@ input_boolean:
     icon: mdi:account
 
 timer:
+  bathroom_presence_warmup:
+    name: Bathroom Presence Warmup
+    duration: "00:05:00"
+
   bathroom_long_occupancy:
     name: Bathroom Long Occupancy
-    duration: "00:15:00"
+    duration: "00:10:00"
+
+binary_sensor:
+  - platform: group
+    unique_id: bathroom_occupancy
+    name: Bathroom Occupancy
+    device_class: occupancy
+    entities:
+      - binary_sensor.bathroom_motion_occupancy
+      - binary_sensor.bathroom_motion_sensor_occupancy
 
 automation:
   ###############################################################################
@@ -41,7 +42,7 @@ automation:
         entity_id: binary_sensor.bathroom_door_contact
         to: "on"
       - platform: state
-        entity_id: binary_sensor.bathroom_motion_occupancy
+        entity_id: binary_sensor.bathroom_occupancy
         to: "on"
     condition:
       - condition: state
@@ -58,18 +59,21 @@ automation:
           brightness: 200
       - service: timer.start
         target:
-          entity_id: timer.bathroom_long_occupancy
+          entity_id: timer.bathroom_presence_warmup
 
   ###############################################################################
-  # Automation 2 - Keep session alive: reset 15-min timer on every motion event
+  # Automation 2 - After 5 min of continuous presence, start the 10-min
+  # long-occupancy timer. NOTE: this does NOT reset on motion - it tracks
+  # total session time, not idle time, unlike the old keepalive automation.
   ###############################################################################
-  - id: bathroom_motion_keepalive
-    alias: "Bathroom - Motion Keep Alive"
-    mode: restart
+  - id: bathroom_warmup_finished
+    alias: "Bathroom - Warmup Finished, Start Long Occupancy Timer"
+    mode: single
     trigger:
-      - platform: state
-        entity_id: binary_sensor.bathroom_motion_occupancy
-        to: "on"
+      - platform: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.bathroom_presence_warmup
     condition:
       - condition: state
         entity_id: input_boolean.bathroom_occupied
@@ -80,14 +84,14 @@ automation:
           entity_id: timer.bathroom_long_occupancy
 
   ###############################################################################
-  # Automation 3 - End session (no motion for 2 min)
+  # Automation 3 - End session (no motion for 2 min) -> cancel everything
   ###############################################################################
   - id: bathroom_end_session
     alias: "Bathroom - End Session (no motion 2min)"
     mode: restart
     trigger:
       - platform: state
-        entity_id: binary_sensor.bathroom_motion_occupancy
+        entity_id: binary_sensor.bathroom_occupancy
         to: "off"
         for: "00:02:00"
     condition:
@@ -103,10 +107,14 @@ automation:
           entity_id: input_boolean.bathroom_occupied
       - service: timer.cancel
         target:
+          entity_id: timer.bathroom_presence_warmup
+      - service: timer.cancel
+        target:
           entity_id: timer.bathroom_long_occupancy
 
   ###############################################################################
-  # Automation 4 - Long occupancy alert at 15 minutes
+  # Automation 4 - Long occupancy alert at 15 min total presence (5 + 10)
+  # Stays red - does NOT revert back to warm light afterward.
   ###############################################################################
   - id: bathroom_long_occupancy_alert
     alias: "Bathroom - Long Occupancy Alert (15min)"
@@ -140,5 +148,5 @@ automation:
         target:
           entity_id: light.bathroom_bulb
         data:
-          brightness: 200
-          color_temp: 4000
+          color_name: "red"
+          brightness: 255

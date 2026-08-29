@@ -136,10 +136,10 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2193 |
-| Number of sensors | 1224 |
-| Current Version | 2026.8.1 |
-| Total Automations | 124 |
+| Number of entities | 2201 |
+| Number of sensors | 1227 |
+| Current Version | 2026.8.3 |
+| Total Automations | 123 |
 | Total Scripts | 38 |
 | Total Lights | 32 |
 | Total Switches | 170 |
@@ -160,8 +160,6 @@ This repository is treated as:
 
 - Network UPS Tools
 
-- Ollama-HA
-
 - openWakeWord
 
 - Samba share
@@ -175,20 +173,21 @@ This repository is treated as:
 
 ## 🧩 Installed Integrations
 - [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting#readme) (v1.30.1)
+- [AI Long Term Memory](https://github.com/Riscue/ha-ai-memory) (v0.2.1)
 - [Alarmo](https://github.com/nielsfaber/alarmo) (v1.10.17)
 - [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.0.1)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.1.1)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v1.3.2)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.0.0)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
-- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.6.3)
+- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.7.3)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
 - [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
@@ -205,9 +204,11 @@ This repository is treated as:
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
-- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.76)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.78)
 
 ## 🔗 Custom integrations
+
+- [Ai Long Term Memory](https://github.com/Riscue/ha-ai-memory)
 
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 
