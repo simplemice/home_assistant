@@ -15,6 +15,10 @@ input_boolean:
     name: Alarm Pause Mode
     icon: mdi:alarm-off
 
+  expected_delivery_window:
+    name: Expected Delivery Window
+    icon: mdi:package-variant
+
 input_text:
   last_alarm_trigger_sensor:
     name: Last Alarm Trigger Sensor
@@ -28,6 +32,13 @@ input_text:
   last_seen_plate:
     name: Frigate Last Seen Plate
     max: 255
+
+  security_summary_history:
+    name: Security Summary History
+    max: 255
+  security_summary_last_sent:
+    name: Security Summary Last Sent
+    max: 50
 
 binary_sensor:
   - platform: group

@@ -92,8 +92,8 @@ blueprint:
                 value: numeric_state_below
               - label: 10 - Numeric State - Above & Below
                 value: numeric_state_above_below
-              multiple: false
               sort: false
+              multiple: false
         trigger_state_entity:
           name: State Entities
           description: '**Used in options 1, 2, 3, 4, 5, 6 or 7**. Enter the entities
@@ -104,6 +104,7 @@ blueprint:
           selector:
             entity:
               multiple: true
+              reorder: false
         trigger_numeric_entity:
           name: Numeric State Entities
           description: '**Used in options 8, 9 or 10**. Enter the entities that will
@@ -114,6 +115,7 @@ blueprint:
           selector:
             entity:
               multiple: true
+              reorder: false
         above_state:
           name: Numeric State Above Option
           description: '**Used in options 8, or 10**. Set the above value. The numeric
@@ -155,7 +157,8 @@ blueprint:
             minutes: 0
             seconds: 0
           selector:
-            duration: {}
+            duration:
+              enable_second: true
     device_notify_settings:
       name: Mobile App Notify
       icon: mdi:devices
@@ -174,8 +177,8 @@ blueprint:
               - label: Disable Mobile App Notify Options
                 value: disable_mobile_app_notify
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         notify_device:
           name: Devices Notified
           description: 'Select the devices to be notified when the automation is triggered.
@@ -194,7 +197,9 @@ blueprint:
             '
           default: "\U0001F4E2 Enter Notify Title Here"
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         notify_message:
           name: Message
           description: 'Enter in the message of your notification.
@@ -202,7 +207,9 @@ blueprint:
             '
           default: "Enter Notify Message Here \U0001F642"
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         notify_interruption_level:
           name: Interruption Level - iOS Only
           description: 'On devices running iOS 15 and later, you can configure the
@@ -230,8 +237,8 @@ blueprint:
               - label: Quiet Notifications Without Waking Screen
                 value: passive
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         notify_sound:
           name: Notification Sound - iOS Only
           description: 'The Home Assistant app for iOS includes built-in notification
@@ -246,7 +253,9 @@ blueprint:
             '
           default: []
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         notify_data:
           name: Android Only Options (Optional)
           description: '**High Priority** notifications ensure that you receive important
@@ -295,7 +304,9 @@ blueprint:
             '
           default: []
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         include_notify_zone:
           name: Use The Notify Zone Option (Optional)
           description: 'Home Assistant can track the location of your devices, such
@@ -316,8 +327,8 @@ blueprint:
               - label: Disable the zone option
                 value: zone_disabled
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         notify_zone:
           name: Notify Zone
           description: 'Choose the notify zone for your notifications.
@@ -330,6 +341,7 @@ blueprint:
               - domain:
                 - zone
               multiple: false
+              reorder: false
     persistent_notify_settings:
       name: Notifications
       icon: mdi:bell-outline
@@ -348,8 +360,8 @@ blueprint:
               - label: Disable UI Notifications
                 value: disabled_persistent_notification
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         persistent_title:
           name: Title
           description: 'Enter in the title of your UI notification.
@@ -357,7 +369,9 @@ blueprint:
             '
           default: "\U0001F4E2 Enter UI Title Here"
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         persistent_message:
           name: Message
           description: 'Enter in the message of your UI notification.
@@ -365,7 +379,9 @@ blueprint:
             '
           default: "Enter UI Message Here \U0001F642"
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
     tts_notify_settings:
       name: Text-to-Speech Announcement
       icon: mdi:bullhorn-outline
@@ -386,8 +402,8 @@ blueprint:
               - label: Disable Text-to-Speech Announcements
                 value: disable_tts_announcement
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         text_to_speech_engine:
           name: Text-to-Speech Service Provider
           description: 'Select the Text-to-Speech service provider.
@@ -400,6 +416,7 @@ blueprint:
               - domain:
                 - tts
               multiple: false
+              reorder: false
         media_player:
           name: Media Player
           description: 'Select the Media Player/s that will play your Text-to-Speech
@@ -413,6 +430,7 @@ blueprint:
               - domain:
                 - media_player
               multiple: true
+              reorder: false
         notify_tts_message:
           name: Announcement Message
           description: 'Enter in the message of your Text-to-Speech announcement.
@@ -445,8 +463,8 @@ blueprint:
               - label: Disable Custom Actions
                 value: disable_custom_actions
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         custom_actions:
           name: Custom Actions
           description: 'Enter the custom actions you would like to run.
@@ -479,8 +497,8 @@ blueprint:
               - label: Disable the time options
                 value: time_disabled
               custom_value: false
-              multiple: false
               sort: false
+              multiple: false
         after_time:
           name: Start Time
           description: 'Set the start time.

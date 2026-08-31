@@ -136,10 +136,10 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2201 |
-| Number of sensors | 1227 |
+| Number of entities | 2225 |
+| Number of sensors | 1232 |
 | Current Version | 2026.8.3 |
-| Total Automations | 123 |
+| Total Automations | 124 |
 | Total Scripts | 38 |
 | Total Lights | 32 |
 | Total Switches | 170 |
@@ -183,7 +183,7 @@ This repository is treated as:
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.0.0)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.1.0)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
@@ -197,14 +197,14 @@ This repository is treated as:
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
-- [Spook](https://spook.boo) (v5.0.0)
+- [Spook](https://spook.boo) (v5.3.0)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
-- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.78)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.88)
 
 ## 🔗 Custom integrations
 

@@ -1,0 +1,16 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   19/08/2025 (fixed duplicate include key 07/05/2026)
+#   @package        :   Health
+#   @description    :   Health Settings
+###############################################################################
+
+input_text:
+  house_health_history:
+    name: House Health Check History
+    initial: ""
+    max: 255
+  house_health_last_sent:
+    name: House Health Check Last Sent
+    initial: ""
+

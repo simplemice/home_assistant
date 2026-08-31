@@ -84,16 +84,26 @@ automation:
           entity_id: timer.bathroom_long_occupancy
 
   ###############################################################################
-  # Automation 3 - End session (no motion for 2 min) -> cancel everything
+  # Automation 3 - End session on: (a) door closed (10s debounce, authoritative
+  # "room is empty" signal per household habit - door is only closed when the
+  # bathroom is empty), OR (b) no motion for 6 min (fallback safety net for
+  # when the door is left open the whole time / both sensors miss stationary
+  # occupancy).
   ###############################################################################
   - id: bathroom_end_session
-    alias: "Bathroom - End Session (no motion 2min)"
+    alias: "Bathroom - End Session (door closed OR 6min no-motion fallback)"
     mode: restart
     trigger:
       - platform: state
+        entity_id: binary_sensor.bathroom_door_contact
+        to: "off"
+        for: "00:00:10"
+        id: door_closed
+      - platform: state
         entity_id: binary_sensor.bathroom_occupancy
         to: "off"
-        for: "00:02:00"
+        for: "00:06:00"
+        id: no_motion_timeout
     condition:
       - condition: state
         entity_id: input_boolean.bathroom_occupied

@@ -58,9 +58,9 @@ blueprint:
                 value: enable_button_trigger
               - label: Dont use a button trigger
                 value: disable_button_trigger
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         button_entity:
           name: Button Helper
           description: 'Input your button helper.
@@ -73,6 +73,7 @@ blueprint:
               - domain:
                 - input_button
               multiple: false
+              reorder: false
         include_time:
           name: Use The Time Trigger (Optional)
           description: 'Select if you would like to use the time trigger. This is
@@ -88,9 +89,9 @@ blueprint:
                 value: time_enabled
               - label: Disable the time options
                 value: time_disabled
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         time:
           name: Time
           description: 'Set the time you would like to run the automation.
@@ -132,8 +133,8 @@ blueprint:
                 value: sat
               - label: Sunday
                 value: sun
-              sort: false
               custom_value: false
+              sort: false
     battery_settings:
       name: Battery Settings
       icon: mdi:battery-alert-variant-outline
@@ -236,9 +237,9 @@ blueprint:
                 value: enable_easy_okay_notify
               - label: Disable Device Notification
                 value: disabled_easy_notify
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         include_persistent_notification:
           name: Use The Easy Notify - UI Notification Options (Optional)
           description: 'Enabling this option will display notifications directly within
@@ -260,9 +261,9 @@ blueprint:
                 value: enable_persistent_okay_notification
               - label: Disable UI Notification
                 value: disabled_persistent_notification
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         sensor_selection:
           name: Sensor Selection
           description: 'Please select which sensors you would like to include in your
@@ -280,9 +281,9 @@ blueprint:
               - label: Use All Battery Sensors Minus Excluded Battery Sensors + Custom
                   Group
                 value: enable_all_and_custom_group_sensors
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         notify_device:
           name: Devices Notified (Optional)
           description: 'If you''ve enabled device notifications above, please select
@@ -302,7 +303,9 @@ blueprint:
             '
           default: Low Battery Notification
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         notify_message:
           name: Message
           description: 'Choose one of the three preset messages from the dropdown
@@ -334,9 +337,9 @@ blueprint:
                 value: sensors
               - label: 3 - Unavailable or Unknown Sensors
                 value: unavailable_sensors
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         notify_okay_message:
           name: Okay Confirmation Message
           description: 'Enter in the notification message you would like to receive
@@ -345,7 +348,9 @@ blueprint:
             '
           default: YES! All batteries are okay :)
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         notify_interruption_level:
           name: Interruption Level - iOS Only
           description: 'On devices running iOS 15 and later, you can configure the
@@ -372,9 +377,9 @@ blueprint:
                 value: time-sensitive
               - label: Quiet Notifications Without Waking Screen
                 value: passive
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         notify_sound:
           name: Notification Sound - iOS Only
           description: 'The Home Assistant app for iOS includes built-in notification
@@ -389,7 +394,9 @@ blueprint:
             '
           default: []
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         notify_data:
           name: Android Only Options (Optional)
           description: '**High Priority** notifications ensure that you receive important
@@ -420,8 +427,8 @@ blueprint:
                 value: sticky
               - label: Notification Channel
                 value: channel
-              sort: false
               custom_value: false
+              sort: false
         notify_channel:
           name: Notification Channel - Android Only
           description: 'If you have chosen to use a notification channel, simply enter
@@ -438,7 +445,9 @@ blueprint:
             '
           default: []
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
     action_buttons_settings:
       name: Action Buttons
       icon: mdi:gesture-tap-button
@@ -463,9 +472,9 @@ blueprint:
                 value: enable_to_do_list_button_and_confirmation
               - label: Disable Action Buttons
                 value: disabled_notify_action_buttons
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         to_do_list:
           name: Easy Notify Action Buttons - To-Do List Selection
           description: 'Choose the To-Do list where you''d like to add your task.
@@ -482,6 +491,7 @@ blueprint:
               - domain:
                 - todo
               multiple: false
+              reorder: false
         to_do_task_title:
           name: Easy Notify Action Buttons - Task Title
           description: 'When the action button is pressed, it will add a task to your
@@ -491,7 +501,9 @@ blueprint:
             '
           default: Batteries To Be Replaced
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         action_button_to_do:
           name: Easy Notify Action Buttons - Action Button
           description: 'Please specify the name for the action button to be displayed
@@ -501,7 +513,9 @@ blueprint:
             '
           default: Add To To-Do List!
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         action_button_cancel:
           name: Easy Notify Action Buttons - Cancel Button
           description: 'Please specify the name for the cancel button to be displayed
@@ -511,7 +525,9 @@ blueprint:
             '
           default: Cancel
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         action_button_confirmation_title:
           name: Easy Notify Action Buttons - Action & Cancel Button Confirmation Title
           description: 'Please enter in a title for the confirmation notification
@@ -520,7 +536,9 @@ blueprint:
             '
           default: Low Battery Confirmation
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         action_button_confirmation_message:
           name: Easy Notify Action Buttons - Action Button Confirmation Message
           description: 'Please enter in the message for the confirmation notification
@@ -529,7 +547,9 @@ blueprint:
             '
           default: Your low batteries have been added to your To-Do list
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
         cancel_action_button_confirmation_message:
           name: Easy Notify Action Buttons - Cancel Button Confirmation Message
           description: 'Please enter in the message for the confirmation notification
@@ -538,7 +558,9 @@ blueprint:
             '
           default: Cancelled - Nothing was added to your To-Do list
           selector:
-            text: {}
+            text:
+              multiple: false
+              multiline: false
     custom_actions_settings:
       name: Custom Actions
       icon: mdi:code-tags
@@ -560,9 +582,9 @@ blueprint:
                 value: enable_custom_actions
               - label: Disable Custom Actions
                 value: disabled_custom_actions
-              multiple: false
-              sort: false
               custom_value: false
+              sort: false
+              multiple: false
         custom_actions:
           name: Custom Actions
           description: 'Add your custom actions that you''d like to run when the automation

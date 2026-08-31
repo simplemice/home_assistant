@@ -3557,7 +3557,10 @@ async def _async_setup_tools_entry(hass: HomeAssistant, entry: ConfigEntry) -> b
     # Register the in-process ha_mcp_tools/* WebSocket commands (info + search)
     # the server calls behind a capability gate. Idempotent, and independent of
     # the caller-token gate above — HA core authenticates the WS connection and
-    # @require_admin gates each command (see websocket_api.py).
+    # @require_admin gates each command (see websocket_api.py). The server
+    # (embedded) entry registers the same surface (#2289), so a server-only
+    # install has it as well; on a dual-entry install both entries register it
+    # and the second registration simply overwrites the first.
     async_register_commands(hass)
 
     # Entry-level finalization: pick up the #1853 rename on existing installs and
@@ -3617,13 +3620,19 @@ async def _async_unload_tools_entry(hass: HomeAssistant, entry: ConfigEntry) -> 
     hass.services.async_remove(DOMAIN, SERVICE_GET_CALLER_TOKEN)
     hass.services.async_remove(DOMAIN, SERVICE_GET_ALLOWED_PATHS)
     hass.services.async_remove(DOMAIN, SERVICE_SET_ALLOWED_PATHS)
+    hass.services.async_remove(DOMAIN, SERVICE_GET_EXTRA_YAML_KEYS)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_EXTRA_YAML_KEYS)
     hass.services.async_remove(DOMAIN, SERVICE_LIST_LEGACY_BACKUPS)
     hass.services.async_remove(DOMAIN, SERVICE_READ_LEGACY_BACKUP)
 
-    # Drop the cached token + allowlist from hass.data so a subsequent
-    # setup_entry re-reads from storage (covers the reload-after-rotate path).
+    # Drop the cached token + allowlist + extra YAML keys from hass.data so a
+    # subsequent setup_entry re-reads from storage (covers the
+    # reload-after-rotate path). The WS command surface is deliberately NOT
+    # unregistered here — it is shared with the server entry and HA offers no
+    # unregister (#2292); see ``websocket_api.async_register_commands``.
     domain_data = hass.data.get(DOMAIN)
     if isinstance(domain_data, dict):
         domain_data.pop(_HASS_DATA_TOKEN_KEY, None)
         domain_data.pop(_HASS_DATA_ALLOWED_PATHS_KEY, None)
+        domain_data.pop(_HASS_DATA_EXTRA_YAML_KEYS_KEY, None)
     return True
