@@ -14,3 +14,31 @@ input_text:
     name: House Health Check Last Sent
     initial: ""
 
+sensor:
+- platform: statistics
+  name: "Battery SOC 24h Mean"
+  unique_id: battery_soc_24h_mean
+  entity_id: sensor.battery_soc_simulated
+  state_characteristic: mean
+  sampling_size: 500
+  max_age:
+    hours: 24
+  precision: 1
+- platform: statistics
+  name: "Solar Power 24h Mean"
+  unique_id: solar_power_24h_mean
+  entity_id: sensor.solar_live_power_simulated
+  state_characteristic: mean
+  sampling_size: 500
+  max_age:
+    hours: 24
+  precision: 0
+- platform: statistics
+  name: "Fridge Power 24h Mean"
+  unique_id: fridge_power_24h_mean
+  entity_id: sensor.fridge_power_power
+  state_characteristic: mean
+  sampling_size: 500
+  max_age:
+    hours: 24
+  precision: 1
