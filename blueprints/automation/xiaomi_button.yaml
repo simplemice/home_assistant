@@ -22,6 +22,7 @@ blueprint:
           domain:
           - sensor
           multiple: false
+          reorder: false
     single_action:
       name: Single Click
       description: Single click for devices with one button

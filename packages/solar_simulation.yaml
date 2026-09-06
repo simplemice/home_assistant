@@ -32,8 +32,7 @@ template:
           {% set eff     = 0.85  %}
 
           {# ── Sun geometry ─────────────────────────────────────────── #}
-          {% set elev = states('sensor.astroweather_astroweather_sun_altitude') | float(0)
-          %}
+          {% set elev = states('sensor.astroweather_astroweather_sun_altitude') | float(0) %}
           {% if elev < 5 %}
             {{ 0 }}
           {% else %}
@@ -45,23 +44,17 @@ template:
 
             {# ── Cloud layers (weighted transmission) ─────────────────── #}
             {# High (cirrus): 15% block — Medium (cumulus): 45% — Low (stratus): 75% #}
-            {% set c_high = states('sensor.astroweather_astroweather_clouds_area_high')   |
-          float(0) / 100 %}
-            {% set c_mid  = states('sensor.astroweather_astroweather_clouds_area_medium')
-          | float(0) / 100 %}
-            {% set c_low  = states('sensor.astroweather_astroweather_clouds_area_low')    |
-          float(0) / 100 %}
-            {% set cloud_trans = (1 - c_high * 0.15) * (1 - c_mid * 0.45) * (1 - c_low
-          * 0.75) %}
+            {% set c_high = states('sensor.astroweather_astroweather_clouds_area_high') | float(0) / 100 %}
+            {% set c_mid  = states('sensor.astroweather_astroweather_clouds_area_medium') | float(0) / 100 %}
+            {% set c_low  = states('sensor.astroweather_astroweather_clouds_area_low') | float(0) / 100 %}
+            {% set cloud_trans = (1 - c_high * 0.15) * (1 - c_mid * 0.45) * (1 - c_low * 0.75) %}
 
             {# ── Fog attenuation ──────────────────────────────────────── #}
-            {% set fog   = states('sensor.astroweather_astroweather_fog_area') | float(0)
-          %}
+            {% set fog   = states('sensor.astroweather_astroweather_fog_area') | float(0) %}
             {% set fog_f = 0.05 if fog > 30 else (1 - fog / 100 * 0.8) %}
 
             {# ── Rain attenuation (progressive): 15 mm/h = 85% block ───── #}
-            {% set rain_mh = states('sensor.pirateweather_precip_intensity') | float(0)
-          %}
+            {% set rain_mh = states('sensor.pirateweather_precip_intensity') | float(0) %}
             {% set rain_f  = [1 - (rain_mh / 15), 0.15] | max %}
 
             {# ── Active thunderstorm hard cutoff ──────────────────────── #}
@@ -74,8 +67,7 @@ template:
 
             {# Thunder probability: graduated attenuation only (not a hard cutoff) #}
             {# 0% → factor 1.0 — 100% → factor 0.30 (panels still produce at ~30%) #}
-            {% set thunder_p = states('sensor.phuket_day_thunder_probability') | float(0)
-          %}
+            {% set thunder_p = states('sensor.phuket_day_thunder_probability') | float(0) %}
             {% set thunder_f = 1.0 - (thunder_p / 100 * 0.70) %}
 
             {% if active_storm %}
@@ -89,8 +81,7 @@ template:
 
               {# ── Physical irradiance anchor from rain detector (mV) ───── #}
               {# 5600 mV ≈ full sun ~1000 W/m²; blend at 20% weight #}
-              {% set mv_raw = states('sensor.rain_detector_illuminance_raw') | float(0)
-          %}
+              {% set mv_raw = states('sensor.rain_detector_illuminance_raw') | float(0) %}
               {% set mv_f   = [mv_raw / 5600, 1.0] | min %}
 
               {# ── Composite irradiance factor ───────────────────────────── #}
@@ -128,8 +119,7 @@ template:
           {% set soc     = states('sensor.battery_soc_simulated') | float(0) %}
           {% set max_chg = 3000 %}
           {% if soc >= 100 %}{{ 0 }}
-          {% else %}{{ [[solar - home, 0] | max, max_chg] | min | round(1) }}{% endif
-          %}
+          {% else %}{{ [[solar - home, 0] | max, max_chg] | min | round(1) }}{% endif %}
           {# NOTE: this is solar's OWN available contribution, capped at 3000W.
              sensor.battery_charge_power_total (battery package) applies the true
              COMBINED cap across solar+wind, so treat this one as "available",
@@ -147,13 +137,12 @@ template:
              anywhere else; safe to remove if you don't need the solar/wind split. #}
           {% set solar = states('sensor.solar_live_power_simulated') | float(0) %}
           {% set wind  = states('sensor.wind_turbine_power_simulated') | float(0) %}
-          {% set total_export = states('sensor.grid_power_export_simulated') | float(0)
-          %}
+          {% set total_export = states('sensor.grid_power_export_simulated') | float(0) %}
           {% set gen = solar + wind %}
           {% if gen > 0 %}{{ (total_export * (solar / gen)) | round(1) }}
           {% else %}{{ 0 }}{% endif %}
 
-      - name: "Solar Energy Accumulated (Simulated)"
+      - name: "Solar Energy Accumulated"
         unique_id: solar_energy_accumulated_simulated
         unit_of_measurement: "kWh"
         device_class: energy
@@ -162,13 +151,13 @@ template:
         state: >
           {{ states('sensor.total_solar_energy_in') | float(0) | round(3) }}
 
-      - name: "Solar Export Energy Accumulated (Simulated)"
+      - name: "Solar Export Energy Accumulated"
         unique_id: solar_export_energy_accumulated_simulated
         unit_of_measurement: "kWh"
         device_class: energy
         state_class: total_increasing
         icon: mdi:transmission-tower-export
-        state: >
+        state: >-
           {# Wrapper so solar's export-energy total is Energy-Dashboard eligible,
              same pattern as solar_energy_accumulated_simulated above. This is
              solar's informational share — sensor.total_grid_energy_export

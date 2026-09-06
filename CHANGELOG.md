@@ -1,5 +1,9 @@
 
 
+## v2026.09.06-1214 - 2026-09-06
+- added sensors to casa_health_check
+
+
 ## v2026.08.31-2357 - 2026-08-31
 - Synced. The garage camera saw something last night. I've said too much.
 

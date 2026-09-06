@@ -136,10 +136,10 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2225 |
-| Number of sensors | 1232 |
-| Current Version | 2026.8.3 |
-| Total Automations | 124 |
+| Number of entities | 2224 |
+| Number of sensors | 1226 |
+| Current Version | 2026.9.1 |
+| Total Automations | 118 |
 | Total Scripts | 38 |
 | Total Lights | 32 |
 | Total Switches | 170 |
@@ -179,11 +179,11 @@ This repository is treated as:
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.1.1)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.1.2)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.1.0)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.1.3)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
@@ -197,7 +197,7 @@ This repository is treated as:
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
-- [Spook](https://spook.boo) (v5.3.0)
+- [Spook](https://spook.boo) (v5.4.0)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
