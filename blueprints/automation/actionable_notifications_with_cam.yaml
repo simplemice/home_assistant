@@ -35,8 +35,8 @@ blueprint:
       selector:
         text:
           type: search
-          multiple: false
           multiline: false
+          multiple: false
     trigger_entity:
       name: Trigger entity
       description: Send the notification when this boolean turns on

@@ -40,21 +40,7 @@
 # ============================================================================
 template:
   - sensor:
-      - name: "Grid Power Import (Simulated)"
-        unique_id: grid_power_import_simulated
-        unit_of_measurement: "W"
-        device_class: power
-        state_class: measurement
-        icon: mdi:transmission-tower
-        state: >
-          {% set solar_home = states('sensor.solar_power_to_home') | float(0) %}
-          {% set wind_home  = states('sensor.wind_power_to_home') | float(0) %}
-          {% set batt_dis   = states('sensor.battery_discharge_power_home') | float(0)
-          %}
-          {% set home       = states('sensor.sim_home_power') | float(0) %}
-          {{ [home - solar_home - wind_home - batt_dis, 0] | max | round(1) }}
-
-      - name: "Grid Power Export (Simulated)"
+      - name: "Grid Power Export"
         unique_id: grid_power_export_simulated
         unit_of_measurement: "W"
         device_class: power
@@ -62,8 +48,7 @@ template:
         icon: mdi:transmission-tower-export
         state: >
           {% set solar    = states('sensor.solar_live_power_simulated') | float(0) %}
-          {% set wind     = states('sensor.wind_turbine_power_simulated') | float(0)
-          %}
+          {% set wind     = states('sensor.wind_turbine_power_simulated') | float(0) %}
           {% set home     = states('sensor.sim_home_power') | float(0) %}
           {% set batt_chg = states('sensor.battery_charge_power_total') | float(0) %}
           {{ [(solar + wind) - home - batt_chg, 0] | max | round(1) }}
@@ -120,6 +105,26 @@ template:
         icon: mdi:transmission-tower-export
         state: >
           {{ states('sensor.total_grid_energy_export') | float(0) | round(3) }}
+
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/1"
+    sensor:
+      - name: "Grid Power Import"
+        unique_id: grid_power_import_simulated
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        icon: mdi:transmission-tower
+        availability: >
+          {{ has_value('sensor.sim_home_power') and has_value('sensor.solar_power_to_home')
+             and has_value('sensor.wind_power_to_home') and has_value('sensor.battery_discharge_power_home') }}
+        state: >-
+          {% set solar_home = states('sensor.solar_power_to_home') | float(0) %}
+          {% set wind_home  = states('sensor.wind_power_to_home') | float(0) %}
+          {% set batt_dis   = states('sensor.battery_discharge_power_home') | float(0) %}
+          {% set home       = states('sensor.sim_home_power') | float(0) %}
+          {{ [home - solar_home - wind_home - batt_dis, 0] | max | round(1) }}
 sensor:
   - platform: integration
     source: sensor.grid_power_import_simulated

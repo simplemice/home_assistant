@@ -25,6 +25,11 @@ input_datetime:
     has_date: false
     has_time: true
 
+  house_comfort_alert_last_sent:
+    name: House Comfort Alert Last Sent
+    has_date: true
+    has_time: true
+
 # ─── Devices ────────────────────────────────────────────────────────────────
 climate:
   - platform: smartir

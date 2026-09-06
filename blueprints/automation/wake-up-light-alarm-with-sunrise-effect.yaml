@@ -13,6 +13,7 @@ blueprint:
           domain:
           - light
           multiple: false
+          reorder: false
     timestamp_sensor:
       name: Alarm timestamp sensor
       description: 'Sensor with timestamp of next alarm with device_class: timestamp
@@ -23,6 +24,7 @@ blueprint:
           device_class:
           - timestamp
           multiple: false
+          reorder: false
     manual_time:
       name: Manual alarm time
       description: Time to trigger alarm every day if timestamp sensor is not set.
@@ -38,6 +40,7 @@ blueprint:
       selector:
         entity:
           multiple: false
+          reorder: false
     sunrise_duration:
       name: Sunrise duration
       description: The sunrise will start the configured number of minutes before

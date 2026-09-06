@@ -14,20 +14,6 @@ sensor:
     json_attributes:
       - iss_position
       - timestamp
-  - platform: rest
-    scan_interval: 1800
-    name: SpaceX Starman Raw
-    resource: "https://api.spacexdata.com/v2/info/roadster"
-    value_template: "{{ value_json.name }}"
-    json_attributes:
-      - speed_kph
-      - earth_distance_km
-      - mars_distance_km
-      - launch_mass_kg
-      - period_days
-      - apoapsis_au
-      - periapsis_au
-
 device_tracker:
   - platform: mqtt_json
     devices:
@@ -35,57 +21,29 @@ device_tracker:
 
 template:
   - sensor:
-      - name: "Starman Speed"
-        icon: mdi:rocket
-        unit_of_measurement: "km/h"
-        device_class: speed
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'speed_kph') | float | round(0) }}
-      - name: "Starman Distance from Earth"
-        icon: mdi:earth
-        unit_of_measurement: "km"
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'earth_distance_km') | float | round(0) }}
-      - name: "Starman Distance from Mars"
-        icon: mdi:planet
-        unit_of_measurement: "km"
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'mars_distance_km') | float | round(0) }}
-      - name: "Starman Orbital Period"
-        icon: mdi:calendar-sync
-        unit_of_measurement: "days"
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'period_days') | float | round(1) }}
-      - name: "Starman Launch Mass"
-        icon: mdi:weight
-        unit_of_measurement: "kg"
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'launch_mass_kg') | float | round(0) }}
-      - name: "Starman Apoapsis"
-        icon: mdi:orbit
-        unit_of_measurement: "AU"
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'apoapsis_au') | float | round(3) }}
-      - name: "Starman Periapsis"
-        icon: mdi:orbit
-        unit_of_measurement: "AU"
-        state: >
-          {{ state_attr('sensor.spacex_starman_raw', 'periapsis_au') | float | round(3) }}
       - name: "ISS Latitude"
+        unique_id: iss_latitude
         icon: mdi:latitude
         unit_of_measurement: "°"
+        state_class: measurement
+        availability: "{{ has_value('sensor.iss_raw') }}"
         state: >
-          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('latitude', 0) | float }}
+          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('latitude', 0) | float(0) }}
       - name: "ISS Longitude"
+        unique_id: iss_longitude
         icon: mdi:longitude
         unit_of_measurement: "°"
+        state_class: measurement
+        availability: "{{ has_value('sensor.iss_raw') }}"
         state: >
-          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('longitude', 0) | float }}
-      - name: "ISS Timestamp"
+          {{ (state_attr('sensor.iss_raw', 'iss_position') or {}).get('longitude', 0) | float(0) }}
+      - name: "ISS Last Update"
+        unique_id: iss_last_update
         icon: mdi:clock
+        device_class: timestamp
+        availability: "{{ has_value('sensor.iss_raw') and state_attr('sensor.iss_raw', 'timestamp') is not none }}"
         state: >
-          {{ state_attr('sensor.iss_raw', 'timestamp') | int(0) | timestamp_local }}
-
+          {{ as_datetime(state_attr('sensor.iss_raw', 'timestamp')) }}
 automation:
   #Publish ISS Location data to MQTT Topic
   - id: iss_location_publish

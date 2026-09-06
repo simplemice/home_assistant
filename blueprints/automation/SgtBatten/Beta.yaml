@@ -162,8 +162,8 @@ blueprint:
                   after_zones | join('', '') | replace(''_'', '' '' ) | title }} at
                   {{event[''after''][''start_time'']|timestamp_custom(''%H:%M'')}}.'
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         update_sub_label:
           name: Update Sub Labels (Advanced)
           description: 'Update the title and/or message with the matched face name
@@ -203,8 +203,8 @@ blueprint:
                 }}'
               - '{{ event[''after''][''top_score''] |float(0) > 0.8 }}'
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         interruption_level:
           name: Interruption Level (iOS)
           description: 'Set the interruption level on iOS devices. This can be templated.
@@ -228,9 +228,9 @@ blueprint:
                 else ''active''}}'
               - '{{''time-sensitive'' if is_state(''sun.sun'', ''above_horizon'')
                 else ''passive'' }}'
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         tts:
           name: Use TTS to override silent/dnd modes on specific phones.
           description: 'Some phones (the Samsung galaxy line, in particular,) disable
@@ -302,9 +302,9 @@ blueprint:
               - label: Snapshot cropped with bounding box (2:1)
                 value: '{{base_url}}/api/frigate{{client_id}}/notifications/{{id}}/snapshot.jpg?bbox=1&crop=1&format=android'
               mode: dropdown
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         attachment_2:
           name: Subsequent Attachment (Optional)
           description: "Choose which image or GIF to attach to the notification for
@@ -342,9 +342,9 @@ blueprint:
               - label: Snapshot cropped with bounding box (2:1)
                 value: '{{base_url}}/api/frigate{{client_id}}/notifications/{{id}}/snapshot.jpg?bbox=1&crop=1&format=android'
               mode: dropdown
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         video:
           name: Video (Optional)
           description: You can optionally attach the clip to the notification which
@@ -364,9 +364,9 @@ blueprint:
               - label: Clip m3u8 (IOS)
                 value: '{{base_url}}/api/frigate{{client_id}}/notifications/{{id}}/{{camera}}/master.m3u8'
               mode: dropdown
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         final_update:
           name: Final update (Optional)
           description: Update the notification at the end of the event. Used to ensure
@@ -432,9 +432,9 @@ blueprint:
                 value: '#000000'
               - label: White
                 value: '#ffffff'
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         icon:
           name: Notification Icon (Optional)
           description: Change the icon that displays on the notification. You can
@@ -450,8 +450,8 @@ blueprint:
                 'Dog' else 'cat' if label == 'Cat' else 'car' if label == 'Car' else
                 'paw' if label == 'Animal' else 'home-assistant'}}
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         group:
           name: Group
           description: The group name that will determine if notifications are grouped
@@ -475,8 +475,8 @@ blueprint:
               - default
               - none
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         volume:
           name: Volume Sound - iOS only (Optional)
           description: You can specify a sound level between 0 and 100
@@ -862,8 +862,8 @@ blueprint:
               - label: Notification History (Android)
                 value: settings://notification_history
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         button_1:
           name: Action Button 1 Text
           description: The text used on the first Action button at the bottom of the
@@ -907,8 +907,8 @@ blueprint:
               - label: Custom Action (Manual Trigger)
                 value: custom-{{ this.entity_id }}
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         icon_1:
           name: Action Button 1 icon - iOS Only
           description: Customise the Icon on the first Action Button. Only the iOS
@@ -955,8 +955,8 @@ blueprint:
               - label: Custom Action (Manual Trigger)
                 value: custom-{{ this.entity_id }}
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         icon_2:
           name: Action Button 2 icon - iOS Only
           description: Customise the Icon on the second Action Button. Only the iOS
@@ -1003,8 +1003,8 @@ blueprint:
               - label: Custom Action (Manual Trigger)
                 value: custom-{{ this.entity_id }}
               custom_value: true
-              sort: false
               multiple: false
+              sort: false
         icon_3:
           name: Action Button 3 icon - iOS Only
           description: Customise the Icon on the third Action Button. Only the iOS
@@ -1070,9 +1070,9 @@ blueprint:
               - top-right
               - top-left
               - center
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         tv_size:
           name: TV Notification Size (Optional)
           description: Set the size of the notification on your TV.
@@ -1085,9 +1085,9 @@ blueprint:
               - medium
               - large
               - max
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         tv_duration:
           name: TV Notification Duration (Optional)
           description: The duration (in seconds) that the notification will display
@@ -1113,9 +1113,9 @@ blueprint:
               - 50%
               - 75%
               - 100%
+              multiple: false
               custom_value: false
               sort: false
-              multiple: false
         tv_interrupt:
           name: TV Notification Interrupt (Optional)
           description: If set to true the notification is interactive and can be dismissed

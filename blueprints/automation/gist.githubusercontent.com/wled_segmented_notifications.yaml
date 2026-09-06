@@ -17,15 +17,15 @@ blueprint:
       default: HA Notify
       selector:
         text:
-          multiple: false
           multiline: false
+          multiple: false
     default_preset_name:
       name: Default Preset Name
       default: Default
       selector:
         text:
-          multiple: false
           multiline: false
+          multiple: false
     number_of_segments:
       name: Number of Notification Segments to Use
       selector:
@@ -39,9 +39,9 @@ blueprint:
             value: '3'
           - label: 4 Segments
             value: '4'
+          multiple: false
           custom_value: false
           sort: false
-          multiple: false
       default: '1'
     trigger_1:
       name: Segment 1 Trigger Entity
@@ -61,8 +61,8 @@ blueprint:
       name: Segment 1 Effect
       selector:
         text:
-          multiple: false
           multiline: false
+          multiple: false
       default: Solid
     speed_1:
       name: Segment 1 Effect Speed
@@ -109,8 +109,8 @@ blueprint:
       name: Segment 2 Effect
       selector:
         text:
-          multiple: false
           multiline: false
+          multiple: false
       default: Blink
     speed_2:
       name: Segment 2 Effect Speed
@@ -157,8 +157,8 @@ blueprint:
       name: Segment 3 Effect
       selector:
         text:
-          multiple: false
           multiline: false
+          multiple: false
       default: Solid
     speed_3:
       name: Segment 3 Effect Speed
@@ -205,8 +205,8 @@ blueprint:
       name: Segment 4 Effect
       selector:
         text:
-          multiple: false
           multiline: false
+          multiple: false
       default: Heartbeat
     speed_4:
       name: Segment 4 Effect Speed
