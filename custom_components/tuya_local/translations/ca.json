@@ -52,7 +52,7 @@
             },
             "select_type_auto_detected": {
                 "title": "Trieu el tipus de dispositiu",
-                "description": "{device_name}Trieu el tipus que coincideix amb el vostre dispositiu. La versión de protocolo {detected_protocol} se detectó automáticamente y se guardó. Si actualiza el firmware del dispositivo en el futuro, es posible que deba reconfigurar esta integración.",
+                "description": "{device_name}Trieu el tipus que coincideixi amb el vostra dispositiu. La versió del protocol {detected_protocol} s'ha detectat i desat automàticament. Si actualitzeu el microprogramari del dispositiu en el futur, és possible que hàgiu de reconfigurar aquesta integració.",
                 "data": {
                     "type": "Tipus de dispositiu"
                 }
@@ -71,7 +71,7 @@
             "no_devices": "No s'ha pogut trobar cap dispositiu sense registrar per al compte."
         },
         "error": {
-            "connection": "No s'ha pogut conectar al vostre dispositiu con esos detalles. Podría ser un problema intermitente, o podrían ser incorrectos. Si seleccionó una versión de protocolo específica, intente 'auto' en su lugar.",
+            "connection": "No s'ha pogut connectar al vostre dispositiu amb aquests detalls. Podria ser una qüestió intermitent, o pot ser que siguin incorrectes. Si heu seleccionat una versió específica del protocol, proveu «auto».",
             "needs_hub": "El dispositiu necessita una passarel·la i no se n'ha seleccionat cap.",
             "does_not_need_hub": "El dispositiu no necessita una passarel·la i se n'ha seleccionat una. Reviseu les vostres opcions."
         }
@@ -103,7 +103,7 @@
             "not_supported": "No hi ha suport per a aquest dispositiu."
         },
         "error": {
-            "connection": "No s'ha pogut conectar al vostre dispositiu con esos detalles. Podría ser un problema intermitente, o podrían ser incorrectos. Si seleccionó una versión de protocolo específica, intente 'auto' en su lugar."
+            "connection": "No s'ha pogut connectar al vostre dispositiu amb aquests detalls. Podria ser una qüestió intermitent, o pot ser que siguin incorrectes. Si heu seleccionat una versió específica del protocol, proveu «auto»."
         }
     },
     "services": {
@@ -112,7 +112,7 @@
             "description": "Envía un comando IR que ha sido aprendido por un dispositivo Tuya Local compatible.",
             "fields": {
                 "emitter_entity_id": {
-                    "name": "Emisor",
+                    "name": "Emissor",
                     "description": "La entidad del transmisor IR que se utilizará para enviar el comando."
                 },
                 "command": {
@@ -310,7 +310,9 @@
                             "fan_only": "Ventilador",
                             "heat": "Aire calent",
                             "floor_cool": "Terra fred",
-                            "floor_heat": "Terra calent"
+                            "floor_heat": "Terra calent",
+                            "air_floor_cool": "Aire i terra freds",
+                            "air_floor_heat": "Aire i terra calents"
                         }
                     }
                 }
@@ -449,6 +451,9 @@
         "event": {
             "alarm": {
                 "name": "Alarma"
+            },
+            "notification": {
+                "name": "Notificació"
             }
         },
         "humidifier": {
@@ -790,6 +795,7 @@
                 "state": {
                     "cancel": "Cancel·la",
                     "continuous": "Continu",
+                    "custom": "Personalitzat",
                     "5s": "5 segons",
                     "10s": "10 segons",
                     "15s": "15 segons",
@@ -862,7 +868,13 @@
                     "4d": "4 dies",
                     "5d": "5 dies",
                     "6d": "6 dies",
-                    "7d": "7 dies"
+                    "7d": "7 dies",
+                    "10d": "10 dies",
+                    "30d": "30 dies",
+                    "60d": "60 dies",
+                    "90d": "90 dies",
+                    "160d": "160 dies",
+                    "365d": "365 dies"
                 }
             },
             "temperature_unit": {
@@ -976,7 +988,7 @@
                     "dry": "Seco",
                     "storage": "Almacenamiento",
                     "light": "Ligero",
-                    "pots": "Ollas"
+                    "pots": "Pots i cassoles"
                 }
             },
             "water_hardness": {
@@ -1155,7 +1167,7 @@
             "cleanliness": {
                 "name": "Limpieza",
                 "state": {
-                    "poor": "Mala",
+                    "poor": "Pobra",
                     "good": "Buena",
                     "great": "Excelente"
                 }
@@ -1204,6 +1216,17 @@
             "energy_consumed_x": {
                 "name": "Energia consumida {x}"
             },
+            "sd_status": {
+                "name": "Estat de la targeta SD",
+                "state": {
+                    "fault": "Errada",
+                    "formatting": "Formatant",
+                    "full": "Plena",
+                    "missing": "Sense targeta SD",
+                    "normal": "Normal",
+                    "unformatted": "Sense format"
+                }
+            },
             "status": {
                 "name": "Estat",
                 "state": {
@@ -1216,7 +1239,7 @@
                     "charged": "Carregat",
                     "fault": "Fallada",
                     "paused": "En pausa",
-                    "waiting_for_authorization": "S'està esperant autorització",
+                    "waiting_for_authorization": "En espera d'autorització",
                     "standby": "En espera",
                     "heating": "Calefacció",
                     "cold": "Frío",
@@ -1263,6 +1286,7 @@
                     "occupied": "Ocupat",
                     "normal": "Normal",
                     "low": "Baix",
+                    "medium": "Mitjà",
                     "high": "Alt",
                     "unwashed": "No rentat",
                     "pre_washing": "Prerentat",
@@ -1282,8 +1306,6 @@
                     "full": "Ple",
                     "empty": "Buit",
                     "missing": "Falta",
-                    "formatting": "Formatant",
-                    "unformatted": "No formatat",
                     "failed": "Ha fallat",
                     "replying": "Responent",
                     "playback": "Reproducció",
@@ -1372,6 +1394,9 @@
                     "off": "Normal"
                 }
             },
+            "camera_record": {
+                "name": "Gravació de la càmera"
+            },
             "do_not_disturb": {
                 "name": "No molestar"
             },
@@ -1424,25 +1449,25 @@
                 "name": "Alarma {x} ajornament activat"
             },
             "alarm_x_day_monday": {
-                "name": "Alarma {x} dia 1-dilluns"
+                "name": "Alarma {x} dia 1 dilluns"
             },
             "alarm_x_day_tuesday": {
-                "name": "Alarma {x} dia 2-dimarts"
+                "name": "Alarma {x} dia 2 dimarts"
             },
             "alarm_x_day_wednesday": {
-                "name": "Alarma {x} dia 3-dimecres"
+                "name": "Alarma {x} dia 3 dimecres"
             },
             "alarm_x_day_thursday": {
-                "name": "Alarma {x} dia 4-dijous"
+                "name": "Alarma {x} dia 4 dijous"
             },
             "alarm_x_day_friday": {
-                "name": "Alarma {x} dia 5-divendres"
+                "name": "Alarma {x} dia 5 divendres"
             },
             "alarm_x_day_saturday": {
-                "name": "Alarma {x} dia 6-dissabte"
+                "name": "Alarma {x} dia 6 dissabte"
             },
             "alarm_x_day_sunday": {
-                "name": "Alarma {x} dia 7-diumenge"
+                "name": "Alarma {x} dia 7 diumenge"
             },
             "music_playback": {
                 "name": "Reproducció de música"

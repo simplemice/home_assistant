@@ -6,8 +6,8 @@ import json
 import logging
 
 from homeassistant.const import (
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     UnitOfArea,
+    UnitOfDensity,
     UnitOfTemperature,
 )
 from homeassistant.helpers.entity import EntityCategory
@@ -143,8 +143,8 @@ class TuyaLocalEntity:
 UNIT_ASCII_MAP = {
     "C": UnitOfTemperature.CELSIUS.value,
     "F": UnitOfTemperature.FAHRENHEIT.value,
-    "ugm3": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    "m2": UnitOfArea.SQUARE_METERS,
+    "ugm3": UnitOfDensity.MICROGRAMS_PER_CUBIC_METER.value,
+    "m2": UnitOfArea.SQUARE_METERS.value,
 }
 
 

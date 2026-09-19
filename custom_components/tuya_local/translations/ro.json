@@ -310,7 +310,9 @@
                             "fan_only": "Ventilator",
                             "heat": "Aer cald",
                             "floor_cool": "Răcire podea",
-                            "floor_heat": "Încălzire podea"
+                            "floor_heat": "Încălzire podea",
+                            "air_floor_cool": "Răcire aer + podea",
+                            "air_floor_heat": "Încălzire aer + podea"
                         }
                     }
                 }
@@ -411,6 +413,9 @@
         "event": {
             "alarm": {
                 "name": "Alarmă"
+            },
+            "notification": {
+                "name": "Notificare"
             }
         },
         "humidifier": {
@@ -790,6 +795,7 @@
                 "state": {
                     "cancel": "Anulează",
                     "continuous": "Continuu",
+                    "custom": "Personalizat",
                     "5s": "5 secunde",
                     "10s": "10 secunde",
                     "15s": "15 secunde",
@@ -862,7 +868,13 @@
                     "4d": "4 zile",
                     "5d": "5 zile",
                     "6d": "6 zile",
-                    "7d": "7 zile"
+                    "7d": "7 zile",
+                    "10d": "10 zile",
+                    "30d": "30 zile",
+                    "60d": "60 zile",
+                    "90d": "90 zile",
+                    "160d": "160 zile",
+                    "365d": "365 zile"
                 }
             },
             "temperature_unit": {
@@ -1171,6 +1183,17 @@
                     "danger": "Periculos"
                 }
             },
+            "sd_status": {
+                "name": "Stare card SD",
+                "state": {
+                    "fault": "Defecțiune",
+                    "formatting": "Formatare",
+                    "full": "Plin",
+                    "missing": "Lipsă",
+                    "normal": "Normal",
+                    "unformatted": "Neformatat"
+                }
+            },
             "status": {
                 "name": "Stare",
                 "state": {
@@ -1230,6 +1253,7 @@
                     "occupied": "Ocupat",
                     "normal": "Normal",
                     "low": "Scăzut",
+                    "medium": "Mediu",
                     "high": "Ridicat",
                     "unwashed": "Nespălat",
                     "pre_washing": "Pre-spălare",
@@ -1249,8 +1273,6 @@
                     "full": "Plin",
                     "empty": "Gol",
                     "missing": "Lipsă",
-                    "formatting": "Formatare",
-                    "unformatted": "Neformatat",
                     "failed": "Eșuat",
                     "replying": "Răspuns",
                     "playback": "Redare",
@@ -1371,6 +1393,9 @@
                     "off": "Deschis",
                     "on": "Închis"
                 }
+            },
+            "camera_record": {
+                "name": "Înregistrare cameră"
             },
             "do_not_disturb": {
                 "name": "Nu deranjați"

@@ -136,14 +136,14 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2224 |
-| Number of sensors | 1226 |
-| Current Version | 2026.9.1 |
-| Total Automations | 118 |
-| Total Scripts | 38 |
+| Number of entities | 2265 |
+| Number of sensors | 1252 |
+| Current Version | 2026.9.3 |
+| Total Automations | 123 |
+| Total Scripts | 41 |
 | Total Lights | 32 |
-| Total Switches | 170 |
-| Total Scenes | 9 |
+| Total Switches | 172 |
+| Total Scenes | 6 |
 | Total Players | 11 |
 
 ---
@@ -173,18 +173,21 @@ This repository is treated as:
 
 ## 🧩 Installed Integrations
 - [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting#readme) (v1.30.1)
-- [AI Long Term Memory](https://github.com/Riscue/ha-ai-memory) (v0.2.1)
+- [AI Memory](https://github.com/Riscue/ha-ai-memory) (v0.3.0)
 - [Alarmo](https://github.com/nielsfaber/alarmo) (v1.10.17)
 - [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
+- [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.1.1)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.1.2)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.3)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.2.0)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.1.3)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.0)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
+- [House Plan](https://github.com/Matysh/houseplan-card) (v1.76.0)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
 - [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.7.3)
@@ -208,7 +211,11 @@ This repository is treated as:
 
 ## 🔗 Custom integrations
 
-- [Ai Long Term Memory](https://github.com/Riscue/ha-ai-memory)
+- [Ai Memory](https://github.com/Riscue/ha-ai-memory)
+
+- [Claude Pulse](https://github.com/nikolmedo/ClaudePulse)
+
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability)
 
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 

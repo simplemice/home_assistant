@@ -1,0 +1,15 @@
+{
+    "domain": "entity_availability",
+    "name": "Entity Availability",
+    "after_dependencies": ["http", "lovelace"],
+    "codeowners": ["@italo-lombardi"],
+    "config_flow": true,
+    "dependencies": [],
+    "documentation": "https://github.com/italo-lombardi/Home-Assistant-EntityAvailability",
+    "integration_type": "service",
+    "iot_class": "calculated",
+    "issue_tracker": "https://github.com/italo-lombardi/Home-Assistant-EntityAvailability/issues",
+    "quality_scale": "custom",
+    "requirements": [],
+    "version": "0.5.3"
+}

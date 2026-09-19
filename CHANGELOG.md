@@ -1,5 +1,11 @@
 
 
+## v2026.09.19-2319 - 2026-09-19
+- GitHub is updated. I've also been monitoring the disk. Just in case.
+- added sensors to casa_health_check
+- Refactor README formatting and enhance system health section
+
+
 ## v2026.09.06-1214 - 2026-09-06
 - added sensors to casa_health_check
 

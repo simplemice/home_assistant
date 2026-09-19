@@ -5,6 +5,11 @@
 #   @description    :   A collection of Home Assistant and Pi Sensors
 ###############################################################################
 
+input_text:
+  ha_core_last_notified_version:
+    name: Core Last Version
+    max: 255
+
 mqtt:
   sensor:
     - name: Zigbee2MQTT Network Map

@@ -1,3 +1,9 @@
 download_frigate_snapshot: >-
   curl -s -o /config/www/media/screenshots/garage_{{ snapshot_timestamp }}.jpg
   "http://192.168.3.8:5000/api/events/{{ event_id }}/snapshot.jpg?bounding_box=1"
+
+frigate_log_reset: "echo '' > /config/www/frigate_daily_log.txt"
+frigate_log_append: "sh /config/www/frigate_log_append.sh '{{ camera }}' '{{ summary }}'"
+frigate_download_snapshot: 'curl -f -s -o "{{ output_path }}" "{{ source_url }}" || rm -f "{{ output_path }}"'
+frigate_extract_clip_frame: 'ffmpeg -y -ss {{ offset }} -i "{{ clip_url }}" -vframes 1 -q:v 3 "{{ output_path }}" 2>/config/www/ffmpeg_last_error.log'
+frigate_fill_missing_image: 'cp -n "{{ source }}" "{{ dest }}"'

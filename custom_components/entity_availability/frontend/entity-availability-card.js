@@ -1,0 +1,2293 @@
+/**
+ * Entity Availability Card v0.5.2
+ * Custom Lovelace card for the Home Assistant Entity Availability integration.
+ */
+
+const CARD_VERSION = "0.5.3";
+
+console.info(
+  `%c ENTITY-AVAILABILITY-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
+  "color: white; background: #4caf50; font-weight: bold; padding: 2px 6px; border-radius: 3px 0 0 3px;",
+  "color: #4caf50; background: #e8f5e9; font-weight: bold; padding: 2px 6px;",
+  "color: #9e9e9e; background: #e8f5e9; padding: 2px 6px; border-radius: 0 3px 3px 0;"
+);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "entity-availability-card",
+  name: "Entity Availability Card",
+  description: "Dashboard-style entity health monitoring with availability bars and entity list.",
+  preview: true,
+  documentationURL: "https://github.com/italo-lombardi/Home-Assistant-EntityAvailability",
+});
+
+// Canonical no-build LitElement bootstrap — matches thomasloven/lovelace-card-tools pattern.
+// home-assistant-main and hui-view are in HA's initial bundle; always defined before card JS runs.
+// Synchronous get() avoids the iOS WKWebView timing issues caused by whenDefined("ha-panel-lovelace")
+// (ha-panel-lovelace is lazy-loaded and may resolve late or not at all on the Companion App).
+const LitElement = Object.getPrototypeOf(
+  customElements.get("home-assistant-main") || customElements.get("hui-view")
+);
+const html = LitElement.prototype.html;
+const nothing = LitElement.prototype.nothing ?? "";
+const css = LitElement.prototype.css || (() => {
+  class CSSResult {
+    constructor(cssText) {
+      this.cssText = cssText;
+      this._styleSheet = null;
+    }
+    get styleSheet() {
+      if (this._styleSheet === null && window.CSSStyleSheet) {
+        try {
+          this._styleSheet = new CSSStyleSheet();
+          this._styleSheet.replaceSync(this.cssText);
+        } catch (e) {
+          this._styleSheet = null;
+        }
+      }
+      return this._styleSheet;
+    }
+    toString() { return this.cssText; }
+  }
+  return (strings, ...values) => new CSSResult(
+    strings.reduce((acc, str, i) => acc + str + (values[i] != null ? String(values[i]) : ""), "")
+  );
+})();
+
+const AVAILABILITY_WINDOWS = [
+  { key: "today", label: "Today" },
+  { key: "3d", label: "3 Days" },
+  { key: "5d", label: "5 Days" },
+  { key: "7d", label: "7 Days" },
+];
+
+const STATUS_ICONS = {
+  green: "mdi:check-circle",
+  yellow: "mdi:alert-circle",
+  red: "mdi:close-circle",
+};
+
+const STATUS_COLORS = {
+  green: "#4caf50",
+  yellow: "#ff9800",
+  red: "#f44336",
+};
+
+const cardStyles = css`
+  :host {
+    --eac-green: #4caf50;
+    --eac-yellow: #ff9800;
+    --eac-red: #f44336;
+    --eac-text-primary: var(--primary-text-color, #212121);
+    --eac-text-secondary: var(--secondary-text-color, #727272);
+    --eac-divider: var(--divider-color, rgba(0, 0, 0, 0.12));
+    --eac-bar-bg: var(--disabled-color, #bdbdbd);
+    --eac-card-bg: var(--ha-card-background, var(--card-background-color, var(--primary-background-color, #1c1c1e)));
+  }
+
+  ha-card {
+    overflow: visible;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .header-icon {
+    --mdc-icon-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .group-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--eac-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-right {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--eac-text-secondary);
+    white-space: nowrap;
+    margin-left: 12px;
+  }
+
+  .divider {
+    height: 1px;
+    background-color: var(--eac-divider);
+    margin: 0 16px;
+  }
+
+  /* Stats Row */
+  .stats-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+  }
+
+  .stat-item {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .stat-item.online {
+    color: var(--eac-green);
+  }
+
+  .stat-item.offline {
+    color: var(--eac-red);
+  }
+
+  .stat-item.battery {
+    color: var(--eac-yellow);
+  }
+
+  .stat-item.neutral {
+    color: var(--eac-text-secondary);
+  }
+
+  .suppressed-banner {
+    font-size: 12px;
+    color: var(--eac-text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: 4px 16px 8px;
+  }
+
+  /* Availability Section */
+  .availability-section {
+    padding: 10px 16px;
+  }
+
+  .availability-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .availability-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .availability-label {
+    font-size: 13px;
+    color: var(--eac-text-secondary);
+    min-width: 50px;
+  }
+
+  .availability-bar {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--eac-bar-bg);
+    overflow: hidden;
+  }
+
+  .availability-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .availability-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--eac-text-primary);
+    min-width: 45px;
+    text-align: right;
+  }
+
+  /* Entity List */
+  .entity-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .entity-section-header:hover {
+    opacity: 0.8;
+  }
+
+  .entity-section-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--eac-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chevron {
+    transition: transform 0.3s ease;
+    --mdc-icon-size: 18px;
+  }
+
+  .chevron.expanded {
+    transform: rotate(180deg);
+  }
+
+  .entity-list {
+    padding: 0 16px 12px;
+    overflow: visible;
+  }
+
+  .entity-list.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding: 0 16px;
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+  }
+
+  .entity-list.expanded {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  /* Combined group breakdown */
+  .group-breakdown {
+    padding: 0 16px 12px;
+    overflow: visible;
+  }
+
+  .group-breakdown.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding: 0 16px;
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+  }
+
+  .group-breakdown.expanded {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  .group-breakdown-row {
+    display: grid;
+    grid-template-columns: minmax(60px, 1fr) repeat(3, minmax(36px, 56px));
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--eac-divider);
+    font-size: 13px;
+  }
+
+  .group-breakdown-row.clickable {
+    cursor: pointer;
+  }
+
+  .group-breakdown-row:last-child {
+    border-bottom: none;
+  }
+
+  .group-breakdown-header {
+    font-weight: 500;
+    color: var(--eac-text-secondary);
+    font-size: 12px;
+  }
+
+  .group-breakdown-header span {
+    display: block;
+    text-align: center;
+  }
+
+  .group-breakdown-header span:first-child {
+    text-align: left;
+  }
+
+  .group-breakdown-name {
+    color: var(--eac-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+  }
+
+  .group-breakdown-count {
+    text-align: center;
+    font-weight: 500;
+  }
+
+  .group-breakdown-count.online { color: var(--eac-green); }
+  .group-breakdown-count.offline { color: var(--eac-red); }
+  .group-breakdown-count.battery { color: var(--eac-yellow); }
+  .group-breakdown-count.stale { color: var(--eac-yellow); }
+  .group-breakdown-count.neutral { color: var(--eac-text-secondary); }
+  .group-breakdown-count.sep,
+  .group-breakdown-header .sep {
+    border-left: 1px solid var(--divider-color, rgba(0,0,0,0.12));
+  }
+
+  .group-breakdown-ne-row {
+    background: transparent;
+    border-bottom: 1px dashed var(--divider-color, rgba(0,0,0,0.12));
+    opacity: 0.75;
+  }
+
+  .group-breakdown-ne-label {
+    color: var(--eac-text-secondary);
+    font-size: 11px;
+    padding-left: 8px;
+  }
+
+  .entity-legend {
+    display: flex;
+    align-items: center;
+    padding: 0 0 6px;
+    gap: 10px;
+    border-bottom: 1px solid var(--eac-divider);
+    margin-bottom: 4px;
+  }
+
+  .entity-legend-dot {
+    width: 10px;
+    flex-shrink: 0;
+  }
+
+  .entity-legend-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--eac-text-secondary);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .entity-legend-status {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--eac-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .entity-legend-battery {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--eac-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-width: 35px;
+    text-align: right;
+    border-left: 1px solid var(--divider-color, rgba(0,0,0,0.08));
+    padding-left: 8px;
+  }
+
+  .entity-battery,
+  .entity-signal {
+    font-size: 12px;
+    color: var(--eac-text-secondary);
+    white-space: nowrap;
+    min-width: 35px;
+    text-align: right;
+    border-left: 1px solid var(--divider-color, rgba(0,0,0,0.08));
+    padding-left: 8px;
+  }
+
+  .entity-list.icon-mode .entity-status {
+    min-width: 24px;
+  }
+
+  .entity-list.icon-mode .entity-battery {
+    min-width: 28px;
+  }
+
+  .entity-list.icon-mode .entity-legend-status {
+    min-width: 24px;
+  }
+
+  .entity-list.icon-mode .entity-legend-battery {
+    min-width: 28px;
+  }
+
+  .entity-legend-spacer {
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .entity-item {
+    display: flex;
+    flex-direction: column;
+    padding: 5px 0;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .entity-item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .entity-item:hover {
+    opacity: 0.8;
+  }
+
+  .entity-suppress-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    color: var(--secondary-text-color);
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .entity-suppress-btn.suppressed {
+    color: var(--warning-color, #ff9800);
+  }
+
+  .entity-suppress-btn:hover {
+    background: var(--secondary-background-color);
+  }
+
+  .entity-detail-inline {
+    width: 100%;
+    flex-basis: 100%;
+    padding: 2px 0 6px 20px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--eac-divider);
+    margin-bottom: 2px;
+  }
+
+  .entity-detail-inline .entity-tooltip-row {
+    padding: 1px 0;
+  }
+
+  .entity-tooltip-row {
+    display: flex;
+    gap: 6px;
+    padding: 1px 0;
+  }
+
+  .entity-tooltip-label {
+    color: var(--secondary-text-color, #727272);
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+
+  .entity-tooltip-value {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .entity-dot.green { background-color: var(--eac-green); }
+  .entity-dot.red { background-color: var(--eac-red); }
+  .entity-dot.yellow { background-color: var(--eac-yellow); }
+  .entity-dot.grey { background-color: var(--eac-bar-bg); }
+  .non-essential-icon {
+    --mdc-icon-size: 14px;
+    flex-shrink: 0;
+    margin-right: -2px;
+  }
+
+  .entity-name {
+    font-size: 13px;
+    color: var(--eac-text-primary);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entity-member-count {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--eac-text-secondary);
+    opacity: 0.75;
+    vertical-align: middle;
+    margin-left: 3px;
+  }
+
+  .entity-status {
+    font-size: 12px;
+    color: var(--eac-text-secondary);
+    white-space: nowrap;
+  }
+
+  /* Actions */
+  .actions-section {
+    padding: 8px 16px 12px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .action-btn:hover { opacity: 0.85; }
+  .action-btn:active { opacity: 0.7; }
+
+  .action-btn.suppress {
+    background-color: var(--primary-color, #03a9f4);
+    color: var(--text-primary-color, #fff);
+  }
+
+  .action-btn.unsuppress {
+    background-color: var(--secondary-background-color, #e0e0e0);
+    color: var(--primary-text-color, #212121);
+  }
+
+  .error-message {
+    padding: 16px;
+    color: var(--error-color, #db4437);
+    font-size: 14px;
+  }
+
+  .compact .card-header { padding: 12px 16px 8px; }
+  .compact .stats-row { padding: 6px 16px; }
+  .compact .non-essential-stats-row { padding: 4px 16px; }
+  .compact .affected-areas-row { padding: 0 16px 6px; }
+  .compact .availability-section { padding: 6px 16px; }
+  .compact .entity-section-header { padding: 6px 16px; }
+  .compact .actions-section { padding: 4px 16px 8px; }
+
+  .non-essential-stats-row {
+    display: flex;
+    align-items: center;
+    padding: 0 16px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--eac-text-secondary);
+    gap: 0;
+  }
+
+  .non-essential-stats-label {
+    flex-shrink: 0;
+    margin-right: 8px;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .non-essential-stat {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .non-essential-stat.online { color: var(--eac-green); }
+  .non-essential-stat.offline { color: var(--eac-red); }
+  .non-essential-stat.battery { color: var(--eac-yellow); }
+  .non-essential-stat.neutral { color: var(--eac-text-secondary); }
+
+  .affected-areas-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 16px 8px;
+    font-size: 13px;
+  }
+
+  .affected-areas-label {
+    color: var(--eac-text-secondary);
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .area-pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: rgba(244, 67, 54, 0.12);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .area-pill--named {
+    color: var(--eac-red);
+  }
+
+  .area-pill--unassigned {
+    font-style: italic;
+    color: var(--eac-text-secondary);
+  }
+`;
+
+const _entityWord = (n) => `${n} ${n === 1 ? "entity" : "entities"}`;
+
+// Collapsed-row offline/online split for the condition string. Pure arithmetic,
+// extracted so it can be unit-checked without a DOM (see test_card_counts.mjs).
+// offlineMemberCount is floored at 1 by the caller; online is the remainder,
+// never negative because offlineMemberCount <= memberCount.
+const _collapsedCounts = (memberCount, offlineMemberCount) => {
+  const offlineCount = offlineMemberCount || 1;
+  const onlineCount = Math.max(memberCount - offlineCount, 0);
+  return { offlineCount, onlineCount };
+};
+
+class EntityAvailabilityCard extends LitElement {
+  static get properties() {
+    return {
+      hass: { attribute: false },
+      _config: { state: true },
+      _entitiesExpanded: { state: true },
+    };
+  }
+
+  static get styles() {
+    return cardStyles;
+  }
+
+  static getConfigElement() {
+    return document.createElement("entity-availability-card-editor");
+  }
+
+  static getStubConfig(hass) {
+    const match = Object.keys(hass.states).find(
+      (id) =>
+        id.startsWith("sensor.entity_availability_") &&
+        id.endsWith("_offline_count")
+    );
+    const group = match
+      ? match.replace("sensor.entity_availability_", "").replace("_offline_count", "")
+      : "my_devices";
+    return {
+      group,
+      show_availability: true,
+      show_groups: true,
+      show_entities: true,
+      entities_expanded: false,
+      show_actions: false,
+      show_suppress_toggle: false,
+      compact: false,
+    };
+  }
+
+  constructor() {
+    super();
+    this._config = {};
+    this._entitiesExpanded = false;
+    this._lastSeen = {};
+  }
+
+  setConfig(config) {
+    if (!config.group) {
+      throw new Error("You must define a 'group' in the card configuration.");
+    }
+    this._config = {
+      show_availability: true,
+      show_groups: true,
+      show_entities: true,
+      entities_expanded: false,
+      show_actions: false,
+      show_suppress_toggle: false,
+      compact: false,
+      sort_by: "status",
+      entity_detail: "off",
+      entity_filter: "all",
+      show_affected_areas: false,
+      show_non_essential_stats: false,
+      show_stat_icons: false,
+      show_table_icons: false,
+      ...config,
+    };
+    // backwards compat: show_entity_tooltips: true → entity_detail: "tooltip"
+    if (!config.entity_detail && config.show_entity_tooltips) {
+      this._config.entity_detail = "tooltip";
+    }
+    this._entitiesExpanded = this._config.entities_expanded;
+  }
+
+  getCardSize() {
+    return this._config.compact ? 3 : 5;
+  }
+
+  shouldUpdate(changedProps) {
+    if (changedProps.has("_config") || changedProps.has("_entitiesExpanded")) return true;
+    if (!this.hass) return false;
+
+    const oldHass = changedProps.get("hass");
+    if (!oldHass) return true;
+
+    const ids = this._getAllEntityIds();
+    return ids.some((id) => oldHass.states[id] !== this.hass.states[id]);
+  }
+
+  render() {
+    if (!this._config || !this.hass) {
+      return html`<ha-card><div class="error-message">Card not configured.</div></ha-card>`;
+    }
+
+    if (!this._config.group) {
+      return html`<ha-card><div class="error-message">No group configured.</div></ha-card>`;
+    }
+
+    const isCombined = this._isCombinedGroup();
+
+    if (isCombined) {
+      const prefix = `entity_availability_combined_${this._config.group}`;
+      const summary = this._getEntity(`sensor.${prefix}_combined_summary`);
+      if (!summary) {
+        return html`<ha-card>
+          <div class="error-message">
+            No entities found for combined group "${this._config.group}".
+            Expected: sensor.${prefix}_combined_summary
+          </div>
+        </ha-card>`;
+      }
+      const attrs = summary.attributes || {};
+      const total = attrs.total_entities || 0;
+      const online = attrs.online || 0;
+      const offline = attrs.offline || 0;
+      const lowBattery = attrs.low_battery || 0;
+      const suppressed = attrs.suppressed || 0;
+      const nonEssential = attrs.non_essential || 0;
+      const nonEssentialOnline = attrs.non_essential_online || 0;
+      const nonEssentialOffline = attrs.non_essential_offline || 0;
+      const groups = (attrs.groups && typeof attrs.groups === "object") ? attrs.groups : {};
+      const asList = (v, fallback) => Array.isArray(v) ? v : (Array.isArray(fallback) ? fallback : []);
+      const asMap = (v) => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+      const allEntities = asList(attrs.entities_collapsed, attrs.entities);
+      const nonEssentialEntities = asList(attrs.non_essential_entities);
+      const nonEssentialOfflineEntities = asList(attrs.offline_entities_non_essential);
+      const staleEntitiesNonEssential = asList(attrs.stale_entities_non_essential);
+      const lowBatteryEntities = asList(attrs.low_battery_entities);
+      const displayNames = asMap(attrs.display_names);
+      const rowEntityIds = asMap(attrs.row_entity_ids);
+      const rowMembers = asMap(attrs.row_members);
+      const batteryLevels = asMap(attrs.battery_levels);
+      const signalLevels = asMap(attrs.signal_levels);
+      const signalUnits = asMap(attrs.signal_units);
+      const suppressedUntil = asMap(attrs.suppressed_until);
+      const offlineSince = asMap(attrs.offline_since);
+      const poorSignalEntities = asList(attrs.poor_signal_entities);
+      const okSignalEntities = asList(attrs.ok_signal_entities);
+      // Feature-enabled flags: battery/staleness must NEVER appear when the
+      // feature is disabled (threshold=0), even if counts are non-zero.
+      const batteryEnabled = attrs.battery_enabled || false;
+      const stalenessEnabled = attrs.staleness_enabled || false;
+      const staleCount = stalenessEnabled ? (attrs.stale || 0) : 0;
+      const staleEntities = attrs.stale_entities || [];
+      const effectiveLowBattery = batteryEnabled ? lowBattery : 0;
+      const signalEnabledCombined = attrs.signal_enabled || false;
+      const combinedPoorSignal = signalEnabledCombined ? (attrs.poor_signal || 0) : 0;
+      const nonEssentialLowBattery = batteryEnabled ? (attrs.low_battery_entities_non_essential || []).length : 0;
+      const nonEssentialStale = stalenessEnabled ? (attrs.stale_entities_non_essential || []).length : 0;
+      const nonEssentialPoorSignal = signalEnabledCombined ? (attrs.poor_signal_entities_non_essential || []).length : 0;
+      const showNE = this._config.show_non_essential_stats === true;
+
+      const statusColor = attrs.status_color || (offline > 0 ? "red" : (effectiveLowBattery > 0 || staleCount > 0 || combinedPoorSignal > 0) ? "yellow" : "green");
+      const statusText = attrs.status === "offline" ? `${offline} Offline` : attrs.status === "degraded" ? "Degraded" : "All OK";
+      const title = this._config.title || this._formatGroupName(this._config.group);
+      const compactClass = this._config.compact ? "compact" : "";
+
+      return html`
+        <ha-card class="${compactClass}">
+          ${this._renderHeader(title, statusColor, statusText)}
+          <div class="divider"></div>
+          ${this._renderStats(online, offline, effectiveLowBattery, staleCount, combinedPoorSignal, this._config.show_stat_icons === true)}
+          ${showNE && nonEssential > 0 ? this._renderNonEssentialStats(nonEssentialOnline, nonEssentialOffline, nonEssentialLowBattery, nonEssentialStale, this._config.show_stat_icons === true, nonEssentialPoorSignal) : nothing}
+          ${this._config.show_affected_areas ? this._renderAffectedAreas(`entity_availability_combined_${this._config.group}`) : nothing}
+          ${this._renderSuppressedBanner(suppressed, attrs.non_essential_suppressed || 0, Object.values(groups))}
+          ${this._config.show_actions && (allEntities.length + (showNE ? nonEssentialEntities.length : 0)) > 50 ? this._renderActions(prefix) : nothing}
+          ${this._config.show_groups !== false ? this._renderCombinedGroupBreakdown(groups, batteryEnabled, stalenessEnabled, this._config.show_table_icons === true) : nothing}
+          ${this._config.show_entities !== false ? this._renderEntityList(allEntities.filter(e => showNE || !nonEssentialEntities.includes(rowEntityIds[e] || e)), batteryLevels, suppressedUntil, staleEntities, offlineSince, total, lowBatteryEntities, displayNames, nonEssentialEntities, showNE ? nonEssentialOfflineEntities : [], showNE ? staleEntitiesNonEssential : [], batteryEnabled, signalEnabledCombined, signalLevels, poorSignalEntities, signalUnits, okSignalEntities, this._config.show_table_icons === true, rowEntityIds, rowMembers) : nothing}
+          ${this._config.show_actions && (allEntities.length + (showNE ? nonEssentialEntities.length : 0)) <= 50 ? this._renderActions(prefix) : nothing}
+        </ha-card>
+      `;
+    }
+
+    const prefix = `entity_availability_${this._config.group}`;
+    const summary = this._getEntity(`sensor.${prefix}_group_summary`);
+    const offlineCountEntity = this._getEntity(`sensor.${prefix}_offline_count`);
+
+    if (!summary && !offlineCountEntity) {
+      return html`<ha-card>
+        <div class="error-message">
+          No entities found for group "${this._config.group}".
+          Expected: sensor.${prefix}_offline_count
+        </div>
+      </ha-card>`;
+    }
+
+    const attrs = summary?.attributes || {};
+    const total = attrs.total_entities || 0;
+    const online = attrs.online || 0;
+    const offline = attrs.offline || 0;
+    const lowBattery = attrs.low_battery || 0;
+    const suppressed = attrs.suppressed || 0;
+    const nonEssential = attrs.non_essential || 0;
+    const nonEssentialEntities = attrs.non_essential_entities || [];
+    const nonEssentialOfflineEntities = attrs.offline_entities_non_essential || [];
+    const entities = attrs.entities_collapsed || attrs.entities || [];
+    const rowMembers = attrs.row_members || {};
+    const batteryLevels = attrs.battery_levels || {};
+    const suppressedUntil = attrs.suppressed_until || {};
+    const staleEntities = attrs.stale_entities || [];
+    const staleEntitiesNonEssential = attrs.stale_entities_non_essential || [];
+    const offlineSince = attrs.offline_since || {};
+    const lastSeen = attrs.last_seen || {};
+    this._lastSeen = lastSeen;
+    const lowBatteryEntities = attrs.low_battery_entities || [];
+    const displayNames = attrs.display_names || {};
+    // Feature-enabled flags: battery/staleness must NEVER appear when the
+    // feature is disabled (threshold=0), even if counts are non-zero.
+    const batteryEnabled = attrs.battery_enabled || false;
+    const stalenessEnabled = attrs.staleness_enabled || false;
+    const signalEnabled = attrs.signal_enabled || false;
+    const signalLevels = attrs.signal_levels || {};
+    const signalUnits = attrs.signal_units || {};
+    const poorSignalEntitiesNE = attrs.poor_signal_entities_non_essential || [];
+    const poorSignalEntitiesEssential = attrs.poor_signal_entities || [];
+    // Merge essential+NE for dot coloring; use essential-only for stat pill/statusColor
+    const poorSignalEntities = [...poorSignalEntitiesEssential, ...poorSignalEntitiesNE];
+    const okSignalEntities = attrs.ok_signal_entities || [];
+
+    const nonEssentialOnline = attrs.non_essential_online ?? 0;
+    const nonEssentialOffline = attrs.non_essential_offline ?? 0;
+    const lowBatteryNonEssential = attrs.low_battery_non_essential ?? 0;
+    const nonEssentialSuppressed = attrs.non_essential_suppressed ?? 0;
+    const poorSignalCountNonEssential = signalEnabled ? poorSignalEntitiesNE.length : 0;
+    const poorSignalCount = signalEnabled ? poorSignalEntitiesEssential.length : 0;
+    const staleCount = stalenessEnabled ? staleEntities.length : 0;
+    const staleCountNonEssential = stalenessEnabled ? staleEntitiesNonEssential.length : 0;
+    const effectiveLowBattery = batteryEnabled ? lowBattery : 0;
+
+    const statusColor = offline > 0 ? "red" : (effectiveLowBattery > 0 || staleCount > 0 || poorSignalCount > 0) ? "yellow" : "green";
+    const title = this._config.title || this._formatGroupName(this._config.group);
+    const compactClass = this._config.compact ? "compact" : "";
+
+    const statusText = offline > 0
+      ? `${offline} Offline`
+      : (effectiveLowBattery > 0 || staleCount > 0 || poorSignalCount > 0)
+      ? "Degraded"
+      : "All OK";
+
+    const showNEStats = this._config.show_non_essential_stats === true && nonEssential > 0;
+
+    return html`
+      <ha-card class="${compactClass}">
+        ${this._renderHeader(title, statusColor, statusText)}
+        <div class="divider"></div>
+        ${this._renderStats(online, offline, effectiveLowBattery, staleCount, poorSignalCount, this._config.show_stat_icons === true)}
+        ${showNEStats ? this._renderNonEssentialStats(nonEssentialOnline, nonEssentialOffline, batteryEnabled ? lowBatteryNonEssential : 0, staleCountNonEssential, this._config.show_stat_icons === true, poorSignalCountNonEssential) : nothing}
+        ${this._config.show_affected_areas ? this._renderAffectedAreas(prefix) : nothing}
+        ${this._renderSuppressedBanner(suppressed, showNEStats ? nonEssentialSuppressed : 0)}
+        ${this._config.show_availability ? this._renderAvailability(prefix) : nothing}
+        ${this._config.show_actions && (entities.length + (showNEStats ? nonEssentialEntities.length : 0)) > 50 ? this._renderActions(prefix) : nothing}
+        ${this._config.show_entities !== false ? this._renderEntityList(entities.filter(e => showNEStats || !nonEssentialEntities.includes(e)), batteryLevels, suppressedUntil, staleEntities, offlineSince, total, lowBatteryEntities, displayNames, nonEssentialEntities, showNEStats ? nonEssentialOfflineEntities : [], showNEStats ? staleEntitiesNonEssential : [], batteryEnabled, signalEnabled, signalLevels, poorSignalEntities, signalUnits, okSignalEntities, this._config.show_table_icons === true, {}, rowMembers) : nothing}
+        ${this._config.show_actions && (entities.length + (showNEStats ? nonEssentialEntities.length : 0)) <= 50 ? this._renderActions(prefix) : nothing}
+      </ha-card>
+    `;
+  }
+
+  _renderHeader(title, statusColor, statusText) {
+    return html`
+      <div class="card-header">
+        <div class="header-left">
+          <ha-icon
+            class="header-icon"
+            icon="${STATUS_ICONS[statusColor]}"
+            style="color: ${STATUS_COLORS[statusColor]}"
+          ></ha-icon>
+          <span class="group-title">${title}</span>
+        </div>
+        <div class="header-right">${statusText}</div>
+      </div>
+    `;
+  }
+
+  _renderStats(online, offline, lowBattery, stale = 0, poorSignal = 0, iconMode = false) {
+    if (iconMode) {
+      return html`
+        <div class="stats-row">
+          <span class="stat-item ${online > 0 ? "online" : "neutral"}" title="Online"><ha-icon icon="mdi:check-circle-outline" style="--mdc-icon-size:16px;vertical-align:middle"></ha-icon> ${online}</span>
+          <span class="stat-item ${offline > 0 ? "offline" : "neutral"}" title="Offline"><ha-icon icon="mdi:alert-circle-outline" style="--mdc-icon-size:16px;vertical-align:middle"></ha-icon> ${offline}</span>
+          ${lowBattery > 0 ? html`<span class="stat-item battery" title="Low Battery"><ha-icon icon="mdi:battery-alert-variant-outline" style="--mdc-icon-size:16px;vertical-align:middle"></ha-icon> ${lowBattery}</span>` : nothing}
+          ${stale > 0 ? html`<span class="stat-item battery" title="Stale"><ha-icon icon="mdi:clock-alert-outline" style="--mdc-icon-size:16px;vertical-align:middle"></ha-icon> ${stale}</span>` : nothing}
+          ${poorSignal > 0 ? html`<span class="stat-item battery" title="Poor Signal"><ha-icon icon="mdi:signal-off" style="--mdc-icon-size:16px;vertical-align:middle"></ha-icon> ${poorSignal}</span>` : nothing}
+        </div>
+      `;
+    }
+    return html`
+      <div class="stats-row">
+        <span class="stat-item ${online > 0 ? "online" : "neutral"}">Online: ${online}</span>
+        <span class="stat-item ${offline > 0 ? "offline" : "neutral"}">Offline: ${offline}</span>
+        ${lowBattery > 0 ? html`<span class="stat-item battery">Low Battery: ${lowBattery}</span>` : nothing}
+        ${stale > 0 ? html`<span class="stat-item battery">Stale: ${stale}</span>` : nothing}
+        ${poorSignal > 0 ? html`<span class="stat-item battery">Poor Signal: ${poorSignal}</span>` : nothing}
+      </div>
+    `;
+  }
+
+  _renderSuppressedBanner(essential, nonEssential, groups = null) {
+    if (essential === 0 && nonEssential === 0) return nothing;
+    const total = essential + nonEssential;
+    let msg;
+    if (groups !== null) {
+      // Combined card: show group count instead of entity count
+      const suppressedGroups = groups.filter(g => (g.suppressed || 0) + (g.non_essential_suppressed || 0) > 0).length;
+      msg = `${suppressedGroups} ${suppressedGroups === 1 ? "group" : "groups"} suppressed (${total} ${total === 1 ? "entity" : "entities"})`;
+    } else if (essential > 0 && nonEssential > 0) {
+      msg = `${total} ${total > 1 ? "entities" : "entity"} suppressed (${essential} essential, ${nonEssential} non-essential)`;
+    } else if (essential > 0) {
+      msg = `${essential} ${essential > 1 ? "entities" : "entity"} suppressed`;
+    } else {
+      msg = `${nonEssential} non-essential ${nonEssential > 1 ? "entities" : "entity"} suppressed`;
+    }
+    return html`<div class="suppressed-banner">${msg}</div>`;
+  }
+
+  _renderNonEssentialStats(online, offline, lowBattery, stale = 0, iconMode = false, poorSignal = 0) {
+    if (iconMode) {
+      return html`
+        <div class="non-essential-stats-row">
+          <span class="non-essential-stats-label">↳ Non-Essential</span>
+          <span class="non-essential-stat ${online > 0 ? "online" : "neutral"}" title="Online"><ha-icon icon="mdi:check-circle-outline" style="--mdc-icon-size:14px;vertical-align:middle"></ha-icon> ${online}</span>
+          <span class="non-essential-stat ${offline > 0 ? "offline" : "neutral"}" title="Offline"><ha-icon icon="mdi:alert-circle-outline" style="--mdc-icon-size:14px;vertical-align:middle"></ha-icon> ${offline}</span>
+          ${lowBattery > 0 ? html`<span class="non-essential-stat battery" title="Low Battery"><ha-icon icon="mdi:battery-alert-variant-outline" style="--mdc-icon-size:14px;vertical-align:middle"></ha-icon> ${lowBattery}</span>` : nothing}
+          ${stale > 0 ? html`<span class="non-essential-stat battery" title="Stale"><ha-icon icon="mdi:clock-alert-outline" style="--mdc-icon-size:14px;vertical-align:middle"></ha-icon> ${stale}</span>` : nothing}
+          ${poorSignal > 0 ? html`<span class="non-essential-stat battery" title="Poor Signal"><ha-icon icon="mdi:signal-off" style="--mdc-icon-size:14px;vertical-align:middle"></ha-icon> ${poorSignal}</span>` : nothing}
+        </div>
+      `;
+    }
+    return html`
+      <div class="non-essential-stats-row">
+        <span class="non-essential-stats-label">↳ Non-Essential</span>
+        <span class="non-essential-stat ${online > 0 ? "online" : "neutral"}">Online: ${online}</span>
+        <span class="non-essential-stat ${offline > 0 ? "offline" : "neutral"}">Offline: ${offline}</span>
+        ${lowBattery > 0 ? html`<span class="non-essential-stat battery">Low Battery: ${lowBattery}</span>` : nothing}
+        ${stale > 0 ? html`<span class="non-essential-stat battery">Stale: ${stale}</span>` : nothing}
+        ${poorSignal > 0 ? html`<span class="non-essential-stat battery">Poor Signal: ${poorSignal}</span>` : nothing}
+      </div>
+    `;
+  }
+
+  _renderAvailability(prefix) {
+    const windows = [];
+    for (const w of AVAILABILITY_WINDOWS) {
+      const entity = this._getEntity(`sensor.${prefix}_availability_${w.key}`);
+      if (entity && entity.state !== "unavailable" && entity.state !== "unknown") {
+        const pct = parseFloat(entity.state) || 0;
+        windows.push({ label: w.label, pct });
+      }
+    }
+
+    if (windows.length === 0) return nothing;
+
+    return html`
+      <div class="divider"></div>
+      <div class="availability-section">
+        ${windows.map(
+          (w) => html`
+            <div class="availability-row">
+              <span class="availability-label">${w.label}</span>
+              <div class="availability-bar">
+                <div
+                  class="availability-fill"
+                  style="width: ${Math.min(100, Math.max(0, w.pct))}%; background-color: ${this._getAvailabilityBarColor(w.pct)}"
+                ></div>
+              </div>
+              <span class="availability-value">${w.pct.toFixed(1)}%</span>
+            </div>
+          `
+        )}
+      </div>
+    `;
+  }
+
+  _renderEntityList(entities, batteryLevels, suppressedUntil, staleEntities, offlineSince, total, lowBatteryEntities, displayNames = {}, nonEssentialEntities = [], nonEssentialOfflineEntities = [], staleEntitiesNonEssential = [], batteryEnabled = false, signalEnabled = false, signalLevels = {}, poorSignalEntities = [], signalUnits = {}, okSignalEntities = [], iconMode = false, rowEntityIds = {}, rowMembers = {}) {
+    if (entities.length === 0 && total === 0) return nothing;
+
+    const allItems = this._buildEntityItems(entities, batteryLevels, staleEntities, offlineSince, suppressedUntil, lowBatteryEntities, displayNames, nonEssentialEntities, nonEssentialOfflineEntities, staleEntitiesNonEssential, signalEnabled, signalLevels, poorSignalEntities, signalUnits, okSignalEntities, rowEntityIds, rowMembers);
+    const filter = this._config.entity_filter || "all";
+    const showNE = this._config.show_non_essential_stats === true;
+    const items = filter === "offline"
+      ? allItems.filter((i) => i.isOffline || i.isStale || i.dotColor === "yellow")
+      : filter === "online"
+      ? allItems.filter((i) => !i.isOffline && !i.isStale && i.dotColor !== "yellow" && (!i.isNonEssential || showNE))
+      : allItems;
+
+    const expanded = this._entitiesExpanded;
+    const showHealth = this._config.show_entity_health !== false;
+    const hasBattery = showHealth && batteryEnabled && allItems.some((i) => i.battery !== null);
+    const hasSignal = showHealth && signalEnabled && allItems.some((i) => i.signalLevel !== null);
+
+    const sectionTitle = filter === "offline" ? "Problem Entities"
+      : filter === "online" ? "Healthy Entities"
+      : "Entities";
+    const countLabel = filter !== "all"
+      ? `${items.length}/${allItems.length}`
+      : `${items.length}`;
+
+    return html`
+      <div class="divider"></div>
+      <div class="entity-section-header" @click=${this._toggleEntities}>
+        <span class="entity-section-title">
+          ${sectionTitle} (${countLabel})
+        </span>
+        <ha-icon
+          class="chevron ${expanded ? "expanded" : ""}"
+          icon="mdi:chevron-down"
+        ></ha-icon>
+      </div>
+      <div class="entity-list ${expanded ? "expanded" : "collapsed"} ${this._config.show_stat_icons ? "icon-mode" : ""}">
+        ${items.length === 0
+          ? nothing
+          : html`
+        ${(() => {
+          const colBat = hasBattery ? (iconMode ? " 40px" : " 52px") : "";
+          const colSig = hasSignal ? (iconMode ? " 40px" : " 52px") : "";
+          const colToggle = this._config.show_suppress_toggle ? " 28px" : "";
+          const gridStyle = `display:grid;grid-template-columns:10px 1fr auto${colBat}${colSig}${colToggle};align-items:center;gap:0 10px`;
+          return html`
+        <div class="entity-legend" style="${gridStyle}">
+          <span class="entity-legend-dot"></span>
+          <span class="entity-legend-name">Entity</span>
+          <span class="entity-legend-status">State</span>
+          ${hasBattery ? html`<span class="entity-legend-battery">${iconMode ? html`<ha-icon icon="mdi:battery-alert-variant-outline" title="Battery" style="--mdc-icon-size:14px"></ha-icon>` : "Bat."}</span>` : nothing}
+          ${hasSignal ? html`<span class="entity-legend-battery">${iconMode ? html`<ha-icon icon="mdi:signal-off" title="Signal" style="--mdc-icon-size:14px"></ha-icon>` : "Signal"}</span>` : nothing}
+          ${this._config.show_suppress_toggle ? html`<span class="entity-legend-spacer"></span>` : nothing}
+        </div>
+        ${items.map(
+          (item) => html`
+            <div class="entity-item" tabindex="0" role="button" @mouseenter=${(e) => this._positionTooltip(e, item, suppressedUntil)} @mouseleave=${() => this._hideTooltip()} @click=${(e) => this._handleEntityClick(e, item.entityId)} @keydown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (e.key === "Enter") this._handleEntityClick(e, item.entityId); } }} @keyup=${(e) => { if (e.key === " ") { e.preventDefault(); this._handleEntityClick(e, item.entityId); } }}>
+              <div class="entity-item-row" style="${gridStyle}">
+                <div class="entity-dot ${item.dotColor}"></div>
+                <span class="entity-name">${item.isNonEssential ? html`<ha-icon icon="mdi:minus-circle-outline" class="non-essential-icon" style="color:var(--eac-${item.dotColor === 'green' ? 'green' : item.dotColor === 'red' ? 'red' : 'yellow'});vertical-align:middle;--mdc-icon-size:14px"></ha-icon> ` : nothing}${item.name}${item.memberCount > 1 ? html`<span class="entity-member-count" title="${item.memberCount} entities collapsed into this row" aria-label="${item.memberCount} entities collapsed">×${item.memberCount}</span>` : nothing}</span>
+                <span class="entity-status">${item.status}</span>
+                ${hasBattery
+                  ? html`<span class="entity-battery">${item.battery !== null ? `${item.battery}%` : ""}</span>`
+                  : nothing}
+                ${hasSignal
+                  ? html`<span class="entity-battery entity-signal">${item.signalLevel !== null ? `${item.signalLevel} ${item.signalUnit ?? ""}` : ""}</span>`
+                  : nothing}
+                ${this._config.show_suppress_toggle ? html`
+                <button class="entity-suppress-btn ${item.isSuppressed ? "suppressed" : ""}"
+                  title="${item.isSuppressed ? "Unsuppress" : "Suppress indefinitely"}"
+                  @click=${(e) => this._handleToggleSuppress(e, item.entityId, item.isSuppressed)}>
+                  <ha-icon icon="${item.isSuppressed ? "mdi:bell-off" : "mdi:bell-off-outline"}" style="--mdc-icon-size:16px"></ha-icon>
+                </button>` : nothing}
+              </div>
+              ${this._config.entity_detail === "inline"
+                ? this._renderDetailInline(item, suppressedUntil)
+                : nothing}
+            </div>
+          `
+        )}`;
+        })()}`}
+      </div>
+    `;
+  }
+
+  _renderCombinedGroupBreakdown(groups, batteryEnabled = false, stalenessEnabled = false, iconMode = false) {
+    const entries = Object.entries(groups);
+    if (entries.length === 0) return nothing;
+
+    const sortBy = this._config.group_sort_by || "name_asc";
+    entries.sort(([, gA], [, gB]) => {
+      const nameA = gA.name ?? "";
+      const nameB = gB.name ?? "";
+      if (sortBy === "name_desc") return nameB.localeCompare(nameA);
+      if (sortBy === "offline_desc") {
+        const diff = (gB.offline ?? 0) - (gA.offline ?? 0);
+        return diff !== 0 ? diff : nameA.localeCompare(nameB);
+      }
+      return nameA.localeCompare(nameB);
+    });
+
+    const expanded = this._entitiesExpanded;
+    const showNEStats = this._config.show_non_essential_stats === true;
+    const showTotal = this._config.show_group_total !== false;
+    const showHealth = this._config.show_group_health !== false;
+    // Feature-enabled flags guard: battery/stale columns must NEVER appear when
+    // the feature is disabled (threshold=0), even if counts are non-zero.
+    const hasBattery = showHealth && batteryEnabled && entries.some(([, g]) => (g.low_battery ?? 0) > 0 || (showNEStats && g.battery_enabled && (g.non_essential_low_battery ?? 0) > 0));
+    const hasStale = showHealth && stalenessEnabled && entries.some(([, g]) => (g.stale ?? 0) > 0 || (showNEStats && g.staleness_enabled && (g.non_essential_stale ?? 0) > 0));
+    const hasSignal = showHealth && entries.some(([, g]) => g.signal_enabled && ((g.poor_signal ?? 0) > 0 || (showNEStats && (g.non_essential_poor_signal ?? 0) > 0)));
+    // NE signal column: only show if at least one group has signal enabled and NE poor signal > 0.
+    const hasNESignal = showHealth && showNEStats && entries.some(([, g]) => g.signal_enabled && (g.non_essential_poor_signal ?? 0) > 0);
+    // NE battery/stale columns: only show if at least one group has the feature enabled and NE counts > 0.
+    const hasNEBattery = showHealth && showNEStats && entries.some(([, g]) => g.battery_enabled && (g.non_essential_low_battery ?? 0) > 0);
+    const hasNEStale = showHealth && showNEStats && entries.some(([, g]) => g.staleness_enabled && (g.non_essential_stale ?? 0) > 0);
+    const extraCols = (showTotal ? 1 : 0) + 2 + (hasBattery ? 1 : 0) + (hasStale ? 1 : 0) + (hasSignal ? 1 : 0);
+    const gridStyle = `grid-template-columns: minmax(60px, 1fr) repeat(${extraCols}, minmax(36px, 56px))`;
+
+    return html`
+      <div class="entity-section-header" @click=${this._toggleEntities}>
+        <span class="entity-section-title">Groups (${entries.length})</span>
+        <ha-icon class="chevron ${expanded ? "expanded" : ""}" icon="mdi:chevron-down"></ha-icon>
+      </div>
+      <div class="group-breakdown ${expanded ? "expanded" : "collapsed"}">
+        <div class="group-breakdown-row group-breakdown-header" style="${gridStyle}">
+          <span>Group</span>
+          ${showTotal ? html`<span title="Total">${iconMode ? html`<ha-icon icon="mdi:counter" style="--mdc-icon-size:14px"></ha-icon>` : "Total"}</span>` : nothing}
+          <span class="${showTotal ? "sep" : ""}" title="Online">${iconMode ? html`<ha-icon icon="mdi:check-circle-outline" style="--mdc-icon-size:14px"></ha-icon>` : "Online"}</span>
+          <span title="Offline">${iconMode ? html`<ha-icon icon="mdi:alert-circle-outline" style="--mdc-icon-size:14px"></ha-icon>` : "Offline"}</span>
+          ${hasBattery ? html`<span class="sep" title="Low Battery">${iconMode ? html`<ha-icon icon="mdi:battery-alert-variant-outline" style="--mdc-icon-size:14px"></ha-icon>` : "Bat."}</span>` : nothing}
+          ${hasStale ? html`<span class="${!hasBattery ? "sep" : ""}" title="Stale">${iconMode ? html`<ha-icon icon="mdi:clock-alert-outline" style="--mdc-icon-size:14px"></ha-icon>` : "Stale"}</span>` : nothing}
+          ${hasSignal ? html`<span class="${!hasBattery && !hasStale ? "sep" : ""}" title="Poor Signal">${iconMode ? html`<ha-icon icon="mdi:signal-off" style="--mdc-icon-size:14px"></ha-icon>` : "Sig."}</span>` : nothing}
+        </div>
+        ${entries.map(([, g]) => {
+          const neCount = g.non_essential ?? 0;
+          const showNERow = showNEStats && neCount > 0;
+          return html`
+            <div class="group-breakdown-row ${g.entity_id ? "clickable" : ""}" style="${gridStyle}"
+                 @click=${g.entity_id ? (e) => this._handleEntityClick(e, g.entity_id) : nothing}>
+              <span class="group-breakdown-name">${g.name ?? ""}</span>
+              ${showTotal ? html`<span class="group-breakdown-count neutral">${g.total ?? 0}</span>` : nothing}
+              <span class="group-breakdown-count ${showTotal ? "sep " : ""}online">${g.online ?? 0}</span>
+              <span class="group-breakdown-count ${g.offline > 0 ? "offline" : "neutral"}">${g.offline ?? 0}</span>
+              ${hasBattery ? html`<span class="group-breakdown-count sep ${g.battery_enabled && (g.low_battery ?? 0) > 0 ? "battery" : "neutral"}">${g.battery_enabled ? (g.low_battery ?? 0) : "—"}</span>` : nothing}
+              ${hasStale ? html`<span class="group-breakdown-count ${!hasBattery ? "sep " : ""}${g.staleness_enabled && (g.stale ?? 0) > 0 ? "stale" : "neutral"}">${g.staleness_enabled ? (g.stale ?? 0) : "—"}</span>` : nothing}
+              ${hasSignal ? html`<span class="group-breakdown-count ${!hasBattery && !hasStale ? "sep " : ""}${g.signal_enabled && (g.poor_signal ?? 0) > 0 ? "battery" : "neutral"}">${g.signal_enabled ? (g.poor_signal ?? 0) : "—"}</span>` : nothing}
+            </div>
+            ${showNERow ? html`
+              <div class="group-breakdown-row group-breakdown-ne-row" style="${gridStyle}">
+                <span class="group-breakdown-name group-breakdown-ne-label">↳ Non-Essential</span>
+                ${showTotal ? html`<span class="group-breakdown-count neutral">${neCount}</span>` : nothing}
+                <span class="group-breakdown-count ${showTotal ? "sep " : ""}neutral">${g.non_essential_online ?? 0}</span>
+                <span class="group-breakdown-count ${(g.non_essential_offline ?? 0) > 0 ? "offline" : "neutral"}">${g.non_essential_offline ?? 0}</span>
+                ${hasBattery ? html`<span class="group-breakdown-count sep ${g.battery_enabled && hasNEBattery && (g.non_essential_low_battery ?? 0) > 0 ? "battery" : "neutral"}">${g.battery_enabled ? (g.non_essential_low_battery ?? 0) : "—"}</span>` : nothing}
+                ${hasStale ? html`<span class="group-breakdown-count ${!hasBattery ? "sep " : ""}${g.staleness_enabled && hasNEStale && (g.non_essential_stale ?? 0) > 0 ? "stale" : "neutral"}">${g.staleness_enabled ? (g.non_essential_stale ?? 0) : "—"}</span>` : nothing}
+                ${hasSignal ? html`<span class="group-breakdown-count ${!hasBattery && !hasStale ? "sep " : ""}${g.signal_enabled && hasNESignal && (g.non_essential_poor_signal ?? 0) > 0 ? "battery" : "neutral"}">${g.signal_enabled ? (g.non_essential_poor_signal ?? 0) : "—"}</span>` : nothing}
+              </div>
+            ` : nothing}
+          `;
+        })}
+      </div>
+    `;
+  }
+
+  _renderActions(prefix) {
+    const includeNE = this._config.show_non_essential_stats === true;
+    return html`
+      <div class="divider"></div>
+      <div class="actions-section">
+        <button class="action-btn suppress" title="Suppress all degraded entities (offline, stale, poor signal${includeNE ? ", including Non-Essential" : ""}) for 60 minutes" @click=${this._handleSuppressAll}>
+          Suppress All Degraded
+        </button>
+        <button class="action-btn suppress" title="Suppress all currently offline entities${includeNE ? " (including Non-Essential)" : ""} for 60 minutes" @click=${this._handleSuppressOffline}>
+          Suppress Offline
+        </button>
+        <button class="action-btn unsuppress" title="Remove suppression from all entities${includeNE ? " (including Non-Essential)" : ""} in this group" @click=${this._handleUnsuppressAll}>
+          Unsuppress All
+        </button>
+      </div>
+    `;
+  }
+
+  _renderAffectedAreas(prefix) {
+    const sensor = this._getEntity(`sensor.${prefix}_affected_areas`);
+    if (!sensor || sensor.state === "None" || sensor.state === "unavailable" || sensor.state === "unknown") {
+      return nothing;
+    }
+    const rawAreas = sensor.attributes?.areas ?? [];
+    if (rawAreas.length === 0) return nothing;
+
+    const named = rawAreas.filter((a) => a !== "(No Area)");
+    const hasUnassigned = rawAreas.includes("(No Area)");
+    const pills = [
+      ...named.map((a) => html`<span class="area-pill area-pill--named">${a}</span>`),
+      ...(hasUnassigned ? [html`<span class="area-pill area-pill--unassigned">Unassigned</span>`] : []),
+    ];
+
+    return html`
+      <div class="affected-areas-row">
+        <ha-icon icon="mdi:home-alert" style="color:var(--eac-red);--mdc-icon-size:16px;flex-shrink:0"></ha-icon>
+        <span class="affected-areas-label">Affected:</span>
+        ${pills}
+      </div>
+    `;
+  }
+
+  _buildEntityItems(entities, batteryLevels, staleEntities, offlineSince, suppressedUntil, lowBatteryEntities = [], displayNames = {}, nonEssentialEntities = [], nonEssentialOfflineEntities = [], staleEntitiesNonEssential = [], signalEnabled = false, signalLevels = {}, poorSignalEntities = [], signalUnits = {}, okSignalEntities = [], rowEntityIds = {}, rowMembers = {}) {
+    const monitoredOfflineEntities = this._getOfflineEntityIds();
+    const items = entities.map((rowKey) => {
+      const entityId = rowEntityIds[rowKey] || rowKey;
+      const members = rowMembers[rowKey] || null;
+      const memberCount = members ? members.length : 1;
+      const deviceId = memberCount > 1 ? (this.hass.entities?.[entityId]?.device_id ?? null) : null;
+      const state = this.hass.states[entityId];
+      const friendlyName = displayNames[rowKey] || state?.attributes?.friendly_name || entityId.split(".").pop();
+      // Derive per-flag status by scanning the row's MEMBERS, not just the
+      // representative entity id. A collapsed row's members are same-tier
+      // (collapse_key buckets by device_id + non_essential), so scanning any
+      // member is safe; scanning the rep alone drops a non-rep member that is
+      // offline/stale/etc. under an otherwise-OK representative.
+      const scanIds = members || [entityId];
+      const inAny = (list) => scanIds.some((id) => list.includes(id));
+      const isOffline = inAny(monitoredOfflineEntities) || inAny(nonEssentialOfflineEntities);
+      const isStale = inAny(staleEntities) || inAny(staleEntitiesNonEssential);
+      const isSuppressed = rowKey in suppressedUntil || entityId in suppressedUntil;
+      const isNonEssential = inAny(nonEssentialEntities);
+      // Value reads prefer the rep key, then fall back to the first member that
+      // has a value — so a member-scanned flag (isLowBattery/isPoorSignal) can't
+      // show its status with an empty cell when the flagged member isn't the rep
+      // (reachable on a same-tier severity tie where the tiebreak picks a
+      // different rep). memberVal keeps value and flag pointing at one member.
+      const memberVal = (map) => {
+        for (const id of scanIds) {
+          if (map[id] != null) return map[id];
+        }
+        return null;
+      };
+      const battery = batteryLevels[rowKey] ?? batteryLevels[entityId] ?? memberVal(batteryLevels);
+      const isLowBattery = inAny(lowBatteryEntities);
+      const signalLevel = signalEnabled ? (signalLevels[rowKey] ?? signalLevels[entityId] ?? memberVal(signalLevels)) : null;
+      const signalUnit = signalEnabled ? (signalUnits[rowKey] ?? signalUnits[entityId] ?? memberVal(signalUnits) ?? "") : null;
+      const isPoorSignal = signalEnabled && inAny(poorSignalEntities);
+      const isOkSignal = signalEnabled && inAny(okSignalEntities);
+
+      let dotColor = "green";
+      let status = "Online";
+
+      if (isSuppressed) {
+        dotColor = "green";
+        status = "Suppressed";
+      } else if (isOffline) {
+        dotColor = "red";
+        const since = offlineSince[rowKey] || offlineSince[entityId];
+        if (since) {
+          const diff = Date.now() - new Date(since).getTime();
+          const minutes = Math.floor(diff / 60000);
+          if (minutes < 1) status = "just now";
+          else if (minutes < 60) status = `${minutes} minute${minutes === 1 ? "" : "s"}`;
+          else {
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) status = `${hours} hour${hours === 1 ? "" : "s"}`;
+            else {
+              const days = Math.floor(hours / 24);
+              status = `${days} day${days === 1 ? "" : "s"}`;
+            }
+          }
+        } else {
+          status = "Offline";
+        }
+      } else if (isNonEssential) {
+        if (isStale) {
+          dotColor = "yellow";
+          status = "Stale";
+        } else if (isLowBattery) {
+          dotColor = "yellow";
+          status = "Low Battery";
+        } else if (isPoorSignal) {
+          dotColor = "yellow";
+          status = "Poor Signal";
+        } else {
+          dotColor = "green";
+          status = "Online";
+        }
+      } else if (isStale) {
+        dotColor = "grey";
+        status = "Stale";
+      } else if (isLowBattery) {
+        dotColor = "yellow";
+        status = "Low Battery";
+      } else if (isPoorSignal) {
+        dotColor = "yellow";
+        status = "Poor Signal";
+      }
+
+      // Offline member tally for the collapsed-row condition string, computed
+      // here from the SAME two lists isOffline used (essential + NE), so the
+      // "N offline" count can't disagree with the row's own offline dot.
+      // ponytail: the backend offline lists are rep-collapsed (one entity id per
+      // device, see _collapsed_match), so a device with 2+ offline members shows
+      // "1 offline" here. Parity with prior behavior (the old members.filter used
+      // the same rep-collapsed set); fix needs a per-row offline count from the
+      // backend if exact multi-member tallies ever matter.
+      const offlineMemberCount = isOffline
+        ? Math.max(
+            scanIds.filter(
+              (id) => monitoredOfflineEntities.includes(id) || nonEssentialOfflineEntities.includes(id),
+            ).length,
+            1,
+          )
+        : 0;
+
+      return { entityId, rowKey, deviceId, memberCount, members, name: friendlyName, dotColor, status, battery, isOffline, offlineMemberCount, isStale, isSuppressed, isNonEssential, signalLevel, signalUnit, isPoorSignal, isOkSignal };
+    });
+
+    // Normalize signal level to 0–100 quality score (higher = better).
+    // dBm covers Wi-Fi/Zigbee/Z-Wave practical range; % and LQI are already 0–100.
+    // ponytail: single range for all dBm protocols — good enough for sort ordering.
+    const signalQuality = (lvl, unit) => {
+      if (lvl === null || lvl === undefined) return null;
+      if (unit === "%" || unit === "LQI") return lvl;
+      return Math.max(0, Math.min(100, (lvl + 110) * (100 / 80)));
+    };
+
+    // Hoist sort key — invariant across comparisons.
+    // In combined mode, group_sort_by drives entity order too (one control for both);
+    // sort_by is intentionally ignored — the editor does not expose it for combined cards.
+    // "offline_desc" maps to "status" because status-sort puts problems first, matching group sort intent.
+    let sortBy = this._config.sort_by || "status";
+    if (this._isCombinedGroup()) {
+      const g = this._config.group_sort_by || "name_asc";
+      sortBy = g === "name_desc" ? "name_desc" : g === "offline_desc" ? "status" : "name_asc";
+    }
+
+    items.sort((a, b) => {
+      // NE entities always go after essential, but within each tier the same sort applies
+      if (a.isNonEssential !== b.isNonEssential) return a.isNonEssential ? 1 : -1;
+      if (sortBy === "name_asc") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "name_desc") {
+        return b.name.localeCompare(a.name);
+      } else if (sortBy === "battery_asc") {
+        const aBat = a.battery ?? 101;
+        const bBat = b.battery ?? 101;
+        if (aBat !== bBat) return aBat - bBat;
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "battery_desc") {
+        const aBat = a.battery ?? -1;
+        const bBat = b.battery ?? -1;
+        if (aBat !== bBat) return bBat - aBat;
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "signal_asc" || sortBy === "signal_desc") {
+        const aQ = signalQuality(a.signalLevel, a.signalUnit);
+        const bQ = signalQuality(b.signalLevel, b.signalUnit);
+        if (aQ === null && bQ === null) return a.name.localeCompare(b.name);
+        if (aQ === null) return 1;
+        if (bQ === null) return -1;
+        const diff = sortBy === "signal_asc" ? aQ - bQ : bQ - aQ;
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      } else {
+        if (a.isOffline && !b.isOffline) return -1;
+        if (!a.isOffline && b.isOffline) return 1;
+        const aDegraded = a.dotColor === "yellow" || a.isStale;
+        const bDegraded = b.dotColor === "yellow" || b.isStale;
+        if (aDegraded && !bDegraded) return -1;
+        if (!aDegraded && bDegraded) return 1;
+        return a.name.localeCompare(b.name);
+      }
+    });
+
+    // Device-collapse is applied by the integration (config option collapse_devices):
+    // the sensor already provides entities_collapsed as the row source, so the card
+    // just renders whatever entities it was given. No client-side collapsing.
+    return items;
+  }
+
+  _isSuppressed(item, suppressedUntilMap) {
+    const key = (item.rowKey != null && item.rowKey in suppressedUntilMap) ? item.rowKey
+      : item.entityId in suppressedUntilMap ? item.entityId : null;
+    return key !== null;
+  }
+
+  _collapsedCondition(item, suppressedUntilMap) {
+    if (this._isSuppressed(item, suppressedUntilMap)) return "Suppressed";
+    if (!item.isOffline) return `${_entityWord(item.memberCount)}: ${item.status}`;
+    const { offlineCount, onlineCount } = _collapsedCounts(item.memberCount, item.offlineMemberCount);
+    const suffix = onlineCount > 0 ? ` · ${_entityWord(onlineCount)}: Online` : "";
+    return `${_entityWord(offlineCount)} offline for ${item.status}${suffix}`;
+  }
+
+  _buildDetailRows(item, suppressedUntilMap) {
+    const entityState = this.hass.states[item.entityId];
+    const lastChanged = this._computeDuration(item.entityId);
+
+    const areaId = this.hass.entities?.[item.entityId]?.area_id;
+    const areaName = areaId ? (this.hass.areas?.[areaId]?.name || null) : null;
+
+    const suppressedUntilIso = (item.rowKey != null && item.rowKey in suppressedUntilMap)
+      ? suppressedUntilMap[item.rowKey]
+      : suppressedUntilMap[item.entityId];
+    const suppressedUntil = suppressedUntilIso === null
+      ? "indefinitely"
+      : suppressedUntilIso
+      ? this._formatFutureDate(suppressedUntilIso)
+      : null;
+
+    const isCollapsed = item.memberCount > 1;
+    const deviceName = isCollapsed && item.deviceId
+      ? (this.hass.devices?.[item.deviceId]?.name_by_user || this.hass.devices?.[item.deviceId]?.name || null)
+      : null;
+
+    const identityRow = deviceName
+      ? { label: "Device", value: deviceName }
+      : { label: "Entity ID", value: item.entityId };
+
+    const conditionValue = isCollapsed
+      ? this._collapsedCondition(item, suppressedUntilMap)
+      : this._isSuppressed(item, suppressedUntilMap) ? "Suppressed" : item.isOffline ? `Offline for ${item.status}` : item.status;
+
+    return [
+      identityRow,
+      areaName ? { label: "Area", value: areaName } : null,
+      !isCollapsed ? { label: "HA State", value: lastChanged ? `${this._formatStateDisplay(entityState)} · ${lastChanged}` : this._formatStateDisplay(entityState) } : null,
+      { label: "Condition", value: conditionValue },
+      item.battery !== null ? { label: "Battery", value: `${item.battery}%` } : null,
+      item.signalLevel !== null && item.signalLevel !== undefined ? { label: "Signal", value: `${item.signalLevel}${item.signalUnit ? " " + item.signalUnit : ""}${item.isPoorSignal ? " (poor)" : ""}` } : null,
+      suppressedUntil ? { label: "Suppressed", value: suppressedUntil === "indefinitely" ? "Indefinitely" : `until ${suppressedUntil}` } : null,
+    ].filter(Boolean);
+  }
+
+  _renderDetailInline(item, suppressedUntilMap) {
+    const compact = this._config.compact === true;
+    const isCollapsed = item.memberCount > 1;
+    let rows;
+    if (isCollapsed && compact) {
+      rows = [{ label: "Condition", value: this._collapsedCondition(item, suppressedUntilMap) }];
+    } else if (isCollapsed && !compact) {
+      if (!item.members) {
+        console.warn("[EA] collapsed row missing members", item.entityId);
+        rows = [];
+      } else {
+        rows = item.members.map((eid) => {
+          const entityState = this.hass.states[eid];
+          const lastChanged = this._computeDuration(eid);
+          const label = entityState?.attributes?.friendly_name || eid.split(".").pop();
+          const value = lastChanged
+            ? `${this._formatStateDisplay(entityState)} · ${lastChanged}`
+            : this._formatStateDisplay(entityState);
+          return { label, value };
+        });
+      }
+    } else if (compact) {
+      const entityState = this.hass.states[item.entityId];
+      const lastChanged = this._computeDuration(item.entityId);
+      const haStateValue = lastChanged
+        ? `${this._formatStateDisplay(entityState)} · ${lastChanged}`
+        : this._formatStateDisplay(entityState);
+      rows = [{ label: "HA State", value: haStateValue }];
+    } else {
+      rows = this._buildDetailRows(item, suppressedUntilMap);
+    }
+    return html`
+      <div class="entity-detail-inline">
+        ${rows.map((r) => html`
+          <div class="entity-tooltip-row">
+            <span class="entity-tooltip-label">${r.label}</span>
+            <span class="entity-tooltip-value">${r.value}</span>
+          </div>
+        `)}
+      </div>
+    `;
+  }
+
+  _getOfflineEntityIds() {
+    const isCombined = this._isCombinedGroup();
+    // Single-source: in combined mode read offline_entities off the summary
+    // sensor (same snapshot the row list comes from) instead of the separate
+    // *_offline_entities sensor, which ticks independently and desyncs row dots
+    // from the header count.
+    if (isCombined) {
+      const summary = this._getEntity(
+        `sensor.entity_availability_combined_${this._config.group}_combined_summary`,
+      );
+      const list = summary?.attributes?.offline_entities;
+      return Array.isArray(list) ? list : [];
+    }
+    const prefix = `entity_availability_${this._config.group}`;
+    const entity = this._getEntity(`sensor.${prefix}_offline_entities`);
+    if (!entity || !entity.attributes) return [];
+    return Array.isArray(entity.attributes.entities) ? entity.attributes.entities : [];
+  }
+
+  _getEntity(entityId) {
+    return this.hass?.states?.[entityId];
+  }
+
+  _isCombinedGroup() {
+    if (!this.hass || !this._config.group) return false;
+    const slug = this._config.group;
+    return !!this.hass.states[`sensor.entity_availability_combined_${slug}_combined_summary`];
+  }
+
+  _getAllEntityIds() {
+    const group = this._config.group;
+    if (this._isCombinedGroup()) {
+      const prefix = `entity_availability_combined_${group}`;
+      const ids = [
+        `sensor.${prefix}_combined_summary`,
+        `sensor.${prefix}_offline_entities`,
+        `sensor.${prefix}_low_battery`,
+        `sensor.${prefix}_low_battery_count`,
+        `binary_sensor.${prefix}_any_offline`,
+      ];
+      if (this._config.show_affected_areas) ids.push(`sensor.${prefix}_affected_areas`);
+      return ids;
+    }
+    const prefix = `entity_availability_${group}`;
+    const ids = [
+      `sensor.${prefix}_group_summary`,
+      `sensor.${prefix}_offline_count`,
+      `sensor.${prefix}_offline_entities`,
+      `sensor.${prefix}_low_battery`,
+      `sensor.${prefix}_availability_today`,
+      `sensor.${prefix}_availability_3d`,
+      `sensor.${prefix}_availability_5d`,
+      `sensor.${prefix}_availability_7d`,
+      `binary_sensor.${prefix}_any_offline`,
+    ];
+    if (this._config.show_affected_areas) ids.push(`sensor.${prefix}_affected_areas`);
+    return ids;
+  }
+
+  _computeDuration(entityId) {
+    const ts = this._lastSeen?.[entityId] || this.hass?.states?.[entityId]?.last_changed;
+    if (!ts) return null;
+
+    const diff = Date.now() - new Date(ts).getTime();
+    const minutes = Math.floor(diff / 60000);
+
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+    const weeks = Math.floor(days / 7);
+    return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+  }
+
+  _formatFutureDate(isoString) {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowStart = new Date(todayStart.getTime() + 86400000);
+
+    if (date < tomorrowStart && date >= todayStart) {
+      return `today at ${date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+    }
+    const sameYear = date.getFullYear() === now.getFullYear();
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      ...(sameYear ? {} : { year: "numeric" }),
+    });
+  }
+
+  _formatStateWithUnit(entityState) {
+    if (!entityState) return "unknown";
+    const raw = this._formatIsoState(entityState.state);
+    const unit = entityState.attributes?.unit_of_measurement;
+    return unit ? `${raw} ${unit}` : raw;
+  }
+
+  _formatStateDisplay(entityState) {
+    if (!entityState) return "unknown";
+    const raw = this._formatStateWithUnit(entityState);
+    const s = entityState.state;
+    // Guard on raw state string, not on raw (which may be a reformatted ISO date).
+    // ISO timestamps: parseFloat("2026-…") → NaN → isFinite false → fall through to label path (correct).
+    if (!s || isFinite(parseFloat(s))) return raw;
+    let label;
+    try { label = this.hass?.formatEntityState?.(entityState); } catch (_) { return raw; }
+    if (!label) return raw;
+    // Suppress redundant label: "Home (home)" adds no info — only show when meaningfully different.
+    if (label.toLowerCase() === s.toLowerCase()) return raw;
+    return `${label} (${raw})`;
+  }
+
+  _formatIsoState(stateValue) {
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(stateValue)) return stateValue;
+    const date = new Date(stateValue);
+    if (isNaN(date.getTime())) return stateValue;
+    const sameYear = date.getFullYear() === new Date().getFullYear();
+    return date.toLocaleString(undefined, {
+      month: "short", day: "numeric",
+      ...(sameYear ? {} : { year: "numeric" }),
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  _getAvailabilityColor(pct) {
+    const t = this._config.availability_thresholds || { high: 99, mid: 95 };
+    if (pct >= t.high) return "green";
+    if (pct >= t.mid) return "yellow";
+    return "red";
+  }
+
+  _getAvailabilityBarColor(pct) {
+    const t = this._config.availability_thresholds || { high: 99, mid: 95 };
+    const c = this._config.availability_colors || { high: "#4caf50", mid: "#ff9800", low: "#f44336" };
+    if (pct >= t.high) return c.high;
+    if (pct >= t.mid) return c.mid;
+    return c.low;
+  }
+
+  _formatGroupName(group) {
+    return group.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  _toggleEntities() {
+    this._entitiesExpanded = !this._entitiesExpanded;
+  }
+
+  _positionTooltip(e, item, suppressedUntilMap) {
+    if (this._config.entity_detail !== "tooltip") return;
+    this._hideTooltip();
+    const rows = this._buildDetailRows(item, suppressedUntilMap);
+    const tt = document.createElement("div");
+    tt.className = "eac-global-tooltip";
+    tt.style.cssText = `
+      position:fixed;z-index:99999;
+      background:var(--ha-card-background,var(--card-background-color,var(--primary-background-color,#1c1c1e)));
+      border:1px solid var(--divider-color,rgba(0,0,0,0.12));
+      border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.25);
+      padding:8px 10px;font-size:12px;
+      color:var(--primary-text-color,#212121);
+      white-space:nowrap;pointer-events:none;min-width:200px;
+      font-family:inherit;
+    `;
+    rows.forEach((r) => {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:6px;padding:2px 0;";
+      const label = document.createElement("span");
+      label.style.cssText = "color:var(--secondary-text-color,var(--disabled-text-color,#757575));min-width:80px;";
+      label.textContent = r.label;
+      const value = document.createElement("span");
+      value.style.cssText = "font-weight:500;";
+      value.textContent = r.value;
+      row.appendChild(label);
+      row.appendChild(value);
+      tt.appendChild(row);
+    });
+    document.body.appendChild(tt);
+    this._activeTooltip = tt;
+    tt.getBoundingClientRect(); // force reflow so offsetHeight/offsetWidth are populated
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ttH = tt.offsetHeight;
+    const ttW = tt.offsetWidth;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top = spaceBelow >= ttH + 8 ? rect.bottom + 4 : rect.top - ttH - 4;
+    const left = Math.max(8, Math.min(rect.left, Math.max(8, window.innerWidth - ttW - 8)));
+    tt.style.left = `${left}px`;
+    tt.style.top = `${top}px`;
+  }
+
+  _hideTooltip() {
+    if (this._activeTooltip) {
+      this._activeTooltip.remove();
+      this._activeTooltip = null;
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._hideTooltip();
+  }
+
+  _handleEntityClick(e, entityId) {
+    e.stopPropagation();
+    if (typeof entityId !== "string" || !entityId) return;
+    this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
+  }
+
+  _resolveGroupId() {
+    return this._getGroupSummary()?.attributes?.entry_id || null;
+  }
+
+  _getGroupSummary() {
+    const isCombined = this._isCombinedGroup();
+    const prefix = isCombined
+      ? `entity_availability_combined_${this._config.group}`
+      : `entity_availability_${this._config.group}`;
+    const sensorId = isCombined
+      ? `sensor.${prefix}_combined_summary`
+      : `sensor.${prefix}_group_summary`;
+    return this._getEntity(sensorId);
+  }
+
+  async _handleToggleSuppress(e, entityId, isSuppressed) {
+    e.stopPropagation();
+    const group = this._resolveGroupId();
+    if (isSuppressed) {
+      await this.hass.callService("entity_availability", "unsuppress", { entity_id: entityId, ...(group ? { group } : {}) });
+    } else {
+      await this.hass.callService("entity_availability", "suppress_indefinitely", { entity_id: entityId, ...(group ? { group } : {}) });
+    }
+  }
+
+  // Build entity_id → entry_id map from the combined groups dict.
+  // Single card: returns {_default: entryId} — all entities use the same group.
+  _buildEntityGroupMap() {
+    const isCombined = this._isCombinedGroup();
+    if (!isCombined) {
+      return { _default: this._resolveGroupId() };
+    }
+    const summary = this._getGroupSummary();
+    const groups = summary?.attributes?.groups || {};
+    const rowMembers = summary?.attributes?.row_members || {};
+    const map = {};
+    for (const [entryId, g] of Object.entries(groups)) {
+      for (const list of ["offline_entities", "offline_entities_non_essential",
+          "stale_entities", "stale_entities_non_essential",
+          "poor_signal_entities", "poor_signal_entities_non_essential",
+          "low_battery_entities", "low_battery_entities_non_essential"]) {
+        for (const eid of (g[list] || [])) {
+          if (!(eid in map)) map[eid] = entryId;
+          // Also map all members of a collapsed row to the same group
+          for (const member of (rowMembers[eid] || [])) {
+            if (!(member in map)) map[member] = entryId;
+          }
+        }
+      }
+    }
+    return map;
+  }
+
+  async _suppressEntities(entityIds, groupMap) {
+    const summary = this._getGroupSummary();
+    const rowMembers = summary?.attributes?.row_members || {};
+    // Expand collapsed rows: if a representative has members, suppress all of them
+    // so the whole device row clears, not just the representative.
+    const expanded = [...new Set(
+      entityIds.flatMap(eid => rowMembers[eid]?.length > 1 ? rowMembers[eid] : [eid])
+    )];
+    for (const entityId of expanded) {
+      const group = groupMap._default ?? groupMap[entityId] ?? null;
+      await this.hass.callService("entity_availability", "suppress", {
+        entity_id: entityId,
+        ...(group ? { group } : {}),
+        duration: 60,
+      });
+    }
+  }
+
+  async _handleSuppressAll(e) {
+    e.stopPropagation();
+    const groupMap = this._buildEntityGroupMap();
+    const summary = this._getGroupSummary();
+    const attrs = summary?.attributes || {};
+    const includeNE = this._config.show_non_essential_stats === true;
+    const ids = [
+      ...(attrs.offline_entities || []),
+      ...(attrs.stale_entities || []),
+      ...(attrs.poor_signal_entities || []),
+      ...(attrs.low_battery_entities || []),
+      ...(includeNE ? (attrs.offline_entities_non_essential || []) : []),
+      ...(includeNE ? (attrs.stale_entities_non_essential || []) : []),
+      ...(includeNE ? (attrs.poor_signal_entities_non_essential || []) : []),
+      ...(includeNE ? (attrs.low_battery_entities_non_essential || []) : []),
+    ];
+    await this._suppressEntities([...new Set(ids)], groupMap);
+  }
+
+  async _handleSuppressOffline(e) {
+    e.stopPropagation();
+    const groupMap = this._buildEntityGroupMap();
+    const summary = this._getGroupSummary();
+    const attrs = summary?.attributes || {};
+    const includeNE = this._config.show_non_essential_stats === true;
+    const ids = [
+      ...(attrs.offline_entities || []),
+      ...(includeNE ? (attrs.offline_entities_non_essential || []) : []),
+    ];
+    await this._suppressEntities([...new Set(ids)], groupMap);
+  }
+
+  async _handleUnsuppressAll(e) {
+    e.stopPropagation();
+    const isCombined = this._isCombinedGroup();
+    const group = isCombined ? null : this._resolveGroupId();
+    const summary = this._getGroupSummary();
+    const attrs = summary?.attributes || {};
+    const ids = attrs.entities || [];
+    for (const entityId of ids) {
+      await this.hass.callService("entity_availability", "unsuppress", {
+        entity_id: entityId,
+        ...(group ? { group } : {}),
+      });
+    }
+  }
+}
+
+customElements.define("entity-availability-card", EntityAvailabilityCard);
+
+// --- Card Editor ---
+
+class EntityAvailabilityCardEditor extends LitElement {
+  static get properties() {
+    return {
+      hass: { attribute: false },
+      _config: { state: true },
+    };
+  }
+
+  static get styles() {
+    return css`
+      .editor-row {
+        margin-bottom: 12px;
+      }
+      .editor-row label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+      .editor-row input[type="text"],
+      .editor-row select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid var(--divider-color, #ccc);
+        border-radius: 4px;
+        box-sizing: border-box;
+        background: var(--card-background-color, var(--primary-background-color, #fafafa));
+        color: var(--primary-text-color, #212121);
+      }
+      .editor-row.checkbox label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: normal;
+      }
+      .color-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .color-row label {
+        font-size: 13px;
+        min-width: 80px;
+      }
+      .color-row input[type="color"] {
+        width: 36px;
+        height: 28px;
+        border: 1px solid var(--divider-color, #ccc);
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 2px;
+      }
+      .color-row input[type="number"] {
+        width: 60px;
+        padding: 4px 6px;
+        border: 1px solid var(--divider-color, #ccc);
+        border-radius: 4px;
+        background: var(--card-background-color, var(--primary-background-color, #fafafa));
+        color: var(--primary-text-color, #212121);
+      }
+      .threshold-section {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--divider-color, #e0e0e0);
+      }
+      .threshold-section > label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 8px;
+      }
+    `;
+  }
+
+  setConfig(config) {
+    this._config = config;
+  }
+
+  _getGroupOptions() {
+    if (!this.hass) return { regular: [], combined: [] };
+    const regular = Object.keys(this.hass.states)
+      .filter(
+        (id) =>
+          id.startsWith("sensor.entity_availability_") &&
+          !id.startsWith("sensor.entity_availability_combined_") &&
+          id.endsWith("_offline_count")
+      )
+      .map((id) =>
+        id
+          .replace("sensor.entity_availability_", "")
+          .replace("_offline_count", "")
+      )
+      .sort();
+    const combined = Object.keys(this.hass.states)
+      .filter(
+        (id) =>
+          id.startsWith("sensor.entity_availability_combined_") &&
+          id.endsWith("_combined_summary")
+      )
+      .map((id) =>
+        id
+          .replace("sensor.entity_availability_combined_", "")
+          .replace("_combined_summary", "")
+      )
+      .sort();
+    return { regular, combined };
+  }
+
+  _isSelectedGroupCombined() {
+    if (!this.hass || !this._config?.group) return false;
+    const slug = this._config.group;
+    return !!this.hass.states[`sensor.entity_availability_combined_${slug}_combined_summary`];
+  }
+
+  render() {
+    if (!this._config) return html``;
+
+    return html`
+      <div style="padding: 16px;">
+        <div class="editor-row">
+          <label>Group Slug</label>
+          ${(() => {
+            const { regular, combined } = this._getGroupOptions();
+            const hasOptions = regular.length > 0 || combined.length > 0;
+            if (!hasOptions) {
+              return html`<input
+                type="text"
+                .value=${this._config.group || ""}
+                @input=${(e) => this._updateConfig("group", e.target.value)}
+                placeholder="e.g. security_devices"
+              />`;
+            }
+            return html`<select
+              .value=${this._config.group || ""}
+              @change=${(e) => this._updateConfig("group", e.target.value)}
+            >
+              ${regular.length > 0 ? html`
+                <optgroup label="Groups">
+                  ${regular.map(
+                    (slug) => html`<option value=${slug} ?selected=${this._config.group === slug}>${slug}</option>`
+                  )}
+                </optgroup>` : nothing}
+              ${combined.length > 0 ? html`
+                <optgroup label="Combined Groups">
+                  ${combined.map(
+                    (slug) => html`<option value=${slug} ?selected=${this._config.group === slug}>${slug}</option>`
+                  )}
+                </optgroup>` : nothing}
+            </select>`;
+          })()}
+        </div>
+        <div class="editor-row">
+          <label>Title (optional)</label>
+          <input
+            type="text"
+            .value=${this._config.title || ""}
+            @input=${(e) => this._updateConfig("title", e.target.value || undefined)}
+            placeholder="Custom card title"
+          />
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_affected_areas === true}
+              @change=${(e) => this._updateConfig("show_affected_areas", e.target.checked)}
+            />
+            Show Affected Areas
+          </label>
+        </div>
+        ${!this._isSelectedGroupCombined() ? html`
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_availability !== false}
+              @change=${(e) => this._updateConfig("show_availability", e.target.checked)}
+            />
+            Show Availability Bars
+          </label>
+        </div>
+        ` : nothing}
+        ${this._isSelectedGroupCombined() ? html`
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_groups !== false}
+              @change=${(e) => this._updateConfig("show_groups", e.target.checked)}
+            />
+            Show Groups
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_entities !== false}
+              @change=${(e) => this._updateConfig("show_entities", e.target.checked)}
+            />
+            Show Entity List
+          </label>
+        </div>
+        ` : html`
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_entities !== false}
+              @change=${(e) => this._updateConfig("show_entities", e.target.checked)}
+            />
+            Show Entity List
+          </label>
+        </div>
+        `}
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_non_essential_stats === true}
+              @change=${(e) => this._updateConfig("show_non_essential_stats", e.target.checked)}
+            />
+            Show Non-Essential Stats Row &amp; Entities
+          </label>
+        </div>
+        ${this._isSelectedGroupCombined() ? html`
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_group_total !== false}
+              @change=${(e) => this._updateConfig("show_group_total", e.target.checked)}
+            />
+            Show Total Column
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_group_health !== false}
+              @change=${(e) => this._updateConfig("show_group_health", e.target.checked)}
+            />
+            Show Health Columns (Bat., Stale &amp; Signal, when active)
+          </label>
+        </div>
+        ` : nothing}
+        ${!this._isSelectedGroupCombined() ? html`
+        <div class="editor-row">
+          <label>Filter Entities (requires Show Entity List)</label>
+          <select
+            .value=${this._config.entity_filter || "all"}
+            @change=${(e) => this._updateConfig("entity_filter", e.target.value)}
+            ?disabled=${this._config.show_entities === false}
+          >
+            <option value="all">All entities</option>
+            <option value="offline">Problems only (offline, stale, low battery)</option>
+            <option value="online">Healthy only (online)</option>
+          </select>
+        </div>
+        ` : nothing}
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.entities_expanded === true}
+              @change=${(e) => this._updateConfig("entities_expanded", e.target.checked)}
+              ?disabled=${this._config.show_entities === false}
+            />
+            Entity List Expanded by Default
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_actions === true}
+              @change=${(e) => this._updateConfig("show_actions", e.target.checked)}
+            />
+            Show Suppress/Unsuppress Buttons
+          </label>
+        </div>
+        ${!this._isSelectedGroupCombined() ? html`
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_entity_health !== false}
+              @change=${(e) => this._updateConfig("show_entity_health", e.target.checked)}
+            />
+            Show Health Columns (Bat. &amp; Signal, when active)
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_suppress_toggle === true}
+              @change=${(e) => this._updateConfig("show_suppress_toggle", e.target.checked)}
+            />
+            Show Per-Entity Suppress Toggle
+          </label>
+        </div>
+        ` : nothing}
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.compact === true}
+              @change=${(e) => this._updateConfig("compact", e.target.checked)}
+            />
+            Compact Mode
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_stat_icons === true}
+              @change=${(e) => this._updateConfig("show_stat_icons", e.target.checked)}
+            />
+            Use Icons in Stats Row
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_table_icons === true}
+              @change=${(e) => this._updateConfig("show_table_icons", e.target.checked)}
+            />
+            ${this._isSelectedGroupCombined() ? "Use Icons in Groups Table Header" : "Use Icons in Entity List Header"}
+          </label>
+        </div>
+        ${this._isSelectedGroupCombined() ? html`
+        <div class="editor-row">
+          <label>Sort Groups &amp; Entities By</label>
+          <select
+            .value=${this._config.group_sort_by || "name_asc"}
+            @change=${(e) => this._updateConfig("group_sort_by", e.target.value)}
+          >
+            <option value="name_asc">Name A → Z (default)</option>
+            <option value="name_desc">Name Z → A</option>
+            <option value="offline_desc">Offline ↓ (most issues first)</option>
+          </select>
+        </div>
+        ` : nothing}
+        ${!this._isSelectedGroupCombined() ? html`
+        <div class="editor-row">
+          <label>Entity Detail</label>
+          <select
+            .value=${this._config.entity_detail || "off"}
+            @change=${(e) => this._updateConfig("entity_detail", e.target.value)}
+          >
+            <option value="off">Off</option>
+            <option value="tooltip">Tooltip on hover</option>
+            <option value="inline">Always visible (inline)</option>
+          </select>
+        </div>
+        <div class="editor-row">
+          <label>Sort Entities By</label>
+          <select
+            .value=${this._config.sort_by || "status"}
+            @change=${(e) => this._updateConfig("sort_by", e.target.value)}
+          >
+            <option value="status">Status (default)</option>
+            <option value="name_asc">Name A → Z</option>
+            <option value="name_desc">Name Z → A</option>
+            <option value="battery_asc">Battery ↑ (weakest first)</option>
+            <option value="battery_desc">Battery ↓ (strongest first)</option>
+            <option value="signal_asc">Signal ↑ (weakest first)</option>
+            <option value="signal_desc">Signal ↓ (strongest first)</option>
+          </select>
+        </div>
+        ` : nothing}
+        ${!this._isSelectedGroupCombined() ? html`
+        <div class="threshold-section">
+          <label>Availability Bar Colors & Thresholds</label>
+          <div class="color-row">
+            <label>High ≥</label>
+            <input
+              type="number"
+              min="0" max="100"
+              .value=${(this._config.availability_thresholds?.high ?? 99).toString()}
+              @input=${(e) => this._updateThreshold("high", e.target.value)}
+            />
+            <span>%</span>
+            <input
+              type="color"
+              .value=${this._config.availability_colors?.high || "#4caf50"}
+              @input=${(e) => this._updateColor("high", e.target.value)}
+            />
+          </div>
+          <div class="color-row">
+            <label>Mid ≥</label>
+            <input
+              type="number"
+              min="0" max="100"
+              .value=${(this._config.availability_thresholds?.mid ?? 95).toString()}
+              @input=${(e) => this._updateThreshold("mid", e.target.value)}
+            />
+            <span>%</span>
+            <input
+              type="color"
+              .value=${this._config.availability_colors?.mid || "#ff9800"}
+              @input=${(e) => this._updateColor("mid", e.target.value)}
+            />
+          </div>
+          <div class="color-row">
+            <label>Low below</label>
+            <input
+              type="color"
+              .value=${this._config.availability_colors?.low || "#f44336"}
+              @input=${(e) => this._updateColor("low", e.target.value)}
+            />
+          </div>
+        </div>
+        ` : nothing}
+      </div>
+    `;
+  }
+
+  _updateThreshold(level, value) {
+    const thresholds = { ...(this._config.availability_thresholds || { high: 99, mid: 95 }) };
+    thresholds[level] = parseInt(value, 10) || 0;
+    this._updateConfig("availability_thresholds", thresholds);
+  }
+
+  _updateColor(level, value) {
+    const colors = { ...(this._config.availability_colors || { high: "#4caf50", mid: "#ff9800", low: "#f44336" }) };
+    colors[level] = value;
+    this._updateConfig("availability_colors", colors);
+  }
+
+  _updateConfig(key, value) {
+    if (!this._config) return;
+    const newConfig = { ...this._config, [key]: value };
+    Object.keys(newConfig).forEach((k) => {
+      if (newConfig[k] === undefined) delete newConfig[k];
+    });
+    this._config = newConfig;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+}
+
+customElements.define("entity-availability-card-editor", EntityAvailabilityCardEditor);
+

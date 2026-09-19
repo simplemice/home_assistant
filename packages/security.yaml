@@ -33,12 +33,32 @@ input_text:
     name: Frigate Last Seen Plate
     max: 255
 
+  security_daily_worst_image:
+    name: Security Daily Worst Image
+    max: 255
+  security_daily_worst_importance:
+    name: Security Daily Worst Importance
+    max: 5
+  security_daily_worst_caption:
+    name: Security Daily Worst Caption
+    max: 255
+  security_confirmed_false_positives:
+    name: Security Confirmed False Positives
+    max: 255
+
   security_summary_history:
     name: Security Summary History
     max: 255
   security_summary_last_sent:
     name: Security Summary Last Sent
     max: 50
+
+input_datetime:
+  frigate_garage_last_notified:
+    name: Frigate Garage Last Notified
+    icon: mdi:cctv
+    has_date: true
+    has_time: true
 
 binary_sensor:
   - platform: group
@@ -126,8 +146,4 @@ command_line:
       json_attributes:
         - events
         - count
-shell_command:
-  frigate_log_reset: "echo '' > /config/www/frigate_daily_log.txt"
-  frigate_log_append:
-    "sh /config/www/frigate_log_append.sh '{{ camera }}' '{{ summary
-    }}'"
+

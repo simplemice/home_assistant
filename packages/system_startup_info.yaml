@@ -10,9 +10,12 @@
 ###############################################################################
 
 input_text:
-  ha_core_last_notified_version:
-    name: "HA Core Last Notified Version"
-    initial: ""
+  ha_safety_reset_last_version:
+    name: "HA Safety Reset - Last Seen Core Version"
+    max: 50
+
+  ha_startup_reason_last_version:
+    name: "HA Startup Reason - Last Seen Core Version"
     max: 50
 
 ###############################################################################
@@ -22,118 +25,139 @@ template:
   ###########################################################################
   # Core Sensor (state + attributes storage)
   ###########################################################################
-  - trigger:
-      # Detect Core Update installation
-      - platform: state
+  - triggers:
+      - trigger: state
         entity_id: update.home_assistant_core_update
         from: "on"
         to: "off"
-
-      # Detect HA startup
-      - platform: homeassistant
+        note: "Secondary/backup signal only -- fires too late after boot to be the primary detector."
+      - trigger: homeassistant
         event: start
-
+        note: "Primary path -- now does a real version-diff check instead of echoing its own last value."
     sensor:
       - name: HA Startup Reason
         unique_id: ha_startup_reason
         icon: mdi:restart
-
         state: >
           {% if trigger.platform == 'state' %}
             update
           {% elif trigger.platform == 'homeassistant' %}
-            {{ this.attributes.reason if this.attributes.reason is defined else 'normal' }}
+            {% set installed = state_attr('update.home_assistant_core_update', 'installed_version') %}
+            {% set last = states('input_text.ha_startup_reason_last_version') %}
+            {% if installed not in [none, ''] and last not in ['', 'unknown', 'unavailable'] and installed != last %}
+              update
+            {% else %}
+              normal
+            {% endif %}
           {% else %}
             normal
           {% endif %}
-
         attributes:
           reason: >
             {% if trigger.platform == 'state' %}
               update
             {% elif trigger.platform == 'homeassistant' %}
-              {{ this.attributes.reason if this.attributes.reason is defined else 'normal' }}
+              {% set installed = state_attr('update.home_assistant_core_update', 'installed_version') %}
+              {% set last = states('input_text.ha_startup_reason_last_version') %}
+              {% if installed not in [none, ''] and last not in ['', 'unknown', 'unavailable'] and installed != last %}
+                update
+              {% else %}
+                normal
+              {% endif %}
             {% else %}
               normal
             {% endif %}
-
           from_version: >
             {% if trigger.platform == 'state' %}
               {{ trigger.from_state.attributes.installed_version }}
+            {% elif trigger.platform == 'homeassistant' %}
+              {{ states('input_text.ha_startup_reason_last_version') }}
             {% else %}
               {{ this.attributes.from_version if this.attributes.from_version is defined else '' }}
             {% endif %}
-
           to_version: >
             {% if trigger.platform == 'state' %}
-              {{ trigger.from_state.attributes.latest_version }}
+              {{ trigger.to_state.attributes.installed_version }}
+            {% elif trigger.platform == 'homeassistant' %}
+              {{ state_attr('update.home_assistant_core_update', 'installed_version') }}
             {% else %}
               {{ this.attributes.to_version if this.attributes.to_version is defined else '' }}
             {% endif %}
-
           last_event: >
             {{ now().isoformat() }}
 
-  ###########################################################################
-  # Human-readable text sensor
-  ###########################################################################
   - sensor:
       - name: HA Startup Reason Text
         unique_id: ha_startup_reason_text
         icon: mdi:information
-
         state: >
           {% set reason = state_attr('sensor.ha_startup_reason','reason') %}
           {% set from_v = state_attr('sensor.ha_startup_reason','from_version') %}
           {% set to_v = state_attr('sensor.ha_startup_reason','to_version') %}
-
           {% if reason == 'update' and from_v and to_v %}
             System upgraded from {{ from_v }} to {{ to_v }}
           {% else %}
             Manual restart or power recovery
           {% endif %}
-
-###############################################################################
-# AUTOMATIONS
-###############################################################################
 automation:
   ###########################################################################
   # Safety: Reset stale update flag (edge-case protection)
   ###########################################################################
-  - alias: HA Startup Reason Safety Reset
+  - alias: "HA Startup Reason - Record Seen Version"
+    id: ha_startup_reason_record_seen_version
+    description: "Updates the version tracker for sensor.ha_startup_reason after it's already had a chance to compare against the old value this boot."
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    actions:
+      - delay: "00:00:10"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.ha_startup_reason_last_version
+        data:
+          value: "{{ state_attr('update.home_assistant_core_update', 'installed_version') }}"
+
+  - alias: "HA Startup Reason Safety Reset"
     id: ha_startup_reason_safety_reset
     mode: single
-
-    trigger:
-      - platform: homeassistant
+    triggers:
+      - trigger: homeassistant
         event: start
-
-    condition:
-      - condition: template
-        value_template: >
-          {{ state_attr('sensor.ha_startup_reason','reason') == 'update' }}
-
-    action:
+    conditions:
+      - "{{ (state_attr('update.home_assistant_core_update', 'installed_version') not in [none, '']) and (states('input_text.ha_safety_reset_last_version') not in ['', 'unknown', 'unavailable']) and (state_attr('update.home_assistant_core_update', 'installed_version') != states('input_text.ha_safety_reset_last_version')) }}"
+    actions:
       - delay: "00:05:00"
-
-      - service: homeassistant.update_entity
+      - action: logbook.log
+        data:
+          name: "HA Startup Safety Reset"
+          message: >
+            Triggered by Core update {{ states('input_text.ha_safety_reset_last_version') }}
+            -> {{ state_attr('update.home_assistant_core_update', 'installed_version') }}
+          entity_id: update.home_assistant_core_update
+      - action: script.ha_announce_startup
+        note: "Sends the boot notification (via sensor.ha_startup_reason_text) before the trackers reset."
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.ha_safety_reset_last_version
+        data:
+          value: "{{ state_attr('update.home_assistant_core_update', 'installed_version') }}"
+      - action: input_text.set_value
+        target:
+          entity_id: input_text.ha_startup_reason_last_version
+        data:
+          value: "{{ state_attr('update.home_assistant_core_update', 'installed_version') }}"
+      - action: homeassistant.update_entity
         target:
           entity_id: sensor.ha_startup_reason
-
-###############################################################################
-# OPTIONAL SCRIPT (for announcements / TTS / logging)
-###############################################################################
 script:
   ha_announce_startup:
     alias: HA Announce Startup Reason
     mode: single
-
     sequence:
       - variables:
           message: "{{ states('sensor.ha_startup_reason_text') }}"
-
-      # Example: replace with your TTS system (JARVIS, Chime TTS, etc.)
-      - service: logbook.log
+      - action: logbook.log
         data:
           name: "Home Assistant"
           message: "{{ message }}"

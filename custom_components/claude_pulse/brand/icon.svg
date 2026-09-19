@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Orange glow for gauge fill -->
+    <filter id="glow-orange" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Blue glow for pulse line -->
+    <filter id="glow-blue" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Subtle shadow for the background -->
+    <filter id="bg-shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="16" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- ── Background ── -->
+  <rect width="512" height="512" rx="96" fill="#0F1620" filter="url(#bg-shadow)"/>
+  <!-- Subtle inner gradient overlay -->
+  <rect width="512" height="512" rx="96" fill="url(#bg-grad)" opacity="1"/>
+  <defs>
+    <radialGradient id="bg-grad" cx="40%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#1a2a40"/>
+      <stop offset="100%" stop-color="#0F1620"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ── Gauge track: 240° arc from 150° to 30° clockwise ──
+       Center (256, 245), Radius 158
+       Start (150°): x=256+158·cos150°=119, y=245+158·sin150°=245+79=324
+       End   (30°) : x=393,                 y=324
+  -->
+  <path d="M 119,324 A 158,158 0 1 1 393,324"
+        fill="none"
+        stroke="#1E2D42"
+        stroke-width="36"
+        stroke-linecap="round"/>
+
+  <!-- ── Gauge fill: ~62% of 240° = 149°, end at 150°+149°=299°
+       cos299°≈0.485, sin299°≈-0.875
+       x=256+158·0.485=333, y=245+158·(-0.875)=245-138=107
+  -->
+  <path d="M 119,324 A 158,158 0 0 1 333,107"
+        fill="none"
+        stroke="#FFA800"
+        stroke-width="36"
+        stroke-linecap="round"
+        filter="url(#glow-orange)"/>
+
+  <!-- ── Gauge fill end-cap glow dot ── -->
+  <circle cx="333" cy="107" r="22" fill="#FFA800" opacity="0.35"/>
+  <circle cx="333" cy="107" r="13" fill="#FFD060"/>
+
+  <!-- ── Pulse / EKG line across the gauge interior ──
+       Center y=245. Inner track radius=158-18=140.
+       Inner bottom at y=245+140·sin150°=245+70=315.
+       Baseline y=290 (well inside). Spike up y=218, spike down y=305.
+       X range 160–356 to stay clear of gauge sides.
+  -->
+  <polyline
+    points="160,290  200,290  222,218  244,305  266,262  288,290  356,290"
+    fill="none"
+    stroke="#55BBFF"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow-blue)"/>
+
+  <!-- ── Label ── -->
+  <text x="256" y="445"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="40"
+        font-weight="700"
+        fill="#ffffff"
+        opacity="0.7"
+        text-anchor="middle"
+        letter-spacing="6">CLAUDE PULSE</text>
+
+  <!-- ── Bottom tick marks (decorative) ── -->
+  <line x1="256" y1="464" x2="256" y2="478" stroke="#2A3A52" stroke-width="4" stroke-linecap="round"/>
+  <line x1="222" y1="460" x2="218" y2="473" stroke="#2A3A52" stroke-width="3" stroke-linecap="round"/>
+  <line x1="290" y1="460" x2="294" y2="473" stroke="#2A3A52" stroke-width="3" stroke-linecap="round"/>
+</svg>

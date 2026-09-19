@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Claude.ai",
+        "description": "Enter your Claude.ai credentials.\n\n**Session Key:** Open DevTools (F12) → Application → Cookies → {claude_url} → copy the `sessionKey` cookie value.\n\n**Organization ID:** In DevTools → Network tab, find any request to `/api/organizations/` and copy the UUID from the URL (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).",
+        "data": {
+          "session_key": "Session Key (sessionKey cookie value)",
+          "org_id": "Organization ID (UUID from /api/organizations/...)",
+          "update_interval": "Update interval in seconds (min 30)",
+          "fable_quota": "Enable Fable quota tracking"
+        }
+      },
+      "reauth": {
+        "title": "Re-authenticate Claude Pulse",
+        "description": "Your Claude.ai session key has expired. Open DevTools (F12) → Application → Cookies → {claude_url} → copy the new `sessionKey` value.",
+        "data": {
+          "session_key": "New Session Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid session key or Organization ID — authentication failed (HTTP 401/403).",
+      "cannot_connect": "Could not reach claude.ai — check your network connection and try again."
+    },
+    "abort": {
+      "already_configured": "This Claude.ai Organization ID is already configured.",
+      "reauth_successful": "Re-authentication successful. Sensors will resume updating."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update Claude Pulse settings",
+        "description": "Update your Session Key, Organization ID, or polling interval.\n\n**Session Key:** Open DevTools (F12) → Application → Cookies → {claude_url} → copy the `sessionKey` cookie value.\n\n**Organization ID:** In DevTools → Network tab, find any request to `/api/organizations/` and copy the UUID from the URL (e.g. `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).",
+        "data": {
+          "session_key": "Session Key (sessionKey cookie value)",
+          "org_id": "Organization ID (UUID from /api/organizations/...)",
+          "update_interval": "Update interval in seconds (min 30)",
+          "fable_quota": "Enable Fable quota tracking"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid session key or Organization ID — authentication failed (HTTP 401/403).",
+      "cannot_connect": "Could not reach claude.ai — check your network connection and try again."
+    }
+  }
+}

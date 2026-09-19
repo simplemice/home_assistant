@@ -350,7 +350,9 @@ class TuyaLocalDevice(object):
                 last_cache = self._cached_state.get("updated_at", 0)
                 now = time()
                 full_poll = False
-                if persist == self.should_poll:
+                if (persist == self.should_poll) or (
+                    persist and (self._api.socket is None)
+                ):
                     # use persistent connections after initial communication
                     # has been established.  Until then, we need to rotate
                     # the protocol version, which seems to require a fresh
@@ -406,7 +408,15 @@ class TuyaLocalDevice(object):
                     poll = None
 
                 if poll:
-                    if "Error" in poll:
+                    if "Err" in poll:
+                        # Limit disconnects to the errors that are caused low level
+                        # communication problems
+                        if poll["Err"] in {"901", "902", "905", "906", "914"}:
+                            force_backoff = True
+                            persist = False
+                            self._api.set_socketPersistent(False)
+                            if self._api.parent:
+                                self._api.parent.set_socketPersistent(False)
                         # increment the error count if not done already
                         if error_count == self._api_working_protocol_failures:
                             self._api_working_protocol_failures += 1
