@@ -180,16 +180,16 @@ class ZambrettiSagerCoordinator(DataUpdateCoordinator[ForecastData]):
         # Append current reading and prune buffer
         self._history_buffer.append(now_dt, p_now)
 
-        history_raw = await self._fetch_history_pressures(now_dt)
+        history_pressures = await self._fetch_history_pressures(now_dt)
         wind = self._get_wind_direction()
         wind_speed = self._get_wind_speed()
         humidity = self._get_humidity()
         is_night = self._is_nighttime()
 
-        # Historical pressures
-        p_3h = self._correct_history_pressure(history_raw.get(3), p_now)
-        p_6h = self._correct_history_pressure(history_raw.get(6), p_3h)
-        p_12h = self._correct_history_pressure(history_raw.get(12), p_6h)
+        # Historical pressures (already sea-level corrected via buffer or batch query)
+        p_3h = self._correct_history_pressure(history_pressures.get(3), p_now)
+        p_6h = self._correct_history_pressure(history_pressures.get(6), p_3h)
+        p_12h = self._correct_history_pressure(history_pressures.get(12), p_6h)
 
         observations = WeatherObservations(
             p_now=p_now,
@@ -234,9 +234,7 @@ class ZambrettiSagerCoordinator(DataUpdateCoordinator[ForecastData]):
         unit = state.attributes.get("unit_of_measurement")
         if unit and isinstance(unit, str):
             try:
-                return float(
-                    TemperatureConverter.convert(raw_val, unit, UnitOfTemperature.CELSIUS)
-                )
+                return float(TemperatureConverter.convert(raw_val, unit, UnitOfTemperature.CELSIUS))
             except Exception:
                 unit_clean = unit.upper().replace("°", "").strip()
                 if unit_clean == "F":
@@ -275,11 +273,15 @@ class ZambrettiSagerCoordinator(DataUpdateCoordinator[ForecastData]):
             return raw_pressure
         return calculate_sea_level_pressure(raw_pressure, self._get_temperature(), self.altitude)
 
-    def _correct_history_pressure(self, raw_pressure: float | None, fallback: float) -> float:
-        """Correct historical pressure reading, or return fallback if unavailable."""
-        if raw_pressure is None:
+    def _correct_history_pressure(self, history_pressure: float | None, fallback: float) -> float:
+        """Resolve historical pressure reading, or return fallback if unavailable.
+
+        Readings from the buffer and recorder queries are already normalized and
+        sea-level corrected; this method applies fallback chaining without double correction.
+        """
+        if history_pressure is None:
             return fallback
-        return self._correct_pressure(raw_pressure)
+        return history_pressure
 
     def _get_wind_direction(self) -> float | None:
         """Return wind direction in degrees or None."""
@@ -402,7 +404,7 @@ class ZambrettiSagerCoordinator(DataUpdateCoordinator[ForecastData]):
                 self.pressure_id,
                 missing_hours,
                 now,
-                pressure_corrector=self._correct_pressure if self.use_sea_level else None,
+                pressure_corrector=self._correct_pressure,
                 buffer=self._history_buffer,
             )
             for h, p in batch_results.items():

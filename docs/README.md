@@ -54,6 +54,7 @@ All notifications in the house go through a single routing script that decides t
 
 - **Speaker (TTS)** — voice announcement via JARVIS, volume automatically lowered during evening or sleep mode
 - **Phone** — push notification to the occupant's mobile
+- **Awtrix display** — glanceable info (weather, rain forecast, AQI) shown on the LED matrix display
 - **TV overlay** — on-screen notification when the TV is on
 - **Persistent** — stored in the HA notification centre
 
@@ -79,9 +80,21 @@ A full automatic kitchen timer system supports start, pause, resume, and auto-al
 
 ---
 
+**🍽️ Meals**
+
+Mealie, a self-hosted recipe manager, feeds today's and tomorrow's meal plan into Home Assistant sensors for dashboard display and JARVIS announcements.
+
+---
+
 **🧺 Laundry**
 
 Laundry sessions are tracked via zone detection at laundry facilities in the area. When the occupant enters a laundry zone, a session timer starts. When they leave, the session is closed and logged.
+
+---
+
+**🛠️ Utility Tracking**
+
+A handful of background trackers keep tabs on things outside the house itself: days since the last pest control service (with a reminder countdown), internet outage start/end and duration logging, local fuel station prices (91/95 gasohol), and the live position of the ISS.
 
 ---
 
@@ -94,6 +107,12 @@ Electricity is tracked against time-of-use tariff — peak (weekday daytime) and
 **🌿 Nature & Social**
 
 Bird detections from the garden cameras are automatically identified and posted to the connected [Mastodon](https://social.nightdestiny.com/@house) account and a public [Telegram channel](https://t.me/live_phuket). The house also generates and posts periodic AI-written status updates about its own state.
+
+---
+
+**🧹 House Modes**
+
+House cleaning mode and guest mode adjust automation behaviour while active (e.g. suppressing notifications or presence-based actions that don't make sense mid-clean or with visitors). A kitchen trash reminder rounds out the household helpers.
 
 ---
 

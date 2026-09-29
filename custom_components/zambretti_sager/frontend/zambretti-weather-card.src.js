@@ -1,10 +1,10 @@
 /**
- * Zambretti & Sager Weather Card  v1.9.89
+ * Zambretti & Sager Weather Card  v1.9.93
  * Lovelace custom card for Home Assistant (Self-contained standalone bundle)
  */
 
 console.info(
-  `%c ZAMBRETTI & SAGER WEATHER CARD %c v1.9.89 `,
+  `%c ZAMBRETTI & SAGER WEATHER CARD %c v1.9.93 `,
   'color: white; background: #d97706; font-weight: 700; border-radius: 3px 0 0 3px; padding: 2px 5px;',
   'color: #92400e; background: #fef3c7; font-weight: 700; border-radius: 0 3px 3px 0; padding: 2px 5px;'
 );
@@ -842,6 +842,7 @@ function historyChart(points, labels, compact) {
   const cH = H - PAD.top - PAD.bottom;
   const FONT = compact ? 11 : 13;
   const FONT_FAMILY = "-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif";
+  const gid = "hc" + (++_gradientIdCounter);
 
   // ── Filter out nulls ───────────────────────────────────────────────────
   let pPoints  = points.filter(d => d.p    != null);
@@ -1173,6 +1174,7 @@ class ZambrettiWeatherCard extends HTMLElement {
       entity_12h:       ["_zambretti_forecast_12h", "zambretti_forecast_12h"],
       entity_24h:       ["_zambretti_forecast_24h", "zambretti_forecast_24h"],
       entity_precip:    ["_precipitation_probability", "precipitation_probability"],
+      entity_pressure:  ["_pressure", "pressure", "_barometric_pressure"],
     };
     const states = h.states;
     const resolved = {};
@@ -1192,6 +1194,7 @@ class ZambrettiWeatherCard extends HTMLElement {
   }
 
   set hass(h) {
+    const oldHass = this._hass;
     this._hass = h;
     // Auto-resolve entity IDs on first load (handles "weather_station_" prefix etc.)
     if (!this._entitiesResolved) {
@@ -1201,9 +1204,16 @@ class ZambrettiWeatherCard extends HTMLElement {
       }
       this._entitiesResolved = true;
     }
-    // Kick off history fetch (debounced) when show_history or show_trend is on
+    // Check if key forecast sensor recovered from unavailable/unknown to an active state
+    const zId = this._config.entity_zambretti;
+    const oldZState = oldHass?.states?.[zId]?.state;
+    const newZState = h?.states?.[zId]?.state;
+    const recovered = (oldZState === "unavailable" || oldZState === "unknown" || !oldZState) &&
+                      (newZState && newZState !== "unavailable" && newZState !== "unknown");
+
+    // Kick off history fetch when show_history or show_trend is on
     if (this._config.show_history || this._config.show_trend) {
-      this._scheduleHistoryFetch();
+      this._scheduleHistoryFetch(recovered);
     }
     // Full rebuild only on first render or after config change.
     // Subsequent hass updates use _patch() to avoid destroying SVG animations.
@@ -1217,17 +1227,20 @@ class ZambrettiWeatherCard extends HTMLElement {
   // ── History fetch ─────────────────────────────────────────────────────
   /**
    * Triggers a history fetch if one isn't already running and the throttle
-   * interval (5 min) has elapsed. Updates chart and timeline on completion.
+   * interval (5 min, or 15s if no data) has elapsed. Updates chart and timeline on completion.
    */
-  _scheduleHistoryFetch() {
+  _scheduleHistoryFetch(force = false) {
     if (this._historyFetching) return;
     if (typeof document !== "undefined" && document.hidden) {
       this._historyFetchPending = true;
       return;
     }
-    // Throttle: refetch at most once per 5 minutes
     const now = Date.now();
-    if (this._historyFetchedAt && (now - this._historyFetchedAt) < 5 * 60 * 1000) return;
+    const hasData = (Array.isArray(this._historyPoints) && this._historyPoints.length >= 2) ||
+                    (Array.isArray(this._timelineSteps) && this._timelineSteps.length > 0);
+    const throttleMs = hasData ? (5 * 60 * 1000) : (15 * 1000);
+    if (!force && this._historyFetchedAt && (now - this._historyFetchedAt) < throttleMs) return;
+
     this._historyFetching = true;
     this._doFetchHistory().then(() => {
       this._historyFetching = false;
@@ -1253,9 +1266,7 @@ class ZambrettiWeatherCard extends HTMLElement {
 
     const zId      = cfg.entity_zambretti;
     const precipId = cfg.entity_precip;
-    // Read pressure sensor entity_id from zambretti sensor attribute
-    // (set by the Python integration — the raw BMP280/barometric sensor)
-    const pressureId = this._attr(zId, "pressure_sensor", null) || null;
+    const pressureId = this._attr(zId, "pressure_sensor", null) || cfg.entity_pressure || null;
 
     if (!zId && !precipId) return;
 
@@ -1494,9 +1505,10 @@ class ZambrettiWeatherCard extends HTMLElement {
   /** Attaches pointer / touch listeners to enable dynamic history scrubbing on the 24h chart. */
   _setupHistoryScrubbing() {
     const svg = this.shadowRoot?.querySelector(".history-chart-svg");
-    if (!svg || !this._historyPoints || !this._historyPoints.p || this._historyPoints.p.length < 2) return;
-    const pPts = this._historyPoints.p;
-    const prPts = this._historyPoints.precip || [];
+    if (!svg || !Array.isArray(this._historyPoints) || this._historyPoints.length < 2) return;
+    let pPts = this._historyPoints.filter(d => d.p != null);
+    if (pPts.length < 2) return;
+    const prPts = this._historyPoints.filter(d => d.precip != null);
     const titleEl = this.shadowRoot?.querySelector(".history-title");
     const defaultTitle = `<svg aria-hidden="true" viewBox="0 0 16 16" width="12" height="12" style="vertical-align:-1px;margin-right:4px;opacity:0.7"><polyline points="1,12 5,6 8,9 11,4 15,7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>24h`;
 
@@ -1508,17 +1520,30 @@ class ZambrettiWeatherCard extends HTMLElement {
     const scrubTipTxt = svg.querySelector(".hchart-scrub-tip-txt");
     if (!scrubCursor || !scrubLine || !scrubDot || !scrubTip) return;
 
+    // Apply same IQR filter as historyChart() so min/max match exactly
+    if (pPts.length >= 4) {
+      const sv = [...pPts].map(d => d.p).sort((a, b) => a - b);
+      const q1 = sv[Math.floor(sv.length * 0.25)];
+      const q3 = sv[Math.floor(sv.length * 0.75)];
+      const iqr = q3 - q1;
+      pPts = pPts.filter(d => d.p >= q1 - 3*iqr && d.p <= q3 + 3*iqr);
+    }
+    if (pPts.length < 2) return;
+
     const compact = !!this._config.compact;
-    const W = 500, H = compact ? 150 : 200;
-    const PAD = compact ? {top:16, bottom:22, left:44, right:12} : {top:20, bottom:26, left:48, right:14};
+    const W = 560, H = compact ? 150 : 200;
+    const PAD = { top: 22, right: 16, bottom: 38, left: 56 };
     const cW = W - PAD.left - PAD.right;
     const cH = H - PAD.top - PAD.bottom;
 
     const pVals = pPts.map(d => d.p);
-    const pMin = Math.floor(Math.min(...pVals) - 1);
-    const pMax = Math.ceil(Math.max(...pVals) + 1);
-    const tMin = pPts[0].t.getTime();
-    const tMax = pPts[pPts.length - 1].t.getTime();
+    const lo = Math.min(...pVals), hi = Math.max(...pVals);
+    const margin = Math.max(2, (hi - lo) * 0.15);
+    const pMin = Math.floor(lo - margin);
+    const pMax = Math.ceil(hi + margin);
+
+    const tMin = this._historyPoints[0].t.getTime();
+    const tMax = this._historyPoints[this._historyPoints.length - 1].t.getTime();
     const tSpan = Math.max(tMax - tMin, 1);
 
     const handleMove = (e) => {
@@ -1536,7 +1561,7 @@ class ZambrettiWeatherCard extends HTMLElement {
         if (diff < minDiff) { minDiff = diff; closest = pt; }
       }
 
-      const yOfP = PAD.top + cH - ((closest.p - pMin) / (pMax - pMin)) * cH;
+      const yOfP = PAD.top + (1 - (closest.p - pMin) / (pMax - pMin)) * cH;
       const xOfT = PAD.left + ((closest.t.getTime() - tMin) / tSpan) * cW;
 
       scrubCursor.style.opacity = "1";
@@ -1572,7 +1597,7 @@ class ZambrettiWeatherCard extends HTMLElement {
       }
 
       if (titleEl) {
-        titleEl.innerHTML = `<span style="color:#FFD54F">⏱ ${timeStr} (-${diffHours}ч): <b>${closest.p.toFixed(1)} hPa</b>${prStr}</span>`;
+        titleEl.innerHTML = `<span style="color:#FFD54F">⏱ ${timeStr} (-${diffHours}h): <b>${closest.p.toFixed(1)} hPa</b>${prStr}</span>`;
       }
     };
 
@@ -2045,12 +2070,20 @@ class ZambrettiWeatherCard extends HTMLElement {
         // Clear isCurrent from previous last step
         this._timelineSteps.forEach(s => { s.isCurrent = false; });
         this._timelineSteps.push({ t: new Date(), state: zState, isCurrent: true });
-        // Keep max 8
         if (this._timelineSteps.length > 8) this._timelineSteps.shift();
         this._patchTimeline();
       }
     }
 
+    // If chart or timeline were previously showing empty state and we now have data, patch them
+    if (cfg.show_history && this._historyPoints && this._historyPoints.length >= 2) {
+      const emptyChart = sr.querySelector(".hchart-empty");
+      if (emptyChart) this._patchChart();
+    }
+    if (cfg.show_trend && this._timelineSteps && this._timelineSteps.length > 0) {
+      const emptyTl = sr.querySelector(".tl-empty");
+      if (emptyTl) this._patchTimeline();
+    }
   }
 
   /**

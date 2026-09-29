@@ -224,9 +224,15 @@ async def async_get_history_pressure_from_recorder(
     hours: int,
     now: datetime.datetime,
     window_minutes: int = 15,
+    pressure_corrector: Callable[[float], float] | None = None,
 ) -> float | None:
     """Query recorder for pressure reading N hours ago (compatibility wrapper)."""
     batch_res = await async_get_history_pressures_batch_from_recorder(
-        hass, pressure_id, [hours], now, window_minutes=window_minutes
+        hass,
+        pressure_id,
+        [hours],
+        now,
+        window_minutes=window_minutes,
+        pressure_corrector=pressure_corrector,
     )
     return batch_res.get(hours)

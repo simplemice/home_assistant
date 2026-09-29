@@ -221,15 +221,21 @@ def calculate_zambretti_index(p_now: float, delta_hpa: float) -> int:
     """Calculate Zambretti index (1–32) from pressure and trend.
 
     The original Zambretti algorithm uses different formulas for
-    falling, steady, and rising pressure trends.
+    falling, steady, and rising pressure trends, corresponding to
+    the three distinct windows of the Zambretti wheel:
+      - Falling (indices 1–9):   1 = settled fine,  9 = very unsettled rain
+      - Steady  (indices 10–19): 10 = settled fine, 19 = stormy much rain
+      - Rising  (indices 20–32): 20 = settled fine, 32 = stormy much rain
     """
     if delta_hpa <= -1.6:  # Falling
         z = round(127 - 0.12 * p_now)
+        return max(1, min(z, 9))
     elif delta_hpa >= 1.6:  # Rising
         z = round(185 - 0.16 * p_now)
+        return max(20, min(z, 32))
     else:  # Steady
         z = round(144 - 0.13 * p_now)
-    return max(1, min(z, 32))
+        return max(10, min(z, 19))
 
 
 def calculate_precipitation_probability(
@@ -352,19 +358,21 @@ def calculate_extrapolations(
         Dict mapping horizon in hours (6, 12, 24) to ExtrapolatedForecast.
     """
     # 6h extrapolation (trend over 3h extrapolated x2)
-    delta_6h = (p_now - p_3h) * 2
+    rate_3h = p_now - p_3h
+    delta_6h = rate_3h * 2
     predicted_p_6h = round(p_now + delta_6h, 1)
     zambretti_6h = ZAMBRETTI_MAPPING.get(
-        calculate_zambretti_index(predicted_p_6h, delta_6h), "stable"
+        calculate_zambretti_index(predicted_p_6h, rate_3h), "stable"
     )
 
     # 12h extrapolation
     p_ref_12 = p_6h if p_6h is not None else p_3h
     h_12 = 6 if p_6h is not None else 3
+    rate_12_3h = (p_now - p_ref_12) / h_12 * 3
     delta_12h = (p_now - p_ref_12) / h_12 * 12
     predicted_p_12h = round(p_now + delta_12h, 1)
     zambretti_12h = ZAMBRETTI_MAPPING.get(
-        calculate_zambretti_index(predicted_p_12h, delta_12h), "stable"
+        calculate_zambretti_index(predicted_p_12h, rate_12_3h), "stable"
     )
 
     # 24h extrapolation
@@ -378,10 +386,11 @@ def calculate_extrapolations(
         p_ref_24 = p_3h
         h_24 = 3
 
+    rate_24_3h = (p_now - p_ref_24) / h_24 * 3
     delta_24h = (p_now - p_ref_24) / h_24 * 24
     predicted_p_24h = round(p_now + delta_24h, 1)
     zambretti_24h = ZAMBRETTI_MAPPING.get(
-        calculate_zambretti_index(predicted_p_24h, delta_24h), "stable"
+        calculate_zambretti_index(predicted_p_24h, rate_24_3h), "stable"
     )
 
     return {
