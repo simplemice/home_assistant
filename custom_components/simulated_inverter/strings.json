@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Simulated Inverter",
+        "description": "Creates the Simulated Inverter device: a full simulated hybrid-inverter sensor suite (grid meter, PV string controller, battery BMS, weather probes) modeled after Huawei FusionSolar and SolaX Power hardware, driven entirely by your existing solar/wind/battery/grid simulation packages. Only one instance is needed."
+      }
+    },
+    "abort": {
+      "already_configured": "Simulated Inverter is already set up."
+    }
+  }
+}

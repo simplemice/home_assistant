@@ -1,0 +1,11 @@
+{
+  "domain": "simulated_inverter",
+  "name": "Simulated Inverter",
+  "codeowners": ["@simplemice"],
+  "config_flow": true,
+  "documentation": "https://github.com/simplemice/home_assistant",
+  "integration_type": "device",
+  "iot_class": "calculated",
+  "requirements": [],
+  "version": "1.0.0"
+}

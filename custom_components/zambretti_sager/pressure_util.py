@@ -6,77 +6,33 @@ import logging
 
 from homeassistant.const import UnitOfPressure
 from homeassistant.core import State
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util.unit_conversion import PressureConverter
+
+from .elevation import _ELEVATION_CACHE, get_elevation
+
+__all__ = [
+    "_ELEVATION_CACHE",
+    "calculate_sea_level_pressure",
+    "get_elevation",
+    "parse_pressure_hpa",
+    "parse_pressure_hpa_from_history",
+]
 
 _LOGGER = logging.getLogger(__name__)
 
 _INVALID_STATES = frozenset({"unknown", "unavailable", "none", ""})
 
-_HPA_UNITS = frozenset({
-    UnitOfPressure.HPA,
-    UnitOfPressure.MBAR,
-    "hPa",
-    "mbar",
-    "mb",
-})
+_HPA_UNITS = frozenset(
+    {
+        UnitOfPressure.HPA,
+        UnitOfPressure.MBAR,
+        "hPa",
+        "mbar",
+        "mb",
+    }
+)
 
 
-_ELEVATION_CACHE: dict[tuple[float, float], float] = {}
-
-
-async def get_elevation(hass, latitude: float, longitude: float) -> float | None:
-    """Get elevation above sea level via Open-Elevation API or Open-Meteo API.
-
-    Caches results in memory to avoid repetitive HTTP requests across reloads.
-
-    Args:
-        hass: Home Assistant instance.
-        latitude: Latitude in degrees.
-        longitude: Longitude in degrees.
-
-    Returns:
-        Elevation in meters, or None if lookup fails.
-    """
-    cache_key = (round(float(latitude), 4), round(float(longitude), 4))
-    if cache_key in _ELEVATION_CACHE:
-        return _ELEVATION_CACHE[cache_key]
-
-    session = async_get_clientsession(hass)
-
-    # 1. Try Open-Elevation API
-    url_open_elevation = (
-        f"https://api.open-elevation.com/api/v1/lookup?locations={latitude},{longitude}"
-    )
-    try:
-        async with session.get(url_open_elevation, timeout=10) as response:
-            if response.status == 200:
-                data = await response.json()
-                results = data.get("results")
-                if results and "elevation" in results[0]:
-                    elevation = float(results[0]["elevation"])
-                    _ELEVATION_CACHE[cache_key] = elevation
-                    return elevation
-    except Exception as err:
-        _LOGGER.debug("Failed to get elevation from Open-Elevation API: %s", err)
-
-    # 2. Try Open-Meteo API fallback
-    url_open_meteo = (
-        f"https://api.open-meteo.com/v1/elevation?latitude={latitude}&longitude={longitude}"
-    )
-    try:
-        async with session.get(url_open_meteo, timeout=10) as response:
-            if response.status == 200:
-                data = await response.json()
-                elevations = data.get("elevation")
-                if elevations and isinstance(elevations, list) and len(elevations) > 0:
-                    elevation = float(elevations[0])
-                    _ELEVATION_CACHE[cache_key] = elevation
-                    return elevation
-    except Exception as err:
-        _LOGGER.debug("Failed to get elevation from Open-Meteo API: %s", err)
-
-    return None
 
 
 def calculate_sea_level_pressure(pressure, temperature, altitude):
@@ -105,7 +61,7 @@ def calculate_sea_level_pressure(pressure, temperature, altitude):
         # Fallback: approximate 1 hPa per 8.3 m
         return pressure + (altitude / 8.3)
 
-    return pressure / (factor ** 5.257)
+    return pressure / (factor**5.257)
 
 
 def _normalize_pressure_value(value: float, unit: str | None, entity_id: str) -> float:

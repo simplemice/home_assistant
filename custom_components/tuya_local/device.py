@@ -5,7 +5,6 @@ API for Tuya Local devices.
 import asyncio
 import logging
 from asyncio.exceptions import CancelledError
-from threading import Lock
 from time import time
 
 import tinytuya
@@ -165,7 +164,6 @@ class TuyaLocalDevice(object):
         self._SINGLE_PROTO_CONNECTION_ATTEMPTS = 3
         # The number of failures from a working protocol before retrying other protocols.
         self._AUTO_FAILURE_RESET_COUNT = 10
-        self._lock = Lock()
 
     @property
     def name(self):
@@ -346,7 +344,6 @@ class TuyaLocalDevice(object):
             error_count = self._api_working_protocol_failures
             force_backoff = False
             try:
-                await self._api_lock.acquire()
                 last_cache = self._cached_state.get("updated_at", 0)
                 now = time()
                 full_poll = False
@@ -462,10 +459,8 @@ class TuyaLocalDevice(object):
                 if self._api.parent:
                     self._api.parent.set_socketPersistent(False)
                 force_backoff = True
-            finally:
-                if self._api_lock.locked():
-                    self._api_lock.release()
-            if not self.has_returned_state:
+
+            if not self.has_returned_state or self._api.socket is None:
                 force_backoff = True
             await asyncio.sleep(5 if force_backoff else 0.1)
 
@@ -662,17 +657,13 @@ class TuyaLocalDevice(object):
         )
 
     def _set_values(self, properties):
-        try:
-            self._lock.acquire()
-            self._api.set_multiple_values(properties, nowait=True)
-            now = time()
-            self._last_connection = now
-            pending_updates = self._get_pending_updates()
-            for key in properties.keys():
-                pending_updates[key]["updated_at"] = now
-                pending_updates[key]["sent"] = True
-        finally:
-            self._lock.release()
+        self._api.set_multiple_values(properties, nowait=True)
+        now = time()
+        self._last_connection = now
+        pending_updates = self._get_pending_updates()
+        for key in properties.keys():
+            pending_updates[key]["updated_at"] = now
+            pending_updates[key]["sent"] = True
 
     async def _retry_on_failed_connection(self, func, error_message):
         if self._api_protocol_version_index is None:
@@ -696,7 +687,8 @@ class TuyaLocalDevice(object):
         for i in range(connections):
             try:
                 if not self._hass.is_stopping:
-                    retval = await self._hass.async_add_executor_job(func)
+                    async with self._api_lock:
+                        retval = await self._hass.async_add_executor_job(func)
                     if isinstance(retval, dict) and "Error" in retval:
                         last_err_code = retval.get("Err")
                         last_err_msg = retval.get("Error")

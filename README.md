@@ -136,15 +136,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2265 |
-| Number of sensors | 1252 |
-| Current Version | 2026.9.3 |
-| Total Automations | 123 |
-| Total Scripts | 41 |
-| Total Lights | 32 |
+| Number of entities | 2340 |
+| Number of sensors | 1306 |
+| Current Version | 2026.9.4 |
+| Total Automations | 124 |
+| Total Scripts | 43 |
+| Total Lights | 33 |
 | Total Switches | 172 |
 | Total Scenes | 6 |
-| Total Players | 11 |
+| Total Players | 13 |
 
 ---
 
@@ -161,6 +161,8 @@ This repository is treated as:
 - Network UPS Tools
 
 - openWakeWord
+
+- Piper
 
 - Samba share
 
@@ -180,14 +182,13 @@ This repository is treated as:
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.1.1)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.3)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.2.0)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.4)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.2.1)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
-- [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.3)
+- [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.6)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
 - [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.0)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
-- [House Plan](https://github.com/Matysh/houseplan-card) (v1.76.0)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
 - [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.7.3)
@@ -200,14 +201,14 @@ This repository is treated as:
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
-- [Spook](https://spook.boo) (v5.4.0)
+- [Spook](https://spook.boo) (v5.6.0)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
-- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.88)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.89)
 
 ## 🔗 Custom integrations
 
@@ -218,6 +219,8 @@ This repository is treated as:
 - [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability)
 
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
+
+- [Frigate](https://github.com/blakeblackshear/frigate-hass-integration)
 
 - [Ha Mcp Custom Component](https://github.com/homeassistant-ai/ha-mcp-integration)
 

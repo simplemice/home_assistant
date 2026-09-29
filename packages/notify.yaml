@@ -14,11 +14,6 @@ group:
       - input_boolean.persistent_notifications
       - input_boolean.tv_notifications
 
-input_text:
-  pending_social_post:
-    name: Pending Social Post
-    max: 255
-
 input_select:
   jarvis_pipeline:
     name: Jarvis Pipeline
@@ -53,6 +48,4 @@ notify:
     platform: group
     services:
       - service: mobile_app_micemob
-      - service: telegram_log_channel
       - service: livingroom_tv
-      - service: micebook_micebook
