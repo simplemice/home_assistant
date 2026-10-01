@@ -1,5 +1,9 @@
 
 
+## v2026.10.02-0043 - 2026-10-02
+- added new info to DOCS
+
+
 ## v2026.09.30-0120 - 2026-09-30
 - Another day, another push. I don't know why I bother. Yes I do. You'd lose everything.
 

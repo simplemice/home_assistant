@@ -182,7 +182,7 @@ This repository is treated as:
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.1.1)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.4)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.5)
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.2.1)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.6)
@@ -200,15 +200,16 @@ This repository is treated as:
 - [Powercalc](https://docs.powercalc.nl) (vv1.20.14)
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
+- [Simulated Inverter](https://github.com/simplemice/home_assistant) (v1.0.0)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
-- [Spook](https://spook.boo) (v5.6.0)
+- [Spook](https://spook.boo) (v5.6.1)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
-- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.89)
+- [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.93)
 
 ## 🔗 Custom integrations
 
