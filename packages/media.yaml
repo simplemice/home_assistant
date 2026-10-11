@@ -76,11 +76,12 @@ template:
             media_player.kitchen_speaker
           {% elif is_state('sensor.micemob_area','Garage') %}
             media_player.garage_speaker
-          {% elif is_state('sensor.micemob_area','Backyard') %}
-            media_player.backyard_speaker
+          {% elif is_state('sensor.micemob_area','Bathroom') %}
+            media_player.bathroom_smart_clock
           {% else %}
             media_player.livingroom_speaker
           {% endif %}
+
       - name: Last Speaker
         unique_id: last_speaker
         state: >

@@ -35,11 +35,13 @@
         "description": "Đặt cấu hình tích hợp",
         "data": {
           "scan_interval": "Khoảng thời gian quét (giây)",
+          "track_network_hosts_interval": "Chu kỳ theo dõi thiết bị (giây)",
           "track_network_hosts_timeout": "Thời gian chờ theo dõi thiết bị mạng (giây)",
           "zone": "Khu vực cho trình theo dõi thiết bị"
         },
         "data_description": {
           "scan_interval": "Tối thiểu: 10s. Mặc định: 30s. Giá trị thấp hơn làm tăng tải RouterOS API.",
+          "track_network_hosts_interval": "Tần suất ping các thiết bị được theo dõi và làm mới trạng thái của chúng. Tối thiểu: 5s. Tối đa: 300s. Mặc định: 10s. Tăng giá trị trên mạng lớn để giảm tải. Không bao giờ dài hơn một nửa thời gian chờ theo dõi. Thay đổi trạng thái ở nhà/vắng nhà có thể trễ tối đa một chu kỳ.",
           "track_network_hosts_timeout": "Chỉ thiết bị có dây. Số giây trước khi thiết bị bị coi là ngoại tuyến nếu không thấy trong ARP. Mặc định: 180s.",
           "zone": "Tên vùng Home Assistant để sử dụng khi thiết bị được theo dõi kết nối. Mặc định: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Công tắc bộ lọc",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kiểm soát trẻ em",
+          "sensor_lte": "Cảm biến modem LTE / 5G",
           "sensor_mangle": "Công tắc Mangle",
           "sensor_nat": "Công tắc NAT",
           "sensor_netwatch_tracker": "Cảm biến Netwatch",
+          "sensor_port_errors": "Bộ đếm lỗi cổng",
+          "sensor_port_switch": "Công tắc cổng",
           "sensor_port_tracker": "Cảm biến theo dõi cổng",
           "sensor_port_traffic": "Cảm biến lưu lượng cổng",
           "sensor_ppp": "Người dùng PPP",
+          "sensor_raw": "Công tắc Raw",
+          "sensor_routes": "Cảm biến tuyến đường",
           "sensor_routing_rules": "Công tắc Routing Rules",
           "sensor_scripts": "Công tắc script",
           "sensor_simple_queues": "Công tắc hàng đợi đơn giản",
@@ -85,12 +92,17 @@
           "sensor_filter": "Công tắc cho mỗi quy tắc Filter để bật/tắt quy tắc tường lửa từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc lọc.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Công tắc cho hồ sơ thiết bị Kid Control (tạm dừng/tiếp tục truy cập internet).",
+          "sensor_lte": "Cảm biến cho mỗi modem LTE hoặc 5G: nhà mạng, công nghệ truy cập, mức tín hiệu (RSSI, RSRP, RSRQ, SINR, CQI) và băng tần. Thêm một truy vấn cho mỗi modem ở mỗi chu kỳ; bộ định tuyến không có modem sẽ không bị truy vấn.",
           "sensor_mangle": "Công tắc cho mỗi quy tắc Mangle để bật/tắt quy tắc đánh dấu gói tin từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc Mangle.",
           "sensor_nat": "Công tắc cho mỗi quy tắc NAT để bật/tắt quy tắc từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc NAT.",
           "sensor_netwatch_tracker": "Cảm biến nhị phân cho mỗi mục Netwatch hiển thị trạng thái có thể tiếp cận.",
+          "sensor_port_errors": "4 cảm biến cho mỗi giao diện (lỗi RX/TX và gói bị loại RX/TX) để phát hiện cáp hỏng hoặc cổng lỗi. Cảnh báo: tạo 4 thực thể cho mỗi giao diện.",
+          "sensor_port_switch": "Công tắc cho mỗi cổng để bật/tắt cổng từ HA. Tắt tùy chọn này để tránh vô tình tắt một cổng; các thực thể khác của cổng vẫn giữ nguyên.",
           "sensor_port_tracker": "Cảm biến nhị phân cho mỗi cổng hiển thị trạng thái kết nối (kết nối/mất kết nối).",
           "sensor_port_traffic": "4 cảm biến cho mỗi giao diện (byte TX/RX và tổng cộng). Cảnh báo: tạo 4 thực thể cho mỗi giao diện — tắt nếu không cần đồ thị lưu lượng.",
           "sensor_ppp": "Công tắc cho mỗi PPP secret (người dùng) để bật/tắt tài khoản VPN/PPPoE từ HA.",
+          "sensor_raw": "Công tắc cho mỗi quy tắc Raw để bật/tắt quy tắc raw của tường lửa từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc raw.",
+          "sensor_routes": "Cảm biến nhị phân cho mỗi tuyến tĩnh và mỗi tuyến mặc định, bật khi tuyến đang hoạt động. Các tuyến động khác không được bao gồm.",
           "sensor_routing_rules": "Công tắc cho mỗi Routing Rule để bật/tắt quy tắc định tuyến chính sách từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc định tuyến.",
           "sensor_scripts": "Nút cho mỗi script để kích hoạt script RouterOS từ HA.",
           "sensor_simple_queues": "Công tắc cho mỗi mục Simple Queue để bật/tắt giới hạn băng thông từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc hàng đợi.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Bảo mật kết nối"
         },
         "data_description": {
-          "port": "Cổng RouterOS API. Để 0 để dùng mặc định: 8728 (không SSL) hoặc 8729 (có SSL)."
+          "port": "Cổng RouterOS API. Để 0 để dùng mặc định: 8728 (không SSL) hoặc 8729 (có SSL).",
+          "password": "Để trống để giữ mật khẩu đã lưu."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Khoảng thời gian quét",
           "track_iface_clients": "Hiển thị MAC và IP của máy khách trên giao diện",
           "unit_of_measurement": "Đơn vị đo",
+          "track_network_hosts_interval": "Chu kỳ theo dõi thiết bị (giây)",
           "track_network_hosts_timeout": "Thời gian chờ theo dõi thiết bị mạng (giây)",
           "zone": "Khu vực cho trình theo dõi thiết bị"
         },
         "data_description": {
           "scan_interval": "Tối thiểu: 10s. Mặc định: 30s. Giá trị thấp hơn làm tăng tải RouterOS API.",
+          "track_network_hosts_interval": "Tần suất ping các thiết bị được theo dõi và làm mới trạng thái của chúng. Tối thiểu: 5s. Tối đa: 300s. Mặc định: 10s. Tăng giá trị trên mạng lớn để giảm tải. Không bao giờ dài hơn một nửa thời gian chờ theo dõi. Thay đổi trạng thái ở nhà/vắng nhà có thể trễ tối đa một chu kỳ.",
           "track_network_hosts_timeout": "Chỉ thiết bị có dây. Số giây trước khi thiết bị bị coi là ngoại tuyến nếu không thấy trong ARP. Mặc định: 180s.",
           "zone": "Tên vùng Home Assistant để sử dụng khi thiết bị được theo dõi kết nối. Mặc định: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Công tắc bộ lọc",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kiểm soát trẻ em",
+          "sensor_lte": "Cảm biến modem LTE / 5G",
           "sensor_mangle": "Công tắc Mangle",
           "sensor_nat": "Công tắc NAT",
           "sensor_netwatch_tracker": "Cảm biến Netwatch",
+          "sensor_port_errors": "Bộ đếm lỗi cổng",
+          "sensor_port_switch": "Công tắc cổng",
           "sensor_port_tracker": "Cảm biến theo dõi cổng",
           "sensor_port_traffic": "Cảm biến lưu lượng cổng",
           "sensor_ppp": "Người dùng PPP",
+          "sensor_raw": "Công tắc Raw",
+          "sensor_routes": "Cảm biến tuyến đường",
           "sensor_routing_rules": "Công tắc Routing Rules",
           "sensor_scripts": "Công tắc script",
           "sensor_simple_queues": "Công tắc hàng đợi đơn giản",
@@ -194,12 +214,17 @@
           "sensor_filter": "Công tắc cho mỗi quy tắc Filter để bật/tắt quy tắc tường lửa từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc lọc.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Công tắc cho hồ sơ thiết bị Kid Control (tạm dừng/tiếp tục truy cập internet).",
+          "sensor_lte": "Cảm biến cho mỗi modem LTE hoặc 5G: nhà mạng, công nghệ truy cập, mức tín hiệu (RSSI, RSRP, RSRQ, SINR, CQI) và băng tần. Thêm một truy vấn cho mỗi modem ở mỗi chu kỳ; bộ định tuyến không có modem sẽ không bị truy vấn.",
           "sensor_mangle": "Công tắc cho mỗi quy tắc Mangle để bật/tắt quy tắc đánh dấu gói tin từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc Mangle.",
           "sensor_nat": "Công tắc cho mỗi quy tắc NAT để bật/tắt quy tắc từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc NAT.",
           "sensor_netwatch_tracker": "Cảm biến nhị phân cho mỗi mục Netwatch hiển thị trạng thái có thể tiếp cận.",
+          "sensor_port_errors": "4 cảm biến cho mỗi giao diện (lỗi RX/TX và gói bị loại RX/TX) để phát hiện cáp hỏng hoặc cổng lỗi. Cảnh báo: tạo 4 thực thể cho mỗi giao diện.",
+          "sensor_port_switch": "Công tắc cho mỗi cổng để bật/tắt cổng từ HA. Tắt tùy chọn này để tránh vô tình tắt một cổng; các thực thể khác của cổng vẫn giữ nguyên.",
           "sensor_port_tracker": "Cảm biến nhị phân cho mỗi cổng hiển thị trạng thái kết nối (kết nối/mất kết nối).",
           "sensor_port_traffic": "4 cảm biến cho mỗi giao diện (byte TX/RX và tổng cộng). Cảnh báo: tạo 4 thực thể cho mỗi giao diện — tắt nếu không cần đồ thị lưu lượng.",
           "sensor_ppp": "Công tắc cho mỗi PPP secret (người dùng) để bật/tắt tài khoản VPN/PPPoE từ HA.",
+          "sensor_raw": "Công tắc cho mỗi quy tắc Raw để bật/tắt quy tắc raw của tường lửa từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc raw.",
+          "sensor_routes": "Cảm biến nhị phân cho mỗi tuyến tĩnh và mỗi tuyến mặc định, bật khi tuyến đang hoạt động. Các tuyến động khác không được bao gồm.",
           "sensor_routing_rules": "Công tắc cho mỗi Routing Rule để bật/tắt quy tắc định tuyến chính sách từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc định tuyến.",
           "sensor_scripts": "Nút cho mỗi script để kích hoạt script RouterOS từ HA.",
           "sensor_simple_queues": "Công tắc cho mỗi mục Simple Queue để bật/tắt giới hạn băng thông từ HA. Cảnh báo: tạo một thực thể cho mỗi quy tắc hàng đợi.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} đã từ chối thay đổi {target}. Lý do của bộ định tuyến có trong nhật ký."
+    },
+    "write_failed": {
+      "message": "Thay đổi đối với {target} không được áp dụng trên {host}. Chi tiết có trong nhật ký."
+    },
+    "write_unconfirmed": {
+      "message": "Không thể xác nhận thay đổi đối với {target} trên {host}: bộ định tuyến không phản hồi, hoặc một tập lệnh đã dừng giữa chừng. Hãy kiểm tra bộ định tuyến trước khi lặp lại. Chi tiết có trong nhật ký."
+    },
+    "no_write_access": {
+      "message": "Tài khoản được cấu hình cho {host} không có quyền ghi trên bộ định tuyến, nên không có gì thay đổi."
     }
   },
   "selector": {

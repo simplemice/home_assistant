@@ -248,17 +248,34 @@ def _make_shutdown(hass: HomeAssistant):
                 )
                 continue
 
+            if not await hass.async_add_executor_job(coordinator.api.connection_check):
+                # Nothing was sent. Without this check the silence of a
+                # router that is down reads exactly like the silence of a
+                # router that obeyed, and the API layer says nothing while
+                # it is inside its retry window.
+                _LOGGER.error("shutdown: %s is unreachable, the command was not sent", router_host)
+                continue
+
             _LOGGER.warning("Shutting down Mikrotik device %s", router_host)
             success = await hass.async_add_executor_job(coordinator.execute, "/system", "shutdown", None, None)
-            if not success:
-                # A router that obeys takes the API session down with it,
-                # so no confirmation is the expected shape of success here.
-                # Permission was checked above; a genuinely unreachable
-                # router is already reported by the API layer.
-                _LOGGER.info(
-                    "shutdown: no confirmation from %s, which is expected when the router powers off",
+            if success:
+                continue
+            if coordinator.connected():
+                # The router answered and said no. The session is intact,
+                # so this is a refusal and the router is still running,
+                # which is the opposite of what the caller asked for.
+                _LOGGER.error(
+                    "shutdown: %s refused the command and is still running",
                     router_host,
                 )
+                continue
+            # A router that obeys takes the API session down with it,
+            # so no confirmation is the expected shape of success here.
+            # Permission and reachability were both checked above.
+            _LOGGER.info(
+                "shutdown: no confirmation from %s, which is expected when the router powers off",
+                router_host,
+            )
 
         # Saying nothing would look like success on an action that cannot be
         # undone, so a name that matches no router is an error.
@@ -352,6 +369,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     coordinator = MikrotikCoordinator(hass, config_entry)
     await coordinator.async_config_entry_first_refresh()
+    # The Core device exists before any platform loads, so the other devices
+    # can point at it by registry id.
+    coordinator.register_core_device()
     coordinator_tracker = MikrotikTrackerCoordinator(hass, config_entry, coordinator)
     await coordinator_tracker.async_config_entry_first_refresh()
     config_entry.runtime_data = MikrotikData(

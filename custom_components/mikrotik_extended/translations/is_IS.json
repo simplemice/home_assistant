@@ -35,11 +35,13 @@
         "description": "Stilla samþættingu",
         "data": {
           "scan_interval": "Tíðni skönnunar (sekúndur)",
+          "track_network_hosts_interval": "Bil milli tækjarakninga (sekúndur)",
           "track_network_hosts_timeout": "Tímamörk við rakningu á netbúnaði (sekúndur)",
           "zone": "Svæði fyrir tækjarakningu"
         },
         "data_description": {
           "scan_interval": "Lágmark: 10s. Sjálfgefið: 30s. Lægri gildi auka RouterOS API-álag.",
+          "track_network_hosts_interval": "Hversu oft rakin tæki eru pinguð og staða þeirra uppfærð. Lágmark: 5s. Hámark: 300s. Sjálfgefið: 10s. Hækkaðu gildið á stórum netum til að minnka álag. Aldrei lengra en helmingur tímamarka rakningar. Breytingar á heima/að heiman geta tafist um allt að eitt bil.",
           "track_network_hosts_timeout": "Aðeins þráðtengdar tæki. Sekúndur áður en tæki telst vera offline ef það sést ekki í ARP. Sjálfgefið: 180s.",
           "zone": "Heiti Home Assistant svæðis til að nota þegar rakið tæki tengist. Sjálfgefið: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Síurofar",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Barnastjórnun",
+          "sensor_lte": "LTE / 5G mótaldsskynjarar",
           "sensor_mangle": "Mangle rofar",
           "sensor_nat": "NAT rofar",
           "sensor_netwatch_tracker": "Netwatch skynjarar",
+          "sensor_port_errors": "Villuteljarar gátta",
+          "sensor_port_switch": "Gáttarofar",
           "sensor_port_tracker": "Port rakningarskynjarar",
           "sensor_port_traffic": "Port umferðarskynjarar",
           "sensor_ppp": "PPP notendur",
+          "sensor_raw": "Raw-rofar",
+          "sensor_routes": "Leiðaskynjarar",
           "sensor_routing_rules": "Routing Rules rofar",
           "sensor_scripts": "Skrifturofar",
           "sensor_simple_queues": "Einfaldir biðraðir rofar",
@@ -85,12 +92,17 @@
           "sensor_filter": "Rofi fyrir hverja Filter-reglu til að virkja/slökkva á eldveggssíureglum frá HA. Viðvörun: býr til eina einingu fyrir hverja síureglu.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Rofar fyrir tækjasnið Kid Control (gera hlé á/halda áfram netaðgangi).",
+          "sensor_lte": "Skynjarar fyrir hvert LTE eða 5G mótald: símafyrirtæki, aðgangstækni, merkisstyrkur (RSSI, RSRP, RSRQ, SINR, CQI) og tíðnisvið. Ein aukafyrirspurn á hvert mótald í hverri umferð; beinir án mótalds er ekki spurður.",
           "sensor_mangle": "Rofi fyrir hverja Mangle-reglu til að virkja/slökkva á pakkamerkingareglum frá HA. Viðvörun: býr til eina einingu fyrir hverja Mangle-reglu.",
           "sensor_nat": "Rofi fyrir hverja NAT-reglu til að virkja/slökkva á reglum frá HA. Viðvörun: býr til eina einingu fyrir hverja NAT-reglu.",
           "sensor_netwatch_tracker": "Tvíundarskynjari fyrir hverja Netwatch-færslu sem sýnir aðgengileika.",
+          "sensor_port_errors": "4 skynjarar á hvert viðmót (RX/TX villur og RX/TX brottfall) til að finna bilaðan kapal eða gátt. Viðvörun: býr til 4 einingar á hvert viðmót.",
+          "sensor_port_switch": "Rofi fyrir hverja gátt til að virkja/slökkva á henni frá HA. Slökktu á þessu svo ekki sé hægt að slökkva á gátt fyrir slysni; aðrar einingar gáttarinnar haldast.",
           "sensor_port_tracker": "Tvíundarskynjari fyrir hvern port sem sýnir tengistöðu (tengd/ótengd).",
           "sensor_port_traffic": "4 skynjarar fyrir hvert viðmót (TX/RX bæti og samtölur). Viðvörun: býr til 4 einingar fyrir hvert viðmót — slökktu á ef umferðargröf eru ekki þörf.",
           "sensor_ppp": "Rofi fyrir hverja PPP secret (notanda) til að virkja/slökkva á VPN/PPPoE reikningum frá HA.",
+          "sensor_raw": "Rofi fyrir hverja Raw-reglu til að virkja/slökkva á raw-reglum eldveggs frá HA. Viðvörun: býr til eina einingu fyrir hverja raw-reglu.",
+          "sensor_routes": "Tvíundarskynjari fyrir hverja fasta leið og hverja sjálfgefna leið, kveikt á meðan leiðin er virk. Aðrar kvikar leiðir eru ekki með.",
           "sensor_routing_rules": "Rofi fyrir hverja Routing Rule til að virkja/slökkva á stefnuleiðarreglum frá HA. Viðvörun: býr til eina einingu fyrir hverja leiðarreglu.",
           "sensor_scripts": "Hnappur fyrir hvert script til að keyra RouterOS script frá HA.",
           "sensor_simple_queues": "Rofi fyrir hverja Simple Queue-færslu til að virkja/slökkva á bandbreiddarhámarkum frá HA. Viðvörun: býr til eina einingu fyrir hverja biðraðarreglu.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Öryggistengingar"
         },
         "data_description": {
-          "port": "RouterOS API-gátt. Skildu eftir 0 til að nota sjálfgefið: 8728 (án SSL) eða 8729 (með SSL)."
+          "port": "RouterOS API-gátt. Skildu eftir 0 til að nota sjálfgefið: 8728 (án SSL) eða 8729 (með SSL).",
+          "password": "Skildu eftir autt til að halda vistaða lykilorðinu."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Tíðni skönnunar",
           "track_iface_clients": "Sýna MAC og IP vistfang fyrir biðlara á netkortum",
           "unit_of_measurement": "Mælieining",
+          "track_network_hosts_interval": "Bil milli tækjarakninga (sekúndur)",
           "track_network_hosts_timeout": "Tímamörk við rakningu á netbúnaði (sekúndur)",
           "zone": "Svæði fyrir tækjarakningu"
         },
         "data_description": {
           "scan_interval": "Lágmark: 10s. Sjálfgefið: 30s. Lægri gildi auka RouterOS API-álag.",
+          "track_network_hosts_interval": "Hversu oft rakin tæki eru pinguð og staða þeirra uppfærð. Lágmark: 5s. Hámark: 300s. Sjálfgefið: 10s. Hækkaðu gildið á stórum netum til að minnka álag. Aldrei lengra en helmingur tímamarka rakningar. Breytingar á heima/að heiman geta tafist um allt að eitt bil.",
           "track_network_hosts_timeout": "Aðeins þráðtengdar tæki. Sekúndur áður en tæki telst vera offline ef það sést ekki í ARP. Sjálfgefið: 180s.",
           "zone": "Heiti Home Assistant svæðis til að nota þegar rakið tæki tengist. Sjálfgefið: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Síurofar",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Barnastjórnun",
+          "sensor_lte": "LTE / 5G mótaldsskynjarar",
           "sensor_mangle": "Mangle rofar",
           "sensor_nat": "NAT rofar",
           "sensor_netwatch_tracker": "Netwatch skynjarar",
+          "sensor_port_errors": "Villuteljarar gátta",
+          "sensor_port_switch": "Gáttarofar",
           "sensor_port_tracker": "Port rakningarskynjarar",
           "sensor_port_traffic": "Port umferðarskynjarar",
           "sensor_ppp": "PPP notendur",
+          "sensor_raw": "Raw-rofar",
+          "sensor_routes": "Leiðaskynjarar",
           "sensor_routing_rules": "Routing Rules rofar",
           "sensor_scripts": "Skrifturofar",
           "sensor_simple_queues": "Einfaldir biðraðir rofar",
@@ -194,12 +214,17 @@
           "sensor_filter": "Rofi fyrir hverja Filter-reglu til að virkja/slökkva á eldveggssíureglum frá HA. Viðvörun: býr til eina einingu fyrir hverja síureglu.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Rofar fyrir tækjasnið Kid Control (gera hlé á/halda áfram netaðgangi).",
+          "sensor_lte": "Skynjarar fyrir hvert LTE eða 5G mótald: símafyrirtæki, aðgangstækni, merkisstyrkur (RSSI, RSRP, RSRQ, SINR, CQI) og tíðnisvið. Ein aukafyrirspurn á hvert mótald í hverri umferð; beinir án mótalds er ekki spurður.",
           "sensor_mangle": "Rofi fyrir hverja Mangle-reglu til að virkja/slökkva á pakkamerkingareglum frá HA. Viðvörun: býr til eina einingu fyrir hverja Mangle-reglu.",
           "sensor_nat": "Rofi fyrir hverja NAT-reglu til að virkja/slökkva á reglum frá HA. Viðvörun: býr til eina einingu fyrir hverja NAT-reglu.",
           "sensor_netwatch_tracker": "Tvíundarskynjari fyrir hverja Netwatch-færslu sem sýnir aðgengileika.",
+          "sensor_port_errors": "4 skynjarar á hvert viðmót (RX/TX villur og RX/TX brottfall) til að finna bilaðan kapal eða gátt. Viðvörun: býr til 4 einingar á hvert viðmót.",
+          "sensor_port_switch": "Rofi fyrir hverja gátt til að virkja/slökkva á henni frá HA. Slökktu á þessu svo ekki sé hægt að slökkva á gátt fyrir slysni; aðrar einingar gáttarinnar haldast.",
           "sensor_port_tracker": "Tvíundarskynjari fyrir hvern port sem sýnir tengistöðu (tengd/ótengd).",
           "sensor_port_traffic": "4 skynjarar fyrir hvert viðmót (TX/RX bæti og samtölur). Viðvörun: býr til 4 einingar fyrir hvert viðmót — slökktu á ef umferðargröf eru ekki þörf.",
           "sensor_ppp": "Rofi fyrir hverja PPP secret (notanda) til að virkja/slökkva á VPN/PPPoE reikningum frá HA.",
+          "sensor_raw": "Rofi fyrir hverja Raw-reglu til að virkja/slökkva á raw-reglum eldveggs frá HA. Viðvörun: býr til eina einingu fyrir hverja raw-reglu.",
+          "sensor_routes": "Tvíundarskynjari fyrir hverja fasta leið og hverja sjálfgefna leið, kveikt á meðan leiðin er virk. Aðrar kvikar leiðir eru ekki með.",
           "sensor_routing_rules": "Rofi fyrir hverja Routing Rule til að virkja/slökkva á stefnuleiðarreglum frá HA. Viðvörun: býr til eina einingu fyrir hverja leiðarreglu.",
           "sensor_scripts": "Hnappur fyrir hvert script til að keyra RouterOS script frá HA.",
           "sensor_simple_queues": "Rofi fyrir hverja Simple Queue-færslu til að virkja/slökkva á bandbreiddarhámarkum frá HA. Viðvörun: býr til eina einingu fyrir hverja biðraðarreglu.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} hafnaði breytingunni á {target}. Ástæða beinisins er í skránni."
+    },
+    "write_failed": {
+      "message": "Breytingin á {target} komst ekki í gegn á {host}. Nánari upplýsingar eru í atvikaskránni."
+    },
+    "write_unconfirmed": {
+      "message": "Ekki tókst að staðfesta breytinguna á {target} á {host}: beinirinn svaraði ekki, eða skrifta stöðvaðist hálfnuð. Athugaðu beininn áður en þú endurtekur. Nánari upplýsingar eru í atvikaskránni."
+    },
+    "no_write_access": {
+      "message": "Reikningurinn sem er stilltur fyrir {host} hefur ekki skrifheimild á beininum, svo engu var breytt."
     }
   },
   "selector": {

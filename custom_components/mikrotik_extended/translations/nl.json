@@ -35,11 +35,13 @@
         "description": "Integratie configureren",
         "data": {
           "scan_interval": "Scaninterval (seconden)",
+          "track_network_hosts_interval": "Interval voor apparaattracking (seconden)",
           "track_network_hosts_timeout": "Time-out van netwerkapparaten (seconden)",
           "zone": "Zone voor apparaattracker"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Standaard: 30s. Lagere waarden verhogen de RouterOS API-belasting.",
+          "track_network_hosts_interval": "Hoe vaak gevolgde apparaten worden gepingd en hun status wordt ververst. Minimum: 5s. Maximum: 300s. Standaard: 10s. Verhoog dit op grote netwerken om de belasting te verlagen. Nooit langer dan de helft van de time-out. Wisselingen tussen thuis en afwezig kunnen tot één interval vertraagd zijn.",
           "track_network_hosts_timeout": "Alleen bekabelde apparaten. Seconden voordat een apparaat als offline wordt beschouwd als het niet in ARP wordt gezien. Standaard: 180s.",
           "zone": "Naam van de Home Assistant-zone die wordt gebruikt wanneer een gevolgd apparaat is verbonden. Standaard: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Filterschakelaars",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kindercontrole",
+          "sensor_lte": "LTE-/5G-modemsensoren",
           "sensor_mangle": "Mangle-schakelaars",
           "sensor_nat": "NAT-schakelaars",
           "sensor_netwatch_tracker": "Netwatch-trackersensors",
+          "sensor_port_errors": "Poortfoutentellers",
+          "sensor_port_switch": "Poortschakelaars",
           "sensor_port_tracker": "Poorttrackersensors",
           "sensor_port_traffic": "Poortverkeersensors",
           "sensor_ppp": "PPP-gebruikers",
+          "sensor_raw": "Raw-schakelaars",
+          "sensor_routes": "Routesensoren",
           "sensor_routing_rules": "Routing Rules-schakelaars",
           "sensor_scripts": "Scriptschakelaars",
           "sensor_simple_queues": "Eenvoudige wachtrijschakelaars",
@@ -85,12 +92,17 @@
           "sensor_filter": "Schakelaar per filterregel om firewallfilterregels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per filterregel aan.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Schakelaars voor Kid Control-apparaatprofielen (internettoegang pauzeren/hervatten).",
+          "sensor_lte": "Sensoren per LTE- of 5G-modem: provider, toegangstechniek, signaalniveaus (RSSI, RSRP, RSRQ, SINR, CQI) en banden. Eén extra opvraging per modem bij elke cyclus; een router zonder modem wordt niet bevraagd.",
           "sensor_mangle": "Schakelaar per Mangle-regel om pakketmarkeringsregels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per Mangle-regel aan.",
           "sensor_nat": "Schakelaar per NAT-regel om regels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per NAT-regel aan.",
           "sensor_netwatch_tracker": "Binaire sensor per Netwatch-item die de bereikbaarheidsstatus toont.",
+          "sensor_port_errors": "4 sensoren per interface (RX/TX-fouten en RX/TX-drops) om een slechte kabel of een defecte poort op te sporen. Waarschuwing: maakt 4 entiteiten per interface aan.",
+          "sensor_port_switch": "Schakelaar per poort om de poort in/uit te schakelen vanuit HA. Zet dit uit om te voorkomen dat een poort per ongeluk wordt uitgeschakeld; de andere entiteiten van de poort blijven.",
           "sensor_port_tracker": "Binaire sensor per poort die de verbindingsstatus (actief/inactief) toont.",
           "sensor_port_traffic": "4 sensoren per interface (TX/RX-bytes en totalen). Waarschuwing: maakt 4 entiteiten per interface aan — schakel uit als verkeersgrafieken niet nodig zijn.",
           "sensor_ppp": "Schakelaar per PPP-secret (gebruiker) om VPN/PPPoE-accounts in/uit te schakelen vanuit HA.",
+          "sensor_raw": "Schakelaar per Raw-regel om firewall-raw-regels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per raw-regel aan.",
+          "sensor_routes": "Binaire sensor per statische route en per standaardroute, aan zolang de route actief is. Andere dynamische routes worden niet meegenomen.",
           "sensor_routing_rules": "Schakelaar per Routing Rule om beleidsrouteringsregels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per routeringsregel aan.",
           "sensor_scripts": "Knop per script om RouterOS-scripts te activeren vanuit HA.",
           "sensor_simple_queues": "Schakelaar per Simple Queue-item om bandbreedtelimieten in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per wachtrijregel aan.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Verbindingsbeveiliging"
         },
         "data_description": {
-          "port": "RouterOS API-poort. Laat op 0 staan voor de standaardwaarde: 8728 (zonder SSL) of 8729 (met SSL)."
+          "port": "RouterOS API-poort. Laat op 0 staan voor de standaardwaarde: 8728 (zonder SSL) of 8729 (met SSL).",
+          "password": "Laat leeg om het opgeslagen wachtwoord te behouden."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Scaninterval",
           "track_iface_clients": "MAC en IP van client weergeven op interfaces",
           "unit_of_measurement": "Meeteenheid",
+          "track_network_hosts_interval": "Interval voor apparaattracking (seconden)",
           "track_network_hosts_timeout": "Volg de time-out van netwerkapparaten (seconden)",
           "zone": "Zone voor apparaattracker"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Standaard: 30s. Lagere waarden verhogen de RouterOS API-belasting.",
+          "track_network_hosts_interval": "Hoe vaak gevolgde apparaten worden gepingd en hun status wordt ververst. Minimum: 5s. Maximum: 300s. Standaard: 10s. Verhoog dit op grote netwerken om de belasting te verlagen. Nooit langer dan de helft van de time-out. Wisselingen tussen thuis en afwezig kunnen tot één interval vertraagd zijn.",
           "track_network_hosts_timeout": "Alleen bekabelde apparaten. Seconden voordat een apparaat als offline wordt beschouwd als het niet in ARP wordt gezien. Standaard: 180s.",
           "zone": "Naam van de Home Assistant-zone die wordt gebruikt wanneer een gevolgd apparaat is verbonden. Standaard: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Filterschakelaars",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kindercontrole",
+          "sensor_lte": "LTE-/5G-modemsensoren",
           "sensor_mangle": "Mangle-schakelaars",
           "sensor_nat": "NAT-schakelaars",
           "sensor_netwatch_tracker": "Netwatch-trackersensors",
+          "sensor_port_errors": "Poortfoutentellers",
+          "sensor_port_switch": "Poortschakelaars",
           "sensor_port_tracker": "Poorttrackersensors",
           "sensor_port_traffic": "Poortverkeersensors",
           "sensor_ppp": "PPP-gebruikers",
+          "sensor_raw": "Raw-schakelaars",
+          "sensor_routes": "Routesensoren",
           "sensor_routing_rules": "Routing Rules-schakelaars",
           "sensor_scripts": "Scriptschakelaars",
           "sensor_simple_queues": "Eenvoudige wachtrijschakelaars",
@@ -194,12 +214,17 @@
           "sensor_filter": "Schakelaar per filterregel om firewallfilterregels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per filterregel aan.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Schakelaars voor Kid Control-apparaatprofielen (internettoegang pauzeren/hervatten).",
+          "sensor_lte": "Sensoren per LTE- of 5G-modem: provider, toegangstechniek, signaalniveaus (RSSI, RSRP, RSRQ, SINR, CQI) en banden. Eén extra opvraging per modem bij elke cyclus; een router zonder modem wordt niet bevraagd.",
           "sensor_mangle": "Schakelaar per Mangle-regel om pakketmarkeringsregels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per Mangle-regel aan.",
           "sensor_nat": "Schakelaar per NAT-regel om regels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per NAT-regel aan.",
           "sensor_netwatch_tracker": "Binaire sensor per Netwatch-item die de bereikbaarheidsstatus toont.",
+          "sensor_port_errors": "4 sensoren per interface (RX/TX-fouten en RX/TX-drops) om een slechte kabel of een defecte poort op te sporen. Waarschuwing: maakt 4 entiteiten per interface aan.",
+          "sensor_port_switch": "Schakelaar per poort om de poort in/uit te schakelen vanuit HA. Zet dit uit om te voorkomen dat een poort per ongeluk wordt uitgeschakeld; de andere entiteiten van de poort blijven.",
           "sensor_port_tracker": "Binaire sensor per poort die de verbindingsstatus (actief/inactief) toont.",
           "sensor_port_traffic": "4 sensoren per interface (TX/RX-bytes en totalen). Waarschuwing: maakt 4 entiteiten per interface aan — schakel uit als verkeersgrafieken niet nodig zijn.",
           "sensor_ppp": "Schakelaar per PPP-secret (gebruiker) om VPN/PPPoE-accounts in/uit te schakelen vanuit HA.",
+          "sensor_raw": "Schakelaar per Raw-regel om firewall-raw-regels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per raw-regel aan.",
+          "sensor_routes": "Binaire sensor per statische route en per standaardroute, aan zolang de route actief is. Andere dynamische routes worden niet meegenomen.",
           "sensor_routing_rules": "Schakelaar per Routing Rule om beleidsrouteringsregels in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per routeringsregel aan.",
           "sensor_scripts": "Knop per script om RouterOS-scripts te activeren vanuit HA.",
           "sensor_simple_queues": "Schakelaar per Simple Queue-item om bandbreedtelimieten in/uit te schakelen vanuit HA. Waarschuwing: maakt één entiteit per wachtrijregel aan.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} heeft de wijziging van {target} geweigerd. De reden van de router staat in het logboek."
+    },
+    "write_failed": {
+      "message": "De wijziging aan {target} is op {host} niet doorgekomen. De details staan in het logboek."
+    },
+    "write_unconfirmed": {
+      "message": "De wijziging aan {target} op {host} kon niet worden bevestigd: de router antwoordde niet, of een script stopte halverwege. Controleer de router voordat u het herhaalt. De details staan in het logboek."
+    },
+    "no_write_access": {
+      "message": "Het account dat voor {host} is ingesteld heeft geen schrijfrechten op de router, dus er is niets gewijzigd."
     }
   },
   "selector": {

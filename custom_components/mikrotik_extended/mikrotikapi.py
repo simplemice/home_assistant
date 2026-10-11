@@ -10,6 +10,7 @@ from time import sleep, time
 import librouteros
 import librouteros.login as _rlogin
 from librouteros.exceptions import MultiTrapError, TrapError
+from librouteros.query import Key, Or
 from voluptuous import Optional
 
 from .const import (
@@ -65,6 +66,12 @@ class MikrotikAPI:
         self._connection_epoch = 0
         self._connection_retry_sec = 58
         self.error = None
+        self.connect_error = None
+        # Why the last write returned False: "refused" when the router
+        # answered and said no, otherwise what kept the request from
+        # getting through. The entity turns it into the right error text.
+        self.last_write_failure = None
+        self._lost_link_error = None
         self.connection_error_reported = True  # suppress first disconnect after startup
         self._first_connect = True
         self.disable_health = False
@@ -115,12 +122,16 @@ class MikrotikAPI:
     # ---------------------------
     #   disconnect
     # ---------------------------
-    def disconnect(self, location="unknown", error=None):
-        """Disconnect from Mikrotik device."""
+    def disconnect(self, location="unknown", error=None, quiet=False):
+        """Disconnect from Mikrotik device.
+
+        ``quiet`` leaves the logging to the caller, for the case where an
+        immediate reconnect may still make the loss a non-event.
+        """
         if not error:
             error = "unknown"
 
-        if not self.connection_error_reported:
+        if not quiet and not self.connection_error_reported:
             if location == "unknown":
                 _LOGGER.debug("Mikrotik %s connection closed", self._host)
             else:
@@ -136,8 +147,12 @@ class MikrotikAPI:
     # ---------------------------
     #   connect
     # ---------------------------
-    def connect(self) -> bool:
-        """Connect to Mikrotik device."""
+    def connect(self, quiet=False) -> bool:
+        """Connect to Mikrotik device.
+
+        ``quiet`` leaves the logging to the caller, who knows more about why
+        the connection is being made than this method does.
+        """
         self.error = ""
         self._connected = False
         self._connection_epoch = time()
@@ -171,17 +186,21 @@ class MikrotikAPI:
                     kwargs["ssl_wrapper"] = self._ssl_wrapper
                 self._connection = librouteros.connect(self._host, self._username, self._password, **kwargs)
             except Exception as e:
-                if not self.connection_error_reported:
+                if not quiet and not self.connection_error_reported:
                     _LOGGER.error("Mikrotik %s error while connecting: %s", self._host, e)
                     self.connection_error_reported = True
 
                 self.error_to_strings(f"{e}")
+                self.connect_error = e
                 self._connection = None
                 return False
             else:
-                if self.connection_error_reported and not self._first_connect:
-                    _LOGGER.warning("Mikrotik Reconnected to %s", self._host)
-                self.connection_error_reported = False
+                if not quiet:
+                    if self.connection_error_reported and not self._first_connect:
+                        _LOGGER.warning("Mikrotik Reconnected to %s", self._host)
+                    # In quiet mode the flag is the caller's to settle, once it
+                    # knows whether the new connection holds.
+                    self.connection_error_reported = False
                 self._first_connect = False
 
                 self._connected = True
@@ -214,25 +233,66 @@ class MikrotikAPI:
     # ---------------------------
     #   query
     # ---------------------------
-    def _note_refusal(self, path, error) -> None:
+    def _note_refusal(self, path, error, what=None, consequence="Data from this path will be missing, the rest keeps working.") -> None:
         """Report a refused path once, not on every poll."""
         if path in self._refused_paths:
             _LOGGER.debug("Mikrotik %s path %s refused again: %s", self._host, path, error)
             return
         self._refused_paths.add(path)
         _LOGGER.warning(
-            "Mikrotik %s refused query %s: %s. Data from this path will be missing, the rest keeps working.",
+            "Mikrotik %s refused %s: %s. %s",
             self._host,
-            path,
+            what or f"query {path}",
             error,
+            consequence,
         )
+
+    def _write_failed(self, location, what, error) -> None:
+        """Sort out an exception raised by a write.
+
+        A trap is the router answering and refusing this one request, so the
+        connection is fine. Tearing it down here cost the whole session for a
+        single refused change: the update cycle running at the time was cut
+        short, the next poll had to reconnect, and the reconnect re-read
+        everything the slow block covers. Anything that is not a trap is a
+        broken link and still disconnects.
+
+        ``what`` is the phrase after the host name, and it has to say what
+        actually happened: "refused X" only for a request the router turned
+        down whole. A script that errors part way through has run that far,
+        and a message that reads as "nothing happened" would invite pressing
+        the button again.
+
+        Unlike a refused read, a refused write is logged every time. A read
+        repeats every cycle, a write is one action somebody took, and they
+        need to see that it did not happen.
+        """
+        if isinstance(error, (TrapError, MultiTrapError)):
+            self.last_write_failure = "refused"
+            _LOGGER.warning(
+                "Mikrotik %s %s: %s. The connection stays up.",
+                self._host,
+                what,
+                error,
+            )
+            return
+        self.last_write_failure = "connection lost"
+        self.disconnect(location, error)
+
+    def _write_blocked(self) -> bool:
+        """True when a write cannot even be sent; records why."""
+        self.last_write_failure = None
+        if self.connection_check():
+            return False
+        self.last_write_failure = "not connected"
+        return True
 
     def _materialize_list(self, response, path):
         """Convert the API generator into a list; returns (response, missing_sentinel).
 
         Returns ``(response, False)`` on success, ``(None, True)`` when the API path
-        is unavailable on this RouterOS version, and ``(None, False)`` on a hard
-        error (connection has already been torn down by the caller).
+        is unavailable on this RouterOS version or refused, and ``(None, False)`` on
+        a hard error, which tears the connection down quietly for the caller's retry.
         """
         try:
             response = list(response)
@@ -253,33 +313,30 @@ class MikrotikAPI:
                 # unavailable over a single unreadable path.
                 self._note_refusal(path, e)
                 return None, True
-            self.disconnect(f"building list for path {path}", e)
+            # Both callers retry a lost link once, so the loss is theirs to log.
+            self._lose_link(e)
             return None, False
 
-    def query(self, path, command=None, args=None, return_list=True) -> Optional(list):
-        """Retrieve data from Mikrotik API."""
-        """Returns generator object, unless return_list passed as True"""
-        if path == "/system/health" and self.disable_health:
-            return None
+    # The outcome of one attempt at a read, so the caller can tell a lost
+    # link, which is worth one immediate retry, from an answer it must accept.
+    _LINK_LOST = object()
 
-        if args is None:
-            args = {}
-
-        if not self.connection_check():
-            return None
-
+    def _read_once(self, path, command, args, return_list):
+        """One attempt at a read; returns the rows, None, or _LINK_LOST."""
         with self.lock:
             try:
                 _LOGGER.debug("API query: %s", path)
                 response = self._connection.path(path)
             except Exception as e:
-                self.disconnect("path", e)
-                return None
+                self._lose_link(e)
+                return self._LINK_LOST
 
             if response and return_list and not command:
-                response, _missing = self._materialize_list(response, path)
+                response, missing = self._materialize_list(response, path)
                 if response is None:
-                    return None
+                    # A missing menu or a refusal is an answer; anything else
+                    # took the connection down.
+                    return None if missing else self._LINK_LOST
 
             elif response and command:
                 _LOGGER.debug("API query: %s, %s, %s", path, command, args)
@@ -291,10 +348,152 @@ class MikrotikAPI:
                     self._note_refusal(f"{path} {command}", e)
                     return None
                 except Exception as e:
-                    self.disconnect("path", e)
-                    return None
+                    self._lose_link(e)
+                    return self._LINK_LOST
 
         return response or None
+
+    def _lose_link(self, error) -> None:
+        """A read took the connection down; keep the reason for the retry's one log line."""
+        self._lost_link_error = error
+        self.disconnect("path", error, quiet=True)
+
+    def _retry_after_lost_link(self, path) -> bool:
+        """Reconnect at once after a read lost the link; True when the read may be repeated.
+
+        A connection the router dropped, for being idle or over a brief
+        network hiccup, used to cost the whole update cycle: every remaining
+        step was skipped, the entities went unavailable, and the next poll
+        reconnected half a minute later. One immediate attempt covers that.
+        If it fails too, connect() has started the usual back-off, and the
+        router is left alone until it passes. Only reads are repeated: a
+        command run twice, a reboot or a script, is worse than an error.
+        """
+        error = self._lost_link_error or "unknown"
+        # The disconnect was quiet and connect() is told to be, so whatever
+        # happens is one line from here, in the order it happened: on
+        # success it is written once the repeated read has shown that the
+        # new connection holds, see _recovered() and _lost_link_again().
+        if self.connect(quiet=True):
+            return True
+        # The attempt failed: now the loss is worth its warning, once, and
+        # the next scheduled poll must be free to try again. Leaving the
+        # back-off that connect() started would silence it for a minute,
+        # longer than a dropped link cost before the immediate retry existed.
+        if not self.connection_error_reported:
+            _LOGGER.warning(
+                "Mikrotik %s lost the connection while reading %s (%s) and reconnecting failed: %s",
+                self._host,
+                path,
+                error,
+                self.connect_error,
+            )
+            self.connection_error_reported = True
+        self._connection_epoch = 0
+        return False
+
+    def _recovered(self, path) -> None:
+        """The repeated read went through on the new connection: the loss was a hiccup."""
+        if not self.connection_error_reported:
+            _LOGGER.info(
+                "Mikrotik %s lost the connection while reading %s (%s) and reconnected within the same poll",
+                self._host,
+                path,
+                self._lost_link_error or "unknown",
+            )
+        elif not self._first_connect:
+            _LOGGER.warning("Mikrotik Reconnected to %s", self._host)
+        self.connection_error_reported = False
+
+    def _lost_link_again(self, path) -> None:
+        """The repeated read lost the link too: this is an outage, and it is reported once.
+
+        Both disconnects on this path were quiet, so without this line a
+        failure that comes back on every read, a timeout on one large table
+        for instance, would take the entities unavailable with nothing but
+        an INFO line saying the poll had recovered.
+        """
+        if not self.connection_error_reported:
+            _LOGGER.warning(
+                "Mikrotik %s lost the connection again while repeating the read of %s: %s",
+                self._host,
+                path,
+                self._lost_link_error or "unknown",
+            )
+            self.connection_error_reported = True
+
+    def query(self, path, command=None, args=None, return_list=True) -> Optional(list):
+        """Retrieve data from Mikrotik API."""
+        """Returns generator object, unless return_list passed as True.
+
+        A lost link is retried once, ``command`` included, so only a command
+        that reads (monitor, print) may go through here. A command with a
+        side effect belongs in execute(), which never repeats.
+        """
+        if path == "/system/health" and self.disable_health:
+            return None
+
+        if args is None:
+            args = {}
+
+        if not self.connection_check():
+            return None
+
+        response = self._read_once(path, command, args, return_list)
+        if response is self._LINK_LOST:
+            if not self._retry_after_lost_link(path):
+                return None
+            response = self._read_once(path, command, args, return_list)
+            if response is self._LINK_LOST:
+                self._lost_link_again(path)
+                return None
+            self._recovered(path)
+        return response
+
+    # ---------------------------
+    #   query_where
+    # ---------------------------
+    def query_where(self, path, any_of: dict) -> list | None:
+        """Rows of a menu that match any of the given field values.
+
+        The router does the filtering, so a menu that can hold a very large
+        table, the routing table of a BGP router for one, is never read in
+        full. Returns an empty list when nothing matches and None when the
+        query could not be made, which the caller must tell apart: no rows is
+        an answer, a failed query is not.
+        """
+        if not any_of:
+            raise ValueError("query_where needs at least one field to match")
+        if not self.connection_check():
+            return None
+
+        conditions = [Key(field) == value for field, value in any_of.items()]
+        condition = conditions[0] if len(conditions) == 1 else Or(*conditions)
+        response = self._read_where_once(path, any_of, condition)
+        if response is self._LINK_LOST:
+            if not self._retry_after_lost_link(path):
+                return None
+            response = self._read_where_once(path, any_of, condition)
+            if response is self._LINK_LOST:
+                self._lost_link_again(path)
+                return None
+            self._recovered(path)
+        return response
+
+    def _read_where_once(self, path, any_of, condition):
+        """One attempt at a filtered read; the rows, None, or _LINK_LOST."""
+        with self.lock:
+            try:
+                _LOGGER.debug("API query: %s where any of %s", path, any_of)
+                response = self._connection.path(path).select().where(condition)
+            except Exception as e:
+                self._lose_link(e)
+                return self._LINK_LOST
+
+            response, missing = self._materialize_list(response, path)
+            if response is None and not missing:
+                return self._LINK_LOST
+        return response
 
     # ---------------------------
     #   set_value
@@ -312,14 +511,18 @@ class MikrotikAPI:
         )
         entry_found = None
 
-        if not self.connection_check():
+        if self._write_blocked():
             return False
 
+        # The lookup can be refused on its own, and then the write never
+        # started, so the phrase follows the phase.
+        what = f"refused listing {path}"
         with self.lock:
             try:
                 _LOGGER.debug("API query: %s", path)
                 response = self._connection.path(path)
                 if not response:
+                    self.last_write_failure = "no answer"
                     return False
 
                 for tmp in response:
@@ -332,6 +535,7 @@ class MikrotikAPI:
                     entry_found = tmp[".id"]
 
                 if not entry_found:
+                    self.last_write_failure = "entry not found"
                     _LOGGER.warning(
                         "Mikrotik %s set_value parameter %s with value %s not found",
                         self._host,
@@ -341,9 +545,13 @@ class MikrotikAPI:
                     return False
 
                 params = {".id": entry_found, mod_param: mod_value}
+                # Spell a bool the way it goes over the wire and the way the
+                # user sees it on the router, not as Python's True or False.
+                shown = ("yes" if mod_value else "no") if isinstance(mod_value, bool) else mod_value
+                what = f"refused {path} set {mod_param}={shown}"
                 response.update(**params)
             except Exception as e:
-                self.disconnect("set_value", e)
+                self._write_failed("set_value", what, e)
                 return False
 
         return True
@@ -356,14 +564,16 @@ class MikrotikAPI:
         entry_found = None
         params = {}
 
-        if not self.connection_check():
+        if self._write_blocked():
             return False
 
+        what = f"refused listing {path}"
         with self.lock:
             try:
                 _LOGGER.debug("API query: %s", path)
                 response = self._connection.path(path)
                 if not response:
+                    self.last_write_failure = "no answer"
                     return False
 
                 if param:
@@ -377,6 +587,7 @@ class MikrotikAPI:
                         entry_found = tmp[".id"]
 
                     if not entry_found:
+                        self.last_write_failure = "entry not found"
                         _LOGGER.warning(
                             "Mikrotik %s Execute %s parameter %s with value %s not found",
                             self._host,
@@ -391,9 +602,10 @@ class MikrotikAPI:
                 if attributes:
                     params.update(attributes)
 
+                what = f"refused {path} {command}"
                 tuple(response(command, **params))
             except Exception as e:
-                self.disconnect("execute", e)
+                self._write_failed("execute", what, e)
                 return False
 
         return True
@@ -403,7 +615,7 @@ class MikrotikAPI:
     # ---------------------------
     def wol(self, mac: str, interface: str | None = None) -> bool:
         """Send Wake-on-LAN magic packet via MikroTik /tool wol"""
-        if not self.connection_check():
+        if self._write_blocked():
             return False
 
         args = {"mac": mac}
@@ -420,7 +632,7 @@ class MikrotikAPI:
                 response = self._connection.path("/tool")
                 tuple(response("wol", **args))
             except Exception as e:
-                self.disconnect("wol", e)
+                self._write_failed("wol", f"refused /tool wol {mac}", e)
                 return False
 
         return True
@@ -431,14 +643,16 @@ class MikrotikAPI:
     def run_script(self, name) -> bool:
         """Run script"""
         entry_found = None
-        if not self.connection_check():
+        if self._write_blocked():
             return False
 
+        what = "refused listing /system/script"
         with self.lock:
             try:
                 _LOGGER.debug("API query: %s", "/system/script")
                 response = self._connection.path("/system/script")
                 if not response:
+                    self.last_write_failure = "no answer"
                     return False
 
                 for tmp in response:
@@ -451,12 +665,19 @@ class MikrotikAPI:
                     entry_found = tmp[".id"]
 
                 if not entry_found:
+                    self.last_write_failure = "script not found"
                     _LOGGER.error("Mikrotik %s Script %s not found", self._host, name)
                     return False
 
+                # A trap here is usually the script itself failing part way,
+                # after the router accepted the run, so it is not a refusal.
+                what = f"reported an error running script {name}"
                 tuple(response("run", **{".id": entry_found}))
             except Exception as e:
-                self.disconnect("run_script", e)
+                self._write_failed("run_script", what, e)
+                if entry_found and self.last_write_failure == "refused":
+                    # The router took the run; the script itself failed.
+                    self.last_write_failure = "script error"
                 return False
 
         return True
@@ -471,11 +692,11 @@ class MikrotikAPI:
                 return e[".id"]
         return None
 
-    def _update_env_entry(self, env, entry_id, value) -> bool:
+    def _update_env_entry(self, env, name, entry_id, value) -> bool:
         try:
             env.update(**{".id": entry_id, "value": str(value)})
         except Exception as e:
-            self.disconnect("set_env_variable", e)
+            self._write_failed("set_env_variable", f"refused environment variable {name}", e)
             return False
         return True
 
@@ -494,7 +715,7 @@ class MikrotikAPI:
             sched = self._connection.path("/system/scheduler")
             tuple(sched("add", name=sched_name, **{"on-event": on_event, "interval": "1s"}))
         except Exception as e:
-            self.disconnect("set_env_variable", e)
+            self._write_failed("set_env_variable", f"refused the scheduler entry creating environment variable {name}", e)
             return False
         return True
 
@@ -506,7 +727,7 @@ class MikrotikAPI:
                 if e.get("name") == name:
                     return True
         except Exception as e:
-            self.disconnect("set_env_variable", e)
+            self._write_failed("set_env_variable", f"refused the check of environment variable {name}", e)
             return False
         return None
 
@@ -530,11 +751,11 @@ class MikrotikAPI:
                 env = self._connection.path(SCRIPT_ENVIRONMENT_PATH)
                 entry_id = self._find_env_entry_id(env, name)
             except Exception as e:
-                self.disconnect("set_env_variable", e)
+                self._write_failed("set_env_variable", "refused listing the environment variables", e)
                 return False
 
             if entry_id:
-                return self._update_env_entry(env, entry_id, value)
+                return self._update_env_entry(env, name, entry_id, value)
 
             # Variable doesn't exist — create via one-shot scheduler
             sched_name = "_ha_env_set"
@@ -574,7 +795,7 @@ class MikrotikAPI:
                         env.remove(e[".id"])
                         return True
             except Exception as e:
-                self.disconnect("remove_env_variable", e)
+                self._write_failed("remove_env_variable", f"refused removing environment variable {name}", e)
                 return False
 
         _LOGGER.warning("Mikrotik %s env variable %s not found", self._host, name)
@@ -591,6 +812,10 @@ class MikrotikAPI:
         response = self.query("/ping", return_list=False)
         if response is None:
             return False
+        # The handle belongs to this connection. If the other coordinator
+        # loses the link and reconnects before the ping runs, the error
+        # from the stale socket must not tear the fresh connection down.
+        connection = self._connection
 
         args = {
             "arp-ping": "no",
@@ -601,16 +826,24 @@ class MikrotikAPI:
         }
         with self.lock:
             try:
-                # _LOGGER.debug("Ping host query: %s", args["address"])
-                ping = response("/ping", **args)
-            except Exception as e:
-                self.disconnect("arp_ping", e)
+                ping = list(response("/ping", **args))
+            except (TrapError, MultiTrapError) as e:
+                # The router answered: most often an interface name it no
+                # longer knows, because the port was renamed after the host
+                # was first seen. The host counts as unreachable and the
+                # session stays. This runs for every host on every tracker
+                # cycle, so the refusal is reported once per interface,
+                # the way a refused read is, not once per ping.
+                self._note_refusal(
+                    f"/ping interface={interface}",
+                    e,
+                    what=f"the tracker ping on interface {interface}",
+                    consequence="Hosts pinged through it count as unreachable until the interface name matches again.",
+                )
                 return False
-
-            try:
-                ping = list(ping)
             except Exception as e:
-                self.disconnect("arp_ping", e)
+                if self._connection is connection:
+                    self.disconnect("arp_ping", e)
                 return False
 
         for tmp in ping:

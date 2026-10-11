@@ -35,11 +35,13 @@
         "description": "Integration konfigurieren",
         "data": {
           "scan_interval": "Scan-Intervall (Sekunden)",
+          "track_network_hosts_interval": "Intervall der Geräteverfolgung (Sekunden)",
           "track_network_hosts_timeout": "Zeitlimit für Netzwerkgeräte (Sekunden)",
           "zone": "Zone für Gerätetracker"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Standard: 30s. Niedrigere Werte erhöhen die Last auf die RouterOS API.",
+          "track_network_hosts_interval": "Wie oft verfolgte Geräte angepingt und ihre Tracker aktualisiert werden. Minimum: 5s. Maximum: 300s. Standard: 10s. In großen Netzwerken erhöhen, um die Last zu senken. Nie länger als die Hälfte des Zeitlimits. Wechsel zwischen zu Hause und abwesend können sich um bis zu ein Intervall verzögern.",
           "track_network_hosts_timeout": "Nur kabelgebundene Geräte. Sekunden, bevor ein Gerät als offline gilt, wenn es nicht mehr im ARP sichtbar ist. Standard: 180s.",
           "zone": "Name der Home Assistant Zone, die verwendet wird, wenn ein verfolgtes Gerät verbunden ist. Standard: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Schalter für Filterregeln",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kindersicherung",
+          "sensor_lte": "LTE-/5G-Modem-Sensoren",
           "sensor_mangle": "Mangle-Schalter",
           "sensor_nat": "NAT-Schalter",
           "sensor_netwatch_tracker": "Netwatch-Tracker-Sensoren",
+          "sensor_port_errors": "Port-Fehlerzähler",
+          "sensor_port_switch": "Port-Schalter",
           "sensor_port_tracker": "Port-Statussensoren",
           "sensor_port_traffic": "Port-Durchsatz Sensoren",
           "sensor_ppp": "PPP-Nutzer",
+          "sensor_raw": "Schalter für Raw-Regeln",
+          "sensor_routes": "Routen-Sensoren",
           "sensor_routing_rules": "Routing-Rules-Schalter",
           "sensor_scripts": "Skript-Schalter",
           "sensor_simple_queues": "Simple-Queue-Schalter",
@@ -85,12 +92,17 @@
           "sensor_filter": "Schalter pro Filterregel zum Aktivieren/Deaktivieren von Firewall-Filterregeln aus HA. Warnung: erstellt eine Entität pro Filterregel.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Schalter für Kid Control-Geräteprofile (Internetzugang pausieren/fortsetzen).",
+          "sensor_lte": "Sensoren pro LTE- oder 5G-Modem: Betreiber, Zugangstechnik, Signalpegel (RSSI, RSRP, RSRQ, SINR, CQI) und Bänder. Eine zusätzliche Abfrage pro Modem bei jedem Zyklus; ein Router ohne Modem wird nicht abgefragt.",
           "sensor_mangle": "Schalter pro Mangle-Regel zum Aktivieren/Deaktivieren von Paketmarkierungsregeln aus HA. Warnung: erstellt eine Entität pro Mangle-Regel.",
           "sensor_nat": "Schalter pro NAT-Regel zum Aktivieren/Deaktivieren von Regeln aus HA. Warnung: erstellt eine Entität pro NAT-Regel.",
           "sensor_netwatch_tracker": "Binärsensor pro Netwatch-Eintrag, der den Erreichbarkeitsstatus anzeigt.",
+          "sensor_port_errors": "4 Sensoren pro Schnittstelle (RX/TX-Fehler und verworfene RX/TX-Pakete), um ein defektes Kabel oder einen defekten Port zu erkennen. Warnung: erstellt 4 Entitäten pro Schnittstelle.",
+          "sensor_port_switch": "Schalter pro Port zum Aktivieren/Deaktivieren des Ports aus HA. Ausschalten, damit kein Port versehentlich deaktiviert wird; die übrigen Entitäten des Ports bleiben.",
           "sensor_port_tracker": "Binärsensor pro Port, der den Link-Up/Down-Status anzeigt.",
           "sensor_port_traffic": "4 Sensoren pro Interface (TX/RX-Bytes und Gesamtwerte). Warnung: erstellt 4 Entitäten pro Interface — deaktivieren, wenn Datenverkehrsdiagramme nicht benötigt werden.",
           "sensor_ppp": "Schalter pro PPP-Secret (Benutzer) zum Aktivieren/Deaktivieren von VPN/PPPoE-Konten aus HA.",
+          "sensor_raw": "Schalter pro Raw-Regel zum Aktivieren/Deaktivieren von Firewall-Raw-Regeln aus HA. Warnung: erstellt eine Entität pro Raw-Regel.",
+          "sensor_routes": "Binärsensor pro statischer Route und pro Standardroute, an, solange die Route aktiv ist. Andere dynamische Routen sind nicht enthalten.",
           "sensor_routing_rules": "Schalter pro Routing-Regel zum Aktivieren/Deaktivieren von Policy-Routing-Regeln aus HA. Warnung: erstellt eine Entität pro Routing-Regel.",
           "sensor_scripts": "Schaltfläche pro Skript zum Ausführen von RouterOS-Skripten aus HA.",
           "sensor_simple_queues": "Schalter pro Simple Queue-Eintrag zum Aktivieren/Deaktivieren von Bandbreitenbeschränkungen aus HA. Warnung: erstellt eine Entität pro Queue-Regel.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Verbindungssicherheit"
         },
         "data_description": {
-          "port": "RouterOS API-Port. Bei 0 wird der Standard verwendet: 8728 (kein SSL) oder 8729 (SSL)."
+          "port": "RouterOS API-Port. Bei 0 wird der Standard verwendet: 8728 (kein SSL) oder 8729 (SSL).",
+          "password": "Leer lassen, um das gespeicherte Passwort zu behalten."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Scan-Intervall",
           "track_iface_clients": "Client MAC und IP auf dem Interface anzeigen",
           "unit_of_measurement": "Maßeinheit",
+          "track_network_hosts_interval": "Intervall der Geräteverfolgung (Sekunden)",
           "track_network_hosts_timeout": "Zeitlimit für Netzwerkgeräte-Verfolgung (Sekunden)",
           "zone": "Zone für Gerätetracker"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Standard: 30s. Niedrigere Werte erhöhen die Last auf die RouterOS API.",
+          "track_network_hosts_interval": "Wie oft verfolgte Geräte angepingt und ihre Tracker aktualisiert werden. Minimum: 5s. Maximum: 300s. Standard: 10s. In großen Netzwerken erhöhen, um die Last zu senken. Nie länger als die Hälfte des Zeitlimits. Wechsel zwischen zu Hause und abwesend können sich um bis zu ein Intervall verzögern.",
           "track_network_hosts_timeout": "Nur kabelgebundene Geräte. Sekunden, bevor ein Gerät als offline gilt, wenn es nicht mehr im ARP sichtbar ist. Standard: 180s.",
           "zone": "Name der Home Assistant Zone, die verwendet wird, wenn ein verfolgtes Gerät verbunden ist. Standard: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Schalter für Filterregeln",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kindersicherung",
+          "sensor_lte": "LTE-/5G-Modem-Sensoren",
           "sensor_mangle": "Mangle-Schalter",
           "sensor_nat": "NAT-Schalter",
           "sensor_netwatch_tracker": "Netwatch-Tracker-Sensoren",
+          "sensor_port_errors": "Port-Fehlerzähler",
+          "sensor_port_switch": "Port-Schalter",
           "sensor_port_tracker": "Port-Statussensoren",
           "sensor_port_traffic": "Port-Durchsatz Sensoren",
           "sensor_ppp": "PPP-Nutzer",
+          "sensor_raw": "Schalter für Raw-Regeln",
+          "sensor_routes": "Routen-Sensoren",
           "sensor_routing_rules": "Routing-Rules-Schalter",
           "sensor_scripts": "Skript-Schalter",
           "sensor_simple_queues": "Simple-Queue-Schalter",
@@ -194,12 +214,17 @@
           "sensor_filter": "Schalter pro Filterregel zum Aktivieren/Deaktivieren von Firewall-Filterregeln aus HA. Warnung: erstellt eine Entität pro Filterregel.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Schalter für Kid Control-Geräteprofile (Internetzugang pausieren/fortsetzen).",
+          "sensor_lte": "Sensoren pro LTE- oder 5G-Modem: Betreiber, Zugangstechnik, Signalpegel (RSSI, RSRP, RSRQ, SINR, CQI) und Bänder. Eine zusätzliche Abfrage pro Modem bei jedem Zyklus; ein Router ohne Modem wird nicht abgefragt.",
           "sensor_mangle": "Schalter pro Mangle-Regel zum Aktivieren/Deaktivieren von Paketmarkierungsregeln aus HA. Warnung: erstellt eine Entität pro Mangle-Regel.",
           "sensor_nat": "Schalter pro NAT-Regel zum Aktivieren/Deaktivieren von Regeln aus HA. Warnung: erstellt eine Entität pro NAT-Regel.",
           "sensor_netwatch_tracker": "Binärsensor pro Netwatch-Eintrag, der den Erreichbarkeitsstatus anzeigt.",
+          "sensor_port_errors": "4 Sensoren pro Schnittstelle (RX/TX-Fehler und verworfene RX/TX-Pakete), um ein defektes Kabel oder einen defekten Port zu erkennen. Warnung: erstellt 4 Entitäten pro Schnittstelle.",
+          "sensor_port_switch": "Schalter pro Port zum Aktivieren/Deaktivieren des Ports aus HA. Ausschalten, damit kein Port versehentlich deaktiviert wird; die übrigen Entitäten des Ports bleiben.",
           "sensor_port_tracker": "Binärsensor pro Port, der den Link-Up/Down-Status anzeigt.",
           "sensor_port_traffic": "4 Sensoren pro Interface (TX/RX-Bytes und Gesamtwerte). Warnung: erstellt 4 Entitäten pro Interface — deaktivieren, wenn Datenverkehrsdiagramme nicht benötigt werden.",
           "sensor_ppp": "Schalter pro PPP-Secret (Benutzer) zum Aktivieren/Deaktivieren von VPN/PPPoE-Konten aus HA.",
+          "sensor_raw": "Schalter pro Raw-Regel zum Aktivieren/Deaktivieren von Firewall-Raw-Regeln aus HA. Warnung: erstellt eine Entität pro Raw-Regel.",
+          "sensor_routes": "Binärsensor pro statischer Route und pro Standardroute, an, solange die Route aktiv ist. Andere dynamische Routen sind nicht enthalten.",
           "sensor_routing_rules": "Schalter pro Routing-Regel zum Aktivieren/Deaktivieren von Policy-Routing-Regeln aus HA. Warnung: erstellt eine Entität pro Routing-Regel.",
           "sensor_scripts": "Schaltfläche pro Skript zum Ausführen von RouterOS-Skripten aus HA.",
           "sensor_simple_queues": "Schalter pro Simple Queue-Eintrag zum Aktivieren/Deaktivieren von Bandbreitenbeschränkungen aus HA. Warnung: erstellt eine Entität pro Queue-Regel.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} hat die Änderung an {target} abgelehnt. Die Begründung des Routers steht im Log."
+    },
+    "write_failed": {
+      "message": "Die Änderung an {target} ist auf {host} nicht durchgegangen. Die Einzelheiten stehen im Log."
+    },
+    "write_unconfirmed": {
+      "message": "Die Änderung an {target} auf {host} konnte nicht bestätigt werden: der Router hat nicht geantwortet, oder ein Skript ist mittendrin abgebrochen. Vor einer Wiederholung den Router prüfen. Die Einzelheiten stehen im Log."
+    },
+    "no_write_access": {
+      "message": "Das für {host} eingerichtete Konto hat auf dem Router keine Schreibberechtigung, es wurde nichts geändert."
     }
   },
   "selector": {

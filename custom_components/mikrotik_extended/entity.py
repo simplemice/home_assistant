@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ATTRIBUTION, CONF_HOST, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     device_registry as dr,
 )
@@ -27,17 +28,32 @@ from .const import (
     ATTRIBUTION,
     CONF_SENSOR_INTERFACES,
     CONF_SENSOR_NETWATCH_TRACKER,
+    CONF_SENSOR_PORT_ERRORS,
+    CONF_SENSOR_PORT_SWITCH,
     CONF_SENSOR_PORT_TRACKER,
     CONF_SENSOR_PORT_TRAFFIC,
     CONF_TRACK_HOSTS,
     DEFAULT_SENSOR_INTERFACES,
     DEFAULT_SENSOR_NETWATCH_TRACKER,
+    DEFAULT_SENSOR_PORT_ERRORS,
+    DEFAULT_SENSOR_PORT_SWITCH,
     DEFAULT_SENSOR_PORT_TRACKER,
     DEFAULT_SENSOR_PORT_TRAFFIC,
     DEFAULT_TRACK_HOSTS,
     DOMAIN,
 )
-from .coordinator import MikrotikCoordinator, MikrotikTrackerCoordinator
+from .coordinator import MikrotikCoordinator, MikrotikTrackerCoordinator, core_device_kwargs
+
+# Home Assistant 2026.9 links a device to its parent by registry id; earlier
+# releases only know the (domain, identifier) tuple and reject the id.
+_VIA_DEVICE_BY_ID = "via_device_id" in DeviceInfo.__annotations__
+
+# Values that arrive where a name is expected without being one. A host
+# without a resolvable name carries None or "unknown"; a host restored from a
+# previous run may carry the string "None", which is what f"{None}" made of
+# it before, and that string is also what earlier releases stored as the
+# device name.
+_NOT_A_NAME = (None, "", "None", "unknown")
 from .helper import format_attribute
 
 _LOGGER = getLogger(__name__)
@@ -48,13 +64,14 @@ _LOGGER = getLogger(__name__)
 # confirm the match. WireGuard peers are deliberately absent: the public key
 # is not unique across interfaces, so a match there could bind a switch to a
 # different peer.
-REBIND_DATA_PATHS = frozenset({"nat", "mangle", "routing_rules", "filter", "queue"})
+REBIND_DATA_PATHS = frozenset({"nat", "mangle", "routing_rules", "filter", "raw", "queue"})
 
-_FIREWALL_GROUPS = {"NAT", "Mangle", "Filter", "Routing Rules"}
+_FIREWALL_GROUPS = {"NAT", "Mangle", "Filter", "Raw", "Routing Rules"}
 _IFACE_TYPE_CATEGORY = {
     "ether": "port",
     "vlan": "vlan",
     "wlan": "wifi",
+    "wifi": "wifi",
     "bridge": "bridge",
     "pppoe-out": "ppp",
     "ppp": "ppp",
@@ -63,6 +80,11 @@ _IFACE_TYPE_CATEGORY = {
     "ovpn-out": "vpn",
     "wireguard": "vpn",
 }
+
+
+def _same_text(left, right) -> bool:
+    """Two names compared the way a MAC needs it: as text, ignoring case."""
+    return left is not None and right is not None and str(left).lower() == str(right).lower()
 
 
 def _skip_non_poe_port(entity_description, item) -> bool:
@@ -89,10 +111,39 @@ def _skip_interface_entity(config_entry, entity_description) -> bool:
     return not config_entry.options.get(CONF_SENSOR_INTERFACES, DEFAULT_SENSOR_INTERFACES)
 
 
+def _skip_port_switch(config_entry, entity_description) -> bool:
+    """Leave out the switch that takes a port down when the user does not want it.
+
+    The switch disables the interface on the router. On a port that carries
+    the uplink, or the connection to Home Assistant itself, one wrong tap
+    cuts the network off, so it can be turned off without giving up the
+    other entities of the port.
+    """
+    if entity_description.func != "MikrotikPortSwitch":
+        return False
+    return not config_entry.options.get(CONF_SENSOR_PORT_SWITCH, DEFAULT_SENSOR_PORT_SWITCH)
+
+
 def _skip_interface_traffic_sensor(config_entry, entity_description, item) -> bool:
     if entity_description.func != "MikrotikInterfaceTrafficSensor":
         return False
     return not config_entry.options.get(CONF_SENSOR_PORT_TRAFFIC, DEFAULT_SENSOR_PORT_TRAFFIC)
+
+
+def _skip_interface_error_sensor(config_entry, entity_description, item) -> bool:
+    if entity_description.func != "MikrotikInterfaceErrorSensor":
+        return False
+    if not config_entry.options.get(CONF_SENSOR_PORT_ERRORS, DEFAULT_SENSOR_PORT_ERRORS):
+        return True
+    # Not every interface type reports every counter.
+    return item.get(entity_description.data_attribute) in (None, "")
+
+
+def _skip_lte_sensor(entity_description, item) -> bool:
+    """The 5G sensors exist only for a modem that is set up for 5G."""
+    if entity_description.data_path != "lte":
+        return False
+    return str(entity_description.data_attribute).startswith("nr-") and not item.get("nr-capable")
 
 
 def _skip_client_traffic(entity_description, item) -> bool:
@@ -106,7 +157,7 @@ def _skip_client_traffic(entity_description, item) -> bool:
 def _skip_port_binary_sensor(config_entry, entity_description, item) -> bool:
     if entity_description.func != "MikrotikPortBinarySensor":
         return False
-    if item["type"] == "wlan":
+    if item["type"] in ("wlan", "wifi"):
         return True
     return not config_entry.options.get(CONF_SENSOR_PORT_TRACKER, DEFAULT_SENSOR_PORT_TRACKER)
 
@@ -134,7 +185,13 @@ def _skip_sensor(config_entry, entity_description, data, uid) -> bool:
         return True
     if _skip_non_poe_port(entity_description, item):
         return True
+    if _skip_port_switch(config_entry, entity_description):
+        return True
     if _skip_interface_traffic_sensor(config_entry, entity_description, item):
+        return True
+    if _skip_interface_error_sensor(config_entry, entity_description, item):
+        return True
+    if _skip_lte_sensor(entity_description, item):
         return True
     if _skip_client_traffic(entity_description, item):
         return True
@@ -257,6 +314,38 @@ _MikrotikCoordinatorT = TypeVar(
 # ---------------------------
 #   MikrotikEntity
 # ---------------------------
+def raise_write_failed(coordinator, target: str) -> None:
+    """A write returned False: tell the user, not just the log.
+
+    A service call that silently reports success while the router kept its
+    state would leave an automation believing the change was made. The
+    wording follows what happened, which the API recorded: "refused" only
+    when the router answered and said no; "could not be confirmed" when the
+    request was sent and the answer never came, or a script failed part way,
+    because then repeating it blindly may do the first half twice; a link
+    that was down or an entry that is no longer there is "did not go
+    through". Either way the details are already in the log, where they
+    happened.
+    """
+    reason = getattr(coordinator.api, "last_write_failure", None)
+    if reason == "refused":
+        key = "write_refused"
+    elif reason in ("connection lost", "script error"):
+        key = "write_unconfirmed"
+    else:
+        key = "write_failed"
+    raise HomeAssistantError(
+        translation_domain=DOMAIN,
+        translation_key=key,
+        translation_placeholders={"host": coordinator.host, "target": target},
+    )
+
+
+def raise_no_write_access(host: str) -> None:
+    """The configured account has no write policy; nothing was even sent."""
+    raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_write_access", translation_placeholders={"host": host})
+
+
 class MikrotikEntity(CoordinatorEntity[_MikrotikCoordinatorT], Entity):
     """Define entity"""
 
@@ -402,30 +491,103 @@ class MikrotikEntity(CoordinatorEntity[_MikrotikCoordinatorT], Entity):
 
     def _build_system_device_info(self, entry_id, dev_connection, dev_connection_value) -> DeviceInfo:
         return DeviceInfo(
-            connections={(dev_connection, f"{entry_id}-{dev_connection_value}")},
-            identifiers={(dev_connection, f"{entry_id}-{dev_connection_value}")},
-            name=f"{self._inst} router Core",
-            model=f"{self.coordinator.data['resource']['board-name']}",
-            manufacturer=f"{self.coordinator.data['resource']['platform']}",
-            sw_version=f"{self.coordinator.data['resource']['version']}",
-            configuration_url=f"http://{self.coordinator.config_entry.data[CONF_HOST]}",  # NOSONAR
+            **core_device_kwargs(
+                entry_id,
+                self._inst,
+                self.coordinator.config_entry.data[CONF_HOST],
+                self.coordinator.data,
+            )
         )
+
+    def _fields_for_new_device(self, connection: tuple[str, str], entry_id: str, placeholder: str | None = None, **fields) -> dict:
+        """Descriptive fields for a device, set on creation only.
+
+        This is what default_name and its siblings used to do, and the plain
+        fields that replaced them in 2026.9 do not: they also overwrite an
+        existing device on every start. On releases before 2026.9 a MAC
+        connection is shared across integrations, so the plain name would
+        rename a Shelly or ESPHome device to whatever the router calls the
+        host, on every reload. A live diff of 243 devices also showed our own
+        devices renamed wholesale on update. So: an existing device keeps
+        what it has, a new one gets the fields, and empty values are never
+        sent. A name the user typed in is stored separately either way.
+        """
+        registry = dr.async_get(self.coordinator.hass)
+        lookup = getattr(registry, "async_get_device_by_connection", None)
+        if lookup is not None:
+            # 2026.8 and later: the lookup is scoped to our config entry, so
+            # whatever it returns is ours.
+            existing = lookup(connection, entry_id)
+            ours = existing is not None
+        else:
+            # Earlier: one shared device per MAC across integrations.
+            existing = registry.async_get_device(connections={connection})
+            ours = existing is not None and entry_id in existing.config_entries
+        # A device that an earlier release of ours created as "None" (the
+        # string, from default_name=f"{None}") is not one to preserve; it gets
+        # a name now. Another integration's device is left alone whatever it
+        # is called.
+        #
+        # The same goes for a device of ours that still carries the
+        # placeholder it was created with: a host seen before it had a name
+        # is called by its MAC, and without this it would keep the MAC for
+        # good once the name turns up.
+        has_real_name = existing is not None and existing.name not in _NOT_A_NAME and not _same_text(existing.name, placeholder)
+        if existing is not None and (not ours or has_real_name):
+            return {}
+        return {key: value for key, value in fields.items() if value not in _NOT_A_NAME}
+
+    def _via_core(self, entry_id) -> dict:
+        """Link a device to the router Core device.
+
+        Home Assistant 2026.9 replaced the via_device tuple with via_device_id
+        and removes the tuple in 2027.8; releases before 2026.9 do not accept
+        the id. Each release gets the form it understands. The Core device is
+        registered at setup, before the platforms load, so its id is known
+        here; when it is not (the serial was unknown), the link is left out
+        rather than pointed at nothing.
+        """
+        if _VIA_DEVICE_BY_ID:
+            # Host trackers run on the tracker coordinator, which hangs off
+            # the main one; the Core device id lives on the main one.
+            main = self.coordinator.coordinator if isinstance(self.coordinator, MikrotikTrackerCoordinator) else self.coordinator
+            core_id = getattr(main, "core_device_id", None)
+            # An id the registry no longer knows (the user deleted the Core
+            # device) would make the registry reject the whole device info
+            # and the platform drop the entity. No link beats no entity.
+            if isinstance(core_id, str) and dr.async_get(self.coordinator.hass).async_get(core_id) is not None:
+                return {"via_device_id": core_id}
+            return {}
+        return {
+            "via_device": (
+                DOMAIN,
+                f"{entry_id}-{self.coordinator.data['routerboard']['serial-number']}",
+            )
+        }
 
     def _build_mac_device_info(self, entry_id, dev_connection, dev_connection_value) -> DeviceInfo:
         dev_group = self._data[self.entity_description.data_name]
         dev_manufacturer = ""
         if dev_connection_value in self.coordinator.data["host"]:
-            dev_group = self.coordinator.data["host"][dev_connection_value]["host-name"]
-            dev_manufacturer = self.coordinator.data["host"][dev_connection_value]["manufacturer"]
+            host = self.coordinator.data["host"][dev_connection_value]
+            # A host without a resolvable name carries None or "unknown" here.
+            # Neither is a name: the old default_name silently stored the
+            # string "None" on new devices, and the plain name field would
+            # now overwrite a good existing name with it on every restart.
+            # Fall back to the interface's own value, which is the MAC.
+            if host.get("host-name") not in _NOT_A_NAME:
+                dev_group = host["host-name"]
+            dev_manufacturer = host.get("manufacturer") or ""
+        if dev_group in _NOT_A_NAME:
+            # For a host tracker the entity's own record is the host, so the
+            # first fallback above is the same None; the MAC is what is left.
+            dev_group = dev_connection_value
 
+        connection = (dev_connection, f"{dev_connection_value}")
         return DeviceInfo(
-            connections={(dev_connection, f"{dev_connection_value}")},
-            default_name=f"{dev_group}",
-            default_manufacturer=f"{dev_manufacturer}",
-            via_device=(
-                DOMAIN,
-                f"{entry_id}-{self.coordinator.data['routerboard']['serial-number']}",
-            ),
+            connections={connection},
+            **self._fields_for_new_device(connection, entry_id, placeholder=f"{dev_connection_value}", name=f"{dev_group}", manufacturer=dev_manufacturer),
+            **self._via_core(entry_id),
         )
 
     def _build_generic_device_info(self, entry_id, dev_connection, dev_connection_value, dev_group) -> DeviceInfo:
@@ -438,15 +600,17 @@ class MikrotikEntity(CoordinatorEntity[_MikrotikCoordinatorT], Entity):
             dev_display_name = f"{self._inst} router firewall {dev_group}"
         else:
             dev_display_name = f"{self._inst} router {dev_group}"
+        connection = (dev_connection, f"{entry_id}-{dev_connection_value}")
         return DeviceInfo(
-            connections={(dev_connection, f"{entry_id}-{dev_connection_value}")},
-            default_name=dev_display_name,
-            default_model=f"{self.coordinator.data['resource']['board-name']}",
-            default_manufacturer=f"{self.coordinator.data['resource']['platform']}",
-            via_device=(
-                DOMAIN,
-                f"{entry_id}-{self.coordinator.data['routerboard']['serial-number']}",
+            connections={connection},
+            **self._fields_for_new_device(
+                connection,
+                entry_id,
+                name=dev_display_name,
+                model=f"{self.coordinator.data['resource']['board-name']}",
+                manufacturer=f"{self.coordinator.data['resource']['platform']}",
             ),
+            **self._via_core(entry_id),
         )
 
     @property

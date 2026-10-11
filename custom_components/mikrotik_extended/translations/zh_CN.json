@@ -35,11 +35,13 @@
         "description": "配置集成",
         "data": {
           "scan_interval": "扫描间隔（秒）",
+          "track_network_hosts_interval": "设备跟踪间隔（秒）",
           "track_network_hosts_timeout": "跟踪网络设备超时（秒）",
           "zone": "设备跟踪器的区域"
         },
         "data_description": {
           "scan_interval": "最小值：10s。默认值：30s。值越低，RouterOS API 负载越高。",
+          "track_network_hosts_interval": "对被跟踪设备执行 ping 并刷新其状态的频率。最小值：5s。最大值：300s。默认值：10s。在大型网络中调大可降低负载。不会超过跟踪超时的一半。在家/离家状态的变化最多可能延迟一个间隔。",
           "track_network_hosts_timeout": "仅限有线设备。设备在 ARP 中消失后被判定为离线的秒数。默认值：180s。",
           "zone": "跟踪到设备连接时使用的 Home Assistant 区域名称。默认值：home。"
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "过滤器开关",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "儿童控制",
+          "sensor_lte": "LTE / 5G 调制解调器传感器",
           "sensor_mangle": "Mangle 开关",
           "sensor_nat": "NAT 开关",
           "sensor_netwatch_tracker": "Netwatch 传感器",
+          "sensor_port_errors": "端口错误计数器",
+          "sensor_port_switch": "端口开关",
           "sensor_port_tracker": "端口跟踪传感器",
           "sensor_port_traffic": "端口流量传感器",
           "sensor_ppp": "PPP 用户",
+          "sensor_raw": "Raw 开关",
+          "sensor_routes": "路由传感器",
           "sensor_routing_rules": "路由规则开关",
           "sensor_scripts": "脚本开关",
           "sensor_simple_queues": "简单队列开关",
@@ -85,12 +92,17 @@
           "sensor_filter": "每条过滤规则一个开关，可从 HA 启用/禁用防火墙过滤规则。警告：每条过滤规则创建一个实体。",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control 设备配置文件的开关（暂停/恢复上网）。",
+          "sensor_lte": "每个 LTE 或 5G 调制解调器的传感器：运营商、接入技术、信号水平（RSSI、RSRP、RSRQ、SINR、CQI）和频段。每次轮询每个调制解调器多一次查询；没有调制解调器的路由器不会被查询。",
           "sensor_mangle": "每条 Mangle 规则一个开关，可从 HA 启用/禁用数据包标记规则。警告：每条 Mangle 规则创建一个实体。",
           "sensor_nat": "每条 NAT 规则一个开关，可从 HA 启用/禁用规则。警告：每条 NAT 规则创建一个实体。",
           "sensor_netwatch_tracker": "每个 Netwatch 条目一个二进制传感器，显示可达性状态。",
+          "sensor_port_errors": "每个接口 4 个传感器（RX/TX 错误和 RX/TX 丢包），用于发现损坏的网线或故障端口。警告：每个接口创建 4 个实体。",
+          "sensor_port_switch": "每个端口一个开关，可从 HA 启用/禁用该端口。关闭此选项可避免误禁用端口；该端口的其他实体保持不变。",
           "sensor_port_tracker": "每个端口一个二进制传感器，显示链路连接/断开状态。",
           "sensor_port_traffic": "每个接口 4 个传感器（TX/RX 字节数及总量）。警告：每个接口创建 4 个实体——如不需要流量图表请禁用。",
           "sensor_ppp": "每个 PPP 密钥（用户）一个开关，可从 HA 启用/禁用 VPN/PPPoE 账户。",
+          "sensor_raw": "每条 Raw 规则一个开关，可从 HA 启用/禁用防火墙 raw 规则。警告：每条 raw 规则创建一个实体。",
+          "sensor_routes": "为每条静态路由和每条默认路由创建一个二进制传感器，路由处于活动状态时为开。其他动态路由不包括在内。",
           "sensor_routing_rules": "每条路由规则一个开关，可从 HA 启用/禁用策略路由规则。警告：每条路由规则创建一个实体。",
           "sensor_scripts": "每个脚本一个按钮，可从 HA 触发 RouterOS 脚本。",
           "sensor_simple_queues": "每条 Simple Queue 条目一个开关，可从 HA 启用/禁用带宽限制。警告：每条队列规则创建一个实体。",
@@ -118,7 +130,8 @@
           "ssl_mode": "连接安全"
         },
         "data_description": {
-          "port": "RouterOS API 端口。保留为 0 以使用默认值：8728（无 SSL）或 8729（SSL）。"
+          "port": "RouterOS API 端口。保留为 0 以使用默认值：8728（无 SSL）或 8729（SSL）。",
+          "password": "留空以保留已保存的密码。"
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "扫描间隔",
           "track_iface_clients": "显示接口上的客户端 MAC 和 IP",
           "unit_of_measurement": "测量单位",
+          "track_network_hosts_interval": "设备跟踪间隔（秒）",
           "track_network_hosts_timeout": "跟踪网络设备超时（秒）",
           "zone": "设备跟踪器的区域"
         },
         "data_description": {
           "scan_interval": "最小值：10s。默认值：30s。值越低，RouterOS API 负载越高。",
+          "track_network_hosts_interval": "对被跟踪设备执行 ping 并刷新其状态的频率。最小值：5s。最大值：300s。默认值：10s。在大型网络中调大可降低负载。不会超过跟踪超时的一半。在家/离家状态的变化最多可能延迟一个间隔。",
           "track_network_hosts_timeout": "仅限有线设备。设备在 ARP 中消失后被判定为离线的秒数。默认值：180s。",
           "zone": "跟踪到设备连接时使用的 Home Assistant 区域名称。默认值：home。"
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "过滤器开关",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "儿童控制",
+          "sensor_lte": "LTE / 5G 调制解调器传感器",
           "sensor_mangle": "Mangle 开关",
           "sensor_nat": "NAT 开关",
           "sensor_netwatch_tracker": "Netwatch 传感器",
+          "sensor_port_errors": "端口错误计数器",
+          "sensor_port_switch": "端口开关",
           "sensor_port_tracker": "端口跟踪传感器",
           "sensor_port_traffic": "端口流量传感器",
           "sensor_ppp": "PPP 用户",
+          "sensor_raw": "Raw 开关",
+          "sensor_routes": "路由传感器",
           "sensor_routing_rules": "路由规则开关",
           "sensor_scripts": "脚本开关",
           "sensor_simple_queues": "简单队列开关",
@@ -194,12 +214,17 @@
           "sensor_filter": "每条过滤规则一个开关，可从 HA 启用/禁用防火墙过滤规则。警告：每条过滤规则创建一个实体。",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control 设备配置文件的开关（暂停/恢复上网）。",
+          "sensor_lte": "每个 LTE 或 5G 调制解调器的传感器：运营商、接入技术、信号水平（RSSI、RSRP、RSRQ、SINR、CQI）和频段。每次轮询每个调制解调器多一次查询；没有调制解调器的路由器不会被查询。",
           "sensor_mangle": "每条 Mangle 规则一个开关，可从 HA 启用/禁用数据包标记规则。警告：每条 Mangle 规则创建一个实体。",
           "sensor_nat": "每条 NAT 规则一个开关，可从 HA 启用/禁用规则。警告：每条 NAT 规则创建一个实体。",
           "sensor_netwatch_tracker": "每个 Netwatch 条目一个二进制传感器，显示可达性状态。",
+          "sensor_port_errors": "每个接口 4 个传感器（RX/TX 错误和 RX/TX 丢包），用于发现损坏的网线或故障端口。警告：每个接口创建 4 个实体。",
+          "sensor_port_switch": "每个端口一个开关，可从 HA 启用/禁用该端口。关闭此选项可避免误禁用端口；该端口的其他实体保持不变。",
           "sensor_port_tracker": "每个端口一个二进制传感器，显示链路连接/断开状态。",
           "sensor_port_traffic": "每个接口 4 个传感器（TX/RX 字节数及总量）。警告：每个接口创建 4 个实体——如不需要流量图表请禁用。",
           "sensor_ppp": "每个 PPP 密钥（用户）一个开关，可从 HA 启用/禁用 VPN/PPPoE 账户。",
+          "sensor_raw": "每条 Raw 规则一个开关，可从 HA 启用/禁用防火墙 raw 规则。警告：每条 raw 规则创建一个实体。",
+          "sensor_routes": "为每条静态路由和每条默认路由创建一个二进制传感器，路由处于活动状态时为开。其他动态路由不包括在内。",
           "sensor_routing_rules": "每条路由规则一个开关，可从 HA 启用/禁用策略路由规则。警告：每条路由规则创建一个实体。",
           "sensor_scripts": "每个脚本一个按钮，可从 HA 触发 RouterOS 脚本。",
           "sensor_simple_queues": "每条 Simple Queue 条目一个开关，可从 HA 启用/禁用带宽限制。警告：每条队列规则创建一个实体。",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} 拒绝了对 {target} 的更改。路由器给出的原因在日志中。"
+    },
+    "write_failed": {
+      "message": "对 {target} 的更改未能在 {host} 上生效。详情见日志。"
+    },
+    "write_unconfirmed": {
+      "message": "无法确认对 {host} 上 {target} 的更改：路由器未应答，或脚本中途停止。重试前请先检查路由器。详情见日志。"
+    },
+    "no_write_access": {
+      "message": "为 {host} 配置的账户在路由器上没有写入权限，因此未做任何更改。"
     }
   },
   "selector": {

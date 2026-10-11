@@ -18,13 +18,20 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
     CONF_ZONE,
     STATE_HOME,
+    UnitOfTime,
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from .const import (
@@ -36,18 +43,24 @@ from .const import (
     CONF_SENSOR_FILTER,
     CONF_SENSOR_INTERFACES,
     CONF_SENSOR_KIDCONTROL,
+    CONF_SENSOR_LTE,
     CONF_SENSOR_MANGLE,
     CONF_SENSOR_NAT,
     CONF_SENSOR_NETWATCH_TRACKER,
+    CONF_SENSOR_PORT_ERRORS,
+    CONF_SENSOR_PORT_SWITCH,
     CONF_SENSOR_PORT_TRACKER,
     CONF_SENSOR_PORT_TRAFFIC,
     CONF_SENSOR_PPP,
+    CONF_SENSOR_RAW,
+    CONF_SENSOR_ROUTES,
     CONF_SENSOR_ROUTING_RULES,
     CONF_SENSOR_SCRIPTS,
     CONF_SENSOR_SIMPLE_QUEUES,
     CONF_SENSOR_WIREGUARD,
     CONF_TEXT_ENCODING,
     CONF_TRACK_HOSTS,
+    CONF_TRACK_HOSTS_INTERVAL,
     CONF_TRACK_HOSTS_TIMEOUT,
     DEFAULT_DEVICE_NAME,
     DEFAULT_HOST,
@@ -60,12 +73,17 @@ from .const import (
     DEFAULT_SENSOR_FILTER,
     DEFAULT_SENSOR_INTERFACES,
     DEFAULT_SENSOR_KIDCONTROL,
+    DEFAULT_SENSOR_LTE,
     DEFAULT_SENSOR_MANGLE,
     DEFAULT_SENSOR_NAT,
     DEFAULT_SENSOR_NETWATCH_TRACKER,
+    DEFAULT_SENSOR_PORT_ERRORS,
+    DEFAULT_SENSOR_PORT_SWITCH,
     DEFAULT_SENSOR_PORT_TRACKER,
     DEFAULT_SENSOR_PORT_TRAFFIC,
     DEFAULT_SENSOR_PPP,
+    DEFAULT_SENSOR_RAW,
+    DEFAULT_SENSOR_ROUTES,
     DEFAULT_SENSOR_ROUTING_RULES,
     DEFAULT_SENSOR_SCRIPTS,
     DEFAULT_SENSOR_SIMPLE_QUEUES,
@@ -74,9 +92,12 @@ from .const import (
     DEFAULT_TEXT_ENCODING,
     DEFAULT_TRACK_HOST_TIMEOUT,
     DEFAULT_TRACK_HOSTS,
+    DEFAULT_TRACK_HOSTS_INTERVAL,
     DEFAULT_USERNAME,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
+    MAX_TRACK_HOSTS_INTERVAL,
+    MIN_TRACK_HOSTS_INTERVAL,
     TEXT_ENCODING_OPTIONS,
 )
 from .mikrotikapi import MikrotikAPI
@@ -93,18 +114,37 @@ def _ssl_mode_from_bools(ssl: bool, verify_ssl: bool) -> str:
     return "none"
 
 
+# A box rather than the slider a plain min/max range is drawn as: picking an
+# exact number of seconds on a 5 to 300 slider is guesswork.
+# Only validators Home Assistant can serialise belong in here: the form is
+# sent to the frontend as data, and a plain function in the chain makes the
+# whole form fail to open.
+_TRACKER_INTERVAL_FIELD = vol.All(
+    NumberSelector(NumberSelectorConfig(min=MIN_TRACK_HOSTS_INTERVAL, max=MAX_TRACK_HOSTS_INTERVAL, step=1, mode=NumberSelectorMode.BOX, unit_of_measurement=UnitOfTime.SECONDS)), vol.Coerce(int)
+)
+
+# Drawn masked by the frontend.
+_PASSWORD_FIELD = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+
+# The port switch option is deliberately not part of any preset. Turning it
+# off is a safeguard, and picking a preset later, to enable something
+# unrelated, must not quietly put the switch back on the uplink port.
 _SENSOR_PRESETS = {
     "core": {
         CONF_SENSOR_INTERFACES: False,
+        CONF_SENSOR_PORT_ERRORS: False,
         CONF_SENSOR_PORT_TRACKER: False,
         CONF_SENSOR_PORT_TRAFFIC: False,
         CONF_SENSOR_CLIENT_TRAFFIC: False,
         CONF_SENSOR_CLIENT_CAPTIVE: False,
         CONF_SENSOR_SIMPLE_QUEUES: False,
         CONF_SENSOR_NAT: False,
+        CONF_SENSOR_LTE: False,
         CONF_SENSOR_MANGLE: False,
         CONF_SENSOR_ROUTING_RULES: False,
         CONF_SENSOR_FILTER: False,
+        CONF_SENSOR_RAW: False,
+        CONF_SENSOR_ROUTES: False,
         CONF_SENSOR_WIREGUARD: False,
         CONF_SENSOR_CONTAINERS: False,
         CONF_SENSOR_PPP: False,
@@ -116,15 +156,19 @@ _SENSOR_PRESETS = {
     },
     "minimal": {
         CONF_SENSOR_INTERFACES: True,
+        CONF_SENSOR_PORT_ERRORS: False,
         CONF_SENSOR_PORT_TRACKER: True,
         CONF_SENSOR_PORT_TRAFFIC: False,
         CONF_SENSOR_CLIENT_TRAFFIC: False,
         CONF_SENSOR_CLIENT_CAPTIVE: False,
         CONF_SENSOR_SIMPLE_QUEUES: False,
         CONF_SENSOR_NAT: False,
+        CONF_SENSOR_LTE: False,
         CONF_SENSOR_MANGLE: False,
         CONF_SENSOR_ROUTING_RULES: False,
         CONF_SENSOR_FILTER: False,
+        CONF_SENSOR_RAW: False,
+        CONF_SENSOR_ROUTES: False,
         CONF_SENSOR_WIREGUARD: False,
         CONF_SENSOR_CONTAINERS: False,
         CONF_SENSOR_PPP: False,
@@ -136,15 +180,19 @@ _SENSOR_PRESETS = {
     },
     "recommended": {
         CONF_SENSOR_INTERFACES: True,
+        CONF_SENSOR_PORT_ERRORS: False,
         CONF_SENSOR_PORT_TRACKER: True,
         CONF_SENSOR_PORT_TRAFFIC: False,
         CONF_SENSOR_CLIENT_TRAFFIC: False,
         CONF_SENSOR_CLIENT_CAPTIVE: False,
         CONF_SENSOR_SIMPLE_QUEUES: False,
         CONF_SENSOR_NAT: True,
+        CONF_SENSOR_LTE: False,
         CONF_SENSOR_MANGLE: True,
         CONF_SENSOR_ROUTING_RULES: False,
         CONF_SENSOR_FILTER: True,
+        CONF_SENSOR_RAW: False,
+        CONF_SENSOR_ROUTES: False,
         CONF_SENSOR_WIREGUARD: False,
         CONF_SENSOR_CONTAINERS: False,
         CONF_SENSOR_PPP: False,
@@ -156,15 +204,19 @@ _SENSOR_PRESETS = {
     },
     "full": {
         CONF_SENSOR_INTERFACES: True,
+        CONF_SENSOR_PORT_ERRORS: True,
         CONF_SENSOR_PORT_TRACKER: True,
         CONF_SENSOR_PORT_TRAFFIC: True,
         CONF_SENSOR_CLIENT_TRAFFIC: True,
         CONF_SENSOR_CLIENT_CAPTIVE: True,
         CONF_SENSOR_SIMPLE_QUEUES: True,
         CONF_SENSOR_NAT: True,
+        CONF_SENSOR_LTE: True,
         CONF_SENSOR_MANGLE: True,
         CONF_SENSOR_ROUTING_RULES: True,
         CONF_SENSOR_FILTER: True,
+        CONF_SENSOR_RAW: True,
+        CONF_SENSOR_ROUTES: True,
         CONF_SENSOR_WIREGUARD: True,
         CONF_SENSOR_CONTAINERS: True,
         CONF_SENSOR_PPP: True,
@@ -198,6 +250,19 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return MikrotikControllerOptionsFlowHandler(config_entry)
 
+    def _update_entry_and_reload(self, entry, **changes) -> None:
+        """Update the entry and make sure it is reloaded exactly once.
+
+        A loaded entry has an update listener that schedules the reload, but
+        it is only notified when something changed, and an entry whose setup
+        failed has no listener at all. Those are the cases where the reload
+        is scheduled here: an unchanged entry may be waiting to retry, and a
+        failed one is the very thing the user is trying to bring back.
+        """
+        changed = self.hass.config_entries.async_update_entry(entry, **changes)
+        if not (changed and entry.update_listeners):
+            self.hass.config_entries.async_schedule_reload(entry.entry_id)
+
     async def async_step_import(self, user_input=None):
         """Occurs when a previously entry setup fails and is re-initiated."""
         return await self.async_step_user(user_input)
@@ -223,7 +288,7 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
             if not await self.hass.async_add_executor_job(api.connect):
                 errors[CONF_PASSWORD] = api.error
             else:
-                self.hass.config_entries.async_update_entry(
+                self._update_entry_and_reload(
                     reauth_entry,
                     data={
                         **reauth_entry.data,
@@ -231,7 +296,6 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_PASSWORD: user_input[CONF_PASSWORD],
                     },
                 )
-                self.hass.config_entries.async_schedule_reload(reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
@@ -242,7 +306,7 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_USERNAME,
                         default=reauth_entry.data.get(CONF_USERNAME, ""),
                     ): str,
-                    vol.Required(CONF_PASSWORD): str,
+                    vol.Required(CONF_PASSWORD): _PASSWORD_FIELD,
                 }
             ),
             description_placeholders={"host": reauth_entry.data[CONF_HOST]},
@@ -385,6 +449,7 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(int, vol.Range(min=10)),
                     vol.Optional(CONF_TRACK_HOSTS_TIMEOUT, default=DEFAULT_TRACK_HOST_TIMEOUT): vol.All(int, vol.Range(min=1)),
+                    vol.Optional(CONF_TRACK_HOSTS_INTERVAL, default=DEFAULT_TRACK_HOSTS_INTERVAL): _TRACKER_INTERVAL_FIELD,
                     vol.Optional(CONF_ZONE, default=STATE_HOME): str,
                 }
             ),
@@ -451,12 +516,17 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_SENSOR_FILTER, default=DEFAULT_SENSOR_FILTER): bool,
                     vol.Optional(CONF_SENSOR_INTERFACES, default=DEFAULT_SENSOR_INTERFACES): bool,
                     vol.Optional(CONF_SENSOR_KIDCONTROL, default=DEFAULT_SENSOR_KIDCONTROL): bool,
+                    vol.Optional(CONF_SENSOR_LTE, default=DEFAULT_SENSOR_LTE): bool,
                     vol.Optional(CONF_SENSOR_MANGLE, default=DEFAULT_SENSOR_MANGLE): bool,
                     vol.Optional(CONF_SENSOR_NAT, default=DEFAULT_SENSOR_NAT): bool,
                     vol.Optional(CONF_SENSOR_NETWATCH_TRACKER, default=DEFAULT_SENSOR_NETWATCH_TRACKER): bool,
+                    vol.Optional(CONF_SENSOR_PORT_ERRORS, default=DEFAULT_SENSOR_PORT_ERRORS): bool,
+                    vol.Optional(CONF_SENSOR_PORT_SWITCH, default=DEFAULT_SENSOR_PORT_SWITCH): bool,
                     vol.Optional(CONF_SENSOR_PORT_TRACKER, default=DEFAULT_SENSOR_PORT_TRACKER): bool,
                     vol.Optional(CONF_SENSOR_PORT_TRAFFIC, default=DEFAULT_SENSOR_PORT_TRAFFIC): bool,
                     vol.Optional(CONF_SENSOR_PPP, default=DEFAULT_SENSOR_PPP): bool,
+                    vol.Optional(CONF_SENSOR_RAW, default=DEFAULT_SENSOR_RAW): bool,
+                    vol.Optional(CONF_SENSOR_ROUTES, default=DEFAULT_SENSOR_ROUTES): bool,
                     vol.Optional(CONF_SENSOR_ROUTING_RULES, default=DEFAULT_SENSOR_ROUTING_RULES): bool,
                     vol.Optional(CONF_SENSOR_SCRIPTS, default=DEFAULT_SENSOR_SCRIPTS): bool,
                     vol.Optional(CONF_SENSOR_SIMPLE_QUEUES, default=DEFAULT_SENSOR_SIMPLE_QUEUES): bool,
@@ -475,6 +545,10 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
             ssl_mode = user_input.pop("ssl_mode", "none")
             user_input[CONF_SSL] = ssl_mode in ("ssl", "ssl_verify")
             user_input[CONF_VERIFY_SSL] = ssl_mode == "ssl_verify"
+            # The form shows no password; an empty field keeps the stored one.
+            typed_password = user_input.get(CONF_PASSWORD) or ""
+            if not typed_password:
+                user_input[CONF_PASSWORD] = reconfigure_entry.data.get(CONF_PASSWORD, "")
 
             api = MikrotikAPI(
                 host=user_input[CONF_HOST],
@@ -488,21 +562,24 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors[CONF_HOST] = api.error
 
             if not errors:
-                return self.async_update_reload_and_abort(
+                self._update_entry_and_reload(
                     reconfigure_entry,
                     title=user_input[CONF_NAME],
                     data={**reconfigure_entry.data, **user_input},
-                    reason="reconfigure_successful",
                 )
+                return self.async_abort(reason="reconfigure_successful")
 
-            return self._show_config_form(user_input=user_input, errors=errors, step_id="reconfigure")
+            # After a failed attempt the field keeps what the user typed, so a
+            # mistyped host does not silently fall back to the old password on
+            # the retry; the stored password is still never put on the form.
+            return self._show_config_form(user_input={**user_input, CONF_PASSWORD: typed_password}, errors=errors, step_id="reconfigure")
 
         return self._show_config_form(
             user_input={
                 CONF_NAME: reconfigure_entry.title,
                 CONF_HOST: reconfigure_entry.data.get(CONF_HOST, DEFAULT_HOST),
                 CONF_USERNAME: reconfigure_entry.data.get(CONF_USERNAME, DEFAULT_USERNAME),
-                CONF_PASSWORD: reconfigure_entry.data.get(CONF_PASSWORD, ""),
+                CONF_PASSWORD: "",
                 CONF_PORT: reconfigure_entry.data.get(CONF_PORT, DEFAULT_PORT),
                 CONF_SSL: reconfigure_entry.data.get(CONF_SSL, DEFAULT_SSL),
                 CONF_VERIFY_SSL: reconfigure_entry.data.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
@@ -526,7 +603,10 @@ class MikrotikControllerConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_NAME, default=user_input[CONF_NAME]): str,
                     vol.Required(CONF_HOST, default=user_input[CONF_HOST]): str,
                     vol.Required(CONF_USERNAME, default=user_input[CONF_USERNAME]): str,
-                    vol.Required(CONF_PASSWORD, default=user_input[CONF_PASSWORD]): str,
+                    # Reconfiguring shows an empty password field and keeps the
+                    # stored password when it stays empty; the stored one is never
+                    # put on a form.
+                    (vol.Optional(CONF_PASSWORD, default=user_input[CONF_PASSWORD]) if step_id == "reconfigure" else vol.Required(CONF_PASSWORD, default=user_input[CONF_PASSWORD])): _PASSWORD_FIELD,
                     vol.Optional(CONF_PORT, default=user_input[CONF_PORT]): int,
                     vol.Optional("ssl_mode", default=ssl_mode): SelectSelector(
                         SelectSelectorConfig(
@@ -578,6 +658,10 @@ class MikrotikControllerOptionsFlowHandler(OptionsFlow):
                         CONF_TRACK_HOSTS_TIMEOUT,
                         default=self._config_entry.options.get(CONF_TRACK_HOSTS_TIMEOUT, DEFAULT_TRACK_HOST_TIMEOUT),
                     ): int,
+                    vol.Optional(
+                        CONF_TRACK_HOSTS_INTERVAL,
+                        default=self._config_entry.options.get(CONF_TRACK_HOSTS_INTERVAL, DEFAULT_TRACK_HOSTS_INTERVAL),
+                    ): _TRACKER_INTERVAL_FIELD,
                     vol.Optional(
                         CONF_ZONE,
                         default=self._config_entry.options.get(CONF_ZONE, STATE_HOME),
@@ -681,6 +765,10 @@ class MikrotikControllerOptionsFlowHandler(OptionsFlow):
                         default=self._config_entry.options.get(CONF_SENSOR_KIDCONTROL, DEFAULT_SENSOR_KIDCONTROL),
                     ): bool,
                     vol.Optional(
+                        CONF_SENSOR_LTE,
+                        default=self._config_entry.options.get(CONF_SENSOR_LTE, DEFAULT_SENSOR_LTE),
+                    ): bool,
+                    vol.Optional(
                         CONF_SENSOR_MANGLE,
                         default=self._config_entry.options.get(CONF_SENSOR_MANGLE, DEFAULT_SENSOR_MANGLE),
                     ): bool,
@@ -696,6 +784,14 @@ class MikrotikControllerOptionsFlowHandler(OptionsFlow):
                         ),
                     ): bool,
                     vol.Optional(
+                        CONF_SENSOR_PORT_ERRORS,
+                        default=self._config_entry.options.get(CONF_SENSOR_PORT_ERRORS, DEFAULT_SENSOR_PORT_ERRORS),
+                    ): bool,
+                    vol.Optional(
+                        CONF_SENSOR_PORT_SWITCH,
+                        default=self._config_entry.options.get(CONF_SENSOR_PORT_SWITCH, DEFAULT_SENSOR_PORT_SWITCH),
+                    ): bool,
+                    vol.Optional(
                         CONF_SENSOR_PORT_TRACKER,
                         default=self._config_entry.options.get(CONF_SENSOR_PORT_TRACKER, DEFAULT_SENSOR_PORT_TRACKER),
                     ): bool,
@@ -706,6 +802,14 @@ class MikrotikControllerOptionsFlowHandler(OptionsFlow):
                     vol.Optional(
                         CONF_SENSOR_PPP,
                         default=self._config_entry.options.get(CONF_SENSOR_PPP, DEFAULT_SENSOR_PPP),
+                    ): bool,
+                    vol.Optional(
+                        CONF_SENSOR_RAW,
+                        default=self._config_entry.options.get(CONF_SENSOR_RAW, DEFAULT_SENSOR_RAW),
+                    ): bool,
+                    vol.Optional(
+                        CONF_SENSOR_ROUTES,
+                        default=self._config_entry.options.get(CONF_SENSOR_ROUTES, DEFAULT_SENSOR_ROUTES),
                     ): bool,
                     vol.Optional(
                         CONF_SENSOR_ROUTING_RULES,

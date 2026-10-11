@@ -35,11 +35,13 @@
         "description": "Configurar a integração",
         "data": {
           "scan_interval": "Intervalo de escaneamento (segundos)",
+          "track_network_hosts_interval": "Intervalo de rastreamento de dispositivos (segundos)",
           "track_network_hosts_timeout": "Tempo limite de rastreamento de dispositivos (segundos)",
           "zone": "Zona para rastreador de dispositivos"
         },
         "data_description": {
           "scan_interval": "Mínimo: 10s. Padrão: 30s. Valores menores aumentam a carga na API RouterOS.",
+          "track_network_hosts_interval": "Com que frequência os dispositivos rastreados recebem ping e seu estado é atualizado. Mínimo: 5s. Máximo: 300s. Padrão: 10s. Aumente em redes grandes para reduzir a carga. Nunca maior que metade do tempo limite de rastreamento. As mudanças entre em casa e ausente podem atrasar até um intervalo.",
           "track_network_hosts_timeout": "Apenas dispositivos cabeados. Segundos antes de um dispositivo ser considerado offline se não for visto no ARP. Padrão: 180s.",
           "zone": "Nome da zona do Home Assistant a usar quando um dispositivo rastreado está conectado. Padrão: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Interruptores de filtro",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Controle infantil",
+          "sensor_lte": "Sensores do modem LTE / 5G",
           "sensor_mangle": "Interruptores Mangle",
           "sensor_nat": "Interruptores NAT",
           "sensor_netwatch_tracker": "Sensores de Netwatch",
+          "sensor_port_errors": "Contadores de erros das portas",
+          "sensor_port_switch": "Interruptores de porta",
           "sensor_port_tracker": "Sensores do rastreador de porta",
           "sensor_port_traffic": "Sensores de tráfego de porta",
           "sensor_ppp": "Usuários de PPP",
+          "sensor_raw": "Interruptores Raw",
+          "sensor_routes": "Sensores de rotas",
           "sensor_routing_rules": "Interruptores de regras de roteamento",
           "sensor_scripts": "Interruptores de script",
           "sensor_simple_queues": "Interruptores de filas simples",
@@ -85,12 +92,17 @@
           "sensor_filter": "Interruptor por regra de filtro para ativar/desativar regras de filtro de firewall pelo HA. Aviso: cria uma entidade por regra de filtro.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Interruptores para perfis de dispositivos do Kid Control (pausar/retomar o acesso à internet).",
+          "sensor_lte": "Sensores para cada modem LTE ou 5G: operadora, tecnologia de acesso, níveis de sinal (RSSI, RSRP, RSRQ, SINR, CQI) e bandas. Uma consulta adicional por modem a cada ciclo; um roteador sem modem não é consultado.",
           "sensor_mangle": "Interruptor por regra Mangle para ativar/desativar regras de marcação de pacotes pelo HA. Aviso: cria uma entidade por regra Mangle.",
           "sensor_nat": "Interruptor por regra NAT para ativar/desativar regras pelo HA. Aviso: cria uma entidade por regra NAT.",
           "sensor_netwatch_tracker": "Sensor binário por entrada Netwatch mostrando o status de acessibilidade.",
+          "sensor_port_errors": "4 sensores por interface (erros RX/TX e descartes RX/TX) para detectar um cabo defeituoso ou uma porta com falha. Aviso: cria 4 entidades por interface.",
+          "sensor_port_switch": "Interruptor por porta para ativá-la/desativá-la pelo HA. Desative para evitar desligar uma porta por engano; as demais entidades da porta permanecem.",
           "sensor_port_tracker": "Sensor binário por porta mostrando o estado do link (ativo/inativo).",
           "sensor_port_traffic": "4 sensores por interface (bytes TX/RX e totais). Aviso: cria 4 entidades por interface — desative se os gráficos de tráfego não forem necessários.",
           "sensor_ppp": "Interruptor por secret PPP (usuário) para ativar/desativar contas VPN/PPPoE pelo HA.",
+          "sensor_raw": "Interruptor por regra Raw para ativar/desativar regras raw do firewall pelo HA. Aviso: cria uma entidade por regra raw.",
+          "sensor_routes": "Sensor binário para cada rota estática e cada rota padrão, ligado enquanto a rota está ativa. As demais rotas dinâmicas não são incluídas.",
           "sensor_routing_rules": "Interruptor por Routing Rule para ativar/desativar regras de roteamento de políticas pelo HA. Aviso: cria uma entidade por regra de roteamento.",
           "sensor_scripts": "Botão por script para acionar scripts RouterOS pelo HA.",
           "sensor_simple_queues": "Interruptor por entrada Simple Queue para ativar/desativar limites de largura de banda pelo HA. Aviso: cria uma entidade por regra de fila.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Segurança da conexão"
         },
         "data_description": {
-          "port": "Porta da API RouterOS. Deixe em 0 para usar o padrão: 8728 (sem SSL) ou 8729 (com SSL)."
+          "port": "Porta da API RouterOS. Deixe em 0 para usar o padrão: 8728 (sem SSL) ou 8729 (com SSL).",
+          "password": "Deixe em branco para manter a senha salva."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Intervalo de escaneamento",
           "track_iface_clients": "Mostrar MAC e IP do cliente nas interfaces",
           "unit_of_measurement": "Unidade de medida",
+          "track_network_hosts_interval": "Intervalo de rastreamento de dispositivos (segundos)",
           "track_network_hosts_timeout": "Tempo limite de rastreamento de dispositivos (segundos)",
           "zone": "Zona para rastreador de dispositivos"
         },
         "data_description": {
           "scan_interval": "Mínimo: 10s. Padrão: 30s. Valores menores aumentam a carga na API RouterOS.",
+          "track_network_hosts_interval": "Com que frequência os dispositivos rastreados recebem ping e seu estado é atualizado. Mínimo: 5s. Máximo: 300s. Padrão: 10s. Aumente em redes grandes para reduzir a carga. Nunca maior que metade do tempo limite de rastreamento. As mudanças entre em casa e ausente podem atrasar até um intervalo.",
           "track_network_hosts_timeout": "Apenas dispositivos cabeados. Segundos antes de um dispositivo ser considerado offline se não for visto no ARP. Padrão: 180s.",
           "zone": "Nome da zona do Home Assistant a usar quando um dispositivo rastreado está conectado. Padrão: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Interruptores de filtro",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Controle infantil",
+          "sensor_lte": "Sensores do modem LTE / 5G",
           "sensor_mangle": "Interruptores Mangle",
           "sensor_nat": "Interruptores NAT",
           "sensor_netwatch_tracker": "Sensores de Netwatch",
+          "sensor_port_errors": "Contadores de erros das portas",
+          "sensor_port_switch": "Interruptores de porta",
           "sensor_port_tracker": "Sensores do rastreador de porta",
           "sensor_port_traffic": "Sensores de tráfego de porta",
           "sensor_ppp": "Usuários de PPP",
+          "sensor_raw": "Interruptores Raw",
+          "sensor_routes": "Sensores de rotas",
           "sensor_routing_rules": "Interruptores de regras de roteamento",
           "sensor_scripts": "Interruptores de script",
           "sensor_simple_queues": "Interruptores de filas simples",
@@ -194,12 +214,17 @@
           "sensor_filter": "Interruptor por regra de filtro para ativar/desativar regras de filtro de firewall pelo HA. Aviso: cria uma entidade por regra de filtro.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Interruptores para perfis de dispositivos do Kid Control (pausar/retomar o acesso à internet).",
+          "sensor_lte": "Sensores para cada modem LTE ou 5G: operadora, tecnologia de acesso, níveis de sinal (RSSI, RSRP, RSRQ, SINR, CQI) e bandas. Uma consulta adicional por modem a cada ciclo; um roteador sem modem não é consultado.",
           "sensor_mangle": "Interruptor por regra Mangle para ativar/desativar regras de marcação de pacotes pelo HA. Aviso: cria uma entidade por regra Mangle.",
           "sensor_nat": "Interruptor por regra NAT para ativar/desativar regras pelo HA. Aviso: cria uma entidade por regra NAT.",
           "sensor_netwatch_tracker": "Sensor binário por entrada Netwatch mostrando o status de acessibilidade.",
+          "sensor_port_errors": "4 sensores por interface (erros RX/TX e descartes RX/TX) para detectar um cabo defeituoso ou uma porta com falha. Aviso: cria 4 entidades por interface.",
+          "sensor_port_switch": "Interruptor por porta para ativá-la/desativá-la pelo HA. Desative para evitar desligar uma porta por engano; as demais entidades da porta permanecem.",
           "sensor_port_tracker": "Sensor binário por porta mostrando o estado do link (ativo/inativo).",
           "sensor_port_traffic": "4 sensores por interface (bytes TX/RX e totais). Aviso: cria 4 entidades por interface — desative se os gráficos de tráfego não forem necessários.",
           "sensor_ppp": "Interruptor por secret PPP (usuário) para ativar/desativar contas VPN/PPPoE pelo HA.",
+          "sensor_raw": "Interruptor por regra Raw para ativar/desativar regras raw do firewall pelo HA. Aviso: cria uma entidade por regra raw.",
+          "sensor_routes": "Sensor binário para cada rota estática e cada rota padrão, ligado enquanto a rota está ativa. As demais rotas dinâmicas não são incluídas.",
           "sensor_routing_rules": "Interruptor por Routing Rule para ativar/desativar regras de roteamento de políticas pelo HA. Aviso: cria uma entidade por regra de roteamento.",
           "sensor_scripts": "Botão por script para acionar scripts RouterOS pelo HA.",
           "sensor_simple_queues": "Interruptor por entrada Simple Queue para ativar/desativar limites de largura de banda pelo HA. Aviso: cria uma entidade por regra de fila.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} recusou a alteração em {target}. O motivo do roteador está no log."
+    },
+    "write_failed": {
+      "message": "A alteração em {target} não foi aplicada em {host}. Os detalhes estão no log."
+    },
+    "write_unconfirmed": {
+      "message": "A alteração em {target} em {host} não pôde ser confirmada: o roteador não respondeu, ou um script parou no meio. Verifique o roteador antes de repetir. Os detalhes estão no log."
+    },
+    "no_write_access": {
+      "message": "A conta configurada para {host} não tem permissão de escrita no roteador, então nada foi alterado."
     }
   },
   "selector": {

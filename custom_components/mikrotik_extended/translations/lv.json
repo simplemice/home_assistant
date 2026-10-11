@@ -35,11 +35,13 @@
         "description": "Konfigurēt integrāciju",
         "data": {
           "scan_interval": "Skenēšanas periods (sekundēs)",
+          "track_network_hosts_interval": "Ierīču izsekošanas intervāls (sekundēs)",
           "track_network_hosts_timeout": "Tīkla ierīces uzraudzības noilgums (sekundēs)",
           "zone": "Ierīces izsekotāja zona"
         },
         "data_description": {
           "scan_interval": "Minimums: 10s. Noklusējums: 30s. Zemākas vērtības palielina RouterOS API slodzi.",
+          "track_network_hosts_interval": "Cik bieži izsekotās ierīces tiek pingotas un to stāvoklis atjaunots. Minimums: 5s. Maksimums: 300s. Noklusējums: 10s. Lielos tīklos palieliniet to, lai samazinātu slodzi. Nekad nav ilgāks par pusi no izsekošanas noilguma. Mājās/prom stāvokļa maiņa var aizkavēties līdz vienam intervālam.",
           "track_network_hosts_timeout": "Tikai vadu ierīces. Sekundes, pēc kurām ierīce tiek uzskatīta par bezsaistē, ja tā nav redzama ARP. Noklusējums: 180s.",
           "zone": "Home Assistant zonas nosaukums, ko izmantot, kad izsekotā ierīce ir pievienota. Noklusējums: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Filtra slēdži",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Bērnu kontrole",
+          "sensor_lte": "LTE / 5G modema sensori",
           "sensor_mangle": "Mangle slēdži",
           "sensor_nat": "NAT slēdži",
           "sensor_netwatch_tracker": "Netwatch sensori",
+          "sensor_port_errors": "Portu kļūdu skaitītāji",
+          "sensor_port_switch": "Portu slēdži",
           "sensor_port_tracker": "Porta izsekošanas sensori",
           "sensor_port_traffic": "Porta datu plūsmas sensori",
           "sensor_ppp": "PPP lietotāji",
+          "sensor_raw": "Raw slēdži",
+          "sensor_routes": "Maršrutu sensori",
           "sensor_routing_rules": "Routing Rules slēdži",
           "sensor_scripts": "Skriptu slēdži",
           "sensor_simple_queues": "Vienkāršo rindu slēdži",
@@ -85,12 +92,17 @@
           "sensor_filter": "Slēdzis katram Filter noteikumam — ugunsmūra filtra noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram filtra noteikumam.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Slēdži Kid Control ierīču profiliem (interneta piekļuves pauzēšana/atsākšana).",
+          "sensor_lte": "Sensori katram LTE vai 5G modemam: operators, piekļuves tehnoloģija, signāla līmeņi (RSSI, RSRP, RSRQ, SINR, CQI) un joslas. Viens papildu vaicājums katram modemam katrā ciklā; maršrutētājs bez modema netiek vaicāts.",
           "sensor_mangle": "Slēdzis katram Mangle noteikumam — pakešu marķēšanas noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram Mangle noteikumam.",
           "sensor_nat": "Slēdzis katram NAT noteikumam — noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram NAT noteikumam.",
           "sensor_netwatch_tracker": "Binārs sensors katram Netwatch ierakstam, kas parāda sasniedzamības statusu.",
+          "sensor_port_errors": "4 sensori katrai saskarnei (RX/TX kļūdas un RX/TX atmestās paketes), lai atrastu bojātu kabeli vai portu. Brīdinājums: izveido 4 entītijas katrai saskarnei.",
+          "sensor_port_switch": "Slēdzis katram portam tā iespējošanai/atspējošanai no HA. Izslēdziet, lai portu nevarētu atspējot nejauši; pārējās porta entītijas paliek.",
           "sensor_port_tracker": "Binārs sensors katram portam, kas parāda savienojuma stāvokli (augšā/lejā).",
           "sensor_port_traffic": "4 sensori katram interfeisam (TX/RX baiti un kopsummas). Brīdinājums: izveido 4 entītijas katram interfeisam — atspējojiet, ja trafika grafiki nav nepieciešami.",
           "sensor_ppp": "Slēdzis katram PPP secret (lietotājam) — VPN/PPPoE kontu iespējošanai/atspējošanai no HA.",
+          "sensor_raw": "Slēdzis katram Raw noteikumam ugunsmūra raw noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram raw noteikumam.",
+          "sensor_routes": "Binārais sensors katram statiskajam un katram noklusējuma maršrutam, ieslēgts, kamēr maršruts ir aktīvs. Citi dinamiskie maršruti nav iekļauti.",
           "sensor_routing_rules": "Slēdzis katram maršrutēšanas noteikumam — politikas maršrutēšanas noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram maršrutēšanas noteikumam.",
           "sensor_scripts": "Poga katram skriptam — RouterOS skriptu aktivizēšanai no HA.",
           "sensor_simple_queues": "Slēdzis katram Simple Queue ierakstam — joslas platuma ierobežojumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram rindas noteikumam.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Savienojuma drošība"
         },
         "data_description": {
-          "port": "RouterOS API ports. Atstājiet 0, lai izmantotu noklusējumu: 8728 (bez SSL) vai 8729 (SSL)."
+          "port": "RouterOS API ports. Atstājiet 0, lai izmantotu noklusējumu: 8728 (bez SSL) vai 8729 (SSL).",
+          "password": "Atstājiet tukšu, lai saglabātu esošo paroli."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Skenēšanas periods",
           "track_iface_clients": "Rādīt klienta MAC un IP interfeisā",
           "unit_of_measurement": "Mērvienības",
+          "track_network_hosts_interval": "Ierīču izsekošanas intervāls (sekundēs)",
           "track_network_hosts_timeout": "Tīkla ierīces uzraudzības noilgums (sekundēs)",
           "zone": "Ierīces izsekotāja zona"
         },
         "data_description": {
           "scan_interval": "Minimums: 10s. Noklusējums: 30s. Zemākas vērtības palielina RouterOS API slodzi.",
+          "track_network_hosts_interval": "Cik bieži izsekotās ierīces tiek pingotas un to stāvoklis atjaunots. Minimums: 5s. Maksimums: 300s. Noklusējums: 10s. Lielos tīklos palieliniet to, lai samazinātu slodzi. Nekad nav ilgāks par pusi no izsekošanas noilguma. Mājās/prom stāvokļa maiņa var aizkavēties līdz vienam intervālam.",
           "track_network_hosts_timeout": "Tikai vadu ierīces. Sekundes, pēc kurām ierīce tiek uzskatīta par bezsaistē, ja tā nav redzama ARP. Noklusējums: 180s.",
           "zone": "Home Assistant zonas nosaukums, ko izmantot, kad izsekotā ierīce ir pievienota. Noklusējums: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Filtra slēdži",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Bērnu kontrole",
+          "sensor_lte": "LTE / 5G modema sensori",
           "sensor_mangle": "Mangle slēdži",
           "sensor_nat": "NAT slēdži",
           "sensor_netwatch_tracker": "Netwatch sensori",
+          "sensor_port_errors": "Portu kļūdu skaitītāji",
+          "sensor_port_switch": "Portu slēdži",
           "sensor_port_tracker": "Porta izsekošanas sensori",
           "sensor_port_traffic": "Porta datu plūsmas sensori",
           "sensor_ppp": "PPP lietotāji",
+          "sensor_raw": "Raw slēdži",
+          "sensor_routes": "Maršrutu sensori",
           "sensor_routing_rules": "Routing Rules slēdži",
           "sensor_scripts": "Skriptu slēdži",
           "sensor_simple_queues": "Vienkāršo rindu slēdži",
@@ -194,12 +214,17 @@
           "sensor_filter": "Slēdzis katram Filter noteikumam — ugunsmūra filtra noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram filtra noteikumam.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Slēdži Kid Control ierīču profiliem (interneta piekļuves pauzēšana/atsākšana).",
+          "sensor_lte": "Sensori katram LTE vai 5G modemam: operators, piekļuves tehnoloģija, signāla līmeņi (RSSI, RSRP, RSRQ, SINR, CQI) un joslas. Viens papildu vaicājums katram modemam katrā ciklā; maršrutētājs bez modema netiek vaicāts.",
           "sensor_mangle": "Slēdzis katram Mangle noteikumam — pakešu marķēšanas noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram Mangle noteikumam.",
           "sensor_nat": "Slēdzis katram NAT noteikumam — noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram NAT noteikumam.",
           "sensor_netwatch_tracker": "Binārs sensors katram Netwatch ierakstam, kas parāda sasniedzamības statusu.",
+          "sensor_port_errors": "4 sensori katrai saskarnei (RX/TX kļūdas un RX/TX atmestās paketes), lai atrastu bojātu kabeli vai portu. Brīdinājums: izveido 4 entītijas katrai saskarnei.",
+          "sensor_port_switch": "Slēdzis katram portam tā iespējošanai/atspējošanai no HA. Izslēdziet, lai portu nevarētu atspējot nejauši; pārējās porta entītijas paliek.",
           "sensor_port_tracker": "Binārs sensors katram portam, kas parāda savienojuma stāvokli (augšā/lejā).",
           "sensor_port_traffic": "4 sensori katram interfeisam (TX/RX baiti un kopsummas). Brīdinājums: izveido 4 entītijas katram interfeisam — atspējojiet, ja trafika grafiki nav nepieciešami.",
           "sensor_ppp": "Slēdzis katram PPP secret (lietotājam) — VPN/PPPoE kontu iespējošanai/atspējošanai no HA.",
+          "sensor_raw": "Slēdzis katram Raw noteikumam ugunsmūra raw noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram raw noteikumam.",
+          "sensor_routes": "Binārais sensors katram statiskajam un katram noklusējuma maršrutam, ieslēgts, kamēr maršruts ir aktīvs. Citi dinamiskie maršruti nav iekļauti.",
           "sensor_routing_rules": "Slēdzis katram maršrutēšanas noteikumam — politikas maršrutēšanas noteikumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram maršrutēšanas noteikumam.",
           "sensor_scripts": "Poga katram skriptam — RouterOS skriptu aktivizēšanai no HA.",
           "sensor_simple_queues": "Slēdzis katram Simple Queue ierakstam — joslas platuma ierobežojumu iespējošanai/atspējošanai no HA. Brīdinājums: izveido vienu entītiju katram rindas noteikumam.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} noraidīja izmaiņu {target}. Maršrutētāja iemesls ir žurnālā."
+    },
+    "write_failed": {
+      "message": "Izmaiņas {target} netika veiktas ierīcē {host}. Sīkāka informācija ir žurnālā."
+    },
+    "write_unconfirmed": {
+      "message": "Izmaiņas {target} ierīcē {host} neizdevās apstiprināt: maršrutētājs neatbildēja vai skripts apstājās pusceļā. Pirms atkārtošanas pārbaudiet maršrutētāju. Sīkāka informācija ir žurnālā."
+    },
+    "no_write_access": {
+      "message": "Kontam, kas iestatīts {host}, nav rakstīšanas tiesību maršrutētājā, tāpēc nekas netika mainīts."
     }
   },
   "selector": {

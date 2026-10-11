@@ -35,11 +35,13 @@
         "description": "통합 환경설정",
         "data": {
           "scan_interval": "스캔 간격(초)",
+          "track_network_hosts_interval": "기기 추적 간격(초)",
           "track_network_hosts_timeout": "네트워크 기기 추적 시간 초과(초)",
           "zone": "기기 추적기용 지역"
         },
         "data_description": {
           "scan_interval": "최솟값: 10s. 기본값: 30s. 값이 낮을수록 RouterOS API 부하가 증가합니다.",
+          "track_network_hosts_interval": "추적 중인 기기에 핑을 보내고 상태를 갱신하는 주기입니다. 최소: 5s. 최대: 300s. 기본값: 10s. 대규모 네트워크에서는 값을 높여 부하를 줄이세요. 추적 시간 초과의 절반을 넘지 않습니다. 재실/외출 상태 변경은 최대 한 간격만큼 늦어질 수 있습니다.",
           "track_network_hosts_timeout": "유선 기기만 해당합니다. ARP에서 감지되지 않을 경우 기기가 오프라인으로 판단되기까지의 초 수입니다. 기본값: 180s.",
           "zone": "추적된 기기가 연결될 때 사용할 Home Assistant 지역 이름입니다. 기본값: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "필터 스위치",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "자녀 보호",
+          "sensor_lte": "LTE / 5G 모뎀 센서",
           "sensor_mangle": "Mangle 스위치",
           "sensor_nat": "NAT 스위치",
           "sensor_netwatch_tracker": "Netwatch 센서",
+          "sensor_port_errors": "포트 오류 카운터",
+          "sensor_port_switch": "포트 스위치",
           "sensor_port_tracker": "포트 추적 센서",
           "sensor_port_traffic": "포트 트래픽 센서",
           "sensor_ppp": "PPP 사용자",
+          "sensor_raw": "Raw 스위치",
+          "sensor_routes": "경로 센서",
           "sensor_routing_rules": "Routing Rules 스위치",
           "sensor_scripts": "스크립트 스위치",
           "sensor_simple_queues": "단순 대기열 스위치",
@@ -85,12 +92,17 @@
           "sensor_filter": "Filter 규칙당 스위치로 HA에서 방화벽 필터 규칙을 활성화/비활성화합니다. 경고: 필터 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control 기기 프로필용 스위치(인터넷 접근 일시중지/재개)입니다.",
+          "sensor_lte": "LTE 또는 5G 모뎀별 센서: 통신사, 접속 방식, 신호 수준(RSSI, RSRP, RSRQ, SINR, CQI), 대역. 폴링마다 모뎀당 한 번의 추가 조회가 발생하며, 모뎀이 없는 라우터에는 조회하지 않습니다.",
           "sensor_mangle": "Mangle 규칙당 스위치로 HA에서 패킷 마킹 규칙을 활성화/비활성화합니다. 경고: Mangle 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_nat": "NAT 규칙당 스위치로 HA에서 규칙을 활성화/비활성화합니다. 경고: NAT 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_netwatch_tracker": "Netwatch 항목당 바이너리 센서로 도달 가능성 상태를 표시합니다.",
+          "sensor_port_errors": "인터페이스당 센서 4개(RX/TX 오류 및 RX/TX 드롭)로 불량 케이블이나 고장 난 포트를 찾습니다. 경고: 인터페이스당 엔티티 4개가 생성됩니다.",
+          "sensor_port_switch": "포트마다 스위치를 만들어 HA에서 포트를 활성화/비활성화합니다. 실수로 포트를 끄지 않으려면 이 옵션을 끄세요. 포트의 다른 엔티티는 그대로 유지됩니다.",
           "sensor_port_tracker": "포트당 바이너리 센서로 링크 연결/해제 상태를 표시합니다.",
           "sensor_port_traffic": "인터페이스당 4개의 센서(TX/RX 바이트 및 총량)입니다. 경고: 인터페이스당 4개의 엔티티가 생성됩니다 — 트래픽 그래프가 필요하지 않으면 비활성화하세요.",
           "sensor_ppp": "PPP 시크릿(사용자)당 스위치로 HA에서 VPN/PPPoE 계정을 활성화/비활성화합니다.",
+          "sensor_raw": "Raw 규칙당 스위치로 HA에서 방화벽 raw 규칙을 활성화/비활성화합니다. 경고: raw 규칙당 하나의 엔티티가 생성됩니다.",
+          "sensor_routes": "정적 경로와 기본 경로마다 이진 센서를 만들며, 경로가 활성 상태인 동안 켜집니다. 그 밖의 동적 경로는 포함되지 않습니다.",
           "sensor_routing_rules": "Routing Rule당 스위치로 HA에서 정책 라우팅 규칙을 활성화/비활성화합니다. 경고: 라우팅 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_scripts": "스크립트당 버튼으로 HA에서 RouterOS 스크립트를 트리거합니다.",
           "sensor_simple_queues": "Simple Queue 항목당 스위치로 HA에서 대역폭 제한을 활성화/비활성화합니다. 경고: 큐 규칙당 하나의 엔티티가 생성됩니다.",
@@ -118,7 +130,8 @@
           "ssl_mode": "연결 보안"
         },
         "data_description": {
-          "port": "RouterOS API 포트입니다. 기본값을 사용하려면 0으로 두세요: 8728 (SSL 없음) 또는 8729 (SSL)."
+          "port": "RouterOS API 포트입니다. 기본값을 사용하려면 0으로 두세요: 8728 (SSL 없음) 또는 8729 (SSL).",
+          "password": "저장된 비밀번호를 유지하려면 비워 두세요."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "스캔 간격",
           "track_iface_clients": "인터페이스에 클라이언트 MAC 및 IP 표시",
           "unit_of_measurement": "측정 단위",
+          "track_network_hosts_interval": "기기 추적 간격(초)",
           "track_network_hosts_timeout": "네트워크 기기 추적 시간 초과(초)",
           "zone": "기기 추적기용 지역"
         },
         "data_description": {
           "scan_interval": "최솟값: 10s. 기본값: 30s. 값이 낮을수록 RouterOS API 부하가 증가합니다.",
+          "track_network_hosts_interval": "추적 중인 기기에 핑을 보내고 상태를 갱신하는 주기입니다. 최소: 5s. 최대: 300s. 기본값: 10s. 대규모 네트워크에서는 값을 높여 부하를 줄이세요. 추적 시간 초과의 절반을 넘지 않습니다. 재실/외출 상태 변경은 최대 한 간격만큼 늦어질 수 있습니다.",
           "track_network_hosts_timeout": "유선 기기만 해당합니다. ARP에서 감지되지 않을 경우 기기가 오프라인으로 판단되기까지의 초 수입니다. 기본값: 180s.",
           "zone": "추적된 기기가 연결될 때 사용할 Home Assistant 지역 이름입니다. 기본값: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "필터 스위치",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "자녀 보호",
+          "sensor_lte": "LTE / 5G 모뎀 센서",
           "sensor_mangle": "Mangle 스위치",
           "sensor_nat": "NAT 스위치",
           "sensor_netwatch_tracker": "Netwatch 센서",
+          "sensor_port_errors": "포트 오류 카운터",
+          "sensor_port_switch": "포트 스위치",
           "sensor_port_tracker": "포트 추적 센서",
           "sensor_port_traffic": "포트 트래픽 센서",
           "sensor_ppp": "PPP 사용자",
+          "sensor_raw": "Raw 스위치",
+          "sensor_routes": "경로 센서",
           "sensor_routing_rules": "Routing Rules 스위치",
           "sensor_scripts": "스크립트 스위치",
           "sensor_simple_queues": "단순 대기열 스위치",
@@ -194,12 +214,17 @@
           "sensor_filter": "Filter 규칙당 스위치로 HA에서 방화벽 필터 규칙을 활성화/비활성화합니다. 경고: 필터 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control 기기 프로필용 스위치(인터넷 접근 일시중지/재개)입니다.",
+          "sensor_lte": "LTE 또는 5G 모뎀별 센서: 통신사, 접속 방식, 신호 수준(RSSI, RSRP, RSRQ, SINR, CQI), 대역. 폴링마다 모뎀당 한 번의 추가 조회가 발생하며, 모뎀이 없는 라우터에는 조회하지 않습니다.",
           "sensor_mangle": "Mangle 규칙당 스위치로 HA에서 패킷 마킹 규칙을 활성화/비활성화합니다. 경고: Mangle 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_nat": "NAT 규칙당 스위치로 HA에서 규칙을 활성화/비활성화합니다. 경고: NAT 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_netwatch_tracker": "Netwatch 항목당 바이너리 센서로 도달 가능성 상태를 표시합니다.",
+          "sensor_port_errors": "인터페이스당 센서 4개(RX/TX 오류 및 RX/TX 드롭)로 불량 케이블이나 고장 난 포트를 찾습니다. 경고: 인터페이스당 엔티티 4개가 생성됩니다.",
+          "sensor_port_switch": "포트마다 스위치를 만들어 HA에서 포트를 활성화/비활성화합니다. 실수로 포트를 끄지 않으려면 이 옵션을 끄세요. 포트의 다른 엔티티는 그대로 유지됩니다.",
           "sensor_port_tracker": "포트당 바이너리 센서로 링크 연결/해제 상태를 표시합니다.",
           "sensor_port_traffic": "인터페이스당 4개의 센서(TX/RX 바이트 및 총량)입니다. 경고: 인터페이스당 4개의 엔티티가 생성됩니다 — 트래픽 그래프가 필요하지 않으면 비활성화하세요.",
           "sensor_ppp": "PPP 시크릿(사용자)당 스위치로 HA에서 VPN/PPPoE 계정을 활성화/비활성화합니다.",
+          "sensor_raw": "Raw 규칙당 스위치로 HA에서 방화벽 raw 규칙을 활성화/비활성화합니다. 경고: raw 규칙당 하나의 엔티티가 생성됩니다.",
+          "sensor_routes": "정적 경로와 기본 경로마다 이진 센서를 만들며, 경로가 활성 상태인 동안 켜집니다. 그 밖의 동적 경로는 포함되지 않습니다.",
           "sensor_routing_rules": "Routing Rule당 스위치로 HA에서 정책 라우팅 규칙을 활성화/비활성화합니다. 경고: 라우팅 규칙당 하나의 엔티티가 생성됩니다.",
           "sensor_scripts": "스크립트당 버튼으로 HA에서 RouterOS 스크립트를 트리거합니다.",
           "sensor_simple_queues": "Simple Queue 항목당 스위치로 HA에서 대역폭 제한을 활성화/비활성화합니다. 경고: 큐 규칙당 하나의 엔티티가 생성됩니다.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host}이(가) {target} 변경을 거부했습니다. 라우터의 사유는 로그에 있습니다."
+    },
+    "write_failed": {
+      "message": "{host}에서 {target} 변경이 적용되지 않았습니다. 자세한 내용은 로그에 있습니다."
+    },
+    "write_unconfirmed": {
+      "message": "{host}의 {target} 변경을 확인할 수 없습니다. 라우터가 응답하지 않았거나 스크립트가 도중에 멈췄습니다. 반복하기 전에 라우터를 확인하세요. 자세한 내용은 로그에 있습니다."
+    },
+    "no_write_access": {
+      "message": "{host}에 설정된 계정은 라우터에 쓰기 권한이 없어 아무것도 변경되지 않았습니다."
     }
   },
   "selector": {

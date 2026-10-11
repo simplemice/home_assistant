@@ -136,15 +136,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2340 |
-| Number of sensors | 1306 |
-| Current Version | 2026.9.4 |
-| Total Automations | 124 |
-| Total Scripts | 43 |
+| Number of entities | 2359 |
+| Number of sensors | 1314 |
+| Current Version | 2026.10.1 |
+| Total Automations | 129 |
+| Total Scripts | 44 |
 | Total Lights | 33 |
 | Total Switches | 172 |
 | Total Scenes | 6 |
-| Total Players | 13 |
+| Total Players | 15 |
 
 ---
 
@@ -180,18 +180,18 @@ This repository is treated as:
 - [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
-- [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.1.1)
+- [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.2.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.5)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.2.1)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.7)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.3.0)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.6)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.0)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.1)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
-- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.7.3)
+- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.12.2)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
 - [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
@@ -200,9 +200,9 @@ This repository is treated as:
 - [Powercalc](https://docs.powercalc.nl) (vv1.20.14)
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
-- [Simulated Inverter](https://github.com/simplemice/home_assistant) (v1.0.0)
+- [Simulated Inverter](https://github.com/simplemice/home_assistant) (v1.0.1)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
-- [Spook](https://spook.boo) (v5.6.1)
+- [Spook](https://spook.boo) (v5.10.0)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
 - [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)

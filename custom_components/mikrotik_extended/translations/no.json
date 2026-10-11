@@ -35,11 +35,13 @@
         "description": "Konfigurer integrasjon",
         "data": {
           "scan_interval": "Søkeintervall (sekunder)",
+          "track_network_hosts_interval": "Intervall for enhetssporing (sekunder)",
           "track_network_hosts_timeout": "Tidsavbrudd for nettverksenhetssporing (sekunder)",
           "zone": "Sone for enhetssporer"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Standard: 30s. Lavere verdier øker belastningen på RouterOS API.",
+          "track_network_hosts_interval": "Hvor ofte sporede enheter pinges og statusen oppdateres. Minimum: 5s. Maksimum: 300s. Standard: 10s. Øk verdien i store nettverk for å redusere belastningen. Aldri lengre enn halvparten av tidsavbruddet for sporing. Endringer mellom hjemme og borte kan forsinkes med inntil ett intervall.",
           "track_network_hosts_timeout": "Kun kablede enheter. Sekunder før en enhet regnes som frakoblet hvis den ikke sees i ARP. Standard: 180s.",
           "zone": "Home Assistant-sonenavn som brukes når en sporet enhet er tilkoblet. Standard: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Filterbytere",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Barnekontroll",
+          "sensor_lte": "LTE-/5G-modemsensorer",
           "sensor_mangle": "Manglebytere",
           "sensor_nat": "NAT-bytere",
           "sensor_netwatch_tracker": "Netwatch sensorer",
+          "sensor_port_errors": "Feiltellere for porter",
+          "sensor_port_switch": "Portbrytere",
           "sensor_port_tracker": "Portsporingssensorer",
           "sensor_port_traffic": "Porttrafikksensorer",
           "sensor_ppp": "PPP brukere",
+          "sensor_raw": "Raw-brytere",
+          "sensor_routes": "Rutesensorer",
           "sensor_routing_rules": "Routing Rules-bytere",
           "sensor_scripts": "Skriptbytere",
           "sensor_simple_queues": "Enkelkøbytere",
@@ -85,12 +92,17 @@
           "sensor_filter": "Bryter per Filter-regel for å aktivere/deaktivere brannmur-filterregler fra HA. Advarsel: oppretter én enhet per filterregel.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Brytere for Kid Control-enhetsprofiler (pause/gjenoppta internettilgang).",
+          "sensor_lte": "Sensorer per LTE- eller 5G-modem: operatør, tilgangsteknologi, signalnivåer (RSSI, RSRP, RSRQ, SINR, CQI) og bånd. Én ekstra forespørsel per modem i hver syklus; en ruter uten modem blir ikke spurt.",
           "sensor_mangle": "Bryter per Mangle-regel for å aktivere/deaktivere pakkemerkingsregler fra HA. Advarsel: oppretter én enhet per Mangle-regel.",
           "sensor_nat": "Bryter per NAT-regel for å aktivere/deaktivere regler fra HA. Advarsel: oppretter én enhet per NAT-regel.",
           "sensor_netwatch_tracker": "Binær sensor per Netwatch-oppføring som viser tilgjengelighetsstatus.",
+          "sensor_port_errors": "4 sensorer per grensesnitt (RX/TX-feil og RX/TX-forkastede pakker) for å finne en dårlig kabel eller en defekt port. Advarsel: oppretter 4 enheter per grensesnitt.",
+          "sensor_port_switch": "Bryter per port for å aktivere/deaktivere porten fra HA. Slå av for å unngå at en port deaktiveres ved et uhell; de andre enhetene for porten beholdes.",
           "sensor_port_tracker": "Binær sensor per port som viser tilkoblingsstatus (oppe/nede).",
           "sensor_port_traffic": "4 sensorer per grensesnitt (TX/RX-byte og totaler). Advarsel: oppretter 4 enheter per grensesnitt — deaktiver hvis trafikkgrafer ikke er nødvendig.",
           "sensor_ppp": "Bryter per PPP-hemmelighet (bruker) for å aktivere/deaktivere VPN/PPPoE-kontoer fra HA.",
+          "sensor_raw": "Bryter per Raw-regel for å aktivere/deaktivere raw-regler i brannmuren fra HA. Advarsel: oppretter én enhet per raw-regel.",
+          "sensor_routes": "Binær sensor per statisk rute og per standardrute, på så lenge ruten er aktiv. Andre dynamiske ruter er ikke med.",
           "sensor_routing_rules": "Bryter per rutingsregel for å aktivere/deaktivere politikkrutingsregler fra HA. Advarsel: oppretter én enhet per rutingsregel.",
           "sensor_scripts": "Knapp per skript for å utløse RouterOS-skript fra HA.",
           "sensor_simple_queues": "Bryter per Simple Queue-oppføring for å aktivere/deaktivere båndbreddelimiter fra HA. Advarsel: oppretter én enhet per køsregel.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Tilkoblingssikkerhet"
         },
         "data_description": {
-          "port": "RouterOS API-port. La stå på 0 for å bruke standard: 8728 (uten SSL) eller 8729 (SSL)."
+          "port": "RouterOS API-port. La stå på 0 for å bruke standard: 8728 (uten SSL) eller 8729 (SSL).",
+          "password": "La stå tomt for å beholde det lagrede passordet."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Søkeintervall",
           "track_iface_clients": "Vis klient MAC og IP på grensesnitt",
           "unit_of_measurement": "Måleenhet",
+          "track_network_hosts_interval": "Intervall for enhetssporing (sekunder)",
           "track_network_hosts_timeout": "Nettverksenhetssporingstidsavbrudd (sekunder)",
           "zone": "Sone for enhetssporer"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Standard: 30s. Lavere verdier øker belastningen på RouterOS API.",
+          "track_network_hosts_interval": "Hvor ofte sporede enheter pinges og statusen oppdateres. Minimum: 5s. Maksimum: 300s. Standard: 10s. Øk verdien i store nettverk for å redusere belastningen. Aldri lengre enn halvparten av tidsavbruddet for sporing. Endringer mellom hjemme og borte kan forsinkes med inntil ett intervall.",
           "track_network_hosts_timeout": "Kun kablede enheter. Sekunder før en enhet regnes som frakoblet hvis den ikke sees i ARP. Standard: 180s.",
           "zone": "Home Assistant-sonenavn som brukes når en sporet enhet er tilkoblet. Standard: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Filterbytere",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Barnekontroll",
+          "sensor_lte": "LTE-/5G-modemsensorer",
           "sensor_mangle": "Manglebytere",
           "sensor_nat": "NAT-bytere",
           "sensor_netwatch_tracker": "Netwatch sensorer",
+          "sensor_port_errors": "Feiltellere for porter",
+          "sensor_port_switch": "Portbrytere",
           "sensor_port_tracker": "Portsporingssensorer",
           "sensor_port_traffic": "Porttrafikksensorer",
           "sensor_ppp": "PPP brukere",
+          "sensor_raw": "Raw-brytere",
+          "sensor_routes": "Rutesensorer",
           "sensor_routing_rules": "Routing Rules-bytere",
           "sensor_scripts": "Skriptbytere",
           "sensor_simple_queues": "Enkelkøbytere",
@@ -194,12 +214,17 @@
           "sensor_filter": "Bryter per Filter-regel for å aktivere/deaktivere brannmur-filterregler fra HA. Advarsel: oppretter én enhet per filterregel.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Brytere for Kid Control-enhetsprofiler (pause/gjenoppta internettilgang).",
+          "sensor_lte": "Sensorer per LTE- eller 5G-modem: operatør, tilgangsteknologi, signalnivåer (RSSI, RSRP, RSRQ, SINR, CQI) og bånd. Én ekstra forespørsel per modem i hver syklus; en ruter uten modem blir ikke spurt.",
           "sensor_mangle": "Bryter per Mangle-regel for å aktivere/deaktivere pakkemerkingsregler fra HA. Advarsel: oppretter én enhet per Mangle-regel.",
           "sensor_nat": "Bryter per NAT-regel for å aktivere/deaktivere regler fra HA. Advarsel: oppretter én enhet per NAT-regel.",
           "sensor_netwatch_tracker": "Binær sensor per Netwatch-oppføring som viser tilgjengelighetsstatus.",
+          "sensor_port_errors": "4 sensorer per grensesnitt (RX/TX-feil og RX/TX-forkastede pakker) for å finne en dårlig kabel eller en defekt port. Advarsel: oppretter 4 enheter per grensesnitt.",
+          "sensor_port_switch": "Bryter per port for å aktivere/deaktivere porten fra HA. Slå av for å unngå at en port deaktiveres ved et uhell; de andre enhetene for porten beholdes.",
           "sensor_port_tracker": "Binær sensor per port som viser tilkoblingsstatus (oppe/nede).",
           "sensor_port_traffic": "4 sensorer per grensesnitt (TX/RX-byte og totaler). Advarsel: oppretter 4 enheter per grensesnitt — deaktiver hvis trafikkgrafer ikke er nødvendig.",
           "sensor_ppp": "Bryter per PPP-hemmelighet (bruker) for å aktivere/deaktivere VPN/PPPoE-kontoer fra HA.",
+          "sensor_raw": "Bryter per Raw-regel for å aktivere/deaktivere raw-regler i brannmuren fra HA. Advarsel: oppretter én enhet per raw-regel.",
+          "sensor_routes": "Binær sensor per statisk rute og per standardrute, på så lenge ruten er aktiv. Andre dynamiske ruter er ikke med.",
           "sensor_routing_rules": "Bryter per rutingsregel for å aktivere/deaktivere politikkrutingsregler fra HA. Advarsel: oppretter én enhet per rutingsregel.",
           "sensor_scripts": "Knapp per skript for å utløse RouterOS-skript fra HA.",
           "sensor_simple_queues": "Bryter per Simple Queue-oppføring for å aktivere/deaktivere båndbreddelimiter fra HA. Advarsel: oppretter én enhet per køsregel.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} avviste endringen av {target}. Ruterens begrunnelse står i loggen."
+    },
+    "write_failed": {
+      "message": "Endringen av {target} gikk ikke gjennom på {host}. Detaljene står i loggen."
+    },
+    "write_unconfirmed": {
+      "message": "Endringen av {target} på {host} kunne ikke bekreftes: ruteren svarte ikke, eller et skript stoppet halvveis. Sjekk ruteren før du gjentar. Detaljene står i loggen."
+    },
+    "no_write_access": {
+      "message": "Kontoen som er satt opp for {host} har ikke skriverettigheter på ruteren, så ingenting ble endret."
     }
   },
   "selector": {

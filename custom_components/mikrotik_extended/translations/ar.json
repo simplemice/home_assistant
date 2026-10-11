@@ -35,11 +35,13 @@
         "description": "تهيئة التكامل",
         "data": {
           "scan_interval": "الفاصل الزمني للمسح (بالثواني)",
+          "track_network_hosts_interval": "الفاصل الزمني لتتبّع الأجهزة (بالثواني)",
           "track_network_hosts_timeout": "مهلة تتبّع أجهزة الشبكة (بالثواني)",
           "zone": "منطقة لتعقُّب الجهاز"
         },
         "data_description": {
           "scan_interval": "الحد الأدنى: 10s. الافتراضي: 30s. القيم الأقل تزيد من حمل RouterOS API.",
+          "track_network_hosts_interval": "عدد مرات اختبار الأجهزة المتتبَّعة وتحديث حالتها. الحد الأدنى: 5s. الحد الأقصى: 300s. الافتراضي: 10s. ارفع القيمة في الشبكات الكبيرة لتخفيف الحمل. لا يتجاوز أبدًا نصف مهلة التتبّع. قد يتأخر تغيّر الحالة بين المنزل وخارجه بمقدار فاصل زمني واحد.",
           "track_network_hosts_timeout": "الأجهزة السلكية فقط. عدد الثواني قبل اعتبار الجهاز غير متصل إذا لم يُرَ في ARP. الافتراضي: 180s.",
           "zone": "اسم منطقة Home Assistant للاستخدام عند توصيل جهاز متعقَّب. الافتراضي: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "مفاتيح الترشيح",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "مراقبة الأطفال",
+          "sensor_lte": "مستشعرات مودم LTE / 5G",
           "sensor_mangle": "مفاتيح Mangle",
           "sensor_nat": "مفاتيح NAT",
           "sensor_netwatch_tracker": "مستشعرات Netwatch",
+          "sensor_port_errors": "عدّادات أخطاء المنافذ",
+          "sensor_port_switch": "مفاتيح المنافذ",
           "sensor_port_tracker": "مُستشعرات تعقُب منفذ الشبكة",
           "sensor_port_traffic": "مُستشعرات حركة المرور عبر منفذ الشبكة",
           "sensor_ppp": "مستخدمو PPP",
+          "sensor_raw": "مفاتيح Raw",
+          "sensor_routes": "مستشعرات المسارات",
           "sensor_routing_rules": "مبدّلات Routing Rules",
           "sensor_scripts": "مُبدِّلات النصوص البرمجية",
           "sensor_simple_queues": "مفاتيح الطوابير البسيطة",
@@ -85,12 +92,17 @@
           "sensor_filter": "مفتاح لكل قاعدة Filter لتفعيل/تعطيل قواعد جدار الحماية من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة فلتر.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "مفاتيح لملفات تعريف أجهزة Kid Control (إيقاف/استئناف الوصول إلى الإنترنت).",
+          "sensor_lte": "مستشعرات لكل مودم LTE أو 5G: المشغّل، تقنية الاتصال، مستويات الإشارة (RSSI, RSRP, RSRQ, SINR, CQI) والنطاقات. استعلام إضافي واحد لكل مودم في كل دورة؛ لا يُرسل أي استعلام إلى راوتر بلا مودم.",
           "sensor_mangle": "مفتاح لكل قاعدة Mangle لتفعيل/تعطيل قواعد وضع علامات الحزم من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة Mangle.",
           "sensor_nat": "مفتاح لكل قاعدة NAT لتفعيل/تعطيل القواعد من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة NAT.",
           "sensor_netwatch_tracker": "مستشعر ثنائي لكل إدخال Netwatch يُظهر حالة إمكانية الوصول.",
+          "sensor_port_errors": "4 مستشعرات لكل واجهة (أخطاء RX/TX والحزم المُسقطة RX/TX) لاكتشاف كابل تالف أو منفذ معطوب. تحذير: ينشئ 4 كيانات لكل واجهة.",
+          "sensor_port_switch": "مفتاح لكل منفذ لتفعيله/تعطيله من HA. عطّل هذا الخيار لمنع تعطيل منفذ عن طريق الخطأ؛ تبقى بقية كيانات المنفذ.",
           "sensor_port_tracker": "مستشعر ثنائي لكل منفذ يُظهر حالة الاتصال (متصل/غير متصل).",
           "sensor_port_traffic": "4 مستشعرات لكل واجهة (بايتات TX/RX والإجماليات). تحذير: ينشئ 4 كيانات لكل واجهة — عطِّله إذا لم تكن رسوم بيانية لحركة المرور مطلوبة.",
           "sensor_ppp": "مفتاح لكل PPP secret (مستخدم) لتفعيل/تعطيل حسابات VPN/PPPoE من HA.",
+          "sensor_raw": "مفتاح لكل قاعدة Raw لتفعيل/تعطيل قواعد raw في جدار الحماية من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة raw.",
+          "sensor_routes": "مستشعر ثنائي لكل مسار ثابت ولكل مسار افتراضي، يعمل ما دام المسار نشطًا. المسارات الديناميكية الأخرى غير مشمولة.",
           "sensor_routing_rules": "مفتاح لكل قاعدة توجيه لتفعيل/تعطيل قواعد توجيه السياسات من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة توجيه.",
           "sensor_scripts": "زر لكل سكريبت لتشغيل سكريبتات RouterOS من HA.",
           "sensor_simple_queues": "مفتاح لكل إدخال Simple Queue لتفعيل/تعطيل حدود النطاق الترددي من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة قائمة انتظار.",
@@ -118,7 +130,8 @@
           "ssl_mode": "أمان الاتصال"
         },
         "data_description": {
-          "port": "منفذ RouterOS API. اتركه عند 0 لاستخدام الافتراضي: 8728 (بدون SSL) أو 8729 (مع SSL)."
+          "port": "منفذ RouterOS API. اتركه عند 0 لاستخدام الافتراضي: 8728 (بدون SSL) أو 8729 (مع SSL).",
+          "password": "اتركه فارغًا للإبقاء على كلمة المرور المحفوظة."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "الفاصل الزمني للمسح",
           "track_iface_clients": "إظهار عنوان MAC و IP للعميل على الواجهات",
           "unit_of_measurement": "وحدة قياس",
+          "track_network_hosts_interval": "الفاصل الزمني لتتبّع الأجهزة (بالثواني)",
           "track_network_hosts_timeout": "مهلة تتبّع أجهزة الشبكة (بالثواني)",
           "zone": "منطقة لتعقُّب الجهاز"
         },
         "data_description": {
           "scan_interval": "الحد الأدنى: 10s. الافتراضي: 30s. القيم الأقل تزيد من حمل RouterOS API.",
+          "track_network_hosts_interval": "عدد مرات اختبار الأجهزة المتتبَّعة وتحديث حالتها. الحد الأدنى: 5s. الحد الأقصى: 300s. الافتراضي: 10s. ارفع القيمة في الشبكات الكبيرة لتخفيف الحمل. لا يتجاوز أبدًا نصف مهلة التتبّع. قد يتأخر تغيّر الحالة بين المنزل وخارجه بمقدار فاصل زمني واحد.",
           "track_network_hosts_timeout": "الأجهزة السلكية فقط. عدد الثواني قبل اعتبار الجهاز غير متصل إذا لم يُرَ في ARP. الافتراضي: 180s.",
           "zone": "اسم منطقة Home Assistant للاستخدام عند توصيل جهاز متعقَّب. الافتراضي: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "مفاتيح الترشيح",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "مراقبة الأطفال",
+          "sensor_lte": "مستشعرات مودم LTE / 5G",
           "sensor_mangle": "مفاتيح Mangle",
           "sensor_nat": "مفاتيح NAT",
           "sensor_netwatch_tracker": "مستشعرات Netwatch",
+          "sensor_port_errors": "عدّادات أخطاء المنافذ",
+          "sensor_port_switch": "مفاتيح المنافذ",
           "sensor_port_tracker": "مُستشعرات تعقُب منفذ الشبكة",
           "sensor_port_traffic": "مُستشعرات حركة المرور عبر منفذ الشبكة",
           "sensor_ppp": "مستخدمو PPP",
+          "sensor_raw": "مفاتيح Raw",
+          "sensor_routes": "مستشعرات المسارات",
           "sensor_routing_rules": "مبدّلات Routing Rules",
           "sensor_scripts": "مُبدِّلات النصوص البرمجية",
           "sensor_simple_queues": "مفاتيح الطوابير البسيطة",
@@ -194,12 +214,17 @@
           "sensor_filter": "مفتاح لكل قاعدة Filter لتفعيل/تعطيل قواعد جدار الحماية من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة فلتر.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "مفاتيح لملفات تعريف أجهزة Kid Control (إيقاف/استئناف الوصول إلى الإنترنت).",
+          "sensor_lte": "مستشعرات لكل مودم LTE أو 5G: المشغّل، تقنية الاتصال، مستويات الإشارة (RSSI, RSRP, RSRQ, SINR, CQI) والنطاقات. استعلام إضافي واحد لكل مودم في كل دورة؛ لا يُرسل أي استعلام إلى راوتر بلا مودم.",
           "sensor_mangle": "مفتاح لكل قاعدة Mangle لتفعيل/تعطيل قواعد وضع علامات الحزم من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة Mangle.",
           "sensor_nat": "مفتاح لكل قاعدة NAT لتفعيل/تعطيل القواعد من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة NAT.",
           "sensor_netwatch_tracker": "مستشعر ثنائي لكل إدخال Netwatch يُظهر حالة إمكانية الوصول.",
+          "sensor_port_errors": "4 مستشعرات لكل واجهة (أخطاء RX/TX والحزم المُسقطة RX/TX) لاكتشاف كابل تالف أو منفذ معطوب. تحذير: ينشئ 4 كيانات لكل واجهة.",
+          "sensor_port_switch": "مفتاح لكل منفذ لتفعيله/تعطيله من HA. عطّل هذا الخيار لمنع تعطيل منفذ عن طريق الخطأ؛ تبقى بقية كيانات المنفذ.",
           "sensor_port_tracker": "مستشعر ثنائي لكل منفذ يُظهر حالة الاتصال (متصل/غير متصل).",
           "sensor_port_traffic": "4 مستشعرات لكل واجهة (بايتات TX/RX والإجماليات). تحذير: ينشئ 4 كيانات لكل واجهة — عطِّله إذا لم تكن رسوم بيانية لحركة المرور مطلوبة.",
           "sensor_ppp": "مفتاح لكل PPP secret (مستخدم) لتفعيل/تعطيل حسابات VPN/PPPoE من HA.",
+          "sensor_raw": "مفتاح لكل قاعدة Raw لتفعيل/تعطيل قواعد raw في جدار الحماية من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة raw.",
+          "sensor_routes": "مستشعر ثنائي لكل مسار ثابت ولكل مسار افتراضي، يعمل ما دام المسار نشطًا. المسارات الديناميكية الأخرى غير مشمولة.",
           "sensor_routing_rules": "مفتاح لكل قاعدة توجيه لتفعيل/تعطيل قواعد توجيه السياسات من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة توجيه.",
           "sensor_scripts": "زر لكل سكريبت لتشغيل سكريبتات RouterOS من HA.",
           "sensor_simple_queues": "مفتاح لكل إدخال Simple Queue لتفعيل/تعطيل حدود النطاق الترددي من HA. تحذير: ينشئ كيانًا واحدًا لكل قاعدة قائمة انتظار.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "رفض {host} التغيير على {target}. سبب الراوتر موجود في السجل."
+    },
+    "write_failed": {
+      "message": "لم يتم تطبيق التغيير على {target} في {host}. التفاصيل في السجل."
+    },
+    "write_unconfirmed": {
+      "message": "تعذر تأكيد التغيير على {target} في {host}: لم يستجب الموجّه، أو توقف سكربت في منتصفه. تحقق من الموجّه قبل التكرار. التفاصيل في السجل."
+    },
+    "no_write_access": {
+      "message": "الحساب المضبوط لـ {host} لا يملك صلاحية الكتابة على الراوتر، لذلك لم يتغيّر شيء."
     }
   },
   "selector": {

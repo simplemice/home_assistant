@@ -35,11 +35,13 @@
         "description": "Skonfiguruj integrację",
         "data": {
           "scan_interval": "Częstotliwość skanowania (sekundy)",
+          "track_network_hosts_interval": "Interwał śledzenia urządzeń (sekundy)",
           "track_network_hosts_timeout": "Limit czasu śledzenia urządzeń sieciowych (sekundy)",
           "zone": "Strefa programu do śledzenia urządzeń"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Domyślnie: 30s. Niższe wartości zwiększają obciążenie API RouterOS.",
+          "track_network_hosts_interval": "Jak często śledzone urządzenia są pingowane, a ich stan odświeżany. Minimum: 5s. Maksimum: 300s. Domyślnie: 10s. W dużych sieciach zwiększ wartość, aby zmniejszyć obciążenie. Nigdy nie jest dłuższy niż połowa limitu czasu śledzenia. Zmiany stanu w domu/poza domem mogą się opóźnić o jeden interwał.",
           "track_network_hosts_timeout": "Tylko urządzenia przewodowe. Liczba sekund, po której urządzenie jest uznawane za offline, jeśli nie pojawia się w ARP. Domyślnie: 180s.",
           "zone": "Nazwa strefy Home Assistant używana gdy śledzone urządzenie jest połączone. Domyślnie: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Przełączniki filtrów",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kontrola rodzicielska",
+          "sensor_lte": "Czujniki modemu LTE / 5G",
           "sensor_mangle": "Przełączniki Mangle",
           "sensor_nat": "Przełączniki NAT",
           "sensor_netwatch_tracker": "Czujniki Netwatch",
+          "sensor_port_errors": "Liczniki błędów portów",
+          "sensor_port_switch": "Przełączniki portów",
           "sensor_port_tracker": "Czujniki monitora portu",
           "sensor_port_traffic": "Czujniki ruchu portowego",
           "sensor_ppp": "Użytkownicy PPP",
+          "sensor_raw": "Przełączniki Raw",
+          "sensor_routes": "Czujniki tras",
           "sensor_routing_rules": "Przełączniki Routing Rules",
           "sensor_scripts": "Przełączniki skryptów",
           "sensor_simple_queues": "Przełączniki prostych kolejek",
@@ -85,12 +92,17 @@
           "sensor_filter": "Przełącznik na regułę Filter do włączania/wyłączania reguł zapory z HA. Uwaga: tworzy jedną encję na regułę filtra.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Przełączniki dla profili urządzeń Kid Control (wstrzymanie/wznowienie dostępu do internetu).",
+          "sensor_lte": "Czujniki dla każdego modemu LTE lub 5G: operator, technologia dostępu, poziomy sygnału (RSSI, RSRP, RSRQ, SINR, CQI) i pasma. Jedno dodatkowe zapytanie na modem w każdym cyklu; router bez modemu nie jest odpytywany.",
           "sensor_mangle": "Przełącznik na regułę Mangle do włączania/wyłączania reguł oznaczania pakietów z HA. Uwaga: tworzy jedną encję na regułę Mangle.",
           "sensor_nat": "Przełącznik na regułę NAT do włączania/wyłączania reguł z HA. Uwaga: tworzy jedną encję na regułę NAT.",
           "sensor_netwatch_tracker": "Czujnik binarny na wpis Netwatch pokazujący stan osiągalności.",
+          "sensor_port_errors": "4 czujniki na interfejs (błędy RX/TX i odrzucone pakiety RX/TX) do wykrycia uszkodzonego kabla lub portu. Uwaga: tworzy 4 encje na interfejs.",
+          "sensor_port_switch": "Przełącznik dla każdego portu do jego włączania/wyłączania z HA. Wyłącz, aby nie dało się przypadkiem wyłączyć portu; pozostałe encje portu zostają.",
           "sensor_port_tracker": "Czujnik binarny na port pokazujący stan łącza (aktywny/nieaktywny).",
           "sensor_port_traffic": "4 czujniki na interfejs (bajty TX/RX i sumy). Uwaga: tworzy 4 encje na interfejs — wyłącz jeśli wykresy ruchu nie są potrzebne.",
           "sensor_ppp": "Przełącznik na sekret PPP (użytkownika) do włączania/wyłączania kont VPN/PPPoE z HA.",
+          "sensor_raw": "Przełącznik na regułę Raw do włączania/wyłączania reguł raw zapory z HA. Uwaga: tworzy jedną encję na regułę raw.",
+          "sensor_routes": "Czujnik binarny dla każdej trasy statycznej i każdej trasy domyślnej, włączony, dopóki trasa jest aktywna. Pozostałe trasy dynamiczne nie są uwzględniane.",
           "sensor_routing_rules": "Przełącznik na regułę routingu do włączania/wyłączania reguł routingu polityki z HA. Uwaga: tworzy jedną encję na regułę routingu.",
           "sensor_scripts": "Przycisk na skrypt do uruchamiania skryptów RouterOS z HA.",
           "sensor_simple_queues": "Przełącznik na wpis Simple Queue do włączania/wyłączania limitów przepustowości z HA. Uwaga: tworzy jedną encję na regułę kolejki.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Bezpieczeństwo połączenia"
         },
         "data_description": {
-          "port": "Port API RouterOS. Pozostaw 0, aby użyć domyślnego: 8728 (bez SSL) lub 8729 (SSL)."
+          "port": "Port API RouterOS. Pozostaw 0, aby użyć domyślnego: 8728 (bez SSL) lub 8729 (SSL).",
+          "password": "Pozostaw puste, aby zachować zapisane hasło."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Częstotliwość skanowania",
           "track_iface_clients": "Pokaż w interfejsach adres MAC i IP klienta",
           "unit_of_measurement": "Jednostka miary",
+          "track_network_hosts_interval": "Interwał śledzenia urządzeń (sekundy)",
           "track_network_hosts_timeout": "Limit czasu śledzenia urządzeń sieciowych (sekundy)",
           "zone": "Strefa programu do śledzenia urządzeń"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Domyślnie: 30s. Niższe wartości zwiększają obciążenie API RouterOS.",
+          "track_network_hosts_interval": "Jak często śledzone urządzenia są pingowane, a ich stan odświeżany. Minimum: 5s. Maksimum: 300s. Domyślnie: 10s. W dużych sieciach zwiększ wartość, aby zmniejszyć obciążenie. Nigdy nie jest dłuższy niż połowa limitu czasu śledzenia. Zmiany stanu w domu/poza domem mogą się opóźnić o jeden interwał.",
           "track_network_hosts_timeout": "Tylko urządzenia przewodowe. Liczba sekund, po której urządzenie jest uznawane za offline, jeśli nie pojawia się w ARP. Domyślnie: 180s.",
           "zone": "Nazwa strefy Home Assistant używana gdy śledzone urządzenie jest połączone. Domyślnie: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Przełączniki filtrów",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kontrola rodzicielska",
+          "sensor_lte": "Czujniki modemu LTE / 5G",
           "sensor_mangle": "Przełączniki Mangle",
           "sensor_nat": "Przełączniki NAT",
           "sensor_netwatch_tracker": "Czujniki Netwatch",
+          "sensor_port_errors": "Liczniki błędów portów",
+          "sensor_port_switch": "Przełączniki portów",
           "sensor_port_tracker": "Czujniki monitora portu",
           "sensor_port_traffic": "Czujniki ruchu portowego",
           "sensor_ppp": "Użytkownicy PPP",
+          "sensor_raw": "Przełączniki Raw",
+          "sensor_routes": "Czujniki tras",
           "sensor_routing_rules": "Przełączniki Routing Rules",
           "sensor_scripts": "Przełączniki skryptów",
           "sensor_simple_queues": "Przełączniki prostych kolejek",
@@ -194,12 +214,17 @@
           "sensor_filter": "Przełącznik na regułę Filter do włączania/wyłączania reguł zapory z HA. Uwaga: tworzy jedną encję na regułę filtra.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Przełączniki dla profili urządzeń Kid Control (wstrzymanie/wznowienie dostępu do internetu).",
+          "sensor_lte": "Czujniki dla każdego modemu LTE lub 5G: operator, technologia dostępu, poziomy sygnału (RSSI, RSRP, RSRQ, SINR, CQI) i pasma. Jedno dodatkowe zapytanie na modem w każdym cyklu; router bez modemu nie jest odpytywany.",
           "sensor_mangle": "Przełącznik na regułę Mangle do włączania/wyłączania reguł oznaczania pakietów z HA. Uwaga: tworzy jedną encję na regułę Mangle.",
           "sensor_nat": "Przełącznik na regułę NAT do włączania/wyłączania reguł z HA. Uwaga: tworzy jedną encję na regułę NAT.",
           "sensor_netwatch_tracker": "Czujnik binarny na wpis Netwatch pokazujący stan osiągalności.",
+          "sensor_port_errors": "4 czujniki na interfejs (błędy RX/TX i odrzucone pakiety RX/TX) do wykrycia uszkodzonego kabla lub portu. Uwaga: tworzy 4 encje na interfejs.",
+          "sensor_port_switch": "Przełącznik dla każdego portu do jego włączania/wyłączania z HA. Wyłącz, aby nie dało się przypadkiem wyłączyć portu; pozostałe encje portu zostają.",
           "sensor_port_tracker": "Czujnik binarny na port pokazujący stan łącza (aktywny/nieaktywny).",
           "sensor_port_traffic": "4 czujniki na interfejs (bajty TX/RX i sumy). Uwaga: tworzy 4 encje na interfejs — wyłącz jeśli wykresy ruchu nie są potrzebne.",
           "sensor_ppp": "Przełącznik na sekret PPP (użytkownika) do włączania/wyłączania kont VPN/PPPoE z HA.",
+          "sensor_raw": "Przełącznik na regułę Raw do włączania/wyłączania reguł raw zapory z HA. Uwaga: tworzy jedną encję na regułę raw.",
+          "sensor_routes": "Czujnik binarny dla każdej trasy statycznej i każdej trasy domyślnej, włączony, dopóki trasa jest aktywna. Pozostałe trasy dynamiczne nie są uwzględniane.",
           "sensor_routing_rules": "Przełącznik na regułę routingu do włączania/wyłączania reguł routingu polityki z HA. Uwaga: tworzy jedną encję na regułę routingu.",
           "sensor_scripts": "Przycisk na skrypt do uruchamiania skryptów RouterOS z HA.",
           "sensor_simple_queues": "Przełącznik na wpis Simple Queue do włączania/wyłączania limitów przepustowości z HA. Uwaga: tworzy jedną encję na regułę kolejki.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} odrzucił zmianę {target}. Powód podany przez router jest w dzienniku."
+    },
+    "write_failed": {
+      "message": "Zmiana {target} nie powiodła się na {host}. Szczegóły są w dzienniku."
+    },
+    "write_unconfirmed": {
+      "message": "Nie udało się potwierdzić zmiany {target} na {host}: router nie odpowiedział lub skrypt zatrzymał się w połowie. Sprawdź router przed powtórzeniem. Szczegóły są w dzienniku."
+    },
+    "no_write_access": {
+      "message": "Konto skonfigurowane dla {host} nie ma uprawnień do zapisu na routerze, więc nic nie zostało zmienione."
     }
   },
   "selector": {

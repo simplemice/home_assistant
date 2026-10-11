@@ -35,11 +35,13 @@
         "description": "Nakonfigurovať integráciu",
         "data": {
           "scan_interval": "Interval skenovania (sekundy)",
+          "track_network_hosts_interval": "Interval sledovania zariadení (sekundy)",
           "track_network_hosts_timeout": "Časový limit sledovania sieťových zariadení (sekundy)",
           "zone": "Zóna pre sledované zariadenia"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Predvolene: 30s. Nižšie hodnoty zvyšujú záťaž API RouterOS.",
+          "track_network_hosts_interval": "Ako často sa sledované zariadenia pingujú a ich stav obnovuje. Minimum: 5s. Maximum: 300s. Predvolené: 10s. Vo veľkých sieťach hodnotu zvýšte, zníži sa záťaž. Nikdy nie je dlhší než polovica časového limitu sledovania. Zmena stavu doma/preč sa môže oneskoriť až o jeden interval.",
           "track_network_hosts_timeout": "Iba káblové zariadenia. Počet sekúnd, po ktorých je zariadenie považované za offline, ak sa nezobrazuje v ARP. Predvolene: 180s.",
           "zone": "Názov zóny Home Assistant použitý pri pripojení sledovaného zariadenia. Predvolene: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Prepínače filtrov",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Rodičovská kontrola",
+          "sensor_lte": "Senzory modemu LTE / 5G",
           "sensor_mangle": "Prepínače Mangle",
           "sensor_nat": "Prepínače NAT",
           "sensor_netwatch_tracker": "Senzory Netwatch",
+          "sensor_port_errors": "Počítadlá chýb portov",
+          "sensor_port_switch": "Prepínače portov",
           "sensor_port_tracker": "Senzory sledovania portov",
           "sensor_port_traffic": "Senzory prenosu portov",
           "sensor_ppp": "PPP používatelia",
+          "sensor_raw": "Prepínače Raw",
+          "sensor_routes": "Senzory trás",
           "sensor_routing_rules": "Prepínače Routing Rules",
           "sensor_scripts": "Prepínače skriptov",
           "sensor_simple_queues": "Prepínače jednoduchých radov",
@@ -85,12 +92,17 @@
           "sensor_filter": "Spínač na pravidlo Filter pre povolenie/zakázanie pravidiel firewallu z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo filtra.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Spínače pre profily zariadení Kid Control (pozastavenie/obnovenie prístupu na internet).",
+          "sensor_lte": "Senzory pre každý modem LTE alebo 5G: operátor, technológia pripojenia, úrovne signálu (RSSI, RSRP, RSRQ, SINR, CQI) a pásma. Jeden dopyt navyše na modem pri každom cykle; router bez modemu sa nedopytuje.",
           "sensor_mangle": "Spínač na pravidlo Mangle pre povolenie/zakázanie pravidiel označovania paketov z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo Mangle.",
           "sensor_nat": "Spínač na pravidlo NAT pre povolenie/zakázanie pravidiel z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo NAT.",
           "sensor_netwatch_tracker": "Binárny senzor na položku Netwatch zobrazujúci stav dostupnosti.",
+          "sensor_port_errors": "4 senzory na rozhranie (chyby RX/TX a zahodené pakety RX/TX) na odhalenie chybného kábla alebo portu. Upozornenie: vytvorí 4 entity na rozhranie.",
+          "sensor_port_switch": "Prepínač pre každý port na jeho povolenie/zakázanie z HA. Vypnite, aby sa port nedal zakázať omylom; ostatné entity portu zostanú.",
           "sensor_port_tracker": "Binárny senzor na port zobrazujúci stav linky (aktívny/neaktívny).",
           "sensor_port_traffic": "4 senzory na rozhranie (bajty TX/RX a súčty). Upozornenie: vytvorí 4 entity na rozhranie — zakážte ak grafy prenosu nie sú potrebné.",
           "sensor_ppp": "Spínač na PPP secret (používateľa) pre povolenie/zakázanie VPN/PPPoE účtov z HA.",
+          "sensor_raw": "Spínač na pravidlo Raw pre povolenie/zakázanie raw pravidiel firewallu z HA. Upozornenie: vytvorí jednu entitu na každé raw pravidlo.",
+          "sensor_routes": "Binárny senzor pre každú statickú a každú predvolenú trasu, zapnutý, kým je trasa aktívna. Ostatné dynamické trasy zahrnuté nie sú.",
           "sensor_routing_rules": "Spínač na pravidlo smerovania pre povolenie/zakázanie pravidiel policy routingu z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo smerovania.",
           "sensor_scripts": "Tlačidlo na skript pre spúšťanie skriptov RouterOS z HA.",
           "sensor_simple_queues": "Spínač na položku Simple Queue pre povolenie/zakázanie limitov šírky pásma z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo fronty.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Zabezpečenie pripojenia"
         },
         "data_description": {
-          "port": "Port API RouterOS. Ponechajte 0 pre použitie predvoleného: 8728 (bez SSL) alebo 8729 (SSL)."
+          "port": "Port API RouterOS. Ponechajte 0 pre použitie predvoleného: 8728 (bez SSL) alebo 8729 (SSL).",
+          "password": "Nechajte prázdne, ak chcete zachovať uložené heslo."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Interval skenovania",
           "track_iface_clients": "Zobraziť klientske MAC a IP na rozhraniach",
           "unit_of_measurement": "Merná jednotka",
+          "track_network_hosts_interval": "Interval sledovania zariadení (sekundy)",
           "track_network_hosts_timeout": "Časový limit sledovania sieťových zariadení (sekundy)",
           "zone": "Zóna pre sledované zariadenia"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Predvolene: 30s. Nižšie hodnoty zvyšujú záťaž API RouterOS.",
+          "track_network_hosts_interval": "Ako často sa sledované zariadenia pingujú a ich stav obnovuje. Minimum: 5s. Maximum: 300s. Predvolené: 10s. Vo veľkých sieťach hodnotu zvýšte, zníži sa záťaž. Nikdy nie je dlhší než polovica časového limitu sledovania. Zmena stavu doma/preč sa môže oneskoriť až o jeden interval.",
           "track_network_hosts_timeout": "Iba káblové zariadenia. Počet sekúnd, po ktorých je zariadenie považované za offline, ak sa nezobrazuje v ARP. Predvolene: 180s.",
           "zone": "Názov zóny Home Assistant použitý pri pripojení sledovaného zariadenia. Predvolene: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Prepínače filtrov",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Rodičovská kontrola",
+          "sensor_lte": "Senzory modemu LTE / 5G",
           "sensor_mangle": "Prepínače Mangle",
           "sensor_nat": "Prepínače NAT",
           "sensor_netwatch_tracker": "Senzory Netwatch",
+          "sensor_port_errors": "Počítadlá chýb portov",
+          "sensor_port_switch": "Prepínače portov",
           "sensor_port_tracker": "Senzory sledovania portov",
           "sensor_port_traffic": "Senzory prenosu portov",
           "sensor_ppp": "PPP používatelia",
+          "sensor_raw": "Prepínače Raw",
+          "sensor_routes": "Senzory trás",
           "sensor_routing_rules": "Prepínače Routing Rules",
           "sensor_scripts": "Prepínače skriptov",
           "sensor_simple_queues": "Prepínače jednoduchých radov",
@@ -194,12 +214,17 @@
           "sensor_filter": "Spínač na pravidlo Filter pre povolenie/zakázanie pravidiel firewallu z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo filtra.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Spínače pre profily zariadení Kid Control (pozastavenie/obnovenie prístupu na internet).",
+          "sensor_lte": "Senzory pre každý modem LTE alebo 5G: operátor, technológia pripojenia, úrovne signálu (RSSI, RSRP, RSRQ, SINR, CQI) a pásma. Jeden dopyt navyše na modem pri každom cykle; router bez modemu sa nedopytuje.",
           "sensor_mangle": "Spínač na pravidlo Mangle pre povolenie/zakázanie pravidiel označovania paketov z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo Mangle.",
           "sensor_nat": "Spínač na pravidlo NAT pre povolenie/zakázanie pravidiel z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo NAT.",
           "sensor_netwatch_tracker": "Binárny senzor na položku Netwatch zobrazujúci stav dostupnosti.",
+          "sensor_port_errors": "4 senzory na rozhranie (chyby RX/TX a zahodené pakety RX/TX) na odhalenie chybného kábla alebo portu. Upozornenie: vytvorí 4 entity na rozhranie.",
+          "sensor_port_switch": "Prepínač pre každý port na jeho povolenie/zakázanie z HA. Vypnite, aby sa port nedal zakázať omylom; ostatné entity portu zostanú.",
           "sensor_port_tracker": "Binárny senzor na port zobrazujúci stav linky (aktívny/neaktívny).",
           "sensor_port_traffic": "4 senzory na rozhranie (bajty TX/RX a súčty). Upozornenie: vytvorí 4 entity na rozhranie — zakážte ak grafy prenosu nie sú potrebné.",
           "sensor_ppp": "Spínač na PPP secret (používateľa) pre povolenie/zakázanie VPN/PPPoE účtov z HA.",
+          "sensor_raw": "Spínač na pravidlo Raw pre povolenie/zakázanie raw pravidiel firewallu z HA. Upozornenie: vytvorí jednu entitu na každé raw pravidlo.",
+          "sensor_routes": "Binárny senzor pre každú statickú a každú predvolenú trasu, zapnutý, kým je trasa aktívna. Ostatné dynamické trasy zahrnuté nie sú.",
           "sensor_routing_rules": "Spínač na pravidlo smerovania pre povolenie/zakázanie pravidiel policy routingu z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo smerovania.",
           "sensor_scripts": "Tlačidlo na skript pre spúšťanie skriptov RouterOS z HA.",
           "sensor_simple_queues": "Spínač na položku Simple Queue pre povolenie/zakázanie limitov šírky pásma z HA. Upozornenie: vytvorí jednu entitu na každé pravidlo fronty.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} odmietol zmenu {target}. Dôvod routera je v logu."
+    },
+    "write_failed": {
+      "message": "Zmena {target} na {host} neprebehla. Podrobnosti sú v protokole."
+    },
+    "write_unconfirmed": {
+      "message": "Zmenu {target} na {host} sa nepodarilo potvrdiť: router neodpovedal, alebo sa skript zastavil v polovici. Pred opakovaním skontrolujte router. Podrobnosti sú v protokole."
+    },
+    "no_write_access": {
+      "message": "Účet nastavený pre {host} nemá na routeri oprávnenie na zápis, nič sa nezmenilo."
     }
   },
   "selector": {

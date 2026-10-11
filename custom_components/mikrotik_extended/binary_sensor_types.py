@@ -128,6 +128,18 @@ DEVICE_ATTRIBUTES_NETWATCH = [
     "rtt-stdev",
 ]
 
+DEVICE_ATTRIBUTES_ROUTE = [
+    "dst-address",
+    "gateway",
+    "immediate-gw",
+    "distance",
+    "routing-table",
+    "comment",
+    "enabled",
+    "dynamic",
+    "present",
+]
+
 
 @dataclass
 class MikrotikBinarySensorEntityDescription(BinarySensorEntityDescription):
@@ -232,6 +244,39 @@ SENSOR_TYPES: tuple[BinarySensorEntityDescription, ...] = (
         data_reference="uid-ref",
         data_attributes_list=DEVICE_ATTRIBUTES_NETWATCH,
         func="MikrotikNetwatchBinarySensor",
+    ),
+    MikrotikBinarySensorEntityDescription(
+        key="lte_connection",
+        name="Connection",
+        icon_enabled="mdi:signal-cellular-3",
+        icon_disabled="mdi:signal-cellular-outline",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        ha_group="LTE modem",
+        ha_connection=DOMAIN,
+        ha_connection_value="LTE modem",
+        data_path="lte",
+        data_attribute="connected",
+        data_name="name",
+        data_uid="name",
+        data_reference="uid-ref",
+    ),
+    MikrotikBinarySensorEntityDescription(
+        key="route",
+        name="",
+        icon_enabled="mdi:routes",
+        icon_disabled="mdi:routes-clock",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        ha_group="Routes",
+        ha_connection=DOMAIN,
+        ha_connection_value="Routes",
+        data_path="route",
+        data_attribute="active",
+        data_name="name",
+        data_name_comment=True,
+        data_uid="uid-key",
+        data_reference="uid-key",
+        data_attributes_list=DEVICE_ATTRIBUTES_ROUTE,
+        func="MikrotikRouteBinarySensor",
     ),
     MikrotikBinarySensorEntityDescription(
         key="wireguard_peer",

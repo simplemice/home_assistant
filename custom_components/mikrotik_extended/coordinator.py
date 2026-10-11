@@ -23,7 +23,7 @@ from homeassistant.const import (
     CONF_ZONE,
     STATE_HOME,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry
@@ -49,17 +49,21 @@ from .const import (
     CONF_SENSOR_FILTER,
     CONF_SENSOR_INTERFACES,
     CONF_SENSOR_KIDCONTROL,
+    CONF_SENSOR_LTE,
     CONF_SENSOR_MANGLE,
     CONF_SENSOR_NAT,
     CONF_SENSOR_NETWATCH_TRACKER,
     CONF_SENSOR_PORT_TRAFFIC,
     CONF_SENSOR_PPP,
+    CONF_SENSOR_RAW,
+    CONF_SENSOR_ROUTES,
     CONF_SENSOR_ROUTING_RULES,
     CONF_SENSOR_SCRIPTS,
     CONF_SENSOR_SIMPLE_QUEUES,
     CONF_SENSOR_WIREGUARD,
     CONF_TEXT_ENCODING,
     CONF_TRACK_HOSTS,
+    CONF_TRACK_HOSTS_INTERVAL,
     CONF_TRACK_HOSTS_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SENSOR_CLIENT_CAPTIVE,
@@ -69,11 +73,14 @@ from .const import (
     DEFAULT_SENSOR_FILTER,
     DEFAULT_SENSOR_INTERFACES,
     DEFAULT_SENSOR_KIDCONTROL,
+    DEFAULT_SENSOR_LTE,
     DEFAULT_SENSOR_MANGLE,
     DEFAULT_SENSOR_NAT,
     DEFAULT_SENSOR_NETWATCH_TRACKER,
     DEFAULT_SENSOR_PORT_TRAFFIC,
     DEFAULT_SENSOR_PPP,
+    DEFAULT_SENSOR_RAW,
+    DEFAULT_SENSOR_ROUTES,
     DEFAULT_SENSOR_ROUTING_RULES,
     DEFAULT_SENSOR_SCRIPTS,
     DEFAULT_SENSOR_SIMPLE_QUEUES,
@@ -81,7 +88,10 @@ from .const import (
     DEFAULT_TEXT_ENCODING,
     DEFAULT_TRACK_HOST_TIMEOUT,
     DEFAULT_TRACK_HOSTS,
+    DEFAULT_TRACK_HOSTS_INTERVAL,
     DOMAIN,
+    MAX_TRACK_HOSTS_INTERVAL,
+    MIN_TRACK_HOSTS_INTERVAL,
 )
 from .encoding_repair import RAW_SUFFIX, collect_renames
 from .mikrotikapi import MikrotikAPI
@@ -282,8 +292,13 @@ class MikrotikTrackerCoordinator(DataUpdateCoordinator[None]):
             self.hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(seconds=10),
+            # The first cycle after a start does not ping, so a host that is
+            # quiet in ARP reads as away until the second one. That second
+            # cycle therefore comes at the default pace whatever is
+            # configured, and the configured interval takes over after it.
+            update_interval=min(tracker_interval(config_entry), timedelta(seconds=DEFAULT_TRACK_HOSTS_INTERVAL)),
         )
+        self.configured_interval = tracker_interval(config_entry)
         self.name = config_entry.data[CONF_NAME]
         self.host = config_entry.data[CONF_HOST]
 
@@ -357,6 +372,7 @@ class MikrotikTrackerCoordinator(DataUpdateCoordinator[None]):
         if "test" not in self.coordinator.ds["access"]:
             return
 
+        pinging = self.coordinator.host_tracking_initialized
         for uid in list(self.coordinator.ds["host"]):
             if not self.coordinator.host_tracking_initialized:
                 self._fill_host_defaults(self.coordinator.ds["host"][uid])
@@ -372,6 +388,8 @@ class MikrotikTrackerCoordinator(DataUpdateCoordinator[None]):
                 self.coordinator.ds["host"][uid]["last-seen"] = utcnow()
 
         self.coordinator.host_tracking_initialized = True
+        if pinging:
+            self.update_interval = self.configured_interval
 
         await self.coordinator.async_process_host()
         return {
@@ -380,9 +398,201 @@ class MikrotikTrackerCoordinator(DataUpdateCoordinator[None]):
         }
 
 
+def _list_id_order(entry: dict):
+    """Sort key that puts RouterOS list ids ("*A", "*10") in numeric order."""
+    raw = str(entry.get(".id", ""))
+    try:
+        return (0, int(raw.lstrip("*"), 16), raw)
+    except ValueError:
+        return (1, 0, raw)
+
+
+# What is read from an LTE modem. Deliberately a list of what to take rather
+# than of what to leave out: the monitor reply also carries the IMEI, the IMSI
+# and the ICCID, and those must never reach the data store, the entities, the
+# diagnostics or the log, whatever a later RouterOS release adds next to them.
+_LTE_TEXT_FIELDS = ("status", "model", "revision", "current-operator", "data-class", "primary-band", "ca-band", "dl-modulation", "nr-dl-modulation", "session-uptime")
+_LTE_ID_FIELDS = ("current-cellid", "enb-id", "sector-id", "phy-cellid")
+# The 5G names are the ones a real modem reported on 5G NSA. It sent no 5G
+# CQI, so there is no sensor for one; should a modem report it, it shows up
+# in the nr-other attribute like any other name not listed here.
+_LTE_NUMBER_FIELDS = ("rssi", "rsrp", "rsrq", "sinr", "cqi", "ri", "mcs", "nr-rsrp", "nr-rsrq", "nr-sinr")
+_LTE_NEVER = ("imei", "imsi", "iccid", "uicc")
+_LTE_NUMBER_RE = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)")
+
+
+def _lte_number(value):
+    """A signal value as a number, None when the modem gave none.
+
+    The API hands out plain numbers on some releases and the terminal form
+    with its unit ("-67dBm", "18dB") on others; both are read.
+    """
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    match = _LTE_NUMBER_RE.match(str(value))
+    if match is None:
+        return None
+    number = float(match.group(1))
+    return int(number) if number.is_integer() else number
+
+
+def _lte_text(value):
+    """A text value on one line, None when empty.
+
+    The carrier aggregation bands come as several lines, or as a list.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (list, tuple)):
+        value = "; ".join(str(part) for part in value)
+    text = "; ".join(" ".join(line.split()) for line in str(value).splitlines() if line.strip())
+    # Home Assistant refuses a state longer than 255 characters, and a long
+    # list of aggregated carriers can get there.
+    if len(text) > 255:
+        text = text[:252] + "..."
+    return text or None
+
+
+def lte_row(key: str, modem: dict, info: dict) -> dict:
+    """One modem as the entities see it, built from the interface and its monitor reply."""
+    row = {"name": str(modem.get("name") or key), "uid-ref": f"lte-{key}"}
+    for field in _LTE_TEXT_FIELDS:
+        row[field] = _lte_text(info.get(field))
+    for field in _LTE_ID_FIELDS:
+        row[field] = _lte_text(info.get(field))
+    for field in _LTE_NUMBER_FIELDS:
+        row[field] = _lte_number(info.get(field))
+    # 5G values the modem reports under a name this code does not know yet
+    # are kept together as one attribute, so they can be seen and reported.
+    known = set(_LTE_TEXT_FIELDS) | set(_LTE_ID_FIELDS) | set(_LTE_NUMBER_FIELDS) | set(_LTE_NEVER)
+    other = {key: _lte_text(value) for key, value in info.items() if str(key).startswith("nr-") and key not in known}
+    row["nr-other"] = ", ".join(f"{key}={value}" for key, value in sorted(other.items()) if value) or None
+    # Modem firmwares word the state differently: "running" and "connected"
+    # were seen first, an R11e-LTE6 says "registered" while it carries
+    # traffic. A data session has an uptime whatever the wording, so that is
+    # the sign of a connection, with the two known words as a fallback for a
+    # reply that leaves the uptime out.
+    row["connected"] = bool(row["session-uptime"]) or row["status"] in ("running", "connected")
+    # Whether the 5G sensors exist depends on what the modem is set up for,
+    # not on what it reports this minute, so they do not come and go as the
+    # modem moves between LTE and 5G.
+    row["nr-capable"] = "5g" in str(modem.get("network-mode", "")).lower() or any(str(key).startswith("nr-") for key in info)
+    return row
+
+
+def _route_interface(row: dict) -> str:
+    """The interface a route leaves through, "" when it is not known.
+
+    RouterOS reports it in immediate-gw, either as the interface itself
+    ("pppoe-out1") or after the gateway address ("192.0.2.1%ether1").
+    """
+    hop = str(row.get("immediate-gw") or "")
+    if hop in ("", "unknown"):
+        return ""
+    return hop.rsplit("%", 1)[-1]
+
+
+def _route_interfaces(row: dict) -> list[str]:
+    """Every interface a route leaves through; an ECMP route lists several hops."""
+    hops = str(row.get("immediate-gw") or "")
+    if hops in ("", "unknown"):
+        return []
+    # Everything after the first "%" is the interface, so a name that
+    # itself contains one stays whole.
+    return [hop.strip().split("%", 1)[-1] for hop in hops.split(",") if hop.strip()]
+
+
+def active_wan(routes: dict | None) -> dict:
+    """Which interface carries the traffic that leaves the network right now.
+
+    That is the active default route of the main table. ``routes`` is None
+    when the routing table has not been read yet, which is not the same as
+    having no way out: the first reads "unknown", the second "none".
+    """
+    empty = {"gateway": None, "immediate-gw": None, "distance": None, "dynamic": None, "active-routes": 0}
+    if routes is None:
+        return {"interface": "unknown", **empty}
+    rows = [row for row in routes.values() if row.get("dst-address") == "0.0.0.0/0" and row.get("routing-table") == "main" and row.get("active") and row.get("present", True)]
+    # A blackhole default route, the usual last line of a failover setup,
+    # is active and leads nowhere: it has neither a gateway nor a hop. When
+    # it is the one in charge there is no way out, and the sensor must say
+    # so, since that is the moment an automation waits for.
+    rows = [row for row in rows if _route_interfaces(row) or str(row.get("gateway") or "").strip()]
+    if not rows:
+        return {"interface": "none", **empty}
+    # The lowest distance is the route RouterOS prefers; the rest of the key
+    # only makes the order the same on every poll.
+    rows.sort(key=lambda row: (_as_int(row.get("distance"), 255), str(row.get("immediate-gw")), str(row.get("gateway"))))
+    interfaces: list[str] = []
+    for row in rows:
+        for name in _route_interfaces(row) or [str(row.get("gateway")).strip()]:
+            if name not in interfaces:
+                interfaces.append(name)
+    first = rows[0]
+    return {
+        "interface": ", ".join(interfaces)[:255],
+        "gateway": first.get("gateway"),
+        "immediate-gw": first.get("immediate-gw"),
+        "distance": first.get("distance"),
+        "dynamic": bool(first.get("dynamic")),
+        "active-routes": len(rows),
+    }
+
+
+def _as_int(value, default: int) -> int:
+    """A stored option as a whole number, the default when it is not one."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def tracker_interval(config_entry: ConfigEntry) -> timedelta:
+    """How often hosts are pinged and their trackers refreshed.
+
+    The stored value is kept inside the supported range here as well as in
+    the form, so an entry edited by other means cannot make the tracker spin
+    or stall.
+
+    It is also held to half the tracking timeout. A wired host that has gone
+    quiet in ARP is only kept home by the ping, so pinging less often than the
+    timeout would mark it away between two cycles and bring it back on the
+    next one.
+    """
+    options = config_entry.options
+    seconds = _as_int(options.get(CONF_TRACK_HOSTS_INTERVAL), DEFAULT_TRACK_HOSTS_INTERVAL)
+    timeout = _as_int(options.get(CONF_TRACK_HOSTS_TIMEOUT), DEFAULT_TRACK_HOST_TIMEOUT)
+    # The floor wins over the half when the timeout is under ten seconds:
+    # pinging every host each second or two would load the router for the
+    # sake of a timeout nobody should be running.
+    ceiling = min(MAX_TRACK_HOSTS_INTERVAL, max(MIN_TRACK_HOSTS_INTERVAL, timeout // 2))
+    return timedelta(seconds=min(max(seconds, MIN_TRACK_HOSTS_INTERVAL), ceiling))
+
+
 # ---------------------------
 #   MikrotikControllerData
 # ---------------------------
+def core_device_kwargs(entry_id: str, instance_name: str, host: str, data: dict) -> dict:
+    """The router Core device, as one definition for two callers.
+
+    The registry entry is created from this at setup, before any platform
+    loads, and the System entities describe their device with the same
+    values, so the two cannot drift apart.
+    """
+    ident = (DOMAIN, f"{entry_id}-{data['routerboard']['serial-number']}")
+    return {
+        "identifiers": {ident},
+        "connections": {ident},
+        "name": f"{instance_name} router Core",
+        "model": f"{data['resource']['board-name']}",
+        "manufacturer": f"{data['resource']['platform']}",
+        "sw_version": f"{data['resource']['version']}",
+        "configuration_url": f"http://{host}",  # NOSONAR
+    }
+
+
 class MikrotikCoordinator(DataUpdateCoordinator[None]):
     """MikrotikCoordinator Class"""
 
@@ -398,6 +608,9 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         )
         self.name = config_entry.data[CONF_NAME]
         self.host = config_entry.data[CONF_HOST]
+        # Registry id of the router Core device, set by register_core_device
+        # at setup. Every other device of this entry points at it.
+        self.core_device_id: str | None = None
 
         self.ds = {
             "access": {},
@@ -416,6 +629,10 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             "mangle": {},
             "routing_rules": {},
             "filter": {},
+            "raw": {},
+            "lte": {},
+            "route": {},
+            "active_wan": {},
             "ppp_secret": {},
             "ppp_active": {},
             "fw-update": {},
@@ -445,6 +662,12 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             "system_packages": {},
             "dhcp_leases": {},
         }
+        # The sensor exists from the first moment the option is on, reading
+        # unknown until the routing table has been read. An empty store would
+        # leave it uncreated on a start that fails before the route query, and
+        # the orphan cleanup would then remove it with its name and area.
+        if config_entry.options.get(CONF_SENSOR_ROUTES, DEFAULT_SENSOR_ROUTES):
+            self.ds["active_wan"] = active_wan(None)
 
         self.notified_flags = []
 
@@ -467,6 +690,10 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         self.mangle_removed = {}
         self.routing_rules_removed = {}
         self.filter_removed = {}
+        self.raw_removed = {}
+        self._routes_restored = False
+        self._routes_read = False
+        self._routes_replaced: set[str] = set()
         self.queue_removed = {}
         self.host_hass_recovered = False
         self.host_tracking_initialized = False
@@ -479,7 +706,8 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         self.support_wireguard = False
         self.support_containers = False
         self.support_cloud = False
-        self._wifimodule = "wireless"
+        # The wifi stacks whose menus the router really has; see _detect_v7_wifi.
+        self._wifimodules: list[str] = ["wireless"]
 
         self.major_fw_version = 0
         self.minor_fw_version = 0
@@ -495,7 +723,7 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         self._rule_uids_migrated = False
 
     # Entity keys whose reference moved from the rule contents to the comment.
-    _COMMENT_KEYED_RULES = ("nat", "mangle", "routing_rules", "filter", "queue")
+    _COMMENT_KEYED_RULES = ("nat", "mangle", "routing_rules", "filter", "raw", "queue")
 
     def _migrate_rule_unique_ids(self) -> None:
         """Point entities created under the content based scheme at the new id.
@@ -657,6 +885,30 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         return self.config_entry.options.get(CONF_SENSOR_FILTER, DEFAULT_SENSOR_FILTER)
 
     # ---------------------------
+    #   option_sensor_raw
+    # ---------------------------
+    @property
+    def option_sensor_raw(self):
+        """Config entry option to create firewall Raw rule switches."""
+        return self.config_entry.options.get(CONF_SENSOR_RAW, DEFAULT_SENSOR_RAW)
+
+    # ---------------------------
+    #   option_sensor_routes
+    # ---------------------------
+    @property
+    def option_sensor_routes(self):
+        """Config entry option to create route sensors."""
+        return self.config_entry.options.get(CONF_SENSOR_ROUTES, DEFAULT_SENSOR_ROUTES)
+
+    # ---------------------------
+    #   option_sensor_lte
+    # ---------------------------
+    @property
+    def option_sensor_lte(self):
+        """Config entry option to create LTE modem sensors."""
+        return self.config_entry.options.get(CONF_SENSOR_LTE, DEFAULT_SENSOR_LTE)
+
+    # ---------------------------
     #   option_sensor_kidcontrol
     # ---------------------------
     @property
@@ -764,23 +1016,42 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             self.support_containers = True
 
     def _detect_v7_wifi(self, packages) -> None:
-        """Resolve wifi module and CAPsMAN/wireless flags on RouterOS v7."""
+        """Work out which wifi stacks the router runs, on RouterOS v7.
+
+        A router can run more than one: an older radio keeps the legacy
+        "wireless" package next to the new "wifi" one, and from 7.13 the new
+        stack is built in even where only the legacy radio is used. Picking
+        a single stack from the version left such routers asking a menu that
+        did not exist, and their wireless clients were never seen. So every
+        stack the packages point at is a candidate, and the router is asked
+        which of the menus it really has.
+        """
         self.support_ppp = True
-        self.support_wireless = True
+        candidates = []
         if _package_enabled(packages, "wifiwave2"):
-            self.support_capsman = False
-            self._wifimodule = "wifiwave2"
-        elif self._has_v7_wifi_module(packages):
-            self.support_capsman = False
-            self._wifimodule = "wifi"
-        else:
-            self.support_capsman = True
-            self.support_wireless = bool(self.minor_fw_version < 13)
+            candidates.append("wifiwave2")
+        if self._has_v7_wifi_module(packages):
+            candidates.append("wifi")
+        if _package_enabled(packages, "wireless") or (self.minor_fw_version < 13 and not candidates):
+            candidates.append("wireless")
+        present = [module for module in candidates if self.api.query_where(f"/interface/{module}", {"disabled": "no"}) is not None]
+        # The probe asks for enabled interfaces; a stack whose menu exists but
+        # holds none right now answers with an empty list, and is kept.
+        self._wifimodules = present or candidates[:1]
+        self.support_wireless = bool(self._wifimodules)
+        # The legacy CAPsMAN has its own menu, and its clients show up only
+        # there. The new stacks list their controller's clients in their own
+        # registration table, which is read with the stack. A router that
+        # controls legacy CAPs from a release that also carries the new stack
+        # has both, so the controller is probed on its own rather than
+        # inferred from the stacks.
+        self.support_capsman = "wireless" in self._wifimodules and self.api.query_where("/caps-man/interface", {"disabled": "no"}) is not None
 
         _LOGGER.debug(
-            "Mikrotik %s wifi module=%s",
+            "Mikrotik %s wifi modules=%s (candidates %s)",
             self.host,
-            self._wifimodule,
+            self._wifimodules,
+            candidates,
         )
 
     def _has_v7_wifi_module(self, packages) -> bool:
@@ -977,6 +1248,19 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         if self.api.connected() and self.option_sensor_filter:
             await self.hass.async_add_executor_job(self.get_filter)
 
+        if self.api.connected() and self.option_sensor_lte:
+            await self.hass.async_add_executor_job(self.get_lte)
+
+        if self.api.connected() and self.option_sensor_raw:
+            await self.hass.async_add_executor_job(self.get_raw)
+
+        if self.api.connected() and self.option_sensor_routes:
+            await self.hass.async_add_executor_job(self.get_route)
+            if not self._routes_restored:
+                self._restore_dynamic_routes(everything=not self._routes_read)
+            if self._routes_replaced:
+                self._remove_replaced_routes()
+
         if self.api.connected() and self.option_sensor_netwatch:
             await self.hass.async_add_executor_job(self.get_netwatch)
 
@@ -1049,13 +1333,15 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         "nat": ("comment",),
         "mangle": ("comment",),
         "filter": ("comment",),
+        "raw": ("comment",),
+        "route": ("comment",),
         "routing_rules": ("comment",),
         "host": ("host-name",),
         "client_traffic": ("host-name",),
         # These also surface the comment: netwatch and WireGuard peers use it as
         # the entity name, containers and queues derive their name or key from
         # it, and IP addresses expose it as an attribute.
-        "netwatch": ("comment",),
+        "netwatch": ("comment", "name"),
         "wireguard_peers": ("comment",),
         "containers": ("comment",),
         "queue": ("comment",),
@@ -1154,13 +1440,62 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         """
         serial = self.ds.get("routerboard", {}).get("serial-number", "unknown")
         version = self.ds.get("resource", {}).get("version", "unknown")
-        if serial in ("unknown", "", "N/A") or version in ("unknown", ""):
+        if version in ("unknown", ""):
             return
 
         registry = dr.async_get(self.hass)
-        device = registry.async_get_device(identifiers={(DOMAIN, f"{self.config_entry.entry_id}-{serial}")})
+        device = registry.async_get(self.core_device_id) if self.core_device_id else None
+        if device is None and serial in ("unknown", ""):
+            return
+        if device is None:
+            # The Core device was not registered at setup (the serial was not
+            # known yet), or it was deleted since, so look it up.
+            # async_get_device is deprecated since
+            # 2026.9 (identifiers are no longer unique across config entries)
+            # and goes away in 2027.8; the per-entry lookup that replaces it
+            # only exists from 2026.8, and this integration still runs on
+            # older releases, so fall back there. Our identifier carries the
+            # entry id, so the old call is unambiguous.
+            identifier = (DOMAIN, f"{self.config_entry.entry_id}-{serial}")
+            lookup = getattr(registry, "async_get_device_by_identifier", None)
+            if lookup is not None:
+                device = lookup(identifier, self.config_entry.entry_id)
+            else:
+                device = registry.async_get_device(identifiers={identifier})
+            if device is not None:
+                # The Core device came back under a new id (the System
+                # entities recreated it); new entities link to this one.
+                self.core_device_id = device.id
         if device is not None and device.sw_version != version:
             registry.async_update_device(device.id, sw_version=version)
+
+    # ---------------------------
+    #   register_core_device
+    # ---------------------------
+    def register_core_device(self) -> None:
+        """Create or refresh the router Core device and remember its id.
+
+        Runs at setup, before the platforms load, so that a host or interface
+        device created a moment later can name the Core device by id. Home
+        Assistant 2026.9 replaced the via_device tuple with via_device_id and
+        removes the tuple in 2027.8; the id is only knowable once the device
+        exists, which is why it is created here rather than left to whichever
+        System entity happens to load first.
+        """
+        # A CHR has no routerboard and reports its serial as the literal
+        # "N/A", and its Core device has always been keyed on that, because
+        # the System entities take the serial as it comes. That is a stable
+        # answer and registers. "unknown" is different: it is what an empty
+        # routerboard reply leaves behind, and registering on it would create
+        # a Core device the entities abandon once the real serial arrives.
+        serial = self.ds.get("routerboard", {}).get("serial-number", "unknown")
+        if serial in ("unknown", "") or not self.ds.get("resource"):
+            return
+        device = dr.async_get(self.hass).async_get_or_create(
+            config_entry_id=self.config_entry.entry_id,
+            **core_device_kwargs(self.config_entry.entry_id, self.name, self.host, self.ds),
+        )
+        self.core_device_id = device.id
 
     # ---------------------------
     #   force_hwinfo_refresh
@@ -1278,6 +1613,15 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 {"name": "last-link-up-time"},
                 {"name": "link-downs"},
                 {"name": "tx-queue-drop"},
+                # Counters the interface list carries anyway, so reading them
+                # costs no extra query. They only become entities when the
+                # port error counters option is on. No default: a counter the
+                # interface does not report stays empty, so it gets no sensor
+                # instead of one that reads a made-up zero.
+                {"name": "rx-error"},
+                {"name": "tx-error"},
+                {"name": "rx-drop"},
+                {"name": "tx-drop"},
                 {"name": "actual-mtu"},
                 {"name": "about", "source": ".about", "default": ""},
                 {"name": "rx-current", "source": "rx-byte", "default": 0.0},
@@ -2081,6 +2425,366 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 )
 
     # ---------------------------
+    #   get_raw
+    # ---------------------------
+    def get_raw(self) -> None:
+        """Get firewall Raw data from Mikrotik"""
+        self.ds["raw"] = parse_api(
+            data=self.ds["raw"],
+            source=self.api.query("/ip/firewall/raw"),
+            key=".id",
+            vals=[
+                {"name": ".id"},
+                {"name": "chain"},
+                {"name": "action"},
+                {"name": "comment"},
+                {"name": "address-list"},
+                {"name": "protocol", "default": "any"},
+                {"name": "in-interface", "default": "any"},
+                {"name": "in-interface-list", "default": "any"},
+                {"name": "out-interface", "default": "any"},
+                {"name": "out-interface-list", "default": "any"},
+                {"name": "src-address", "default": "any"},
+                {"name": "src-address-list", "default": "any"},
+                {"name": "src-port", "default": "any"},
+                {"name": "dst-address", "default": "any"},
+                {"name": "dst-address-list", "default": "any"},
+                {"name": "dst-port", "default": "any"},
+                {"name": "tcp-flags", "default": "any"},
+                # The raw menu leaves "disabled" out of the reply for a rule
+                # that is enabled, unlike the filter menu, which always sends
+                # it. A missing value therefore means not disabled.
+                {
+                    "name": "enabled",
+                    "source": "disabled",
+                    "type": "bool",
+                    "reverse": True,
+                    "default": False,
+                },
+            ],
+            val_proc=[
+                [
+                    {"name": "uniq-id"},
+                    {"action": "combine"},
+                    {"key": "chain"},
+                    {"text": ","},
+                    {"key": "action"},
+                    {"text": ","},
+                    {"key": "protocol"},
+                    {"text": ","},
+                    {"key": "in-interface"},
+                    {"text": ","},
+                    {"key": "in-interface-list"},
+                    {"text": ":"},
+                    {"key": "src-address"},
+                    {"text": ","},
+                    {"key": "src-address-list"},
+                    {"text": ":"},
+                    {"key": "src-port"},
+                    {"text": "-"},
+                    {"key": "out-interface"},
+                    {"text": ","},
+                    {"key": "out-interface-list"},
+                    {"text": ":"},
+                    {"key": "dst-address"},
+                    {"text": ","},
+                    {"key": "dst-address-list"},
+                    {"text": ":"},
+                    {"key": "dst-port"},
+                    # Typical raw rules differ only in these two: a set of
+                    # rules feeding different address lists, or drops on
+                    # different TCP flag combinations.
+                    {"text": ","},
+                    {"key": "address-list"},
+                    {"text": ","},
+                    {"key": "tcp-flags"},
+                ],
+                [
+                    {"name": "name"},
+                    {"action": "combine"},
+                    {"key": "chain"},
+                    {"text": ","},
+                    {"key": "action"},
+                    {"text": ","},
+                    {"key": "protocol"},
+                    {"text": ":"},
+                    {"key": "dst-port"},
+                ],
+            ],
+            skip=[
+                {"name": "dynamic", "value": True},
+                {"name": "action", "value": "jump"},
+            ],
+            prune_stale=True,
+            stale_counters=self._get_stale_counters("raw"),
+        )
+
+        # A rule without a comment is identified by its contents, and two
+        # rules can share those. Both stay, told apart by a suffix.
+        for uid in self.ds["raw"]:
+            self.ds["raw"][uid]["comment"] = str(self.ds["raw"][uid]["comment"])
+        self._decode_store("raw")
+        _prefer_comment_uniq_id(self.ds["raw"], self._get_stale_counters("raw"))
+
+        for tmp_name in _disambiguate_uniq_ids(self.ds["raw"], self._get_stale_counters("raw")):
+            if tmp_name not in self.raw_removed:
+                self.raw_removed[tmp_name] = 1
+                _LOGGER.info(
+                    "Mikrotik %s duplicate Raw rule '%s', a suffix was added to keep both entities. Add unique comments to the rules to remove this warning.",
+                    self.host,
+                    tmp_name,
+                )
+
+    # ---------------------------
+    #   get_route
+    # ---------------------------
+    @callback
+    def _restore_dynamic_routes(self, everything: bool = False) -> None:
+        """Bring back the dynamic routes Home Assistant knew before the restart.
+
+        A default route handed out by PPPoE or DHCP leaves the routing table
+        while the link is down. If Home Assistant starts during such an
+        outage the route is not there to be read, its entity would count as
+        an orphan and be removed, and the automation watching it would lose
+        its sensor at the very moment it matters. So every dynamic route in
+        the entity registry gets a placeholder that reads as not active until
+        the router reports the route again.
+
+        With ``everything`` the static routes are brought back too. That is
+        for a start where the routing table could not be read at all, a
+        refused query for one: nothing is known then, and removing every
+        route sensor over one failed read would throw away their names and
+        areas. Once the table is read again, a static route that is really
+        gone leaves after the usual three cycles.
+        """
+        self._routes_restored = True
+        prefix = f"{self.config_entry.entry_id}-route-{'' if everything else 'dynamic_'}"
+        cut = len(f"{self.config_entry.entry_id}-route-")
+        registry = er.async_get(self.hass)
+        for entity in er.async_entries_for_config_entry(registry, self.config_entry.entry_id):
+            if entity.domain != "binary_sensor" or not entity.unique_id.startswith(prefix):
+                continue
+            key = entity.unique_id[cut:]
+            if key in self.ds["route"]:
+                continue
+            self.ds["route"][key] = {
+                "uid-key": key,
+                "name": entity.original_name or key,
+                "dst-address": "unknown",
+                "gateway": "unknown",
+                "immediate-gw": "unknown",
+                "distance": "unknown",
+                "routing-table": "unknown",
+                "comment": "",
+                "active": False,
+                "enabled": True,
+                "dynamic": key.startswith("dynamic_"),
+                "present": False,
+                # A dynamic route that is not in the table is down, and says
+                # so. A static one restored after a failed read is simply not
+                # known yet, and reporting it as down would raise a false
+                # alarm; its sensor is unavailable until the table is read.
+                "unverified": not key.startswith("dynamic_"),
+            }
+
+    def _dynamic_route_replaced(self, key: str) -> bool:
+        """True when another dynamic route took this one's place.
+
+        A DHCP lease with a new gateway replaces the default route rather
+        than taking it down: same destination, same table, same interface,
+        another gateway. The old route is then not a link that is down but a
+        route that no longer exists. The interface is what keeps a second
+        WAN apart: its default route shares destination and table with the
+        first, and losing it is an outage, not a replacement. A restored
+        placeholder knows no interface and is therefore never judged.
+        """
+        gone = self.ds["route"][key]
+        interface = _route_interface(gone)
+        if not interface:
+            return False
+        for other_key, row in self.ds["route"].items():
+            if other_key == key or not row.get("dynamic") or not row.get("present"):
+                continue
+            if row.get("dst-address") == gone.get("dst-address") and row.get("routing-table") == gone.get("routing-table") and _route_interface(row) == interface:
+                return True
+        return False
+
+    @callback
+    def _remove_replaced_routes(self) -> None:
+        """Take the sensors of replaced dynamic routes out of the registry.
+
+        Dropping the row alone would leave the sensor frozen until the next
+        start, and that start would bring it back as a placeholder.
+        """
+        registry = er.async_get(self.hass)
+        while self._routes_replaced:
+            key = self._routes_replaced.pop()
+            entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, f"{self.config_entry.entry_id}-route-{key}")
+            if entity_id is not None:
+                registry.async_remove(entity_id)
+
+    def get_route(self) -> None:
+        """Get the static routes and the default routes from Mikrotik"""
+        source = self.api.query_where("/ip/route", {"static": True, "dst-address": "0.0.0.0/0"})
+        if source is None:
+            # Not read is not the same as no way out: keep the last answer,
+            # and say unknown if there never was one.
+            if not self.ds["active_wan"]:
+                self.ds["active_wan"] = active_wan(None)
+            return
+        self._routes_read = True
+
+        # A route has no name of its own and its list id changes when it is
+        # re-added, so it is identified by where it leads and how. Two routes
+        # that agree in all of that get a counter, in list order.
+        # A route that was here last time keeps the key it had. Otherwise the
+        # second of two identical routes would slide into the first one's key
+        # when the first is removed, and its sensor would start describing a
+        # different route.
+        previous = {str(row.get(".id")): (key, row.get("uid-base")) for key, row in self.ds["route"].items() if row.get("present") and row.get(".id")}
+        seen_key: dict = {}
+        taken: set = set()
+        ordered = sorted(source, key=_list_id_order)
+        for entry in ordered:
+            entry["uid-key"] = None
+        for entry in ordered:
+            table = str(entry.get("routing-table") or entry.get("routing-mark") or "main")
+            dst = str(entry.get("dst-address", ""))
+            gateway = str(entry.get("gateway", "")) or "none"
+            ref = f"{dst} via {gateway} ({table})"
+            if entry.get("dynamic") is True:
+                ref = f"dynamic {ref}"
+            # Counted on the key, not on the text: "wg-a" and "wg_a" are two
+            # gateways and one slug, and the second route would silently
+            # overwrite the first.
+            base = slugify(ref.lower())
+            entry["routing-table"] = table
+            entry["name"] = f"{dst} via {gateway}"
+            entry["uid-base"] = base
+            # RouterOS can hand a list id to another route, after a reboot
+            # for one. The key is only kept when the route behind the id
+            # still leads to the same place.
+            kept, kept_base = previous.get(str(entry.get(".id")), (None, None))
+            if kept is not None and kept_base == base and kept not in taken:
+                entry["uid-key"] = kept
+                taken.add(kept)
+        for entry in ordered:
+            base = entry["uid-base"]
+            if entry["uid-key"] is not None:
+                continue
+            key = base
+            while key in taken:
+                seen_key[base] = seen_key.get(base, 1) + 1
+                key = f"{base}_{seen_key[base]}"
+            taken.add(key)
+            entry["uid-key"] = key
+
+        self.ds["route"] = parse_api(
+            data=self.ds["route"],
+            source=source,
+            key="uid-key",
+            vals=[
+                {"name": "uid-key"},
+                {"name": "uid-base"},
+                {"name": ".id"},
+                {"name": "name"},
+                {"name": "dst-address"},
+                {"name": "gateway"},
+                {"name": "immediate-gw"},
+                {"name": "distance"},
+                {"name": "routing-table"},
+                {"name": "comment"},
+                {"name": "active", "type": "bool", "default": False},
+                {"name": "dynamic", "type": "bool", "default": False},
+                {
+                    "name": "enabled",
+                    "source": "disabled",
+                    "type": "bool",
+                    "reverse": True,
+                    "default": False,
+                },
+            ],
+        )
+        self._decode_store("route")
+
+        # A route that left the table is not active. A static one was removed
+        # by somebody and goes after the usual three cycles. A dynamic one is
+        # a link that went down: it stays, as not active, because that state
+        # is the reason to have the sensor. Unless another dynamic route to
+        # the same place took over, in which case it is simply gone.
+        seen = {entry["uid-key"] for entry in source}
+        strikes = self._get_stale_counters("route")
+        for row in self.ds["route"].values():
+            row["unverified"] = False
+        for key in seen:
+            self.ds["route"][key]["present"] = True
+            strikes.pop(key, None)
+        for key in list(self.ds["route"]):
+            if key in seen:
+                continue
+            row = self.ds["route"][key]
+            row["present"] = False
+            row["active"] = False
+            replaced = bool(row.get("dynamic")) and self._dynamic_route_replaced(key)
+            if row.get("dynamic") and not replaced:
+                strikes.pop(key, None)
+                continue
+            strikes[key] = strikes.get(key, 0) + 1
+            if strikes[key] >= 3:
+                del self.ds["route"][key]
+                del strikes[key]
+                if replaced:
+                    self._routes_replaced.add(key)
+
+        self.ds["active_wan"] = active_wan(self.ds["route"])
+
+    # ---------------------------
+    #   get_lte
+    # ---------------------------
+    def get_lte(self) -> None:
+        """Get LTE / 5G modem data from Mikrotik"""
+        # The interface list is read anyway and tells whether there is a modem
+        # at all, so a router without one is never asked.
+        if not any(vals.get("type") == "lte" for vals in self.ds["interface"].values()):
+            self.ds["lte"] = {}
+            return
+
+        modems = self.api.query("/interface/lte")
+        if not modems:
+            # There is a modem, so an empty answer is a failed read: keep
+            # what is known rather than dropping the sensors.
+            return
+
+        seen = set()
+        misses = self._get_stale_counters("lte")
+        for modem in modems:
+            # Keyed by the name the router gave the modem, the way interfaces
+            # are: renaming it on the router must not turn every sensor into
+            # a new entity. The name the user chose is what is shown.
+            key = str(modem.get("default-name") or modem.get("name") or "")
+            modem_id = modem.get(".id")
+            if not key or not modem_id:
+                continue
+            seen.add(key)
+            reply = self.api.query("/interface/lte", command="monitor", args={".id": modem_id, "once": True})
+            if not reply or not isinstance(reply[0], dict):
+                # No answer, a refusal during a cell change for one, is not
+                # a link that went down. The last reading stays for a few
+                # cycles, so one failed query cannot trip a failover
+                # automation; only then does the modem read as unknown.
+                misses[key] = misses.get(key, 0) + 1
+                if key in self.ds["lte"] and misses[key] < 3:
+                    continue
+                reply = [{}]
+            else:
+                misses.pop(key, None)
+            self.ds["lte"][key] = lte_row(key, modem, reply[0])
+        for key in list(self.ds["lte"]):
+            if key not in seen:
+                del self.ds["lte"][key]
+                misses.pop(key, None)
+
+    # ---------------------------
     #   get_kidcontrol
     # ---------------------------
     def get_kidcontrol(self) -> None:
@@ -2200,6 +2904,7 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             key="uid-ref",
             vals=[
                 {"name": "uid-ref"},
+                {"name": "name"},
                 {"name": "host"},
                 {"name": "type"},
                 {"name": "interval"},
@@ -2835,15 +3540,11 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     def get_capsman_hosts(self) -> None:
         """Get CAPS-MAN hosts data from Mikrotik"""
 
-        if self.major_fw_version > 7 or (self.major_fw_version == 7 and self.minor_fw_version >= 13):
-            registration_path = "/interface/wifi/registration-table"
-
-        else:
-            registration_path = "/caps-man/registration-table"
-
+        # Only the legacy controller is read here; the new stacks' controller
+        # clients come with the stack's own registration table.
         self.ds["capsman_hosts"] = parse_api(
             data={},
-            source=self.api.query(registration_path),
+            source=self.api.query("/caps-man/registration-table"),
             key="mac-address",
             vals=[
                 {"name": "mac-address"},
@@ -2858,9 +3559,24 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     def get_wireless(self) -> None:
         """Get wireless data from Mikrotik"""
 
+        for module in self._wifimodules:
+            self._get_wireless_module(module)
+
+        for uid in self.ds["wireless"]:
+            if self.ds["wireless"][uid]["master-interface"]:
+                for tmp in self.ds["wireless"][uid]:
+                    if self.ds["wireless"][uid][tmp] == "unknown":
+                        self.ds["wireless"][uid][tmp] = self.ds["wireless"][self.ds["wireless"][uid]["master-interface"]][tmp]
+
+            if uid in self.ds["interface"]:
+                for tmp in self.ds["wireless"][uid]:
+                    self.ds["interface"][uid][tmp] = self.ds["wireless"][uid][tmp]
+
+    def _get_wireless_module(self, module: str) -> None:
+        """Read the interfaces of one wifi stack into the shared wireless store."""
         self.ds["wireless"] = parse_api(
             data=self.ds["wireless"],
-            source=self.api.query(f"/interface/{self._wifimodule}"),
+            source=self.api.query(f"/interface/{module}"),
             key="name",
             vals=[
                 {"name": "master-interface", "default": ""},
@@ -2890,36 +3606,36 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             ],
         )
 
-        for uid in self.ds["wireless"]:
-            if self.ds["wireless"][uid]["master-interface"]:
-                for tmp in self.ds["wireless"][uid]:
-                    if self.ds["wireless"][uid][tmp] == "unknown":
-                        self.ds["wireless"][uid][tmp] = self.ds["wireless"][self.ds["wireless"][uid]["master-interface"]][tmp]
-
-            if uid in self.ds["interface"]:
-                for tmp in self.ds["wireless"][uid]:
-                    self.ds["interface"][uid][tmp] = self.ds["wireless"][uid][tmp]
-
     # ---------------------------
     #   get_wireless_hosts
     # ---------------------------
     def get_wireless_hosts(self) -> None:
         """Get wireless hosts data from Mikrotik"""
-        self.ds["wireless_hosts"] = parse_api(
-            data={},
-            source=self.api.query(f"/interface/{self._wifimodule}/registration-table"),
-            key="mac-address",
-            vals=[
-                {"name": "mac-address"},
-                {"name": "interface", "default": "unknown"},
-                {"name": "ap", "type": "bool"},
-                {"name": "uptime"},
-                {"name": "signal-strength"},
-                {"name": "tx-ccq"},
-                {"name": "tx-rate"},
-                {"name": "rx-rate"},
-            ],
-        )
+        # Every stack's registration table, merged: a client is on exactly
+        # one radio, so the tables do not overlap.
+        hosts: dict = {}
+        for module in self._wifimodules:
+            hosts = parse_api(
+                data=hosts,
+                source=self.api.query(f"/interface/{module}/registration-table"),
+                key="mac-address",
+                vals=[
+                    {"name": "mac-address"},
+                    {"name": "interface", "default": "unknown"},
+                    {"name": "ap", "type": "bool"},
+                    {"name": "uptime"},
+                    {"name": "signal-strength"},
+                    # The new wifi stack calls the same value "signal".
+                    {"name": "signal"},
+                    {"name": "tx-ccq"},
+                    {"name": "tx-rate"},
+                    {"name": "rx-rate"},
+                ],
+            )
+        for host in hosts.values():
+            if host.get("signal-strength") in ("", None) and host.get("signal") not in ("", None):
+                host["signal-strength"] = host["signal"]
+        self.ds["wireless_hosts"] = hosts
 
     # ---------------------------
     #   async_process_host

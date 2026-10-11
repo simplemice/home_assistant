@@ -35,11 +35,13 @@
         "description": "Az integráció konfigurálása",
         "data": {
           "scan_interval": "Felderítési időköz (másodperc)",
+          "track_network_hosts_interval": "Eszközkövetés időköze (másodperc)",
           "track_network_hosts_timeout": "Hálózati eszközök követésének időtúllépése (másodperc)",
           "zone": "Zóna az eszközkövető számára"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Alapértelmezett: 30s. Az alacsonyabb értékek növelik a RouterOS API terhelését.",
+          "track_network_hosts_interval": "Milyen gyakran pingeli a követett eszközöket és frissíti az állapotukat. Minimum: 5s. Maximum: 300s. Alapértelmezett: 10s. Nagy hálózaton érdemes növelni, csökken a terhelés. Soha nem hosszabb a követési időtúllépés felénél. Az otthon/távol váltás legfeljebb egy időköznyit késhet.",
           "track_network_hosts_timeout": "Csak vezetékes eszközök. Másodpercek száma, amely után egy eszközt offline-nak tekintünk, ha nem látjuk az ARP táblában. Alapértelmezett: 180s.",
           "zone": "A Home Assistant zóna neve, amelyet a követett eszközök csatlakozásakor használ. Alapértelmezett: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Szűrő kapcsolók",
           "sensor_interfaces": "Interfész entitások",
           "sensor_kidcontrol": "Szülői felügyelet",
+          "sensor_lte": "LTE / 5G modem szenzorok",
           "sensor_mangle": "Mangle kapcsolók",
           "sensor_nat": "NAT kapcsolók",
           "sensor_netwatch_tracker": "Netwatch tracker szenzorok",
+          "sensor_port_errors": "Port hibaszámlálók",
+          "sensor_port_switch": "Port kapcsolók",
           "sensor_port_tracker": "Portfigyelő szenzorok",
           "sensor_port_traffic": "Portforgalom szenzorok",
           "sensor_ppp": "PPP felhasználók",
+          "sensor_raw": "Raw kapcsolók",
+          "sensor_routes": "Útvonal-szenzorok",
           "sensor_routing_rules": "Routing Rules kapcsolók",
           "sensor_scripts": "Szkript gombok",
           "sensor_simple_queues": "Simple queue kapcsolók",
@@ -85,12 +92,17 @@
           "sensor_filter": "Kapcsoló szűrési szabályonként a tűzfal filter szabályok HA-ból való engedélyezéséhez/tiltásához. Figyelmeztetés: filter szabályonként egy entitást hoz létre.",
           "sensor_interfaces": "Entitásokat hoz létre a hálózati interfészekhez (port kapcsolók, portfigyelők, forgalmi szenzorok, IP-címek). Kikapcsolva csak a központi eszköz marad, és a portonkénti lekérdezések is elmaradnak. A portfigyelő és a portforgalmi szenzorok csak bekapcsolt állapotban jönnek létre. Figyelmeztetés: kikapcsoláskor ezek az entitások és a hozzájuk tartozó port eszközök törlődnek, tehát az átnevezett port vagy a beállított terület nem áll vissza újbóli bekapcsoláskor.",
           "sensor_kidcontrol": "Kapcsolók Kid Control eszközprofilokhoz (internet hozzáférés szüneteltetése/folytatása).",
+          "sensor_lte": "Szenzorok LTE vagy 5G modemenként: szolgáltató, hozzáférési technológia, jelszintek (RSSI, RSRP, RSRQ, SINR, CQI) és sávok. Modemenként egy plusz lekérdezés minden ciklusban; modem nélküli routert nem kérdez le.",
           "sensor_mangle": "Kapcsoló Mangle szabályonként a csomagjelölési szabályok HA-ból való kezeléséhez. Figyelmeztetés: Mangle szabályonként egy entitást hoz létre.",
           "sensor_nat": "Kapcsoló NAT szabályonként a szabályok HA-ból való engedélyezéséhez/tiltásához. Figyelmeztetés: NAT szabályonként egy entitást hoz létre.",
           "sensor_netwatch_tracker": "Bináris szenzor Netwatch bejegyzésenként az elérhetőség állapotának megjelenítéséhez.",
+          "sensor_port_errors": "4 szenzor interfészenként (RX/TX hibák és RX/TX eldobott csomagok), hibás kábel vagy port felismeréséhez. Figyelmeztetés: interfészenként 4 entitást hoz létre.",
+          "sensor_port_switch": "Kapcsoló portonként a port HA-ból való engedélyezéséhez/tiltásához. Kapcsold ki, hogy egy portot ne lehessen véletlenül letiltani; a port többi entitása megmarad.",
           "sensor_port_tracker": "Bináris szenzor portonként a kapcsolat állapotának (fel/le) megjelenítéséhez.",
           "sensor_port_traffic": "4 szenzor interfészenként (TX/RX bájtok és összesítők). Figyelmeztetés: interfészenként 4 entitást hoz létre — kapcsold ki, ha nincs szükség forgalomgrafikonokra.",
           "sensor_ppp": "Kapcsoló PPP secretenként (felhasználónként) VPN/PPPoE fiókok HA-ból való engedélyezéséhez/tiltásához.",
+          "sensor_raw": "Kapcsoló Raw szabályonként a tűzfal raw szabályok HA-ból való engedélyezéséhez/tiltásához. Figyelmeztetés: raw szabályonként egy entitást hoz létre.",
+          "sensor_routes": "Bináris szenzor minden statikus és minden alapértelmezett útvonalhoz, bekapcsolva, amíg az útvonal aktív. A többi dinamikus útvonal nem szerepel.",
           "sensor_routing_rules": "Kapcsoló routing szabályonként a policy routing szabályok HA-ból való kezeléséhez. Figyelmeztetés: routing szabályonként egy entitást hoz létre.",
           "sensor_scripts": "Gomb szkriptenként RouterOS szkriptek HA-ból való futtatásához.",
           "sensor_simple_queues": "Kapcsoló Simple Queue bejegyzésenként a sávszélesség korlátok HA-ból való kezeléséhez. Figyelmeztetés: queue szabályonként egy entitást hoz létre.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Kapcsolat biztonsága"
         },
         "data_description": {
-          "port": "RouterOS API port. Hagyd 0-n az alapértelmezett port automatikus használatához: 8728 (SSL nélkül) vagy 8729 (SSL-lel)."
+          "port": "RouterOS API port. Hagyd 0-n az alapértelmezett port automatikus használatához: 8728 (SSL nélkül) vagy 8729 (SSL-lel).",
+          "password": "Hagyd üresen a tárolt jelszó megtartásához."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Felderítési időköz",
           "track_iface_clients": "Kliens MAC- és IP-cím megjelenítése az interfészeken",
           "unit_of_measurement": "Mértékegység",
+          "track_network_hosts_interval": "Eszközkövetés időköze (másodperc)",
           "track_network_hosts_timeout": "Hálózati eszközök követésének időtúllépése (másodperc)",
           "zone": "Zóna az eszközkövető számára"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Alapértelmezett: 30s. Az alacsonyabb értékek növelik a RouterOS API terhelését.",
+          "track_network_hosts_interval": "Milyen gyakran pingeli a követett eszközöket és frissíti az állapotukat. Minimum: 5s. Maximum: 300s. Alapértelmezett: 10s. Nagy hálózaton érdemes növelni, csökken a terhelés. Soha nem hosszabb a követési időtúllépés felénél. Az otthon/távol váltás legfeljebb egy időköznyit késhet.",
           "track_network_hosts_timeout": "Csak vezetékes eszközök. Másodpercek száma, amely után egy eszközt offline-nak tekintünk, ha nem látjuk az ARP táblában. Alapértelmezett: 180s.",
           "zone": "A Home Assistant zóna neve, amelyet a követett eszközök csatlakozásakor használ. Alapértelmezett: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Szűrő kapcsolók",
           "sensor_interfaces": "Interfész entitások",
           "sensor_kidcontrol": "Szülői felügyelet",
+          "sensor_lte": "LTE / 5G modem szenzorok",
           "sensor_mangle": "Mangle kapcsolók",
           "sensor_nat": "NAT kapcsolók",
           "sensor_netwatch_tracker": "Netwatch tracker szenzorok",
+          "sensor_port_errors": "Port hibaszámlálók",
+          "sensor_port_switch": "Port kapcsolók",
           "sensor_port_tracker": "Portfigyelő szenzorok",
           "sensor_port_traffic": "Portforgalom szenzorok",
           "sensor_ppp": "PPP felhasználók",
+          "sensor_raw": "Raw kapcsolók",
+          "sensor_routes": "Útvonal-szenzorok",
           "sensor_routing_rules": "Routing Rules kapcsolók",
           "sensor_scripts": "Szkript gombok",
           "sensor_simple_queues": "Simple queue kapcsolók",
@@ -194,12 +214,17 @@
           "sensor_filter": "Kapcsoló szűrési szabályonként a tűzfal filter szabályok HA-ból való engedélyezéséhez/tiltásához. Figyelmeztetés: filter szabályonként egy entitást hoz létre.",
           "sensor_interfaces": "Entitásokat hoz létre a hálózati interfészekhez (port kapcsolók, portfigyelők, forgalmi szenzorok, IP-címek). Kikapcsolva csak a központi eszköz marad, és a portonkénti lekérdezések is elmaradnak. A portfigyelő és a portforgalmi szenzorok csak bekapcsolt állapotban jönnek létre. Figyelmeztetés: kikapcsoláskor ezek az entitások és a hozzájuk tartozó port eszközök törlődnek, tehát az átnevezett port vagy a beállított terület nem áll vissza újbóli bekapcsoláskor.",
           "sensor_kidcontrol": "Kapcsolók Kid Control eszközprofilokhoz (internet hozzáférés szüneteltetése/folytatása).",
+          "sensor_lte": "Szenzorok LTE vagy 5G modemenként: szolgáltató, hozzáférési technológia, jelszintek (RSSI, RSRP, RSRQ, SINR, CQI) és sávok. Modemenként egy plusz lekérdezés minden ciklusban; modem nélküli routert nem kérdez le.",
           "sensor_mangle": "Kapcsoló Mangle szabályonként a csomagjelölési szabályok HA-ból való kezeléséhez. Figyelmeztetés: Mangle szabályonként egy entitást hoz létre.",
           "sensor_nat": "Kapcsoló NAT szabályonként a szabályok HA-ból való engedélyezéséhez/tiltásához. Figyelmeztetés: NAT szabályonként egy entitást hoz létre.",
           "sensor_netwatch_tracker": "Bináris szenzor Netwatch bejegyzésenként az elérhetőség állapotának megjelenítéséhez.",
+          "sensor_port_errors": "4 szenzor interfészenként (RX/TX hibák és RX/TX eldobott csomagok), hibás kábel vagy port felismeréséhez. Figyelmeztetés: interfészenként 4 entitást hoz létre.",
+          "sensor_port_switch": "Kapcsoló portonként a port HA-ból való engedélyezéséhez/tiltásához. Kapcsold ki, hogy egy portot ne lehessen véletlenül letiltani; a port többi entitása megmarad.",
           "sensor_port_tracker": "Bináris szenzor portonként a kapcsolat állapotának (fel/le) megjelenítéséhez.",
           "sensor_port_traffic": "4 szenzor interfészenként (TX/RX bájtok és összesítők). Figyelmeztetés: interfészenként 4 entitást hoz létre — kapcsold ki, ha nincs szükség forgalomgrafikonokra.",
           "sensor_ppp": "Kapcsoló PPP secretenként (felhasználónként) VPN/PPPoE fiókok HA-ból való engedélyezéséhez/tiltásához.",
+          "sensor_raw": "Kapcsoló Raw szabályonként a tűzfal raw szabályok HA-ból való engedélyezéséhez/tiltásához. Figyelmeztetés: raw szabályonként egy entitást hoz létre.",
+          "sensor_routes": "Bináris szenzor minden statikus és minden alapértelmezett útvonalhoz, bekapcsolva, amíg az útvonal aktív. A többi dinamikus útvonal nem szerepel.",
           "sensor_routing_rules": "Kapcsoló routing szabályonként a policy routing szabályok HA-ból való kezeléséhez. Figyelmeztetés: routing szabályonként egy entitást hoz létre.",
           "sensor_scripts": "Gomb szkriptenként RouterOS szkriptek HA-ból való futtatásához.",
           "sensor_simple_queues": "Kapcsoló Simple Queue bejegyzésenként a sávszélesség korlátok HA-ból való kezeléséhez. Figyelmeztetés: queue szabályonként egy entitást hoz létre.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "A(z) {host} címhez nem tartozik beállított router, semmi nem lett leállítva."
+    },
+    "write_refused": {
+      "message": "A(z) {host} elutasította a módosítást: {target}. A router indoklása a naplóban van."
+    },
+    "write_failed": {
+      "message": "A(z) {target} módosítása nem ment át a(z) {host} routeren. A részletek a naplóban vannak."
+    },
+    "write_unconfirmed": {
+      "message": "A(z) {target} módosítása a(z) {host} routeren nem erősíthető meg: a router nem válaszolt, vagy egy script félúton megállt. Ismétlés előtt nézd meg a routert. A részletek a naplóban vannak."
+    },
+    "no_write_access": {
+      "message": "A(z) {host} routerhez beállított fióknak nincs írási jogosultsága, ezért semmi nem változott."
     }
   },
   "selector": {

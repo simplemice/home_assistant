@@ -35,11 +35,13 @@
         "description": "インテグレーションを設定する",
         "data": {
           "scan_interval": "スキャン間隔（秒）",
+          "track_network_hosts_interval": "デバイストラッカーの間隔（秒）",
           "track_network_hosts_timeout": "ネットワークデバイスのタイムアウト（秒）",
           "zone": "デバイストラッカー用ゾーン"
         },
         "data_description": {
           "scan_interval": "最小値: 10s。デフォルト: 30s。値を小さくすると RouterOS API の負荷が増加します。",
+          "track_network_hosts_interval": "追跡対象デバイスへ ping を送り、状態を更新する間隔です。最小: 5s。最大: 300s。既定値: 10s。大規模なネットワークでは値を大きくすると負荷が下がります。追跡タイムアウトの半分を超えることはありません。在宅/外出の切り替わりは最大で 1 間隔分遅れることがあります。",
           "track_network_hosts_timeout": "有線デバイスのみ対象です。ARP で検出されなくなってからデバイスがオフラインと判断されるまでの秒数です。デフォルト: 180s。",
           "zone": "追跡デバイスが接続されたときに使用する Home Assistant ゾーン名です。デフォルト: home。"
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "フィルタースイッチ",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "キッドコントロール",
+          "sensor_lte": "LTE / 5G モデムセンサー",
           "sensor_mangle": "Mangleスイッチ",
           "sensor_nat": "NATスイッチ",
           "sensor_netwatch_tracker": "Netwatchセンサー",
+          "sensor_port_errors": "ポートエラーカウンター",
+          "sensor_port_switch": "ポートスイッチ",
           "sensor_port_tracker": "ポートトラッカーセンサー",
           "sensor_port_traffic": "ポートトラフィックセンサー",
           "sensor_ppp": "PPPユーザー",
+          "sensor_raw": "Raw スイッチ",
+          "sensor_routes": "ルートセンサー",
           "sensor_routing_rules": "Routing Rulesスイッチ",
           "sensor_scripts": "スクリプトスイッチ",
           "sensor_simple_queues": "シンプルキュースイッチ",
@@ -85,12 +92,17 @@
           "sensor_filter": "Filter ルールごとにスイッチを作成し、HA からファイアウォールフィルタールールを有効/無効にします。警告: フィルタールールごとに 1 つのエンティティが作成されます。",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control デバイスプロファイルのスイッチ（インターネットアクセスの一時停止/再開）です。",
+          "sensor_lte": "LTE または 5G モデムごとのセンサー: 通信事業者、接続方式、信号レベル（RSSI、RSRP、RSRQ、SINR、CQI）、バンド。ポーリングごとにモデム 1 台につき 1 回の追加クエリが発生します。モデムのないルーターには問い合わせません。",
           "sensor_mangle": "Mangle ルールごとにスイッチを作成し、HA からパケットマーキングルールを有効/無効にします。警告: Mangle ルールごとに 1 つのエンティティが作成されます。",
           "sensor_nat": "NAT ルールごとにスイッチを作成し、HA からルールを有効/無効にします。警告: NAT ルールごとに 1 つのエンティティが作成されます。",
           "sensor_netwatch_tracker": "Netwatch エントリごとに到達可能性状態を示すバイナリセンサーを作成します。",
+          "sensor_port_errors": "インターフェースごとに 4 つのセンサー（RX/TX エラーと RX/TX ドロップ）を作成し、不良ケーブルや故障したポートの発見に役立てます。警告: インターフェースごとに 4 つのエンティティが作成されます。",
+          "sensor_port_switch": "ポートごとにスイッチを作成し、HA からポートを有効/無効にします。誤ってポートを無効にしないようにするにはオフにしてください。ポートのほかのエンティティは残ります。",
           "sensor_port_tracker": "ポートごとにリンクアップ/ダウン状態を示すバイナリセンサーを作成します。",
           "sensor_port_traffic": "インターフェイスごとに 4 つのセンサー（TX/RX バイト数と合計）です。警告: インターフェイスごとに 4 つのエンティティが作成されます — トラフィックグラフが不要な場合は無効にしてください。",
           "sensor_ppp": "PPP シークレット（ユーザー）ごとにスイッチを作成し、HA から VPN/PPPoE アカウントを有効/無効にします。",
+          "sensor_raw": "Raw ルールごとにスイッチを作成し、HA からファイアウォールの raw ルールを有効/無効にします。警告: raw ルールごとに 1 つのエンティティが作成されます。",
+          "sensor_routes": "静的ルートとデフォルトルートごとにバイナリセンサーを作成し、ルートが有効な間オンになります。その他の動的ルートは含まれません。",
           "sensor_routing_rules": "Routing Rule ごとにスイッチを作成し、HA からポリシールーティングルールを有効/無効にします。警告: ルーティングルールごとに 1 つのエンティティが作成されます。",
           "sensor_scripts": "スクリプトごとにボタンを作成し、HA から RouterOS スクリプトをトリガーします。",
           "sensor_simple_queues": "Simple Queue エントリごとにスイッチを作成し、HA から帯域幅制限を有効/無効にします。警告: キュールールごとに 1 つのエンティティが作成されます。",
@@ -118,7 +130,8 @@
           "ssl_mode": "接続セキュリティ"
         },
         "data_description": {
-          "port": "RouterOS API ポートです。デフォルトを使用するには 0 のままにしてください: 8728（SSL なし）または 8729（SSL）。"
+          "port": "RouterOS API ポートです。デフォルトを使用するには 0 のままにしてください: 8728（SSL なし）または 8729（SSL）。",
+          "password": "保存済みのパスワードを使う場合は空のままにしてください。"
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "スキャン間隔",
           "track_iface_clients": "インターフェイスにクライアントのMACとIPを表示",
           "unit_of_measurement": "測定単位",
+          "track_network_hosts_interval": "デバイストラッカーの間隔（秒）",
           "track_network_hosts_timeout": "ネットワークデバイスのタイムアウト（秒）",
           "zone": "デバイストラッカー用ゾーン"
         },
         "data_description": {
           "scan_interval": "最小値: 10s。デフォルト: 30s。値を小さくすると RouterOS API の負荷が増加します。",
+          "track_network_hosts_interval": "追跡対象デバイスへ ping を送り、状態を更新する間隔です。最小: 5s。最大: 300s。既定値: 10s。大規模なネットワークでは値を大きくすると負荷が下がります。追跡タイムアウトの半分を超えることはありません。在宅/外出の切り替わりは最大で 1 間隔分遅れることがあります。",
           "track_network_hosts_timeout": "有線デバイスのみ対象です。ARP で検出されなくなってからデバイスがオフラインと判断されるまでの秒数です。デフォルト: 180s。",
           "zone": "追跡デバイスが接続されたときに使用する Home Assistant ゾーン名です。デフォルト: home。"
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "フィルタースイッチ",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "キッドコントロール",
+          "sensor_lte": "LTE / 5G モデムセンサー",
           "sensor_mangle": "Mangleスイッチ",
           "sensor_nat": "NATスイッチ",
           "sensor_netwatch_tracker": "Netwatchセンサー",
+          "sensor_port_errors": "ポートエラーカウンター",
+          "sensor_port_switch": "ポートスイッチ",
           "sensor_port_tracker": "ポートトラッカーセンサー",
           "sensor_port_traffic": "ポートトラフィックセンサー",
           "sensor_ppp": "PPPユーザー",
+          "sensor_raw": "Raw スイッチ",
+          "sensor_routes": "ルートセンサー",
           "sensor_routing_rules": "Routing Rulesスイッチ",
           "sensor_scripts": "スクリプトスイッチ",
           "sensor_simple_queues": "シンプルキュースイッチ",
@@ -194,12 +214,17 @@
           "sensor_filter": "Filter ルールごとにスイッチを作成し、HA からファイアウォールフィルタールールを有効/無効にします。警告: フィルタールールごとに 1 つのエンティティが作成されます。",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control デバイスプロファイルのスイッチ（インターネットアクセスの一時停止/再開）です。",
+          "sensor_lte": "LTE または 5G モデムごとのセンサー: 通信事業者、接続方式、信号レベル（RSSI、RSRP、RSRQ、SINR、CQI）、バンド。ポーリングごとにモデム 1 台につき 1 回の追加クエリが発生します。モデムのないルーターには問い合わせません。",
           "sensor_mangle": "Mangle ルールごとにスイッチを作成し、HA からパケットマーキングルールを有効/無効にします。警告: Mangle ルールごとに 1 つのエンティティが作成されます。",
           "sensor_nat": "NAT ルールごとにスイッチを作成し、HA からルールを有効/無効にします。警告: NAT ルールごとに 1 つのエンティティが作成されます。",
           "sensor_netwatch_tracker": "Netwatch エントリごとに到達可能性状態を示すバイナリセンサーを作成します。",
+          "sensor_port_errors": "インターフェースごとに 4 つのセンサー（RX/TX エラーと RX/TX ドロップ）を作成し、不良ケーブルや故障したポートの発見に役立てます。警告: インターフェースごとに 4 つのエンティティが作成されます。",
+          "sensor_port_switch": "ポートごとにスイッチを作成し、HA からポートを有効/無効にします。誤ってポートを無効にしないようにするにはオフにしてください。ポートのほかのエンティティは残ります。",
           "sensor_port_tracker": "ポートごとにリンクアップ/ダウン状態を示すバイナリセンサーを作成します。",
           "sensor_port_traffic": "インターフェイスごとに 4 つのセンサー（TX/RX バイト数と合計）です。警告: インターフェイスごとに 4 つのエンティティが作成されます — トラフィックグラフが不要な場合は無効にしてください。",
           "sensor_ppp": "PPP シークレット（ユーザー）ごとにスイッチを作成し、HA から VPN/PPPoE アカウントを有効/無効にします。",
+          "sensor_raw": "Raw ルールごとにスイッチを作成し、HA からファイアウォールの raw ルールを有効/無効にします。警告: raw ルールごとに 1 つのエンティティが作成されます。",
+          "sensor_routes": "静的ルートとデフォルトルートごとにバイナリセンサーを作成し、ルートが有効な間オンになります。その他の動的ルートは含まれません。",
           "sensor_routing_rules": "Routing Rule ごとにスイッチを作成し、HA からポリシールーティングルールを有効/無効にします。警告: ルーティングルールごとに 1 つのエンティティが作成されます。",
           "sensor_scripts": "スクリプトごとにボタンを作成し、HA から RouterOS スクリプトをトリガーします。",
           "sensor_simple_queues": "Simple Queue エントリごとにスイッチを作成し、HA から帯域幅制限を有効/無効にします。警告: キュールールごとに 1 つのエンティティが作成されます。",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} は {target} の変更を拒否しました。ルーター側の理由はログにあります。"
+    },
+    "write_failed": {
+      "message": "{host} で {target} の変更は反映されませんでした。詳細はログにあります。"
+    },
+    "write_unconfirmed": {
+      "message": "{host} の {target} の変更を確認できませんでした。ルーターが応答しなかったか、スクリプトが途中で停止しました。繰り返す前にルーターを確認してください。詳細はログにあります。"
+    },
+    "no_write_access": {
+      "message": "{host} 用に設定されたアカウントにはルーターへの書き込み権限がないため、何も変更されませんでした。"
     }
   },
   "selector": {

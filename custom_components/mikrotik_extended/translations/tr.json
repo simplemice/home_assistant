@@ -35,11 +35,13 @@
         "description": "Entegrasyonu yapılandır",
         "data": {
           "scan_interval": "Tarama aralığı (saniye)",
+          "track_network_hosts_interval": "Cihaz izleme aralığı (saniye)",
           "track_network_hosts_timeout": "Ağ cihazı izleme zaman aşımı (saniye)",
           "zone": "Cihaz izleyici için alan"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Varsayılan: 30s. Düşük değerler RouterOS API yükünü artırır.",
+          "track_network_hosts_interval": "İzlenen cihazlara ne sıklıkla ping atıldığı ve durumlarının yenilendiği. En az: 5s. En çok: 300s. Varsayılan: 10s. Büyük ağlarda yükü azaltmak için artırın. Hiçbir zaman izleme zaman aşımının yarısından uzun olmaz. Evde/dışarıda değişiklikleri bir aralık kadar gecikebilir.",
           "track_network_hosts_timeout": "Yalnızca kablolu cihazlar. ARP'de görülmeyen bir cihazın çevrimdışı sayılması için geçen saniye sayısı. Varsayılan: 180s.",
           "zone": "İzlenen bir cihaz bağlandığında kullanılacak Home Assistant bölge adı. Varsayılan: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Filtre anahtarları",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Çocuk denetimi",
+          "sensor_lte": "LTE / 5G modem sensörleri",
           "sensor_mangle": "Mangle anahtarları",
           "sensor_nat": "NAT anahtarları",
           "sensor_netwatch_tracker": "Netwatch sensörleri",
+          "sensor_port_errors": "Port hata sayaçları",
+          "sensor_port_switch": "Port anahtarları",
           "sensor_port_tracker": "Port izleme sensörleri",
           "sensor_port_traffic": "Port trafiği sensörleri",
           "sensor_ppp": "PPP kullanıcıları",
+          "sensor_raw": "Raw anahtarları",
+          "sensor_routes": "Rota sensörleri",
           "sensor_routing_rules": "Routing Rules anahtarları",
           "sensor_scripts": "Betik anahtarları",
           "sensor_simple_queues": "Basit kuyruk anahtarları",
@@ -85,12 +92,17 @@
           "sensor_filter": "Her Filter kuralı için anahtar — HA'dan güvenlik duvarı filtre kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her filtre kuralı için bir varlık oluşturur.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control cihaz profilleri için anahtarlar (internet erişimini duraklatma/devam ettirme).",
+          "sensor_lte": "Her LTE veya 5G modem için sensörler: operatör, erişim teknolojisi, sinyal seviyeleri (RSSI, RSRP, RSRQ, SINR, CQI) ve bantlar. Her döngüde modem başına bir ek sorgu yapılır; modemi olmayan yönlendirici sorgulanmaz.",
           "sensor_mangle": "Her Mangle kuralı için anahtar — HA'dan paket işaretleme kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her Mangle kuralı için bir varlık oluşturur.",
           "sensor_nat": "Her NAT kuralı için anahtar — HA'dan kuralları etkinleştirmek/devre dışı bırakmak için. Uyarı: her NAT kuralı için bir varlık oluşturur.",
           "sensor_netwatch_tracker": "Her Netwatch girişi için erişilebilirlik durumunu gösteren ikili sensör.",
+          "sensor_port_errors": "Arayüz başına 4 sensör (RX/TX hataları ve RX/TX düşen paketler); bozuk bir kabloyu veya arızalı bir portu bulmak için. Uyarı: arayüz başına 4 varlık oluşturur.",
+          "sensor_port_switch": "Her port için, portu HA'dan etkinleştiren/devre dışı bırakan anahtar. Bir portun yanlışlıkla kapatılmasını önlemek için kapatın; portun diğer varlıkları kalır.",
           "sensor_port_tracker": "Her port için bağlantı açık/kapalı durumunu gösteren ikili sensör.",
           "sensor_port_traffic": "Arayüz başına 4 sensör (TX/RX bayt ve toplamlar). Uyarı: arayüz başına 4 varlık oluşturur — trafik grafiklerine ihtiyaç yoksa devre dışı bırakın.",
           "sensor_ppp": "Her PPP secret (kullanıcı) için anahtar — HA'dan VPN/PPPoE hesaplarını etkinleştirmek/devre dışı bırakmak için.",
+          "sensor_raw": "Her Raw kuralı için anahtar: HA'dan güvenlik duvarı raw kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her raw kuralı için bir varlık oluşturur.",
+          "sensor_routes": "Her statik rota ve her varsayılan rota için ikili sensör; rota etkin olduğu sürece açıktır. Diğer dinamik rotalar dahil değildir.",
           "sensor_routing_rules": "Her Routing Rule için anahtar — HA'dan politika yönlendirme kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her yönlendirme kuralı için bir varlık oluşturur.",
           "sensor_scripts": "Her komut dosyası için düğme — HA'dan RouterOS komut dosyalarını tetiklemek için.",
           "sensor_simple_queues": "Her Simple Queue girişi için anahtar — HA'dan bant genişliği limitlerini etkinleştirmek/devre dışı bırakmak için. Uyarı: her kuyruk kuralı için bir varlık oluşturur.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Bağlantı güvenliği"
         },
         "data_description": {
-          "port": "RouterOS API portu. Varsayılanı kullanmak için 0 bırakın: 8728 (SSL yok) veya 8729 (SSL)."
+          "port": "RouterOS API portu. Varsayılanı kullanmak için 0 bırakın: 8728 (SSL yok) veya 8729 (SSL).",
+          "password": "Kayıtlı parolayı korumak için boş bırakın."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Tarama aralığı",
           "track_iface_clients": "İstemci MAC ve IP adresini arayüzlerde göster",
           "unit_of_measurement": "Ölçü birimi",
+          "track_network_hosts_interval": "Cihaz izleme aralığı (saniye)",
           "track_network_hosts_timeout": "Ağ cihazı izleme zaman aşımı (saniyeler)",
           "zone": "Cihaz izleyici için alan"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Varsayılan: 30s. Düşük değerler RouterOS API yükünü artırır.",
+          "track_network_hosts_interval": "İzlenen cihazlara ne sıklıkla ping atıldığı ve durumlarının yenilendiği. En az: 5s. En çok: 300s. Varsayılan: 10s. Büyük ağlarda yükü azaltmak için artırın. Hiçbir zaman izleme zaman aşımının yarısından uzun olmaz. Evde/dışarıda değişiklikleri bir aralık kadar gecikebilir.",
           "track_network_hosts_timeout": "Yalnızca kablolu cihazlar. ARP'de görülmeyen bir cihazın çevrimdışı sayılması için geçen saniye sayısı. Varsayılan: 180s.",
           "zone": "İzlenen bir cihaz bağlandığında kullanılacak Home Assistant bölge adı. Varsayılan: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Filtre anahtarları",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Çocuk denetimi",
+          "sensor_lte": "LTE / 5G modem sensörleri",
           "sensor_mangle": "Mangle anahtarları",
           "sensor_nat": "NAT anahtarları",
           "sensor_netwatch_tracker": "Netwatch sensörleri",
+          "sensor_port_errors": "Port hata sayaçları",
+          "sensor_port_switch": "Port anahtarları",
           "sensor_port_tracker": "Port izleme sensörleri",
           "sensor_port_traffic": "Port trafiği sensörleri",
           "sensor_ppp": "PPP kullanıcıları",
+          "sensor_raw": "Raw anahtarları",
+          "sensor_routes": "Rota sensörleri",
           "sensor_routing_rules": "Routing Rules anahtarları",
           "sensor_scripts": "Betik anahtarları",
           "sensor_simple_queues": "Basit kuyruk anahtarları",
@@ -194,12 +214,17 @@
           "sensor_filter": "Her Filter kuralı için anahtar — HA'dan güvenlik duvarı filtre kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her filtre kuralı için bir varlık oluşturur.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Kid Control cihaz profilleri için anahtarlar (internet erişimini duraklatma/devam ettirme).",
+          "sensor_lte": "Her LTE veya 5G modem için sensörler: operatör, erişim teknolojisi, sinyal seviyeleri (RSSI, RSRP, RSRQ, SINR, CQI) ve bantlar. Her döngüde modem başına bir ek sorgu yapılır; modemi olmayan yönlendirici sorgulanmaz.",
           "sensor_mangle": "Her Mangle kuralı için anahtar — HA'dan paket işaretleme kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her Mangle kuralı için bir varlık oluşturur.",
           "sensor_nat": "Her NAT kuralı için anahtar — HA'dan kuralları etkinleştirmek/devre dışı bırakmak için. Uyarı: her NAT kuralı için bir varlık oluşturur.",
           "sensor_netwatch_tracker": "Her Netwatch girişi için erişilebilirlik durumunu gösteren ikili sensör.",
+          "sensor_port_errors": "Arayüz başına 4 sensör (RX/TX hataları ve RX/TX düşen paketler); bozuk bir kabloyu veya arızalı bir portu bulmak için. Uyarı: arayüz başına 4 varlık oluşturur.",
+          "sensor_port_switch": "Her port için, portu HA'dan etkinleştiren/devre dışı bırakan anahtar. Bir portun yanlışlıkla kapatılmasını önlemek için kapatın; portun diğer varlıkları kalır.",
           "sensor_port_tracker": "Her port için bağlantı açık/kapalı durumunu gösteren ikili sensör.",
           "sensor_port_traffic": "Arayüz başına 4 sensör (TX/RX bayt ve toplamlar). Uyarı: arayüz başına 4 varlık oluşturur — trafik grafiklerine ihtiyaç yoksa devre dışı bırakın.",
           "sensor_ppp": "Her PPP secret (kullanıcı) için anahtar — HA'dan VPN/PPPoE hesaplarını etkinleştirmek/devre dışı bırakmak için.",
+          "sensor_raw": "Her Raw kuralı için anahtar: HA'dan güvenlik duvarı raw kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her raw kuralı için bir varlık oluşturur.",
+          "sensor_routes": "Her statik rota ve her varsayılan rota için ikili sensör; rota etkin olduğu sürece açıktır. Diğer dinamik rotalar dahil değildir.",
           "sensor_routing_rules": "Her Routing Rule için anahtar — HA'dan politika yönlendirme kurallarını etkinleştirmek/devre dışı bırakmak için. Uyarı: her yönlendirme kuralı için bir varlık oluşturur.",
           "sensor_scripts": "Her komut dosyası için düğme — HA'dan RouterOS komut dosyalarını tetiklemek için.",
           "sensor_simple_queues": "Her Simple Queue girişi için anahtar — HA'dan bant genişliği limitlerini etkinleştirmek/devre dışı bırakmak için. Uyarı: her kuyruk kuralı için bir varlık oluşturur.",
@@ -251,6 +276,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host}, {target} değişikliğini reddetti. Yönlendiricinin gerekçesi günlükte."
+    },
+    "write_failed": {
+      "message": "{target} üzerindeki değişiklik {host} üzerinde uygulanamadı. Ayrıntılar günlükte."
+    },
+    "write_unconfirmed": {
+      "message": "{host} üzerinde {target} değişikliği doğrulanamadı: yönlendirici yanıt vermedi ya da bir betik yarıda durdu. Yinelemeden önce yönlendiriciyi kontrol edin. Ayrıntılar günlükte."
+    },
+    "no_write_access": {
+      "message": "{host} için ayarlanan hesabın yönlendiricide yazma izni yok, bu yüzden hiçbir şey değiştirilmedi."
     }
   },
   "selector": {

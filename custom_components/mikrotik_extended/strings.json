@@ -35,11 +35,13 @@
         "description": "Configure integration",
         "data": {
           "scan_interval": "Scan interval (seconds)",
+          "track_network_hosts_interval": "Device tracker interval (seconds)",
           "track_network_hosts_timeout": "Track network devices timeout (seconds)",
           "zone": "Zone for device tracker"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Default: 30s. Lower values increase RouterOS API load.",
+          "track_network_hosts_interval": "How often tracked devices are pinged and their trackers refreshed. Minimum: 5s. Maximum: 300s. Default: 10s. Raise it on large networks to lower the load. Never longer than half the tracking timeout. Home/away changes can lag by up to one interval.",
           "track_network_hosts_timeout": "Wired devices only. Seconds before a device is considered offline if not seen in ARP. Default: 180s.",
           "zone": "Home Assistant zone name to use when a tracked device is connected. Default: home."
         }
@@ -65,12 +67,17 @@
           "sensor_filter": "Filter switches",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kid control",
+          "sensor_lte": "LTE / 5G modem sensors",
           "sensor_mangle": "Mangle switches",
           "sensor_nat": "NAT switches",
           "sensor_netwatch_tracker": "Netwatch tracker sensors",
+          "sensor_port_errors": "Port error counters",
+          "sensor_port_switch": "Port switches",
           "sensor_port_tracker": "Port tracker sensors",
           "sensor_port_traffic": "Port traffic sensors",
           "sensor_ppp": "PPP users",
+          "sensor_raw": "Raw switches",
+          "sensor_routes": "Route sensors",
           "sensor_routing_rules": "Routing Rules switches",
           "sensor_scripts": "Script switches",
           "sensor_simple_queues": "Simple queues switches",
@@ -85,12 +92,17 @@
           "sensor_filter": "Switch per Filter rule to enable/disable firewall filter rules from HA. Warning: creates one entity per filter rule.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Switches for Kid Control device profiles (pause/resume internet access).",
+          "sensor_lte": "Sensors per LTE or 5G modem: operator, access technology, signal levels (RSSI, RSRP, RSRQ, SINR, CQI) and bands. One extra query per modem on every poll; nothing is asked on a router without a modem.",
           "sensor_mangle": "Switch per Mangle rule to enable/disable packet marking rules from HA. Warning: creates one entity per Mangle rule.",
           "sensor_nat": "Switch per NAT rule to enable/disable rules from HA. Warning: creates one entity per NAT rule.",
           "sensor_netwatch_tracker": "Binary sensor per Netwatch entry showing reachability status.",
+          "sensor_port_errors": "4 sensors per interface (RX/TX errors and RX/TX drops), for spotting a bad cable or a failing port. Warning: creates 4 entities per interface.",
+          "sensor_port_switch": "Switch per port to enable/disable the port from HA. Turn this off to keep a port from being disabled by accident; the other entities of the port stay.",
           "sensor_port_tracker": "Binary sensor per port showing link up/down state.",
           "sensor_port_traffic": "4 sensors per interface (TX/RX bytes and totals). Warning: creates 4 entities per interface, disable if traffic graphs are not needed.",
           "sensor_ppp": "Switch per PPP secret (user) to enable/disable VPN/PPPoE accounts from HA.",
+          "sensor_raw": "Switch per Raw rule to enable/disable firewall raw rules from HA. Warning: creates one entity per raw rule.",
+          "sensor_routes": "Binary sensor per static route and per default route, on while the route is active. Other dynamic routes are not included.",
           "sensor_routing_rules": "Switch per Routing Rule to enable/disable policy routing rules from HA. Warning: creates one entity per routing rule.",
           "sensor_scripts": "Button per script to trigger RouterOS scripts from HA.",
           "sensor_simple_queues": "Switch per Simple Queue entry to enable/disable bandwidth limits from HA. Warning: creates one entity per queue rule.",
@@ -118,7 +130,8 @@
           "ssl_mode": "Connection security"
         },
         "data_description": {
-          "port": "RouterOS API port. Leave at 0 to use the default: 8728 (no SSL) or 8729 (SSL)."
+          "port": "RouterOS API port. Leave at 0 to use the default: 8728 (no SSL) or 8729 (SSL).",
+          "password": "Leave empty to keep the stored password."
         }
       }
     },
@@ -144,11 +157,13 @@
           "scan_interval": "Scan interval",
           "track_iface_clients": "Show client MAC and IP on interfaces",
           "unit_of_measurement": "Unit of measurement",
+          "track_network_hosts_interval": "Device tracker interval (seconds)",
           "track_network_hosts_timeout": "Track network devices timeout (seconds)",
           "zone": "Zone for device tracker"
         },
         "data_description": {
           "scan_interval": "Minimum: 10s. Default: 30s. Lower values increase RouterOS API load.",
+          "track_network_hosts_interval": "How often tracked devices are pinged and their trackers refreshed. Minimum: 5s. Maximum: 300s. Default: 10s. Raise it on large networks to lower the load. Never longer than half the tracking timeout. Home/away changes can lag by up to one interval.",
           "track_network_hosts_timeout": "Wired devices only. Seconds before a device is considered offline if not seen in ARP. Default: 180s.",
           "zone": "Home Assistant zone name to use when a tracked device is connected. Default: home."
         },
@@ -174,12 +189,17 @@
           "sensor_filter": "Filter switches",
           "sensor_interfaces": "Interface entities",
           "sensor_kidcontrol": "Kid control",
+          "sensor_lte": "LTE / 5G modem sensors",
           "sensor_mangle": "Mangle switches",
           "sensor_nat": "NAT switches",
           "sensor_netwatch_tracker": "Netwatch tracker sensors",
+          "sensor_port_errors": "Port error counters",
+          "sensor_port_switch": "Port switches",
           "sensor_port_tracker": "Port tracker sensors",
           "sensor_port_traffic": "Port traffic sensors",
           "sensor_ppp": "PPP users",
+          "sensor_raw": "Raw switches",
+          "sensor_routes": "Route sensors",
           "sensor_routing_rules": "Routing Rules switches",
           "sensor_scripts": "Script switches",
           "sensor_simple_queues": "Simple queues switches",
@@ -194,12 +214,17 @@
           "sensor_filter": "Switch per Filter rule to enable/disable firewall filter rules from HA. Warning: creates one entity per filter rule.",
           "sensor_interfaces": "Create entities for network interfaces (port switches, port trackers, traffic sensors, IP addresses). Disable to monitor only the core device, which also skips the per-port link queries. Port tracker and port traffic sensors are only created while this is enabled. Warning: disabling removes these entities and their per-port devices, so a renamed port or an assigned area is not restored when you enable it again.",
           "sensor_kidcontrol": "Switches for Kid Control device profiles (pause/resume internet access).",
+          "sensor_lte": "Sensors per LTE or 5G modem: operator, access technology, signal levels (RSSI, RSRP, RSRQ, SINR, CQI) and bands. One extra query per modem on every poll; nothing is asked on a router without a modem.",
           "sensor_mangle": "Switch per Mangle rule to enable/disable packet marking rules from HA. Warning: creates one entity per Mangle rule.",
           "sensor_nat": "Switch per NAT rule to enable/disable rules from HA. Warning: creates one entity per NAT rule.",
           "sensor_netwatch_tracker": "Binary sensor per Netwatch entry showing reachability status.",
+          "sensor_port_errors": "4 sensors per interface (RX/TX errors and RX/TX drops), for spotting a bad cable or a failing port. Warning: creates 4 entities per interface.",
+          "sensor_port_switch": "Switch per port to enable/disable the port from HA. Turn this off to keep a port from being disabled by accident; the other entities of the port stay.",
           "sensor_port_tracker": "Binary sensor per port showing link up/down state.",
           "sensor_port_traffic": "4 sensors per interface (TX/RX bytes and totals). Warning: creates 4 entities per interface, disable if traffic graphs are not needed.",
           "sensor_ppp": "Switch per PPP secret (user) to enable/disable VPN/PPPoE accounts from HA.",
+          "sensor_raw": "Switch per Raw rule to enable/disable firewall raw rules from HA. Warning: creates one entity per raw rule.",
+          "sensor_routes": "Binary sensor per static route and per default route, on while the route is active. Other dynamic routes are not included.",
           "sensor_routing_rules": "Switch per Routing Rule to enable/disable policy routing rules from HA. Warning: creates one entity per routing rule.",
           "sensor_scripts": "Button per script to trigger RouterOS scripts from HA.",
           "sensor_simple_queues": "Switch per Simple Queue entry to enable/disable bandwidth limits from HA. Warning: creates one entity per queue rule.",
@@ -260,6 +285,18 @@
     },
     "router_not_found": {
       "message": "No configured router matches the host {host}, nothing was shut down."
+    },
+    "write_refused": {
+      "message": "{host} refused the change to {target}. The router's reason is in the log."
+    },
+    "write_failed": {
+      "message": "The change to {target} did not go through on {host}. The details are in the log."
+    },
+    "write_unconfirmed": {
+      "message": "The change to {target} on {host} could not be confirmed: the router did not answer, or a script stopped part way. Check the router before repeating it. The details are in the log."
+    },
+    "no_write_access": {
+      "message": "The account configured for {host} has no write permission on the router, so nothing was changed."
     }
   },
   "entity": {

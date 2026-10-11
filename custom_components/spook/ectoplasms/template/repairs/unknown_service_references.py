@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-import voluptuous as vol
-
 from homeassistant.const import (
     EVENT_COMPONENT_LOADED,
     EVENT_SERVICE_REGISTERED,
     EVENT_SERVICE_REMOVED,
 )
-from homeassistant.helpers import config_validation as cv
 
 from ....const import LOGGER
 from ....entity_filtering import (
     async_filter_known_services,
-    async_find_services_in_sequence,
     async_get_all_services,
     async_name_helper_in_the_registry,
+    find_services_in_helper_options,
 )
 from ....repairs import AbstractSpookRepair
 
@@ -31,7 +28,10 @@ class SpookRepair(AbstractSpookRepair):
         EVENT_SERVICE_REGISTERED,
         EVENT_SERVICE_REMOVED,
     }
-    inspect_config_entry_changed = "template"
+    # Any integration, not just template: whether an action counts as missing
+    # depends on whether the integration providing it is disabled, and that
+    # can change without an action coming or going.
+    inspect_config_entry_changed = True
     inspect_on_reload = "template"
     automatically_clean_up_issues = True
 
@@ -44,23 +44,7 @@ class SpookRepair(AbstractSpookRepair):
         for entry in self.hass.config_entries.async_entries(self.domain):
             self.possible_issue_ids.add(entry.entry_id)
 
-            # Which options hold actions grows with every new template helper
-            # type, so ask Home Assistant instead of keeping a list of keys.
-            #
-            # Validating is not just a shape check. The walker reads keys that
-            # only exist after validation, so raw options make it raise on
-            # shapes the action editor writes every day, a `parallel` block
-            # among them. Validation normalizes those, and turns a templated
-            # action name into a Template, which is not a string and so falls
-            # out of the known-services filter on its own.
-            services = set()
-            for option in entry.options.values():
-                try:
-                    sequence = cv.SCRIPT_SCHEMA(option)
-                except vol.Invalid:
-                    continue
-
-                services.update(async_find_services_in_sequence(sequence))
+            services = find_services_in_helper_options(entry.options)
 
             unknown_services = async_filter_known_services(
                 self.hass,
