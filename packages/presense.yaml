@@ -165,8 +165,8 @@ template:
           {% elif location in ['SuperCheap','Tops Rawai','Makro Rawai','Makro Chalong'] %}
             At Food Store
           {% elif location in ['unknown','unavailable','not_home',''] %}
-            {{ state_attr('sensor.micemob_location','sub_administrative_area')
-               or state_attr('sensor.micemob_location','location')
+            {{ state_attr('sensor.micemob_geocoded_location','sub_administrative_area')
+               or state_attr('sensor.micemob_geocoded_location','location')
                or 'Away' }}
           {% else %}
             {{ location }}

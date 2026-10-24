@@ -438,6 +438,39 @@ def _lte_number(value):
     return int(number) if number.is_integer() else number
 
 
+POE_READINGS = ("poe-out-voltage", "poe-out-current", "poe-out-power")
+
+
+def _poe_readings(port: dict, answered: bool = True) -> None:
+    """Turn what the PoE monitor said about one port into numbers.
+
+    `answered` is False when the router said nothing about this port in this
+    poll: the query failed, or the port was missing from the reply. What the
+    store holds is then last poll's, zero included, so it is neither a reading
+    nor a value to keep showing.
+
+    The router only sends the readings while it measures something, so a port
+    that is off carries none. Power is then zero, which is true and keeps a
+    graph continuous; voltage and current stay without a value. A port that is
+    powered but sends no power reading has hardware that does not measure, and
+    gets no number made up for it.
+
+    `poe-metered` marks a port that has sent a reading at least once. It is
+    what the sensors wait for, so hardware that never measures gets none.
+    """
+    if not answered:
+        port.update(dict.fromkeys(POE_READINGS))
+        return
+    for field in POE_READINGS:
+        # The same shapes as the modem values: a plain number from the API, or
+        # the terminal form with its unit ("54.2V", "449mA", "24.3W").
+        port[field] = _lte_number(port.get(field))
+    if any(port[field] is not None for field in POE_READINGS):
+        port["poe-metered"] = True
+    if port["poe-out-power"] is None and port.get("poe-out-status") not in ("powered-on", "unknown", None):
+        port["poe-out-power"] = 0
+
+
 def _lte_text(value):
     """A text value on one line, None when empty.
 
@@ -1526,6 +1559,40 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         return str(aaa.get("default-group", "") or "")
 
     # ---------------------------
+    #   _active_session_group
+    # ---------------------------
+    def _active_session_group(self, username: str) -> str:
+        """Return the group of our own API login as the router sees it.
+
+        /user/active lists every live login with the group it actually got.
+        For a RADIUS-validated account that is the group the server sent
+        back, which neither /user (the account is not local) nor /user/aaa
+        (default-group only applies when the server sends none) can tell.
+        Empty when no API session of ours is listed, or when the API logins
+        of this account disagree: a RADIUS server may hand out the group by
+        source, and the listing does not say which login is this one.
+        """
+        rows = self.api.query("/user/active") or []
+        groups = set()
+        for row in rows:
+            # An api-ssl login is listed as "api" too, checked on RouterOS 7.
+            if row.get("name") != username or row.get("via") != "api":
+                continue
+            group = str(row.get("group", "") or "")
+            if group:
+                groups.add(group)
+        if len(groups) != 1:
+            if groups:
+                _LOGGER.debug(
+                    "Mikrotik %s lists user %s with more than one group (%s), rights not taken from the login",
+                    self.host,
+                    username,
+                    ", ".join(sorted(groups)),
+                )
+            return ""
+        return groups.pop()
+
+    # ---------------------------
     #   get_access
     # ---------------------------
     def get_access(self) -> None:
@@ -1556,10 +1623,12 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             # Not a local user. RouterOS can validate router logins against a
             # RADIUS server (/user/aaa use-radius), and such an account exists
             # on the server rather than on the router, so it is absent from
-            # /user. Those logins get the configured default group, which is
-            # where their policies come from. Indexing /user directly used to
-            # raise KeyError straight out of the update cycle here.
-            group_name = self._remote_login_group()
+            # /user. The server names the group in its reply, and the only
+            # place the router shows that is the live login itself. Falling
+            # back to default-group here used to report a "full" account as
+            # read-only, because default-group is what a login gets when the
+            # server sends no group, not what this login got.
+            group_name = self._active_session_group(username) or self._remote_login_group()
 
         policy = tmp_group.get(group_name, {}).get("policy") if group_name else None
         if policy:
@@ -1699,21 +1768,32 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         the per port ethernet monitor above.
         """
         names = [vals["name"] for vals in self.ds["interface"].values() if vals.get("poe-out") not in (None, "", "N/A")]
+        # A port that stopped being PoE capable, a module that was pulled for
+        # example, must not keep its last readings or its sensors.
+        for vals in self.ds["interface"].values():
+            if vals.get("name") not in names and vals.pop("poe-metered", False):
+                vals.update(dict.fromkeys(POE_READINGS))
         if not names:
             return
 
+        rows = self.api.query(
+            PATH_INTERFACE_ETHERNET_POE,
+            command="monitor",
+            args={"numbers": ",".join(names), "once": True},
+        )
+        answered = {row.get("name") for row in rows or ()}
         self.ds["interface"] = parse_api(
             data=self.ds["interface"],
-            source=self.api.query(
-                PATH_INTERFACE_ETHERNET_POE,
-                command="monitor",
-                args={"numbers": ",".join(names), "once": True},
-            ),
+            source=rows,
             key_search="name",
             vals=[
                 {"name": "poe-out-status", "default": "unknown"},
+                *({"name": field, "default": None} for field in POE_READINGS),
             ],
         )
+        for vals in self.ds["interface"].values():
+            if vals.get("name") in names:
+                _poe_readings(vals, answered=vals["name"] in answered)
 
     def _compute_interface_traffic_deltas(self) -> None:
         """Convert rx/tx byte counters into per-second rates."""
@@ -2254,14 +2334,16 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     def get_containers(self) -> None:
         """Get Container data from Mikrotik"""
         _LOGGER.debug("Mikrotik %s fetching containers", self.host)
-        source = self.api.query("/container") or []
+        # None is a failed read and must stay None for parse_api, which
+        # prunes on an empty answer but never on a failed one.
+        source = self.api.query("/container")
         # The RouterOS list id changes when a container is re-created, which
         # is the standard container upgrade workflow and would spawn duplicate
         # entities (same pattern as issue #20). Key entries by the veth
         # interface instead: every container has one and it survives
         # re-creation. Entries without an interface keep the list id.
         seen_per_iface: dict = {}
-        for entry in sorted(source, key=lambda e: (str(e.get("interface", "")), str(e.get("root-dir", "")))):
+        for entry in sorted(source or [], key=lambda e: (str(e.get("interface", "")), str(e.get("root-dir", "")))):
             ref = str(entry.get("interface", "")) or str(entry.get(".id", "")) or "unknown"
             count = seen_per_iface.get(ref, 0) + 1
             seen_per_iface[ref] = count
@@ -2883,13 +2965,15 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_netwatch(self) -> None:
         """Get netwatch data from Mikrotik"""
-        source = self.api.query("/tool/netwatch") or []
+        # None is a failed read and must stay None for parse_api, which
+        # prunes on an empty answer but never on a failed one.
+        source = self.api.query("/tool/netwatch")
         # Keying on the host alone collapses several probes watching the same
         # address (for example an icmp and a tcp check) into one entity, so one
         # of them disappears. Build the reference from host, type and port, and
         # fall back to a deterministic suffix when even that is not unique.
         seen_ref: dict = {}
-        for entry in sorted(source, key=lambda e: (str(e.get("comment", "")), str(e.get(".id", "")))):
+        for entry in sorted(source or [], key=lambda e: (str(e.get("comment", "")), str(e.get(".id", "")))):
             parts = [str(entry.get("host", "")) or "unknown", str(entry.get("type", "")) or "simple"]
             if str(entry.get("port", "")):
                 parts.append(str(entry["port"]))
@@ -3337,6 +3421,9 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 },
             ],
             ensure_vals=[{"name": "interface", "default": "unknown"}],
+            # A lease deleted on the router has to leave the lease count too.
+            prune_stale=True,
+            stale_counters=self._get_stale_counters("dhcp"),
         )
 
         dhcpserver_query = False
@@ -3426,13 +3513,15 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_ip_address(self) -> None:
         """Get IP address data from Mikrotik"""
-        source = self.api.query("/ip/address") or []
+        # None is a failed read and must stay None for parse_api, which
+        # prunes on an empty answer but never on a failed one.
+        source = self.api.query("/ip/address")
         # The RouterOS list id is not stable: dynamic addresses (PPPoE, DHCP)
         # are re-created with a new id on every reconnect, which would spawn a
         # new entity each time (issue #20). Key entries by interface instead,
         # with a deterministic suffix when an interface holds more addresses.
         seen_per_iface: dict = {}
-        for entry in sorted(source, key=lambda e: (str(e.get("interface", "")), str(e.get("address", "")))):
+        for entry in sorted(source or [], key=lambda e: (str(e.get("interface", "")), str(e.get("address", "")))):
             iface = str(entry.get("interface", "")) or "unknown"
             count = seen_per_iface.get(iface, 0) + 1
             seen_per_iface[iface] = count

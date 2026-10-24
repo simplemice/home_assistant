@@ -1,0 +1,1629 @@
+stop:
+  name: Stop cover
+  description: >-
+    Sends stop_cover to the targeted covers via the ACP proxy so the command
+    is recognised as ACP-originated. Engages manual override so the next
+    automatic cycle does not immediately counter-command the cover. Compatible
+    with manual_ignore_external mode — the Lovelace card stop button should
+    call this service instead of cover.stop_cover directly.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+integration_enable:
+  name: Enable integration
+  description: >-
+    Re-enables Adaptive Cover Pro on the targeted instances. Covers stay where they
+    are; positioning resumes on the next natural update cycle.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+integration_disable:
+  name: Disable integration
+  description: >-
+    Disables Adaptive Cover Pro on the targeted instances. Any ACP-in-flight cover
+    moves are stopped immediately (cover.stop_cover). Deferred motion and weather
+    timers are cancelled and reconciliation state is cleared.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+emergency_stop:
+  name: Emergency stop
+  description: >-
+    Panic button — sends stop_cover to every configured cover on the targeted
+    instances (capability-checked), regardless of whether the cover is currently
+    moving, then disables the integration. With no target, acts on all ACP
+    instances and all their covers.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+export_config:
+  name: Export configuration
+  description: >-
+    Returns the cover configuration as JSON for use in the simulation notebook.
+    Call from Developer Tools > Services, then copy the response and paste it
+    into the CONFIG variable in notebooks/simulate_cover.ipynb.
+  fields:
+    config_entry_id:
+      name: Cover configuration
+      description: The Adaptive Cover Pro configuration entry to export.
+      required: true
+      selector:
+        config_entry:
+          integration: adaptive_cover_pro
+
+export_all_config:
+  name: Export all configurations
+  description: >-
+    Writes the full options of every ACP cover entry to
+    ``adaptive_cover_pro_export.json`` in your HA config directory as a lossless
+    JSON snapshot. The file can then be edited with AI, a script, or regex and
+    re-imported with ``import_config``. Also returns ``{file, count}`` as a
+    service response for confirmation in Developer Tools.
+
+import_config:
+  name: Import configurations
+  description: >-
+    Reads a JSON file previously written by ``export_all_config`` and applies
+    the options of each entry (matched by ``entry_id``) to the live config
+    entries. Internal ``_``-prefixed migration markers are preserved from the
+    current live entry. Returns a per-entry result dict.
+
+    **Note — full replace:** any public option key present in the live entry
+    but absent from the import file will be dropped and reset to its default on
+    the next reload. Export first, then edit only the keys you want to change.
+
+    **Note — partial validation:** numeric options are checked against their
+    declared min/max bounds and a failing entry is reported as an error without
+    aborting the rest of the import. Non-numeric options (booleans, strings,
+    enums) are applied as-is and may surface errors when the entry reloads.
+  fields:
+    filename:
+      name: File path
+      description: >-
+        Path to the JSON file to import. Relative paths are resolved against the
+        HA config directory. The file must stay inside the config directory.
+        Defaults to ``adaptive_cover_pro_export.json`` (in the config directory).
+      required: false
+      default: adaptive_cover_pro_export.json
+      selector:
+        text:
+
+set_position:
+  name: Set position
+  description: >-
+    Move the targeted covers to an explicit position. Clamps up to the highest
+    active custom-position minimum-mode floor across all slots. By default the
+    call engages manual override and respects the priority pipeline (so an
+    active force_override or weather override still wins); set force=true to
+    bypass the pipeline check and skip manual-override engagement.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    position:
+      name: Position
+      description: "Target position (0–100%)."
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    force:
+      name: Force
+      description: >-
+        When true, bypass the priority pipeline check and skip manual-override
+        engagement. Default false — service calls respect force_override /
+        weather and engage manual override like a dashboard slider.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+set_tilt:
+  name: Set tilt
+  description: >-
+    Set the slat/tilt axis of the targeted covers. On venetian (dual-axis)
+    covers this drives ONLY the tilt slats and leaves the carriage untouched;
+    on cover types whose primary axis already is the tilt it behaves like a
+    tilt move. By default the call engages manual override; set force=true to
+    skip manual-override engagement (matching set_position's force semantics).
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    tilt:
+      name: Tilt
+      description: "Target tilt (0–100%)."
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    force:
+      name: Force
+      description: >-
+        When true, skip manual-override engagement. Default false — service
+        calls engage manual override like a dashboard slider.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+set_axes:
+  name: Set axes
+  description: >-
+    Set one or more control axes (position and/or tilt) on the targeted covers
+    in a single call. Each requested axis is dispatched through the same path as
+    set_position / set_tilt. Requesting an axis the cover does not support raises
+    an error. By default the call engages manual override; set force=true to skip
+    manual-override engagement.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    axes:
+      name: Axes
+      description: >-
+        Map of axis targets — include only the axes you want to move. Keys are
+        "position" and/or "tilt"; each value is 0–100%. For example, set position
+        to 60 and tilt to 30.
+      required: true
+      example: '{"position": 60, "tilt": 30}'
+      selector:
+        object:
+    force:
+      name: Force
+      description: >-
+        When true, skip manual-override engagement. Default false — service calls
+        engage manual override like a dashboard slider.
+      required: false
+      default: false
+      selector:
+        boolean:
+
+engage_manual_override:
+  name: Engage manual override
+  description: >-
+    Engages (or extends) manual override on the targeted covers WITHOUT moving
+    them — no cover command is sent. Use it to pause automatic control and hold
+    the cover where it is. With no end time and no duration, the override lasts
+    the configured manual-override duration mode starting now. Provide end_time
+    for an absolute end, or duration to extend an active override by that amount
+    (or engage fresh for that long if none is active). If both are given,
+    end_time wins. Either one pins an absolute end that outranks the configured
+    manual_override_duration_mode.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    end_time:
+      name: End time
+      description: >-
+        Absolute time the override should end. A value with no UTC offset
+        (no trailing Z or +HH:MM) is treated as UTC, not your local time.
+        For local time, use an ISO string with an explicit offset (e.g.
+        2026-07-04T22:00:00+02:00) or a template like
+        '{{' (now() + timedelta(hours=2)).isoformat() '}}'. Ignored (falls back
+        to the configured duration) if it is in the past or unparseable.
+        Takes precedence over duration.
+      required: false
+      selector:
+        datetime:
+    duration:
+      name: Duration
+      description: >-
+        Extend an active override by this much, or engage fresh for this long
+        if none is active. Ignored when end_time is set.
+      required: false
+      selector:
+        duration:
+
+set_position_limits:
+  name: Set position limits
+  description: >-
+    Update position-limit options (default height, min/max position, open/close
+    threshold, inverse state). Changes are persisted and take effect after reload.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    default_percentage:
+      name: Default height
+      description: "Default cover position when sun is not visible (0–100%)."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    min_position:
+      name: Minimum position
+      description: "Minimum position the cover may move to (0–99%)."
+      selector:
+        number:
+          min: 0
+          max: 99
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    enable_min_position:
+      name: Enable min position only during sun tracking
+      description: "If true, min_position applies only while sun is tracked."
+      selector:
+        boolean:
+    min_position_sun_tracking:
+      name: Min position during sun tracking
+      description: "Optional separate minimum floor that applies only during sun tracking (0–99%). When set, overrides min_position for sun-tracking paths only. Leave unset to use min_position for all paths."
+      selector:
+        number:
+          min: 0
+          max: 99
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    max_position:
+      name: Maximum position
+      description: "Maximum position the cover may move to (0–100%; 0 = always closed)."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    enable_max_position:
+      name: Enable max position only during sun tracking
+      description: "If true, max_position applies only while sun is tracked."
+      selector:
+        boolean:
+    open_close_threshold:
+      name: Open/close threshold
+      description: "Position below which open/close-only covers are closed (1–99%)."
+      selector:
+        number:
+          min: 1
+          max: 99
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    enable_position_matching:
+      name: Enable position matching
+      description: >-
+        If true, the reconciliation pass resends the target until the cover
+        reaches it. If false (the default), the cover is commanded once and a
+        settle past the position tolerance becomes a manual override.
+      selector:
+        boolean:
+    inverse_state:
+      name: Inverse state
+      description: "Invert position (0%=open, 100%=closed) for covers that report state inversely."
+      selector:
+        boolean:
+
+set_sunset_sunrise:
+  name: Set sunset / sunrise positions
+  description: >-
+    Update sunset position and offset settings. Closes issue #129 — use an
+    automation to drive sunset_position from a sensor (e.g. mosquito activity).
+    Pass null to clear an optional field.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    sunset_position:
+      name: Sunset position
+      description: "Position to move to at end of time window. Null = use default_percentage."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    sunset_offset:
+      name: Sunset offset
+      description: "Minutes to shift the end-of-window trigger relative to sunset (-120–120)."
+      selector:
+        number:
+          min: -120
+          max: 120
+          mode: box
+          unit_of_measurement: minutes
+    sunrise_offset:
+      name: Sunrise offset
+      description: "Minutes to shift the start-of-window trigger relative to sunrise (-120–120)."
+      selector:
+        number:
+          min: -120
+          max: 120
+          mode: box
+          unit_of_measurement: minutes
+    sunrise_gates_start:
+      name: Wait for sunrise before starting
+      description: "If true, the operating window opens at the later of start time and sunrise (entity/astral + offset)."
+      selector:
+        boolean:
+    sunset_use_my:
+      name: Use Somfy My position at sunset
+      description: "If true, use my_position_value instead of sunset_position at end of window."
+      selector:
+        boolean:
+    my_position_value:
+      name: Somfy My position
+      description: "The 'My' preset position (1–99%). Required when sunset_use_my or any custom_position_use_my is true."
+      selector:
+        number:
+          min: 1
+          max: 99
+          mode: slider
+          unit_of_measurement: "%"
+
+set_automation_timing:
+  name: Set automation timing
+  description: >-
+    Update delta thresholds, time window start/end, and return_sunset.
+    start_time and start_entity are mutually exclusive; same for end_time/end_entity.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    delta_position:
+      name: Position delta threshold
+      description: "Minimum position change (%) required before sending a cover command (1–90)."
+      selector:
+        number:
+          min: 1
+          max: 90
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    delta_time:
+      name: Time delta threshold
+      description: "Minimum time (minutes) between cover commands (2–60)."
+      selector:
+        number:
+          min: 2
+          max: 60
+          mode: box
+          unit_of_measurement: minutes
+    start_time:
+      name: Start time
+      description: "Fixed time to start the tracking window (HH:MM:SS). Mutually exclusive with start_entity."
+      selector:
+        time:
+    start_entity:
+      name: Start entity
+      description: "Entity whose state provides the start time. Mutually exclusive with start_time."
+      selector:
+        entity:
+          domain:
+            - sensor
+            - input_datetime
+    end_time:
+      name: End time
+      description: "Fixed time to end the tracking window (HH:MM:SS). Mutually exclusive with end_entity."
+      selector:
+        time:
+    end_entity:
+      name: End entity
+      description: "Entity whose state provides the end time. Mutually exclusive with end_time."
+      selector:
+        entity:
+          domain:
+            - sensor
+            - input_datetime
+    return_sunset:
+      name: Return to sunset position at end time
+      description: "If true, force-send sunset_position when the time window ends."
+      selector:
+        boolean:
+
+set_manual_override:
+  name: Set manual override settings
+  description: Update manual override duration, reset behavior, and detection threshold.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    manual_override_duration:
+      name: Override duration
+      description: "How long a manual override lasts before automatic control resumes."
+      selector:
+        duration:
+    manual_override_duration_mode:
+      name: Override duration mode
+      description: >-
+        What the hold is measured against. "fixed" uses the duration above.
+        The other modes hold until the next sunset, sunrise, sun event, or
+        operating-window end after the moment you moved the cover, and fall
+        back to the duration above when that boundary cannot be resolved.
+      selector:
+        select:
+          translation_key: manual_override_duration_mode
+          options:
+            - fixed
+            - until_sunset
+            - until_sunrise
+            - until_next_sun_event
+            - until_window_end
+    manual_override_reset:
+      name: Reset override on time window start
+      description: "If true, clear any active manual override when the time window starts."
+      selector:
+        boolean:
+    manual_threshold:
+      name: Manual detection threshold
+      description: "Position change (%) that triggers manual override detection (0–99). Null = any change."
+      selector:
+        number:
+          min: 0
+          max: 99
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    manual_ignore_intermediate:
+      name: Ignore intermediate states
+      description: "If true, ignore opening/closing transitional states for manual override detection."
+      selector:
+        boolean:
+    manual_ignore_external:
+      name: Only engage from ACP commands
+      description: "If true, only commands routed through the ACP proxy entity or the adaptive_cover_pro.set_position service engage manual override; all other position changes are ignored."
+      selector:
+        boolean:
+
+set_force_override:
+  name: Set force override (DEPRECATED)
+  description: >-
+    DEPRECATED (issue #563): force override merged into custom-position slot 5.
+    This service now writes slot 5 at safety priority (100) and will be removed
+    in a future release — use set_custom_position with slot: 5 instead.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    force_override_sensors:
+      name: Force override sensors
+      description: "Binary sensors that trigger the override (written to slot 5). Empty list = disable."
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+    force_override_position:
+      name: Force override position
+      description: "Position to move to when a sensor is active (0–100%, written to slot 5)."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    force_override_min_mode:
+      name: Minimum position mode
+      description: "If true, treat the position as a minimum floor rather than a fixed target (written to slot 5)."
+      selector:
+        boolean:
+
+set_custom_position:
+  name: Set custom position slot
+  description: >-
+    Update one custom position slot (1–10). A slot is active when it has a
+    trigger (sensors and/or template) and a claim on an axis — a position, or
+    one of the position_max / tilt_min / tilt_max constraints. Only the fields
+    you pass are changed. To retire a slot completely, clear its trigger **and**
+    every axis claim (position, position_max, tilt_min, tilt_max) — or use
+    🗑️ Delete on the Custom Positions options page, which erases the whole slot
+    in one action. Priority 100 gives the slot safety semantics: it acts outside
+    the time window and bypasses delta gates.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    slot:
+      name: Slot
+      description: "Which custom position slot to update (1–5)."
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 1
+          mode: slider
+    sensors:
+      name: Trigger sensors
+      description: "Binary sensors that activate this custom position (OR logic). Empty list = clear."
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+    sensor:
+      name: Trigger sensor (deprecated)
+      description: "DEPRECATED single-sensor alias — use 'sensors'. Ignored when 'sensors' is supplied."
+      selector:
+        entity:
+          domain: binary_sensor
+    template:
+      name: Condition template
+      description: "Optional Jinja2 template; when truthy it activates the slot (combined with the sensors per template_mode)."
+      selector:
+        template:
+    template_mode:
+      name: Template combine mode
+      description: "'or' (default): template OR sensors activate the slot. 'and': template must be truthy AND a sensor on."
+      selector:
+        select:
+          options:
+            - "or"
+            - "and"
+    position:
+      name: Position
+      description: "Target position (0–100%) when the trigger is active. Null = clear slot."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    priority:
+      name: Priority
+      description: "Pipeline priority (1–100, default 77). Higher = evaluated earlier; 100 = safety semantics."
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          mode: slider
+    min_mode:
+      name: Minimum position mode
+      description: "If true, treat position as a minimum floor."
+      selector:
+        boolean:
+    use_my:
+      name: Use Somfy My position
+      description: "If true, use my_position_value instead of position when the trigger is active."
+      selector:
+        boolean:
+    position_max:
+      name: Maximum position
+      description: "Clamp the resolved position down to at most this (0–100%) while the trigger is active. Null = no maximum."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    tilt_min:
+      name: Minimum tilt
+      description: "Clamp the resolved tilt up to at least this (0–100%) while the trigger is active. Null = no minimum."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    tilt_max:
+      name: Maximum tilt
+      description: "Clamp the resolved tilt down to at most this (0–100%) while the trigger is active. Null = no maximum."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    outside_window:
+      name: Keep constraints active outside time window
+      description: >-
+        If true, this slot's min/max constraints (minimum position, position_max,
+        tilt_min, tilt_max) keep clamping after the start/end time window closes,
+        for as long as the trigger stays active. Only the axis you limited moves:
+        an unconstrained carriage is commanded to where the cover already is, and
+        unconstrained slats are sent no command at all. An exact position never
+        acts outside the window, whatever this is set to. A manual override that
+        is still holding the cover defeats this at any priority — the constraints
+        resume when the window reopens.
+      selector:
+        boolean:
+    scope_to_window:
+      name: Only apply within time window
+      description: >-
+        If true, this slot's exact position (or Use My position) stops applying
+        once the start/end time window closes, so the end-of-window position can
+        take over. Off by default, which keeps the slot winning the pipeline all
+        night. Governs the exact-position claim only — whether a min/max bound
+        survives the window is decided by outside_window instead. Priority 100
+        (safety) ignores this: acting outside the window is what that priority
+        means. The end-of-window reposition itself still requires return_sunset.
+      selector:
+        boolean:
+
+set_motion:
+  name: Set occupancy settings (deprecated)
+  description: >-
+    Deprecated — use set_occupancy instead. Update occupancy sensors and
+    occupancy timeout. Pass an empty list to disable occupancy detection. This
+    service keeps working but will be removed in a future major release.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    motion_sensors:
+      name: Occupancy sensors
+      description: "Binary sensors (motion/occupancy/presence device classes) that indicate occupancy. Empty list = disable."
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class:
+            - motion
+            - occupancy
+            - presence
+          multiple: true
+    motion_timeout:
+      name: Occupancy timeout
+      description: "Seconds to wait after occupancy clears before applying the occupancy-timeout position (30–3600)."
+      selector:
+        number:
+          min: 30
+          max: 3600
+          step: 30
+          mode: slider
+          unit_of_measurement: seconds
+
+set_occupancy:
+  name: Set occupancy settings
+  description: >-
+    Update the occupancy sensors, media players, and timeout that drive
+    occupancy detection. Pass an empty list to disable a source. Replaces the
+    deprecated set_motion service.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    occupancy_sensors:
+      name: Occupancy sensors
+      description: "Binary sensors (motion/occupancy/presence device classes) that indicate occupancy. Empty list = disable."
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class:
+            - motion
+            - occupancy
+            - presence
+          multiple: true
+    occupancy_media_players:
+      name: Occupancy media players
+      description: "Media players treated as occupancy — any player that is not off counts as occupied. Empty list = disable."
+      selector:
+        entity:
+          domain: media_player
+          multiple: true
+    occupancy_timeout:
+      name: Occupancy timeout
+      description: "Seconds to wait after occupancy clears before applying the occupancy-timeout position (30–3600)."
+      selector:
+        number:
+          min: 30
+          max: 3600
+          step: 30
+          mode: slider
+          unit_of_measurement: seconds
+
+set_light_cloud:
+  name: Set light & cloud settings
+  description: >-
+    Update weather entity, sunny-state filter, lux/irradiance thresholds,
+    cloud coverage threshold, and the cloud suppression toggle.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    weather_entity:
+      name: Weather entity
+      description: "Weather entity used to read conditions (domain: weather). Null = none."
+      selector:
+        entity:
+          domain: weather
+    weather_state:
+      name: Sunny weather states
+      description: "Weather condition states considered 'sunny' for sun-tracking purposes."
+      selector:
+        select:
+          multiple: true
+          options:
+            - clear-night
+            - clear
+            - cloudy
+            - fog
+            - hail
+            - lightning
+            - lightning-rainy
+            - partlycloudy
+            - pouring
+            - rainy
+            - snowy
+            - snowy-rainy
+            - sunny
+            - windy
+            - windy-variant
+            - exceptional
+    lux_entity:
+      name: Lux sensor
+      description: "Illuminance sensor entity. Null = none."
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    lux_threshold:
+      name: Lux threshold
+      description: "Lux value above which the cover is considered in direct sunlight."
+      selector:
+        number:
+          min: 0
+          max: 100000
+          mode: box
+          unit_of_measurement: lux
+    irradiance_entity:
+      name: Irradiance sensor
+      description: "Solar irradiance sensor entity. Null = none."
+      selector:
+        entity:
+          domain: sensor
+          device_class: irradiance
+    irradiance_threshold:
+      name: Irradiance threshold
+      description: "W/m² above which the cover is considered in direct sunlight."
+      selector:
+        number:
+          min: 0
+          max: 2000
+          mode: box
+          unit_of_measurement: W/m²
+    cloud_coverage_entity:
+      name: Cloud coverage sensor
+      description: "Sensor reporting cloud coverage percentage. Null = none."
+      selector:
+        entity:
+          domain: sensor
+    cloud_coverage_threshold:
+      name: Cloud coverage threshold
+      description: "Cloud coverage percentage above which the sky is considered overcast."
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: box
+          unit_of_measurement: "%"
+    cloud_suppression:
+      name: Enable cloud suppression
+      description: "If true, suppress solar positioning when cloud coverage exceeds the threshold."
+      selector:
+        boolean:
+    cloudy_tilt:
+      name: Cloudy slat angle
+      description: "Slat tilt to set while cloud suppression is holding (0–100%). 0% = slats closed, 100% = slats open. Venetian blinds only; null = leave the slats alone."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    cloud_escalation_delay:
+      name: Open fully after
+      description: "How long cloud suppression may keep holding before the cover opens fully. Not the smoothing hold time: that one decides how fast suppression engages, this one how long it may stay engaged. Null or all zeros = hold for as long as the cloud lasts."
+      selector:
+        duration:
+    is_sunny_sensor:
+      name: Is Sunny binary sensor
+      description: "Binary entity that authoritatively reports sun-on-window. ON = sunny, OFF = cloud suppression fires. Unavailable falls back to weather state. Null = none."
+      selector:
+        entity:
+          domain:
+            - binary_sensor
+            - input_boolean
+            - switch
+            - schedule
+
+set_climate:
+  name: Set climate settings
+  description: >-
+    Update climate mode and related temperature/presence options.
+    Enforces temp_low < temp_high.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    climate_mode:
+      name: Enable climate mode
+      description: "Master toggle for temperature-aware positioning."
+      selector:
+        boolean:
+    temp_entity:
+      name: Indoor temperature entity
+      description: "Climate or sensor entity for indoor temperature. Null = none."
+      selector:
+        entity:
+          domain:
+            - climate
+            - sensor
+    temp_low:
+      name: Low temperature threshold
+      description: "Below this temperature (°), winter strategy applies (0–90)."
+      selector:
+        number:
+          min: 0
+          max: 90
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    temp_high:
+      name: High temperature threshold
+      description: "Above this temperature (°), summer strategy applies (0–90)."
+      selector:
+        number:
+          min: 0
+          max: 90
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    outside_temp:
+      name: Outdoor temperature entity
+      description: "Sensor entity for outdoor temperature. Null = none."
+      selector:
+        entity:
+          domain: sensor
+    outside_threshold:
+      name: Outdoor temperature threshold
+      description: "Outdoor temperature (°) above which summer strategy is forced (0–100)."
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+          unit_of_measurement: "°"
+    presence_entity:
+      name: Presence entity
+      description: "Entity indicating occupancy (device_tracker, zone, binary_sensor, input_boolean). Null = none."
+      selector:
+        entity:
+          domain:
+            - device_tracker
+            - zone
+            - binary_sensor
+            - input_boolean
+    transparent_blind:
+      name: Transparent blind
+      description: "If true, treat the blind as semi-transparent for climate calculations."
+      selector:
+        boolean:
+    winter_close_insulation:
+      name: Close for winter insulation
+      description: "If true, fully close the cover on cold days to improve insulation."
+      selector:
+        boolean:
+    summer_close_bypass_sun_floor:
+      name: Full close in summer heat
+      description: "If true, summer climate-close ignores the sun-in-acceptance-angle minimum floor and reaches the global minimum position."
+      selector:
+        boolean:
+    temp_extreme_heat:
+      name: Extreme heat threshold (outside)
+      description: "Outdoor temperature (°) above which the cover holds a fixed position all day, pre-empting every season strategy. Accepts a number or a Jinja2 template. Omit to leave unchanged."
+      selector:
+        template:
+    extreme_heat_position:
+      name: Extreme heat hold position
+      description: "Position (0–100 %) held during extreme heat. 0 = fully closed/retracted. On tilt covers this is the slat angle."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    tracking_seasons:
+      name: Glare tracking seasons
+      description: "Seasons in which glare-control tracking is allowed to run. In any deselected season the cover returns to its default position instead of tracking the sun. Winter/summer climate actions (heating, insulation, cooling) are unaffected. Defaults to all seasons."
+      selector:
+        select:
+          multiple: true
+          translation_key: tracking_seasons
+          options:
+            - winter
+            - intermediate
+            - summer
+
+set_weather_safety:
+  name: Set weather safety settings
+  description: >-
+    Update wind, rain, and severe-weather override settings. The weather handler
+    priority-overrides automatic control to protect covers from damage.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    weather_bypass_auto_control:
+      name: Bypass automatic control
+      description: "If true, weather override ignores the Automatic Control toggle."
+      selector:
+        boolean:
+    weather_outside_window:
+      name: Act outside the time window
+      description: "If true (default), weather overrides keep acting after the time window closes. Set false to scope weather safety to the configured start/end window."
+      selector:
+        boolean:
+    weather_wind_speed_sensor:
+      name: Wind speed sensor
+      description: "Sensor entity for wind speed. Null = none."
+      selector:
+        entity:
+          domain: sensor
+    weather_wind_direction_sensor:
+      name: Wind direction sensor
+      description: "Sensor entity for wind direction (degrees). Null = none."
+      selector:
+        entity:
+          domain: sensor
+    weather_wind_speed_threshold:
+      name: Wind speed threshold
+      description: "Wind speed above which the cover is retracted (units must match sensor)."
+      selector:
+        number:
+          min: 0
+          max: 200
+          step: 1
+          mode: slider
+    weather_wind_direction_tolerance:
+      name: Wind direction tolerance
+      description: "Degrees either side of the window azimuth within which wind is considered a threat (5–180°)."
+      selector:
+        number:
+          min: 5
+          max: 180
+          step: 5
+          mode: slider
+          unit_of_measurement: "°"
+    weather_rain_sensor:
+      name: Rain sensor
+      description: "Sensor entity for rain accumulation. Null = none."
+      selector:
+        entity:
+          domain: sensor
+    weather_rain_threshold:
+      name: Rain threshold
+      description: "Rain accumulation above which the cover is retracted."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 0.5
+          mode: slider
+    weather_is_raining_sensor:
+      name: Is raining sensor
+      description: "Binary sensor indicating active rain. Null = none."
+      selector:
+        entity:
+          domain: binary_sensor
+    weather_is_windy_sensor:
+      name: Is windy sensor
+      description: "Binary sensor indicating dangerous wind. Null = none."
+      selector:
+        entity:
+          domain: binary_sensor
+    weather_severe_sensors:
+      name: Severe weather sensors
+      description: "Binary sensors that indicate severe weather conditions (OR logic). Empty list = none."
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+    weather_override_position:
+      name: Weather override position
+      description: "Position to move to when a weather condition is triggered (0–100%)."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    weather_override_tilt:
+      name: Weather override tilt
+      description: "Slat tilt to set when a weather condition is triggered (0–100%). Venetian blinds only; null = leave the slats alone."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    weather_override_min_mode:
+      name: Minimum position mode
+      description: "If true, treat weather_override_position as a minimum floor."
+      selector:
+        boolean:
+    weather_timeout:
+      name: Weather clear timeout
+      description: "Seconds to wait after conditions clear before resuming automatic control (0–3600)."
+      selector:
+        number:
+          min: 0
+          max: 3600
+          step: 30
+          mode: slider
+          unit_of_measurement: seconds
+
+set_sun_tracking:
+  name: Set sun tracking settings
+  description: Update azimuth, sun acceptance angle, elevation limits, and sun-tracking toggle.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    enable_sun_tracking:
+      name: Enable sun tracking
+      description: "Master toggle for solar-position-based cover control."
+      selector:
+        boolean:
+    minimize_movements:
+      name: Minimize movements
+      description: "If true, quantize the sun-tracked position into discrete coverage levels (rounding toward more coverage) to reduce motor movements."
+      selector:
+        boolean:
+    max_coverage_steps:
+      name: Maximum coverage steps
+      description: "Number of distinct positions used to reach full coverage when minimize_movements is on (1–10). 1 = jump straight to full coverage."
+      selector:
+        number:
+          min: 1
+          max: 10
+          step: 1
+          mode: slider
+    set_azimuth:
+      name: Window azimuth
+      description: "Compass direction the window faces (0–359°)."
+      selector:
+        number:
+          min: 0
+          max: 359
+          mode: slider
+          unit_of_measurement: "°"
+    fov_left:
+      name: Sun acceptance angle — left
+      description: "Degrees to the left of the azimuth within which the sun affects this cover (0–180°)."
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    fov_right:
+      name: Sun acceptance angle — right
+      description: "Degrees to the right of the azimuth within which the sun affects this cover (0–180°)."
+      selector:
+        number:
+          min: 0
+          max: 180
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    min_elevation:
+      name: Minimum sun elevation
+      description: "Sun elevation (°) below which the cover is not moved. Null = no minimum."
+      selector:
+        number:
+          min: 0
+          max: 90
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    max_elevation:
+      name: Maximum sun elevation
+      description: "Sun elevation (°) above which the cover is fully opened. Null = no maximum."
+      selector:
+        number:
+          min: 0
+          max: 90
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    distance_shaded_area:
+      name: Distance to shaded area
+      description: "Distance from the window to the edge of the shaded area in metres (0.1–50 m, canonical metric regardless of HA locale)."
+      selector:
+        number:
+          min: 0.1
+          max: 50
+          step: 0.1
+          mode: box
+          unit_of_measurement: m
+
+set_blind_spot:
+  name: Set blind spot
+  description: >-
+    Update blind spot zone angles. Angles are signed gamma measured from the
+    window normal (0 = straight ahead, positive toward the left acceptance
+    edge) — the same frame as the sun-acceptance angle. The wedge is
+    -blind_spot_right_gamma ≤ gamma ≤ blind_spot_left_gamma, so
+    blind_spot_left_gamma + blind_spot_right_gamma must be greater than 0.
+    Enforced at validation time.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    blind_spot:
+      name: Enable blind spot
+      description: "If true, the blind spot zone is active."
+      selector:
+        boolean:
+    blind_spot_left_gamma:
+      name: Blind spot left edge (from window normal)
+      description: "Upper (left) edge of the blind spot wedge as signed gamma from the window normal, degrees. Positive = toward the left acceptance edge. Within [-fov_right, fov_left]."
+      selector:
+        number:
+          min: -180
+          max: 180
+          mode: slider
+          unit_of_measurement: "°"
+    blind_spot_right_gamma:
+      name: Blind spot right edge (from window normal)
+      description: "Negated lower (right) edge of the blind spot wedge as signed gamma from the window normal, degrees. The lower gamma edge is -blind_spot_right_gamma. blind_spot_left_gamma + blind_spot_right_gamma must be greater than 0. Within [-fov_left, fov_right]."
+      selector:
+        number:
+          min: -180
+          max: 180
+          mode: slider
+          unit_of_measurement: "°"
+    blind_spot_left:
+      name: Blind spot left edge (deprecated)
+      description: "DEPRECATED (issue #247): legacy left edge measured inward from the left acceptance edge (0–359°). Accepted for back-compat and converted to signed gamma on write. Use blind_spot_left_gamma instead."
+      selector:
+        number:
+          min: 0
+          max: 359
+          mode: slider
+          unit_of_measurement: "°"
+    blind_spot_right:
+      name: Blind spot right edge (deprecated)
+      description: "DEPRECATED (issue #247): legacy right edge measured inward from the left acceptance edge, must be greater than left edge (1–360°). Accepted for back-compat and converted to signed gamma on write. Use blind_spot_right_gamma instead."
+      selector:
+        number:
+          min: 0
+          max: 360
+          mode: slider
+          unit_of_measurement: "°"
+    blind_spot_elevation:
+      name: Blind spot elevation
+      description: "Sun elevation (°) threshold for the blind spot. Null = always apply."
+      selector:
+        number:
+          min: 0
+          max: 90
+          step: 1
+          mode: slider
+          unit_of_measurement: "°"
+    blind_spot_elevation_mode:
+      name: Blind spot elevation mode
+      description: >-
+        Which side of the elevation threshold the blind spot covers. 'below'
+        (default) blocks LOW sun (sol_elev ≤ threshold) — a tree or roof
+        overhang. 'above' blocks HIGH sun (sol_elev ≥ threshold) — an overhead
+        obstacle like a balcony or deep recess.
+      selector:
+        select:
+          options:
+            - below
+            - above
+
+set_interpolation:
+  name: Set interpolation
+  description: Enable position interpolation and configure the start/end range and lookup table.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    interp:
+      name: Enable interpolation
+      description: "If true, apply interpolation mapping to the calculated position."
+      selector:
+        boolean:
+    interp_start:
+      name: Interpolation start
+      description: "Calculated position (%) at which interpolation begins. Null = none."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    interp_end:
+      name: Interpolation end
+      description: "Calculated position (%) at which interpolation ends. Null = none."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    interp_list:
+      name: Interpolation input list
+      description: "List of input positions (strings) for the interpolation lookup table."
+      selector:
+        text:
+    interp_list_new:
+      name: Interpolation output list
+      description: "List of output positions (strings) mapped from interp_list."
+      selector:
+        text:
+
+set_geometry:
+  name: Set geometry
+  description: >-
+    Update cover geometry dimensions. Supply only the fields applicable to your
+    cover type (vertical blind, awning, or tilt). Invalid cross-type fields are
+    rejected with an error message.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    window_height:
+      name: Window height
+      description: "Window height in metres (0.1–50 m, canonical metric regardless of HA locale). Vertical blind and awning only."
+      selector:
+        number:
+          min: 0.1
+          max: 50
+          step: 0.01
+          mode: box
+          unit_of_measurement: m
+    window_width:
+      name: Window width
+      description: "Window width in metres (0.1–50 m, canonical metric regardless of HA locale). Vertical blind only."
+      selector:
+        number:
+          min: 0.1
+          max: 50
+          step: 0.01
+          mode: box
+          unit_of_measurement: m
+    window_depth:
+      name: Window depth
+      description: "Window reveal depth in metres (0–5 m, canonical metric regardless of HA locale). Vertical blind only."
+      selector:
+        number:
+          min: 0
+          max: 5.0
+          step: 0.01
+          mode: slider
+          unit_of_measurement: m
+    sill_height:
+      name: Sill height
+      description: "Window sill height from floor in metres (0–50 m, canonical metric regardless of HA locale). Vertical blind only."
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 0.01
+          mode: box
+          unit_of_measurement: m
+    length_awning:
+      name: Awning length
+      description: "Awning projection length in metres (0.3–6 m, canonical metric regardless of HA locale). Awning only."
+      selector:
+        number:
+          min: 0.3
+          max: 6
+          step: 0.01
+          mode: slider
+          unit_of_measurement: m
+    angle:
+      name: Awning angle
+      description: "Awning tilt angle in degrees (0–45°). Awning only."
+      selector:
+        number:
+          min: 0
+          max: 45
+          mode: slider
+          unit_of_measurement: "°"
+    slat_depth:
+      name: Slat depth
+      description: "Venetian slat depth in centimetres (0.1–50 cm, canonical metric regardless of HA locale). Tilt only."
+      selector:
+        number:
+          min: 0.1
+          max: 50
+          step: 0.1
+          mode: slider
+          unit_of_measurement: cm
+    slat_distance:
+      name: Slat distance
+      description: "Distance between venetian slats in centimetres (0.1–50 cm, canonical metric regardless of HA locale). Tilt only."
+      selector:
+        number:
+          min: 0.1
+          max: 50
+          step: 0.1
+          mode: slider
+          unit_of_measurement: cm
+    tilt_mode:
+      name: Tilt mode
+      description: "Slat angle calculation mode. Tilt only."
+      selector:
+        select:
+          options:
+            - mode1
+            - mode2
+            - specify_angles
+    tilt_angle_0:
+      name: Tilt angle at 0%
+      description: "Raw slat angle when the cover reports 0% tilt: 0° closed downward, 90° horizontal, 180° closed upward."
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: 1
+          mode: box
+          unit_of_measurement: "°"
+    tilt_angle_100:
+      name: Tilt angle at 100%
+      description: "Raw slat angle when the cover reports 100% tilt: 0° closed downward, 90° horizontal, 180° closed upward."
+      selector:
+        number:
+          min: 0
+          max: 360
+          step: 1
+          mode: box
+          unit_of_measurement: "°"
+    tilt_horizontal_percent:
+      name: Tilt percentage at horizontal
+      description: >-
+        Optional third calibration point: the tilt percentage reported when the
+        slats are exactly horizontal (90°). 0 disables it and the scale runs
+        straight from tilt_angle_0 to tilt_angle_100. Requires tilt_angle_0 and
+        tilt_angle_100 to sit on opposite sides of 90°.
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: box
+          unit_of_measurement: "%"
+
+set_venetian:
+  name: Set venetian options
+  description: >-
+    Update venetian-blind specific options: operating mode, tilt skip threshold,
+    and post-settle hold. Applicable to venetian cover types only.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    venetian_mode:
+      name: Venetian mode
+      description: "Operating mode: 'position_and_tilt' (move carriage then tilt) or 'tilt_only' (tilt only, no carriage movement)."
+      selector:
+        select:
+          options:
+            - position_and_tilt
+            - tilt_only
+    venetian_tilt_skip_above:
+      name: Tilt skip above (%)
+      description: "Skip tilt commands when carriage position exceeds this value (0–100%). Set to 100 to always tilt."
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
+    venetian_post_settle_hold:
+      name: Post-settle hold (s)
+      description: "Seconds to wait after carriage stops before sending the tilt command (0.0–10.0 s). Raise to 4–6 s for KNX FGR223 firmware."
+      selector:
+        number:
+          min: 0.0
+          max: 10.0
+          step: 0.1
+          mode: slider
+          unit_of_measurement: s
+    venetian_backrotate_publish_lag:
+      name: Publish-lag window (s)
+      description: "Seconds the integration tolerates a late position/tilt-state publish from the actuator before treating it as a user touch (15–180 s). Default 45 s. Raise to 60–120 s for slow KNX bus or Fibaro/Shelly republish; tighten only for unusually fast actuators."
+      selector:
+        number:
+          min: 15.0
+          max: 180.0
+          step: 1
+          mode: slider
+          unit_of_measurement: s
+
+set_option:
+  name: Set option (generic)
+  description: >-
+    Generic escape hatch — update any single supported option by key name.
+    Identity keys (name, mode, group, linked_device_id) are rejected.
+    See the integration documentation for the full list of supported option keys.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    option:
+      name: Option key
+      description: "The internal option key to update (e.g. 'default_percentage', 'sunset_position')."
+      required: true
+      selector:
+        text:
+    value:
+      name: Value
+      description: "New value for the option. Pass null to clear an optional field."
+      required: true
+      selector:
+        text:
+
+get_diagnostics:
+  name: Get diagnostics
+  description: >-
+    Returns the live diagnostics snapshot for the targeted Adaptive Cover Pro
+    instances — pipeline decision trace, cover positions, climate readings, sun
+    data, and coordinator health. Designed to be called from the ACP Lovelace
+    card via hass.callService(..., { return_response: true }).
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: >-
+        Explicit config entry id(s) to query. When omitted, standard target
+        (entity / device / area) selection applies. No target at all returns
+        all ACP instances.
+      selector:
+        config_entry:
+          integration: adaptive_cover_pro
+
+get_troubleshooting:
+  name: Get troubleshooting
+  description: >-
+    Returns the Troubleshoot step's triage findings for the targeted Adaptive
+    Cover Pro instances as structured data, plus the rendered report text.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: >-
+        Explicit config entry id(s) to query. When omitted, standard target
+        (entity / device / area) selection applies. No target at all returns
+        all ACP instances.
+      selector:
+        config_entry:
+          integration: adaptive_cover_pro
+
+group_activate_scene:
+  name: "Group: activate scene"
+  description: >-
+    Activates a scene on the targeted cover groups. Scenes ride each member's
+    pipeline (weather safety and member safety still win). Pass "auto" to
+    release the group's scene claim so members return to their own automation.
+    With no target, acts on all cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    scene:
+      name: Scene
+      description: The scene to activate, or "auto" to release the claim.
+      required: true
+      selector:
+        select:
+          options:
+            - "auto"
+            - "all_open"
+            - "all_closed"
+            - "privacy"
+
+group_set_position:
+  name: "Group: set position"
+  description: >-
+    Moves every member of the targeted cover groups to the given position as a
+    user command (member manual-override engagement and floor clamps apply,
+    like dragging the group cover). With no target, acts on all cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    position:
+      name: Position
+      description: >-
+        Position (0-100%) to move member covers to. 0% = closed (blinds
+        lowered / awning retracted), 100% = open (blinds raised / awning
+        extended).
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    tilt:
+      name: Tilt
+      description: Optional slat tilt (0-100%) fanned out on the tilt axis.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+
+group_lock:
+  name: "Group: lock"
+  description: >-
+    Freezes every member of the targeted cover groups in place at safety
+    priority. A member's own safety trigger still wins ties. With no target,
+    locks all cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+group_unlock:
+  name: "Group: unlock"
+  description: >-
+    Releases the group lock on the targeted cover groups. An active scene is
+    re-applied; otherwise members return to their own automation. With no
+    target, unlocks all cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+group_clear_overrides:
+  name: "Group: clear member overrides"
+  description: >-
+    Clears manual overrides on every ACP member of the targeted cover groups
+    and resends each member's pipeline position. With no target, acts on all
+    cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+group_stop:
+  name: "Group: stop"
+  description: >-
+    Stops every member cover of the targeted cover groups mid-travel. With no
+    target, acts on all cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+
+group_set_automation:
+  name: "Group: set automation"
+  description: >-
+    Bulk-enables or disables sun-tracking automation on every ACP member of
+    the targeted cover groups. With no target, acts on all cover groups.
+  target:
+    entity:
+      integration: adaptive_cover_pro
+  fields:
+    enabled:
+      name: Enabled
+      description: True to enable member automation, false to disable it.
+      required: true
+      selector:
+        boolean:

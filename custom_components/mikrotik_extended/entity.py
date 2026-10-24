@@ -87,15 +87,33 @@ def _same_text(left, right) -> bool:
     return left is not None and right is not None and str(left).lower() == str(right).lower()
 
 
+POE_PORT_CONTROLS = frozenset({"MikrotikPoeSelect", "MikrotikPoePowerCycleButton"})
+
+
 def _skip_non_poe_port(entity_description, item) -> bool:
-    """Only a port that can actually supply power gets a PoE selector.
+    """Only a port that can actually supply power gets the PoE controls.
 
     Ports without the capability report a placeholder instead of a mode, so
-    creating a selector for them would offer a control that does nothing.
+    creating a selector or a power cycle button for them would offer a
+    control that does nothing.
     """
-    if entity_description.func != "MikrotikPoeSelect":
+    if entity_description.func not in POE_PORT_CONTROLS:
         return False
-    return item.get("poe-out") in (None, "", "N/A", "unknown")
+    return not _has_poe(item)
+
+
+def _has_poe(item) -> bool:
+    return item.get("poe-out") not in (None, "", "N/A", "unknown")
+
+
+def _waits_for_poe_reading(entity_description, item) -> bool:
+    """A PoE measurement sensor needs a port that has measured something.
+
+    Not every port that supplies power also measures it, and the router sends
+    the readings only while it does. Until a port has sent one, a sensor for
+    it would be a number that never arrives.
+    """
+    return entity_description.func == "MikrotikPoeSensor" and not item.get("poe-metered")
 
 
 def _skip_interface_entity(config_entry, entity_description) -> bool:
@@ -261,6 +279,10 @@ async def async_add_entities(hass: HomeAssistant, config_entry: ConfigEntry, dis
         elif entity is not None:
             await _try_re_enable_entity(platform, entity_registry, entity, entity_id, obj, config_entry)
 
+    def _is_registered(obj, uid: str) -> bool:
+        unique_id = _build_unique_id(config_entry.entry_id, obj, uid)
+        return er.async_get(hass).async_get_entity_id(platform.domain, DOMAIN, unique_id) is not None
+
     async def _process_singleton(coordinator, entity_description, data) -> None:
         if data.get(entity_description.data_attribute) is None:
             return
@@ -280,6 +302,12 @@ async def async_add_entities(hass: HomeAssistant, config_entry: ConfigEntry, dis
             if func is None:
                 continue
             obj = func(coordinator, entity_description, uid)
+            # A port that is switched off sends no reading, also right after a
+            # restart. A sensor that already exists is kept through that, or
+            # the orphan cleanup below would remove it and its history link.
+            # A port that can no longer supply power loses them like any other.
+            if _waits_for_poe_reading(entity_description, data[uid]) and not (_has_poe(data[uid]) and _is_registered(obj, uid)):
+                continue
             await async_check_exist(obj, uid)
 
     @callback

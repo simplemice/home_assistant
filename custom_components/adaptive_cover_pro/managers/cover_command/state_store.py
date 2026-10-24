@@ -1,0 +1,500 @@
+"""Pure data shapes for cover_command's per-entity state.
+
+These dataclasses are the contract between the orchestrator
+(:class:`CoverCommandService`) and the cover-positioning lifecycle
+(reconciliation, manual override, diagnostics).
+
+Keeping them in a leaf module — no imports from the rest of the package —
+breaks any latent circular-import risk and makes it cheap for managers,
+diagnostics, and tests to depend on the shapes without dragging in the
+whole service.
+
+Today this file holds the dataclasses only. The companion
+``EntityStateStore`` wrapper that owns the ``dict[str, PerEntityState]``
+and the typed accessor methods is still on :class:`CoverCommandService`;
+extracting it is the natural follow-up once the rest of the seams have
+moved.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import datetime as dt
+from collections.abc import Mapping
+from typing import Any
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class TravelCalibration:
+    """One entity's row in the ``travel_time_calibration`` option table.
+
+    The typed view of what is persisted as plain JSON in ``config_entry.options``
+    (shape documented at ``const.CONF_TRAVEL_TIME_CALIBRATION``). Everything that
+    reads or writes a row — the calibrator, the options flow's manual-entry step,
+    the diagnostic sensor, :func:`build_travel_plan` — goes through this class, so
+    the key names have exactly one definition instead of a string literal per
+    call site.
+
+    ``source`` records whether the numbers were measured or typed in by hand. It
+    is DISPLAY-ONLY: no behaviour may branch on it. A manual row is a first-class
+    calibration — for an ``assumed_state`` cover it is the only one obtainable —
+    and treating it as second-rate is how the feature stops working for the covers
+    that need it most.
+
+    ``open_seconds`` / ``close_seconds`` are ``None`` on a manual row, which
+    carries a single headline figure and no per-leg detail.
+    """
+
+    full_travel_seconds: float
+    open_seconds: float | None = None
+    close_seconds: float | None = None
+    start_delay_seconds: float = 0.0
+    calibrated_at: str | None = None
+    source: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialise for ``config_entry.options`` (plain JSON, no dataclasses)."""
+        return dataclasses.asdict(self)
+
+    @classmethod
+    def from_dict(cls, raw: Mapping[str, Any]) -> TravelCalibration | None:
+        """Build from a stored row, or ``None`` if it is unusable.
+
+        Tolerant by design: this reads user-editable persisted config that an
+        older build, a hand-edited ``.storage`` file, or a partially-written row
+        could leave malformed. A row without a usable ``full_travel_seconds`` is
+        dropped rather than raising — a missing ramp is a cosmetic loss, and
+        taking down the command path over one is not a trade worth making.
+        """
+        try:
+            full = float(raw["full_travel_seconds"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        if full <= 0:
+            return None
+
+        def _leg(key: str) -> float | None:
+            value = raw.get(key)
+            if value is None:
+                return None
+            try:
+                seconds = float(value)
+            except (TypeError, ValueError):
+                return None
+            return seconds if seconds > 0 else None
+
+        try:
+            delay = max(0.0, float(raw.get("start_delay_seconds") or 0.0))
+        except (TypeError, ValueError):
+            delay = 0.0
+
+        return cls(
+            full_travel_seconds=full,
+            open_seconds=_leg("open_seconds"),
+            close_seconds=_leg("close_seconds"),
+            start_delay_seconds=delay,
+            calibrated_at=raw.get("calibrated_at"),
+            source=raw.get("source"),
+        )
+
+    def seconds_for(self, *, rising: bool) -> float:
+        """Full-sweep seconds for a move in this direction.
+
+        ``rising`` is in WIRE space — the raw ``current_position`` number going
+        up — matching ``transit._TRANSIT_WIRE_SIGN``, because that is the frame
+        the legs were measured in. A caller holding an open-percent direction on
+        an inverse-state install must flip it before asking (the #993 bug class).
+
+        Falls back to the averaged figure whenever the relevant leg is absent,
+        which is every manual row.
+        """
+        leg = self.open_seconds if rising else self.close_seconds
+        return leg if leg is not None else self.full_travel_seconds
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class TravelPlan:
+    """Where a cover should appear to be, at any instant of an in-flight move.
+
+    Recorded when a position command is dispatched and cleared when the entity
+    stops ``waiting``. Consumers render from it rather than being fed a ticking
+    value: two state writes per move instead of a sub-second loop, and a card can
+    interpolate at whatever framerate it draws at.
+
+    ``start_delay_seconds`` is not padding. Several actuator families (Somfy IO
+    via Tahoma is the documented one — see
+    ``VENETIAN_POSITION_SETTLE_STARTUP_GRACE_SECONDS``) sit still for seconds
+    after accepting a command. Folding that dead time into the ramp starts every
+    animation early and lands it late; holding at the origin for it does not.
+    """
+
+    from_position: int
+    to_position: int
+    started_at: dt.datetime
+    start_delay_seconds: float
+    duration_seconds: float
+
+    def position_at(self, now: dt.datetime) -> int:
+        """Modelled position at ``now``, clamped to the move's own endpoints.
+
+        Never overshoots and never runs backwards: before the actuator is due to
+        move this is the origin, after the move is due to finish it is the
+        target. A cover that stalls mid-travel will therefore be reported as
+        arrived — the estimate is a model, and this is the direction in which it
+        is wrong.
+        """
+        elapsed = (now - self.started_at).total_seconds()
+        if elapsed <= self.start_delay_seconds:
+            return self.from_position
+        if self.duration_seconds <= 0:
+            return self.to_position
+        progress = min(
+            1.0, (elapsed - self.start_delay_seconds) / self.duration_seconds
+        )
+        return round(
+            self.from_position + (self.to_position - self.from_position) * progress
+        )
+
+    def as_payload(self) -> dict[str, Any]:
+        """JSON-safe projection for the sensor attribute / diagnostics.
+
+        The companion card's wire contract. ``started_at`` is ISO text because
+        the value is handed to HA's state machine, which will not carry a
+        ``datetime`` through a recorder round-trip.
+        """
+        return {
+            "from": self.from_position,
+            "to": self.to_position,
+            "started_at": self.started_at.isoformat(),
+            "start_delay_seconds": self.start_delay_seconds,
+            "duration_seconds": self.duration_seconds,
+        }
+
+
+def build_travel_plan(
+    raw: Mapping[str, Any] | None,
+    *,
+    from_position: int | None,
+    to_position: int | None,
+    started_at: dt.datetime,
+    span: int,
+) -> TravelPlan | None:
+    """Derive the ramp for one dispatched move, or ``None`` when it can't be.
+
+    Returns ``None`` — meaning "no animation for this move", never an exception —
+    for an uncalibrated cover, an unknown origin, a zero-length move, or a
+    degenerate axis span. Every caller is on the command-dispatch path, where a
+    missing cosmetic surface must not become a failed command.
+
+    ``span`` is the axis's own ``value_max - value_min``, not a literal 100: the
+    calibration measured a full sweep of THAT axis, so the fraction of it this
+    move covers has to be taken against the same range.
+    """
+    calibration = TravelCalibration.from_dict(raw) if raw else None
+    if calibration is None or from_position is None or to_position is None:
+        return None
+    delta = to_position - from_position
+    if delta == 0 or span <= 0:
+        return None
+    seconds = calibration.seconds_for(rising=delta > 0)
+    return TravelPlan(
+        from_position=from_position,
+        to_position=to_position,
+        started_at=started_at,
+        start_delay_seconds=calibration.start_delay_seconds,
+        duration_seconds=seconds * abs(delta) / span,
+    )
+
+
+@dataclasses.dataclass(slots=True)
+class PerEntityState:
+    """Per-entity positioning state owned by CoverCommandService.
+
+    Replaces a fan of parallel dicts/sets keyed by entity_id. The service
+    holds a single dict[str, PerEntityState]; an entity has no state until
+    apply_position / send_my_position records one.
+
+    `target` and `sent_at` use ``None`` to mean "absent" — preserving the
+    "key not in dict" semantics of the previous parallel-dict design.
+
+    """
+
+    target: int | None = None
+    # Opaque provenance stamp for ``target``, minted by the cover-type policy
+    # (``CoverTypePolicy.capture_dispatch_token``) at the moment the command was
+    # booked and handed straight back to that policy when the target is later
+    # re-sent (issue #1115). It describes HOW the dispatch that produced
+    # ``target`` expressed it — a Model C day/night middle rail's inversion
+    # frame, say — which a policy asked to re-gate a resend cannot re-derive:
+    # its own per-cycle cache belongs to the last RESOLUTION, and one
+    # resolve-then-skip cycle is enough to make the two disagree. Written and
+    # cleared by exactly the statements that write and clear ``target`` so the
+    # two can never drift apart. NEVER interpreted by this manager: it stores
+    # and replays the value and nothing else (no cover-type knowledge here).
+    # ``None`` means "no dispatch provenance recorded" — every policy that does
+    # not need one, plus every target no dispatch produced: rehydrated after a
+    # reload, observed on the cover from outside, or the user's configured My
+    # percent, which ``stop_cover`` puts on the wire without a position for any
+    # frame to describe.
+    dispatch_token: Any = None
+    sent_at: dt.datetime | None = None
+    # The raw axis value read at the moment ``target`` was dispatched (issue
+    # #1139) — the SAME ``prior_position`` value both ``sent_at`` writers
+    # (``CoverCommandService._prepare_service_call``,
+    # ``CoverCommandService.send_my_position``) already compute, stamped in
+    # the same breath. Lets ``StateClassifier`` distinguish "this cover has
+    # not reacted to the command at all" (still resting exactly where it
+    # stood at dispatch) from "this cover moved, then stalled somewhere
+    # else" — the #172/#518 guard tests hinge on exactly that distinction;
+    # see the equal-distance arm in ``state_classifier.py``. ``None`` means
+    # "no dispatch origin recorded": every row before its first command, and
+    # every target ``restore_target`` rehydrates after a reload (a
+    # rehydration is not a dispatch, so it must not let the classifier
+    # suppress a clear). Read only by ``StateClassifier``, via
+    # ``CoverCommandService.get_position_at_send`` — dropped with the whole
+    # row by ``discard_target``, no bespoke clearing needed.
+    position_at_send: int | None = None
+    waiting: bool = False
+    last_progress_at: dt.datetime | None = None
+    retry_count: int = 0
+    gave_up: bool = False
+    # Whether ``target`` above is a safety-protected number — the question both
+    # readers ask: ``clear_non_safety_targets()`` decides whether to sweep
+    # ``target``, and ``run_reconciliation_pass`` steps 3/4 decide whether to
+    # resend it with automatic control off or outside the time window. Both
+    # ignore a row whose ``target`` is None. It is a verdict ABOUT the booked
+    # number, which is what makes its lifetime differ from ``dispatch_token``'s
+    # just above: the token describes how one dispatch expressed the value, the
+    # verdict describes what is protecting it.
+    #
+    # "About the booked number" is the INTENT, not an invariant this dataclass
+    # enforces. Two writers keep the pair in step by construction:
+    # ``_prepare_service_call``, which books and stamps in the same breath on
+    # every real dispatch, and ``_record_safety_verdict``, which the three
+    # ``apply_position`` gates that skip WITHOUT dispatching all call — revoke
+    # unconditionally, grant only when the booked target is the number that
+    # cycle routed to, never inside a booking's value-change guard. That rule
+    # and the failure behind each half are argued on the helper (#1165).
+    # ``revoke_safety_verdicts()`` adds no third writer: it is that same
+    # unconditional revoke applied to every row at once, leaving every
+    # ``target`` exactly where it was. Two callers, each of which has already
+    # established instance-wide that no safety verdict is live — the
+    # Integration-Enabled kill switch / ``emergency_stop`` (paired with
+    # ``clear_non_safety_targets()``), and the coordinator's closed-clock
+    # cycle that admits nothing (#1311), where ``apply_position`` is never
+    # reached so neither writer above can run. Leaving ``target`` alone is the
+    # deliberate choice there: the licence is what let reconciliation step 4
+    # resend overnight, and revoking it is enough to stop that — un-booking the
+    # number as well would throw away the at-target/diagnostics answer for a
+    # row nobody is allowed to resend anyway, and would differ from the row
+    # shape a cycle that HAD reached a hysteresis gate leaves behind.
+    #
+    # Every site that revokes rather than decides — ``_record_safety_verdict``'s
+    # unconditional half at the three hysteresis gates, and both callers of
+    # ``revoke_safety_verdicts`` — funnels through the one private
+    # ``_revoke_safety_verdict`` write, so the "unconditional, target
+    # untouched" rule cannot drift between them. (``_prepare_service_call``
+    # is not one of them: it assigns this cycle's verdict either way, as part
+    # of booking, rather than taking a licence away.)
+    #
+    # FOUR other sites write ``target`` and leave the verdict exactly as they
+    # found it, so a row can pair a fresh target with an older decision's
+    # verdict:
+    #
+    # * ``CoverCommandService.restore_target`` — rehydration after a reload.
+    # * ``CoverCommandService.send_my_position`` — books the configured My
+    #   percent (no production caller today).
+    # * ``coordinator.py``'s ``async_apply_user_stop`` (external-stop -> My)
+    #   books below an unconditional ``mark_user_command``, so
+    #   ``run_reconciliation_pass`` step 2 drops the entity under manual
+    #   override before it ever reads this field — the inherited verdict is
+    #   inert there. Its sibling, ``async_check_cover_service_call``, used to
+    #   share this gap: it booked whether or not ``handle_stop_service_call``
+    #   engaged the override, so an untracked cover, or one the #875
+    #   wait-for-target gate declined, booked with no override behind it.
+    #   Fixed (#1225): that site now calls the public
+    #   ``revoke_safety_verdict(entity_id)`` wrapper unconditionally alongside
+    #   its ``set_target`` — an external stop is a user action, not a safety
+    #   decision, so it is a pure revoke, never a grant.
+    # * ``cover_types/venetian/sequencer.py``'s carriage rebase — pushes the
+    #   observed carriage position back through ``set_commanded_position``
+    #   (== ``set_target``) after a tilt-only send back-drives it.
+    #
+    # Today's blast radius is small, but the inheritance is real, and it is why
+    # ``_record_safety_verdict`` declines to GRANT on a row with nothing
+    # booked: an unbooked True is inert against both readers, yet any of the
+    # four would hand it straight to the next target.
+    #
+    # A reconciliation resend RESTATES the recorded value rather than
+    # re-deciding it (#1134), because a resend makes no new verdict.
+    is_safety: bool = False
+    # Whether ``target`` above was booked under an ADMITTED outside-the-clock-
+    # window constraint (issue #943 item B) — an opted-in Custom Position slot
+    # whose min/max bound actually clamped that cycle. One reader:
+    # ``run_reconciliation_pass`` step 4, which resends a licensed target while
+    # the user's clock window is closed.
+    #
+    # A SEPARATE field from ``is_safety`` above, deliberately. Reusing that one
+    # would hand a constraint dispatch every other licence safety carries —
+    # surviving ``clear_non_safety_targets()``, resending with automatic control
+    # off — and reopening #1165's stale-verdict class in the process. The two
+    # never co-write: ``is_safety`` keeps the writers documented above, and this
+    # field has exactly one writer of its own (``_prepare_service_call``, from
+    # ``PositionContext.outside_window_constraint``) and one sweeper
+    # (``clear_outside_window_targets``, on the coordinator's non-admitted
+    # outside-window cycle). ``discard_target`` drops both with the whole row on
+    # the manual-override edge.
+    #
+    # Never restored after a reload: ``restore_target`` rehydrates the number
+    # without the licence, because the licence is a live-cycle verdict and the
+    # first-refresh admission re-establishes it from a fresh result.
+    outside_window_constraint: bool = False
+    last_reconcile_at: dt.datetime | None = None
+    # Display-only assumed position (issue #888). Set on covers with no native
+    # position axis (Somfy-RTS-style open/close-only) when ACP drives them — an
+    # ACP My move or an external stop that engaged the #875 override. A pure
+    # fallback the reported-position surfaces return ONLY when the live HA read
+    # is None; NEVER consulted by the command-dispatch gates (§3b).
+    assumed_position: int | None = None
+    # Synthetic travel direction for no-feedback covers. Set alongside
+    # ``waiting`` on open/close-only covers (Somfy-RTS-style: no position, no
+    # opening/closing state) so the companion card can render "Opening…" /
+    # "Closing…" during ACP's transit-timeout window. Values: ``"opening"``,
+    # ``"closing"``, or ``None``. Computed in the non-inverted display frame
+    # (100=open, 0=closed) and cleared whenever ``waiting`` clears — the
+    # ``transit_states()`` surface is gated on ``waiting`` so it disappears
+    # exactly when the transit window closes.
+    transit_direction: str | None = None
+    # Position-vs-time model for the move currently in flight, or None. Written
+    # at the same dispatch chokepoint as ``transit_direction`` and cleared by the
+    # same ``_clear_waiting``, so the two cannot drift out of step: both describe
+    # the transit window and both must vanish when it closes. Present only for
+    # covers with a travel-time calibration (measured or manual).
+    travel_plan: TravelPlan | None = None
+    # Anti-relay latch for full-mechanical-endpoint forcing (issue #897). Holds
+    # the endpoint (0 or 100) that ``apply_position`` last force-routed via
+    # close_cover/open_cover. Read BEFORE computing force_endpoint and written
+    # only after a successful send, so a cover that never reports the mechanical
+    # state (state stays "open" at 2%) is forced exactly once instead of
+    # relay-clicking every cycle (#507 preserved). Cleared when a non-endpoint
+    # move fires; a flip to the other endpoint re-fires because the latched
+    # value differs from the new target.
+    forced_endpoint: int | None = None
+    # One-shot latch for the configured min/max position limit (issue #1350),
+    # the same shape as ``forced_endpoint`` above but for a DIFFERENT
+    # permanent bypass: PR #763 (#474) added the active min/max limit to
+    # ``build_special_positions`` so a cover could reach its configured floor
+    # or ceiling even when the last step is under ``CONF_DELTA_POSITION``.
+    # That membership test is stateless, so on hardware that settles a point
+    # or two off the commanded limit (e.g. a coupled venetian whose tilt
+    # back-drives the carriage) it re-fires every update cycle forever.
+    # Holds the limit value ``apply_position`` last dispatched to. Read
+    # BEFORE the delta-gate call to drop the target from the effective
+    # special-positions list once already latched, and written only after a
+    # successful send, so the limit is snapped to exactly once per approach
+    # and ``CONF_DELTA_POSITION`` resumes ownership afterward. Cleared
+    # whenever a dispatch lands on a position that is NOT one of
+    # ``PositionContext.limit_positions``; a later approach to a limit (the
+    # same one, or the other one after a floor/ceiling flip) re-fires because
+    # the latched value differs from the new target.
+    snapped_limit: int | None = None
+
+    @property
+    def acts_outside_clock_window(self) -> bool:
+        """Whether this booked target may be resent outside the clock window.
+
+        The per-entity half of the shared admission rule. It reaches the SAME
+        predicate ``PipelineResult.acts_outside_clock_window`` does, which is
+        the point: the live result and the booked record answer the question in
+        different shapes and at different times, but the rule itself exists once
+        (CODING_GUIDELINES § No Duplication).
+        """
+        # Local import keeps this a leaf module at import time.
+        from ...pipeline.axis_constraints import (  # noqa: PLC0415
+            may_act_outside_clock_window,
+        )
+
+        return may_act_outside_clock_window(
+            is_safety=self.is_safety,
+            constraint_admitted=self.outside_window_constraint,
+        )
+
+
+@dataclasses.dataclass
+class PositionContext:
+    """Context passed to apply_position() describing current coordinator state.
+
+    The coordinator builds this each time it wants to move a cover, passing in
+    all the contextual flags that govern whether the command should actually be
+    sent. CoverCommandService uses these instead of reaching back into the
+    coordinator.
+
+    """
+
+    auto_control: bool
+    manual_override: bool
+    sun_just_appeared: bool
+    min_change: int
+    time_threshold: int
+    special_positions: list[int]
+    inverse_state: bool = False
+    force: bool = False  # Skip delta/time/manual_override gates (NOT auto_control)
+    is_safety: bool = (
+        False  # Safety-critical target (persists across window boundaries; bypasses auto_control)
+    )
+    # This cycle's outside-the-clock-window constraint admission (issue #943
+    # item B) — set by the coordinator from
+    # ``PipelineResult.outside_window_constraint_active``. Stamped onto
+    # ``PerEntityState.outside_window_constraint`` at the single booking site so
+    # reconciliation may resend the licensed target overnight. Strictly narrower
+    # than ``is_safety``: it grants the clock crossing and nothing else.
+    outside_window_constraint: bool = False
+    # The always-enforced min/max position limits for this cycle (issue
+    # #1350), built once by ``build_limit_positions(options)`` — the same
+    # values ``build_special_positions`` folds into ``special_positions``
+    # above. Read by ``apply_position`` alongside ``PerEntityState.snapped_limit``
+    # to narrow the limit's delta-gate bypass from "every cycle" to "once per
+    # approach": a target in this list whose ``snapped_limit`` already
+    # matches it is dropped from the effective special-positions list before
+    # the delta gate runs, so ``CONF_DELTA_POSITION`` resumes ownership after
+    # the first successful send. Empty list (not ``None``) is the "no
+    # always-enforced limit configured" case, matching ``special_positions``'
+    # own convention. ``default_factory=list`` keeps every existing
+    # construction site (tests included) unchanged.
+    limit_positions: list[int] = dataclasses.field(default_factory=list)
+    bypass_auto_control: bool = (
+        False  # Sanctioned one-shot bypass of auto_control gate (e.g. switch return-to-default)
+    )
+    user_command: bool = (
+        # An explicit user-initiated command (card Open/Close/Set, set_position /
+        # set_axes service, My button). Unlike the generic ``force`` flag — which
+        # recurring resends (custom_position, override-clear) also set and which
+        # MUST stay deduped by the same-position gate to avoid relay clicks
+        # (issue #290) — a user command must ALWAYS dispatch, even when ACP's raw
+        # view already matches the target. On a no-feedback cover ACP cannot know
+        # the true position, so it must trust the user (issue #900).
+        False
+    )
+    use_my_position: bool = (
+        False  # Route through send_my_position() on non-position-capable covers
+    )
+    # Secondary-axis target (e.g. tilt for venetian blinds). The owning
+    # cover-type policy reads it inside ``after_position_command`` to decide
+    # whether and how to chase the position command with a second service
+    # call. ``None`` means "no secondary axis on this update cycle".
+    tilt: int | None = None
+    # The cover-type policy in effect. ``apply_position`` calls
+    # ``policy.after_position_command`` once the position service has fired so
+    # dual-axis covers can run their settle+tilt sequence without leaking the
+    # logic into this shared service.
+    policy: Any = None
+    # Set by the owning cover-type policy (venetian) when BOTH axes target the
+    # same full mechanical endpoint (0/0 or 100/100). Cover-type-agnostic: the
+    # manager only honors the bool, never inspects cover type. Issue #755.
+    full_endpoint_target: bool = False
+    # Winning pipeline control method for this update cycle. Populated by the
+    # coordinator from the PipelineResult; cover-type-agnostic (concrete type
+    # ControlMethod | None, consumed by the owning policy's command hooks — e.g.
+    # the venetian drift-reset scope gate, issue #808). Typed ``Any`` to keep
+    # this leaf module free of package imports.
+    control_method: Any = None

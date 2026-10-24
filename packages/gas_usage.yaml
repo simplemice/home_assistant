@@ -15,6 +15,26 @@
 #     -> template   -> gas_cost_total  (THB cumulative, Energy Dashboard)
 ###############################################################################
 
+input_number:
+  gas_tariff_rate:
+    name: "Gas Tariff Rate"
+    initial: 430
+    min: 0
+    max: 5000
+    step: 1
+    unit_of_measurement: "THB"
+    icon: mdi:gas-cylinder
+    mode: box
+  gas_tank_capacity_kg:
+    name: "Gas Tank Capacity"
+    initial: 38
+    min: 1
+    max: 100
+    step: 0.5
+    unit_of_measurement: "kg"
+    icon: mdi:gas-cylinder
+    mode: box
+
 sensor:
   - platform: derivative
     source: sensor.kitchen_gas_scale_volume
@@ -43,12 +63,12 @@ template:
         icon: mdi:gas-burner
         state: >
           {% if trigger.platform == 'homeassistant' %}
-            {{ states('sensor.gas_used') | float(0) | round(3) }}
+            {{ states('sensor.gas_used_total') | float(0) | round(3) }}
           {% else %}
             {% set current  = trigger.to_state.state | float(0) %}
             {% set previous = trigger.from_state.state | float(current) %}
             {% set delta    = previous - current %}
-            {% set running  = states('sensor.gas_used') | float(0) %}
+            {% set running  = states('sensor.gas_used_total') | float(0) %}
             {% if 0 < delta < 2 %}
               {{ (running + delta) | round(3) }}
             {% else %}
@@ -72,10 +92,9 @@ template:
         icon: mdi:gas-cylinder
         state_class: measurement
         state: >
-          {% set brutto = states('sensor.kitchen_gas_scale_brutto_weight') | float(0)
-          %}
-          {% set net    = [brutto - 7.0, 0] | max %}
-          {{ [[net / 15.0 * 100, 0] | max, 100] | min | round(1) }}
+          {% set net = states('sensor.kitchen_gas_scale_net_remaining') | float(0) %}
+          {% set cap = states('input_number.gas_tank_capacity_kg') | float(38) %}
+          {{ [[net / cap * 100, 0] | max, 100] | min | round(1) }}
 
       - name: "Gas Consumed m3"
         unique_id: gas_consumed_m3
@@ -84,7 +103,7 @@ template:
         state_class: total_increasing
         icon: mdi:gas-cylinder
         state: >
-          {% set used_l = states('sensor.gas_used') | float(0) %}
+          {% set used_l = states('sensor.gas_used_total') | float(0) %}
           {{ (used_l * 0.001964) | round(5) }}
 
       - name: "Gas Days Remaining"
@@ -116,7 +135,7 @@ template:
         state_class: total_increasing
         icon: mdi:cash-multiple
         state: >
-          {% set used_l = states('sensor.gas_used') | float(0) %}
+          {% set used_l = states('sensor.gas_used_total') | float(0) %}
           {% set rate   = states('input_number.gas_tariff_rate') | float(430.0) %}
           {{ (used_l * rate / 29.4) | round(2) }}
 

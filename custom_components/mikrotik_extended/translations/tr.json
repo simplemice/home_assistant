@@ -321,6 +321,9 @@
       "backup": {
         "name": "Configuration backup"
       },
+      "poe_power_cycle": {
+        "name": "PoE güç döngüsü"
+      },
       "reboot": {
         "name": "Yeniden başlat"
       }
@@ -362,6 +365,15 @@
       },
       "system_poe_out_consumption": {
         "name": "PoE çıkış tüketimi"
+      },
+      "poe_out_power": {
+        "name": "PoE çıkış gücü"
+      },
+      "poe_out_voltage": {
+        "name": "PoE çıkış gerilimi"
+      },
+      "poe_out_current": {
+        "name": "PoE çıkış akımı"
       },
       "system_fan1_speed": {
         "name": "Fan 1 hızı"

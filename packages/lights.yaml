@@ -35,7 +35,7 @@ light:
     unique_id: lights
     name: "Lights"
     entities:
-      #- light.bathroom_bulb
+      - light.bathroom_bulb
       - light.porch_bulb
       - light.closet_lamp
       - light.backyard_light
@@ -46,6 +46,13 @@ light:
     entities:
       - light.kitchen_wled_kitchen_closet_down
       - light.kitchen_fridge_light
+
+  - platform: group
+    unique_id: kitchen_celling
+    name: "Kitchen Celling"
+    entities:
+      - light.kitchen_celling_l
+      - light.kitchen_celling_r
 
   - platform: group
     unique_id: bedroom_ambient

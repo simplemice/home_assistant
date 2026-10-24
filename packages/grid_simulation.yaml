@@ -31,7 +31,7 @@
 #      elsewhere so it stays. If you want to consolidate down to one entity,
 #      that needs to happen on the Energy Dashboard side first (swap the
 #      selected source), then the redundant sensor can be safely dropped here.
-#
+# 
 # STILL OPEN:
 #   - Confirm whether a peak/off-peak tariff-switching automation
 #     (input_select + utility_meter.next_tariff, PEA time-of-use) exists

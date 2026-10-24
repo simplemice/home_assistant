@@ -1,0 +1,133 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "sun_motion": {
+        "default": "mdi:weather-sunny",
+        "state": {
+          "off": "mdi:weather-sunny-off"
+        }
+      },
+      "manual_override": {
+        "default": "mdi:hand-back-left",
+        "state": {
+          "off": "mdi:hand-back-left-off"
+        }
+      },
+      "glare_active": {
+        "default": "mdi:white-balance-sunny",
+        "state": {
+          "off": "mdi:weather-sunny-off"
+        }
+      },
+      "position_mismatch": {
+        "default": "mdi:alert-circle-outline",
+        "state": {
+          "off": "mdi:check-circle-outline"
+        }
+      }
+    },
+    "button": {
+      "reset_manual_override": {
+        "default": "mdi:hand-back-left-off"
+      },
+      "apply_calculated_position": {
+        "default": "mdi:target-variant"
+      }
+    },
+    "sensor": {
+      "travel_calibration": {
+        "default": "mdi:timer-cog-outline",
+        "state": {
+          "running": "mdi:timer-sand",
+          "complete": "mdi:timer-check-outline",
+          "failed": "mdi:timer-alert-outline",
+          "cancelled": "mdi:timer-off-outline"
+        }
+      },
+      "control": {
+        "default": "mdi:white-balance-sunny",
+        "state": {
+          "winter": "mdi:snowflake",
+          "summer": "mdi:heat-wave"
+        }
+      }
+    },
+    "switch": {
+      "enabled_toggle": {
+        "default": "mdi:power",
+        "state": {
+          "off": "mdi:power-off"
+        }
+      },
+      "automatic_control": {
+        "default": "mdi:window-shutter-auto",
+        "state": {
+          "off": "mdi:window-shutter"
+        }
+      },
+      "sun_tracking": {
+        "default": "mdi:weather-sunny",
+        "state": {
+          "off": "mdi:weather-sunny-off"
+        }
+      },
+      "manual_toggle": {
+        "default": "mdi:hand-back-left",
+        "state": {
+          "off": "mdi:hand-back-left-off"
+        }
+      },
+      "return_to_default_toggle": {
+        "default": "mdi:restore"
+      },
+      "switch_mode": {
+        "default": "mdi:home-thermometer",
+        "state": {
+          "off": "mdi:home-thermometer-outline"
+        }
+      },
+      "temp_toggle": {
+        "default": "mdi:thermometer",
+        "state": {
+          "off": "mdi:thermometer-off"
+        }
+      },
+      "lux_toggle": {
+        "default": "mdi:brightness-5",
+        "state": {
+          "off": "mdi:brightness-1"
+        }
+      },
+      "irradiance_toggle": {
+        "default": "mdi:sun-wireless",
+        "state": {
+          "off": "mdi:sun-wireless-outline"
+        }
+      },
+      "glare_zone_0": {
+        "default": "mdi:blinds",
+        "state": {
+          "off": "mdi:blinds-open"
+        }
+      },
+      "glare_zone_1": {
+        "default": "mdi:blinds",
+        "state": {
+          "off": "mdi:blinds-open"
+        }
+      },
+      "glare_zone_2": {
+        "default": "mdi:blinds",
+        "state": {
+          "off": "mdi:blinds-open"
+        }
+      },
+      "glare_zone_3": {
+        "default": "mdi:blinds",
+        "state": {
+          "off": "mdi:blinds-open"
+        }
+      }
+    }
+  }
+}

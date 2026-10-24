@@ -1,0 +1,317 @@
+"""Motion sensor timeout management for Adaptive Cover Pro."""
+
+from __future__ import annotations
+
+import datetime as dt
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Mapping
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+
+from ..const import DEFAULT_MOTION_TEMPLATE_MODE, DEFAULT_MOTION_TIMEOUT
+from ..helpers import is_entity_active
+from ..templates import combine_with_mode, is_template_string, render_condition
+from .common import EventRecorder, TimeoutController
+
+
+class MotionManager:
+    """Manage motion sensor state and timeout tracking for cover control.
+
+    Tracks occupancy from one or more binary motion/occupancy sensors and
+    manages a debounce timeout so covers return to a default position only
+    after sustained no-motion rather than on brief sensor off-flickers.
+
+    Behavior:
+    - Motion detected (any sensor on)  → immediate response, cancel timeout
+    - Motion stopped (all sensors off) → start timeout; set active after expiry
+    - No sensors configured            → feature disabled (always-present assumed)
+
+    """
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        logger,
+        *,
+        event_buffer=None,
+        template_variables: Mapping[str, Any] | None = None,
+    ) -> None:
+        """Initialize the MotionManager.
+
+        Args:
+            hass: Home Assistant instance used to read sensor states
+            logger: Logger instance for debug/info output
+            event_buffer: Shared diagnostic ring buffer (optional, reserved for future events).
+            template_variables: Opaque render context threaded into the occupancy
+                template — the ``acp`` self-reference namespace built once by the
+                coordinator (issue #1159). The manager never inspects it.
+
+        """
+        self._hass = hass
+        self._logger = logger
+        self._event_buffer = event_buffer
+        self._template_variables = template_variables
+        self._events = EventRecorder(event_buffer, now_fn=self._now)
+
+        self._sensors: list[str] = []
+        self._template: str | None = None
+        self._template_mode: str = DEFAULT_MOTION_TEMPLATE_MODE
+        self._timeout_seconds: int = DEFAULT_MOTION_TIMEOUT
+
+        self._timer = TimeoutController(logger, label="motion timeout")
+        self._last_motion_time: float | None = None
+        self._timeout_started_at: float | None = None
+        self._motion_timeout_active: bool = False
+
+    # --- Internal helpers ---
+
+    @staticmethod
+    def _now() -> dt.datetime:
+        """Return the current time as a UTC-aware datetime.
+
+        Single source of "now" for this manager so timestamp construction
+        is consistent (UTC-aware) and mockable in one place.
+        """
+        return dt.datetime.now(dt.UTC)
+
+    # --- Configuration ---
+
+    def update_config(
+        self,
+        sensors: list[str],
+        timeout_seconds: int,
+        media_players: list[str] = (),
+        template: str | None = None,
+        template_mode: str = DEFAULT_MOTION_TEMPLATE_MODE,
+    ) -> None:
+        """Update tracked entity list, occupancy template, and timeout duration.
+
+        Called whenever config options change so the manager stays in sync
+        without recreating it. Media players are folded into the same tracked
+        list as motion sensors — ``is_entity_active`` handles each domain, so
+        any non-off media player counts as occupancy under the same logic.
+        The optional ``template`` is an extra occupancy source: when it renders
+        truthy it counts as occupancy (issue #577 follow-up). ``template_mode``
+        (a :class:`~const.TemplateCombineMode` value) chooses how it folds in —
+        ``"or"`` (default, additive) or ``"and"`` (the template must also be
+        truthy for the sensors to count as occupancy).
+
+        Args:
+            sensors: Entity IDs of binary motion/occupancy sensors to track
+            timeout_seconds: Seconds to wait after last motion before setting active
+            media_players: media_player entity IDs treated as occupancy when on
+            template: optional Jinja2 condition; truthy result counts as occupancy
+            template_mode: how ``template`` combines with the sensors (or/and)
+
+        """
+        self._sensors = list(sensors) + list(media_players)
+        self._template = template
+        self._template_mode = template_mode
+        self._timeout_seconds = timeout_seconds
+
+    # --- Properties ---
+
+    @property
+    def is_configured(self) -> bool:
+        """Return True when any occupancy source — sensor or template — is set.
+
+        Single source for "is motion control active?": the timeout machinery and
+        startup state only run when occupancy is actually configured.
+        """
+        return bool(self._sensors) or is_template_string(self._template)
+
+    @property
+    def template_active(self) -> bool:
+        """Return True when the occupancy template is set and renders truthy."""
+        return render_condition(
+            self._hass, self._template, variables=self._template_variables
+        )
+
+    @property
+    def template_mode(self) -> str:
+        """Return the configured template combine mode (a ``TemplateCombineMode``)."""
+        return self._template_mode
+
+    @property
+    def is_motion_detected(self) -> bool:
+        """Check whether the configured occupancy sources report presence.
+
+        Returns:
+            True if nothing is configured (feature disabled → assume presence).
+            Otherwise the occupancy template and the sensors are combined per
+            ``template_mode``: ``"or"`` (default) is occupied when either is
+            active; ``"and"`` requires the template truthy *and* a sensor active
+            (degenerating to whichever single source exists). Media players are
+            already folded into ``self._sensors``.
+
+        """
+        if not self.is_configured:
+            return True  # Feature disabled — assume presence
+
+        others_active = any(is_entity_active(self._hass, sid) for sid in self._sensors)
+        return combine_with_mode(
+            self.template_active,
+            others_active,
+            self._template_mode,
+            has_template=is_template_string(self._template),
+            has_others=bool(self._sensors),
+        )
+
+    @property
+    def is_motion_timeout_active(self) -> bool:
+        """Check whether the no-motion timeout has expired.
+
+        Returns:
+            False when no sensors configured (feature disabled).
+            True only after a completed timeout cycle.
+
+        """
+        if not self._sensors:
+            return False  # Feature disabled
+
+        return self._motion_timeout_active
+
+    @property
+    def has_pending_timeout(self) -> bool:
+        """Return True iff a no-motion timer is in flight (sleeping, not yet expired).
+
+        Public observation point so tests don't have to reach into the
+        ``TimeoutController`` instance. Distinguishes "timer running"
+        from "timeout already expired" (``is_motion_timeout_active``).
+        """
+        return self._timer.is_running
+
+    @property
+    def timeout_end_time(self) -> dt.datetime | None:
+        """Return when the running no-motion timer will expire, or None.
+
+        Computed from when the timer actually *started* (the clear edge,
+        ``start_motion_timeout``), not from ``last_motion_time`` (the
+        detection edge). Occupancy commonly outlasts the configured
+        timeout, so measuring from detection instead of timer-start
+        publishes an end time that is already in the past the instant the
+        timer starts (issue #1266). Single owner of this formula — callers
+        must not recompute it from ``last_motion_time`` and
+        ``_timeout_seconds``.
+
+        The backing stamp (``_timeout_started_at``) is live only while a
+        timer is actually counting down. All four exits from that state —
+        ``record_motion_detected``, ``cancel_motion_timeout``,
+        ``set_no_motion``, and the timer firing naturally
+        (``_on_motion_timeout_expired``) — clear it, so this property
+        returns ``None`` rather than a stale past timestamp once the timer
+        is gone, whichever way it left.
+        """
+        if self._timeout_started_at is None:
+            return None
+        return dt.datetime.fromtimestamp(
+            self._timeout_started_at + self._timeout_seconds, dt.UTC
+        )
+
+    @property
+    def last_motion_time(self) -> float | None:
+        """Return UNIX timestamp of the most recent motion detection, or None."""
+        return self._last_motion_time
+
+    # --- Motion event handling ---
+
+    def set_no_motion(self) -> None:
+        """Immediately activate the no-motion state without waiting for a timeout.
+
+        Used at startup when all sensors are already off so the feature does not
+        stay stuck in ``waiting_for_data`` until a sensor first turns on then off.
+        """
+        self.cancel_motion_timeout()
+        self._motion_timeout_active = True
+
+    def record_motion_detected(self) -> bool:
+        """Record that motion was detected right now.
+
+        Updates last_motion_time, cancels any running timeout task, and
+        clears the active flag so covers resume automatic sun positioning.
+
+        Returns:
+            True if a timeout was active (expired) or pending (task still
+            running), indicating the coordinator should call async_refresh
+            to resume automatic sun positioning.  False when motion was
+            already the current state (no refresh needed).
+
+        """
+        had_pending = self._timer.is_running
+        had_active = self._motion_timeout_active
+        self.cancel_motion_timeout()
+        self._last_motion_time = self._now().timestamp()
+        self._timeout_started_at = None
+        self._motion_timeout_active = False
+        return had_active or had_pending
+
+    # --- Timeout management ---
+
+    def start_motion_timeout(self, refresh_callback: Callable) -> None:
+        """Start the no-motion timeout task.
+
+        Cancels any existing timeout before creating a new one so only one
+        timer runs at a time.
+
+        Args:
+            refresh_callback: Async callable invoked when timeout expires and
+                covers should switch to the default position.  Typically
+                ``coordinator.async_refresh``.
+
+        """
+        # Record the "cancelled" event before the controller swaps timers
+        # so the diagnostic ring still shows the cancel-on-restart edge.
+        if self._timer.is_running:
+            self._events.record("motion_timeout_canceled")
+
+        timeout_seconds = self._timeout_seconds
+        self._logger.info(
+            "No motion detected - starting %s second timeout before using default position",
+            timeout_seconds,
+        )
+        self._events.record("motion_timeout_started", timeout_seconds=timeout_seconds)
+
+        async def _on_expire() -> None:
+            await self._on_motion_timeout_expired(timeout_seconds, refresh_callback)
+
+        self._timeout_started_at = self._now().timestamp()
+        self._timer.start(timeout_seconds, _on_expire)
+
+    async def _on_motion_timeout_expired(
+        self, timeout_seconds: int, refresh_callback: Callable
+    ) -> None:
+        """Body that runs after the no-motion sleep completes.
+
+        Re-checks the motion state — sensors may have flipped on during
+        the sleep, in which case the default-position fallback should
+        not fire. Otherwise sets the active flag, emits the expiry
+        event, and delegates to the caller's refresh callback.
+        """
+        if self.is_motion_detected:
+            self._logger.debug(
+                "Motion detected during timeout - canceling default position"
+            )
+            self._events.record("motion_detected_during_timeout")
+            return
+
+        self._motion_timeout_active = True
+        # Timer has fired; nothing is counting down. Clear the stamp like the
+        # other three exits from "timer counting" (record_motion_detected,
+        # cancel_motion_timeout, set_no_motion) so timeout_end_time honors its
+        # own contract instead of returning a past timestamp forever (#1266).
+        self._timeout_started_at = None
+        self._logger.info(
+            "Motion timeout expired (%s seconds) - using default position",
+            timeout_seconds,
+        )
+        self._events.record("motion_timeout_expired", timeout_seconds=timeout_seconds)
+
+        await refresh_callback()
+
+    def cancel_motion_timeout(self) -> None:
+        """Cancel the running timeout task, if any."""
+        if self._timer.is_running:
+            self._events.record("motion_timeout_canceled")
+        self._timer.cancel()
+        self._timeout_started_at = None

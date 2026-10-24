@@ -1,0 +1,716 @@
+"""Cover-state-change classification for manual-override detection.
+
+`StateClassifier` is the single piece of code that decides whether a
+post-command cover state change represents the integration's own transit
+(grace period, mid-transit pause, forward progress, settle) or genuine
+user activity (manual override).  The body that lived inline on the
+coordinator before this extraction is preserved verbatim, every issue-fix
+comment included; #1139 and #1306 are the first behaviour changes made
+directly in this module rather than relocated into it.
+
+Background — the inline implementation accumulated eight issue-numbered
+behaviour fixes over its lifetime:
+
+- **#147** — clearing wait_for_target on intermediate states caused
+  user-initiated moves to be mis-attributed to ACP.
+- **#172** — startup motor-engagement delay must keep wait_for_target so
+  ACP-commanded covers aren't false-flagged before they move.
+- **#186** — step-motor covers briefly report a non-transitional state
+  between pulses; restart the grace period instead of clearing.
+- **#271** — progress-aware backstop: clear wait_for_target only after
+  *transit_timeout* seconds without forward progress, so slow-but-moving
+  covers are not prematurely cleared.
+- **#285** — direction/progress check runs for covers that never emit
+  "opening"/"closing", based purely on position delta.
+- **#1139** — a cover that has not reacted to a dispatched command at all
+  (still resting exactly on its pre-command position, same HA state string)
+  must keep wait_for_target, bounded by the same transit-timeout backstop as
+  every other arm — distinct from a genuine mid-travel stall, which must
+  still clear.
+- **#1306** — a cover that acked a command with a transit state and then
+  settled without progress has been stopped or reversed — neither a #186
+  pause nor a #1139 unreacted command — so neither arm may suppress that
+  event.
+- **#1358** — a cover whose full travel completes in under
+  ``COMMAND_GRACE_PERIOD_SECONDS`` always lands its arrival event inside
+  the grace window, where it was discarded unconditionally; a verified
+  arrival (an incremental report between dispatch origin and target, not a
+  #518 optimistic echo) now clears wait_for_target even while grace is
+  still running, instead of waiting on the 45s transit-timeout backstop.
+
+The classifier is composed by :class:`CoverCommandService` and accessed
+through its public :meth:`classify_state_change` wrapper.  External state
+flows in as keyword arguments:
+
+- ``target_just_reached`` is a ``set[str]`` owned by the coordinator and
+  *mutated in place* — the coordinator reads it from another handler
+  inside the same event lifecycle, and changing that contract is out of
+  scope for this phase.
+- ``grace_mgr`` is the same :class:`GracePeriodManager` the cover
+  command service already composes; it is passed by argument here so the
+  classifier never reaches back into the service for it.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+
+from .transit import is_state_in_transit
+
+if TYPE_CHECKING:
+    from homeassistant.core import Event
+
+    from ...diagnostics.event_buffer import EventBuffer
+    from ...managers.grace_period import GracePeriodManager
+
+
+DebugLogFn = Callable[..., None]
+
+
+def _is_reversal_after_ack(
+    *,
+    old_position: int | None,
+    position: int | None,
+    target: int | None,
+    position_at_send: int | None,
+) -> bool:
+    """Issue #1306: does the position math show a reversal rather than progress.
+
+    Consulted (via ``transit_to_settled and _is_reversal_after_ack(...)``,
+    the combined ``reversal_after_ack`` seen in :meth:`StateClassifier.classify`)
+    by BOTH suppression arms in that method — the #186 step-motor pause arm
+    immediately after this predicate is bound, and the #1139 unreacted-
+    command arm ~200 lines further down. A genuine #186 pause always
+    *advances* between pulses, and a genuine #1139 unreacted command never
+    acks with a transit state at all (``transit_to_settled`` is already
+    False for it) — a reversal is neither: the cover acked the command by
+    entering "opening"/"closing" and then left transit without getting any
+    closer to the target. On covers that publish no intermediate positions
+    (Velux roof window via KLF-200) this is the ONLY event a user reversal
+    ever produces, so suppressing it destroys the evidence and the override
+    can structurally never engage.
+
+    The discriminator is NOT progress alone: a cover that only reports a
+    position when it changes settles a pause with old_distance ==
+    new_distance too (the position didn't change between the last transit
+    report and the settle). That equal-distance shape is genuinely
+    ambiguous between a pause and a reversal-to-origin UNLESS the dispatch
+    origin is known — a pause has moved away from ``position_at_send``
+    since dispatch; a reversal that lands back on the origin has not. So
+    the equal-distance case only counts as a reversal when the cover is
+    still resting exactly where the command found it; strictly-worse
+    distance always counts, regardless of dispatch origin.
+
+    Two ambiguities are resolved rather than eliminated, both in favour of
+    calling the event a reversal:
+    - A pause that has NOT moved at all since dispatch is genuinely
+      indistinguishable from a reversal that lands back on the origin.
+    - On a cover that DOES publish intermediate positions, a settle landing
+      equidistant from the target but on the OPPOSITE side from the last
+      transit report also satisfies the equal-distance check above — the
+      discriminator here is ``position_at_send``, not which side of the
+      target the cover ends up on, so that shape is also read as a
+      reversal rather than a pause. No report in this repo describes it;
+      it is named here rather than assumed away.
+
+    An unreadable old position leaves the direction unknowable — returns
+    False (the historical suppression stays in force).
+    """
+    return old_position is not None and (
+        abs(position - target) > abs(old_position - target)
+        or (
+            abs(position - target) == abs(old_position - target)
+            and position == position_at_send
+        )
+    )
+
+
+class StateClassifier:
+    """Classify post-command cover state changes for manual-override detection."""
+
+    def __init__(
+        self,
+        service: Any,
+        *,
+        event_buffer: EventBuffer | None,
+        debug_log: DebugLogFn,
+    ) -> None:
+        """Bind the classifier to its long-lived collaborators.
+
+        ``service`` is the :class:`CoverCommandService` instance — the
+        classifier reads waiting / target / capability / progress state
+        through its public surface.
+        """
+        self._service = service
+        self._event_buffer = event_buffer
+        self._debug_log = debug_log
+        self._logger = getattr(service, "_logger", None)
+
+    def classify(  # noqa: C901
+        self,
+        event: Event,
+        *,
+        ignore_intermediate_states: bool,
+        target_just_reached: set[str],
+        grace_mgr: GracePeriodManager,
+    ) -> None:
+        """Decide whether ``event`` is ACP-driven transit or a manual move.
+
+        Mutates ``target_just_reached`` and (via the bound service) clears
+        ``wait_for_target`` when the cover has settled at the commanded
+        position, runs out of progress, or otherwise enters a state where
+        the manual-override detector should run on the next event.
+        """
+        svc = self._service
+        cmd_svc = svc  # legacy name from inline body
+        logger = self._logger
+        entity_id = event.entity_id
+        if logger is not None:
+            logger.debug("Processing state change event: %s", event)
+        if ignore_intermediate_states and is_state_in_transit(event.new_state.state):
+            if logger is not None:
+                logger.debug("Ignoring intermediate state change for %s", entity_id)
+            return
+        if cmd_svc.is_waiting_for_target(entity_id):
+            # Hoisted above the grace check (Issue #1358) — the in-grace
+            # arrival settle below needs both, and reading them once here
+            # (rather than a second time after grace expires) keeps this a
+            # single read per event regardless of which branch is taken.
+            caps = cmd_svc.get_cover_capabilities(entity_id)
+            position = cmd_svc.read_position_with_capabilities(
+                entity_id, caps, event.new_state
+            )
+            # Check if still in grace period
+            if grace_mgr.is_in_command_grace_period(entity_id):
+                if self._settle_verified_arrival_in_grace(
+                    event,
+                    entity_id,
+                    position,
+                    caps=caps,
+                    cmd_svc=cmd_svc,
+                    target_just_reached=target_just_reached,
+                ):
+                    return
+                if logger is not None:
+                    logger.debug(
+                        "Position change for %s ignored (in grace period)", entity_id
+                    )
+                return  # Ignore ALL position changes during grace period
+
+            # Grace period expired — check if cover reached target (tolerance-based)
+            reached = cmd_svc.check_target_reached(entity_id, position)
+            if reached:
+                # Mark this entity so async_handle_cover_state_change() skips the
+                # manual override comparison for this event.  The cover has just
+                # settled at its commanded position (within position tolerance) —
+                # any small positional difference is motor rounding, not a user
+                # action.  The set is cleared at the end of that handler.
+                target_just_reached.add(entity_id)
+                self._debug_log(
+                    "manual_override",
+                    "Target just reached for %s — skipping manual override check for this event",
+                    entity_id,
+                )
+            else:
+                # Grace period expired but the cover is not at the commanded target.
+                # Determine whether the cover is still actively moving toward the
+                # target (integration-initiated transit) or has stopped / moved away
+                # (user action — Issue #147).
+                #
+                # HA covers report transitional states ("opening"/"closing") while
+                # moving, then a final state ("stopped"/"open"/"closed") when done.
+                # If ignore_intermediate_states is True, those transitional events
+                # are already filtered out above, so we only reach here with final
+                # states and always clear wait_for_target.
+                #
+                # However, some covers (French volet-roulant, some Zigbee rolling
+                # shutters) never emit transitional states at all — they stay "open"
+                # or "closed" throughout transit and simply update current_position.
+                # The direction/progress check therefore runs for ALL covers based
+                # on position delta, regardless of the HA state string (Issue #285).
+                cover_is_transitioning = is_state_in_transit(event.new_state.state)
+
+                old_position = cmd_svc.read_position_with_capabilities(  # noqa: SLF001
+                    entity_id, caps, event.old_state
+                )
+                target = cmd_svc.get_target(entity_id)
+
+                # Step-motor pause (Issue #186) takes highest priority: some covers
+                # briefly report "open"/"closed" at an intermediate position between
+                # motor pulses before resuming transit.  If the *new* state is
+                # non-transitional and the *old* state was transitional, the cover
+                # just paused mid-transit — restart grace period to let the motor
+                # resume.  This must be checked before the direction/progress block
+                # so that forward-progress detection (Issue #285) does not short-
+                # circuit the grace-period restart.
+                was_transitioning = event.old_state is not None and is_state_in_transit(
+                    event.old_state.state
+                )
+                # Issue #1306: the shared precondition for ONE
+                # ``reversal_after_ack`` predicate consulted by both
+                # suppression arms below (this #186 pause arm and the
+                # #1139 unreacted-command arm ~200 lines further down) —
+                # named once so neither arm re-lists the same four
+                # conditions. See ``_is_reversal_after_ack`` above for the
+                # full reasoning (progress vs. reversal, the equal-distance
+                # dispatch-origin discriminator, and the documented
+                # ambiguities it resolves).
+                transit_to_settled = (
+                    was_transitioning
+                    and not cover_is_transitioning
+                    and target is not None
+                    and position is not None
+                )
+                # Looked up once and shared by both arms below —
+                # get_position_at_send() is a cheap dict.get, but there is
+                # no reason to pay for it twice on the same event.
+                position_at_send = cmd_svc.get_position_at_send(entity_id)
+                reversal_after_ack = transit_to_settled and _is_reversal_after_ack(
+                    old_position=old_position,
+                    position=position,
+                    target=target,
+                    position_at_send=position_at_send,
+                )
+                if transit_to_settled and position != target and not reversal_after_ack:
+                    grace_mgr.start_command_grace_period(entity_id)
+                    self._debug_log(
+                        "manual_override",
+                        "Cover %s paused mid-transit at %s (target %s) "
+                        "— restarting grace period",
+                        entity_id,
+                        position,
+                        target,
+                    )
+                    if logger is not None:
+                        logger.debug("Wait for target: %s", cmd_svc.waiting_entities())
+                    return
+
+                # Optimistic-target guard (Issue #518): see _check_optimistic_guard.
+                now = dt.datetime.now(dt.UTC)
+                if self._check_optimistic_guard(
+                    event,
+                    entity_id,
+                    old_position,
+                    position,
+                    target,
+                    cmd_svc=cmd_svc,
+                    grace_mgr=grace_mgr,
+                    now=now,
+                    logger=logger,
+                ):
+                    return
+
+                # Direction/progress check: runs for all covers where positions and
+                # target are known, EXCEPT when HA explicitly reports "stopped" (an
+                # unambiguous halt signal).  This extends the progress-aware backstop
+                # from Issue #271 to covers that never emit "opening"/"closing".
+                if (
+                    old_position is not None
+                    and position is not None
+                    and target is not None
+                    and event.new_state.state != "stopped"
+                ):
+                    old_distance = abs(old_position - target)
+                    new_distance = abs(position - target)
+
+                    if new_distance < old_distance:
+                        # Unambiguously moving toward target — still in transit.
+                        # Reset the progress clock so the backstop window extends.
+                        now = dt.datetime.now(dt.UTC)
+                        cmd_svc.record_progress(entity_id, now)  # noqa: SLF001
+                        self._debug_log(
+                            "manual_override",
+                            "Grace expired but %s still in transit toward "
+                            "target %s (was %s, now %s, state=%s) "
+                            "— keeping wait_for_target",
+                            entity_id,
+                            target,
+                            old_position,
+                            position,
+                            event.new_state.state,
+                        )
+                        if self._event_buffer is not None:
+                            self._event_buffer.record(
+                                {
+                                    "ts": now.isoformat(),
+                                    "event": "transit_progress_forward",
+                                    "entity_id": entity_id,
+                                    "old_position": old_position,
+                                    "new_position": position,
+                                    "target": target,
+                                    "old_distance": old_distance,
+                                    "new_distance": new_distance,
+                                    "cover_state": event.new_state.state,
+                                }
+                            )
+                        if logger is not None:
+                            logger.debug(
+                                "Wait for target: %s", cmd_svc.waiting_entities()
+                            )
+                        return
+
+                    # Progress-aware backstop: if no forward progress has been
+                    # observed for longer than the configured transit timeout,
+                    # the cover is stuck or stalled — clear wait_for_target so
+                    # manual override detection can run.  The clock resets each
+                    # time record_progress() is called (when new_distance <
+                    # old_distance above), so slow-but-moving covers are not
+                    # prematurely cleared.  Covers that never report intermediate
+                    # positions fall back to measuring from _sent_at.
+                    now = dt.datetime.now(dt.UTC)
+                    elapsed = cmd_svc.transit_elapsed_without_progress(entity_id, now)
+                    if elapsed is not None:
+                        timeout = cmd_svc.transit_timeout_seconds
+                        if elapsed > timeout:
+                            cmd_svc.set_waiting(entity_id, False)
+                            self._debug_log(
+                                "manual_override",
+                                "Transit timeout for %s (%.0fs > %ds without progress) "
+                                "— clearing wait_for_target",
+                                entity_id,
+                                elapsed,
+                                timeout,
+                            )
+                            if self._event_buffer is not None:
+                                self._event_buffer.record(
+                                    {
+                                        "ts": now.isoformat(),
+                                        "event": "transit_timeout_cleared",
+                                        "entity_id": entity_id,
+                                        "elapsed_seconds": round(elapsed, 1),
+                                        "timeout_seconds": timeout,
+                                        "position": position,
+                                        "target": target,
+                                        "cover_state": event.new_state.state,
+                                    }
+                                )
+                            if logger is not None:
+                                logger.debug(
+                                    "Wait for target: %s", cmd_svc.waiting_entities()
+                                )
+                            return
+
+                    if new_distance == old_distance:
+                        # Positions equal — could be startup delay or stall.
+                        # Startup delay: motor just engaged; state transitions from
+                        # non-transitional (e.g. "closed") to something else.
+                        # Stall: state didn't change and cover was already in transit
+                        # (e.g. opening→opening same position); open→open same
+                        # position with no state change is the same signature
+                        # (Issue #172 regression guard). Neither falls straight
+                        # through to clear any more: the unreacted-command arm
+                        # below (Issue #1139) intercepts both when the position
+                        # still matches the dispatch origin, keeping
+                        # wait_for_target. Only a genuine mid-travel stall — the
+                        # position has moved away from where the command found
+                        # it — reaches the clear at the bottom of this block.
+                        old_state_str = (
+                            event.old_state.state
+                            if event.old_state is not None
+                            else None
+                        )
+                        new_state_str = event.new_state.state
+                        state_changed = old_state_str != new_state_str
+                        if not is_state_in_transit(old_state_str) and state_changed:
+                            self._debug_log(
+                                "manual_override",
+                                "Grace expired but %s position unchanged at %s "
+                                "(startup delay — old state was %s) "
+                                "— keeping wait_for_target",
+                                entity_id,
+                                position,
+                                old_state_str,
+                            )
+                            if self._event_buffer is not None:
+                                self._event_buffer.record(
+                                    {
+                                        "ts": dt.datetime.now(dt.UTC).isoformat(),
+                                        "event": "transit_startup_delay",
+                                        "entity_id": entity_id,
+                                        "position": position,
+                                        "old_state": old_state_str,
+                                        "new_state": new_state_str,
+                                        "target": target,
+                                    }
+                                )
+                            if logger is not None:
+                                logger.debug(
+                                    "Wait for target: %s", cmd_svc.waiting_entities()
+                                )
+                            return
+
+                        # Unreacted-command guard (Issue #1139): the cover has
+                        # not moved AT ALL since the command was dispatched —
+                        # it is still resting exactly on its pre-command
+                        # origin, not merely at the position it last
+                        # reported. This covers same-state republishes the
+                        # #172 guard above misses (open->open, closing->
+                        # closing) — the discriminator is dispatch origin,
+                        # not the HA state string. Requiring old_position ==
+                        # position (not just position_at_send) rules out a
+                        # genuine straddle move where equal distances are
+                        # coincidental (e.g. target 50, 40->60).
+                        #
+                        # Bounded by the SAME sent_at-anchored clock the
+                        # backstop above already reads
+                        # (transit_elapsed_without_progress) — this arm must
+                        # NOT call record_progress() or
+                        # start_command_grace_period(), or the suppression
+                        # stops being bounded by transit_timeout.
+                        #
+                        # Issue #1306: on a cover that publishes no
+                        # intermediate positions (Velux via KLF-200), a user
+                        # reversal mid-transit produces exactly this
+                        # signature — old_position == position ==
+                        # position_at_send, because position_at_send is
+                        # stamped at dispatch and the single reported event
+                        # never moves off it. ``reversal_after_ack`` (bound
+                        # above, alongside ``was_transitioning`` — see
+                        # ``_is_reversal_after_ack`` for the full reasoning)
+                        # is the discriminator: this arm exists to protect a
+                        # command the cover never acked with a transit
+                        # state at all, which a reversal is not (it acked,
+                        # then settled without progress) — so a reversal
+                        # must not be swallowed here either. ``position_at_send``
+                        # itself is also bound above, shared with arm 1
+                        # rather than looked up a second time here.
+                        if (
+                            position_at_send is not None
+                            and old_position == position == position_at_send
+                            and elapsed is not None
+                            and not reversal_after_ack
+                        ):
+                            # `now` / `elapsed` are the same locals the
+                            # backstop above already computed on this
+                            # identical code path — reusing them (rather
+                            # than recomputing) keeps the buffer event's
+                            # ``ts`` aligned with the backstop's own clock.
+                            # `elapsed is not None` makes the bound explicit:
+                            # both this arm and the backstop above depend on
+                            # a live clock to stay bounded by
+                            # transit_timeout, so the arm must not engage
+                            # when there is none to measure against.
+                            self._debug_log(
+                                "manual_override",
+                                "Grace expired but %s has not reacted to the "
+                                "dispatched command yet (still at %s, "
+                                "position at send was %s) "
+                                "— keeping wait_for_target",
+                                entity_id,
+                                position,
+                                position_at_send,
+                            )
+                            if self._event_buffer is not None:
+                                self._event_buffer.record(
+                                    {
+                                        "ts": now.isoformat(),
+                                        "event": "transit_awaiting_reaction",
+                                        "entity_id": entity_id,
+                                        "position": position,
+                                        "position_at_send": position_at_send,
+                                        "target": target,
+                                        "cover_state": event.new_state.state,
+                                        "elapsed_seconds": round(elapsed, 1),
+                                        "timeout_seconds": cmd_svc.transit_timeout_seconds,
+                                    }
+                                )
+                            if logger is not None:
+                                logger.debug(
+                                    "Wait for target: %s", cmd_svc.waiting_entities()
+                                )
+                            return
+
+                # Clear wait_for_target to allow manual override detection.
+                cmd_svc.set_waiting(entity_id, False)
+                self._debug_log(
+                    "manual_override",
+                    "Grace period expired, cover %s not in transit "
+                    "— clearing wait_for_target "
+                    "(position=%s, state=%s)",
+                    entity_id,
+                    position,
+                    event.new_state.state,
+                )
+                if self._event_buffer is not None:
+                    self._event_buffer.record(
+                        {
+                            "ts": dt.datetime.now(dt.UTC).isoformat(),
+                            "event": "transit_cleared",
+                            "entity_id": entity_id,
+                            "position": position,
+                            "cover_state": event.new_state.state,
+                            "old_position": old_position,
+                            "target": target,
+                        }
+                    )
+            if logger is not None:
+                logger.debug("Wait for target: %s", cmd_svc.waiting_entities())
+        else:
+            if logger is not None:
+                logger.debug("No wait for target call for %s", entity_id)
+
+    def _settle_verified_arrival_in_grace(
+        self,
+        event: Any,
+        entity_id: str,
+        position: int | None,
+        *,
+        caps: dict[str, bool],
+        cmd_svc: Any,
+        target_just_reached: set[str],
+    ) -> bool:
+        """Issue #1358: let a *verified* arrival clear wait_for_target inside grace.
+
+        ``COMMAND_GRACE_PERIOD_SECONDS`` (5s) exists to suppress the flurry of
+        intermediate positions a cover reports while it is still travelling.
+        But on a cover that streams live intermediate positions AND completes
+        its full transit in well under 5s (a Tuya roller shutter doing 0->100
+        in ~0.87s, for example), the arrival event is guaranteed to land
+        inside that same window — the grace branch above returns
+        unconditionally, ``check_target_reached`` (the ONLY call site that
+        clears ``wait_for_target`` on arrival) never runs, and the flag can
+        then only ever be cleared by the 45s transit-timeout backstop. Any
+        user reversal in that stale window reads ``old_position == target,
+        position != target`` on its first sample — identical to the #518
+        optimistic-firmware-echo signature — so ``_check_optimistic_guard``
+        (below) swallows it as transit, restarting grace and resetting the
+        progress clock, and the loop repeats.
+
+        The fix: settle a genuine arrival even while grace is still running,
+        by reusing the exact same "at target" seam
+        (``check_target_reached`` / ``read_position_with_capabilities``) the
+        post-grace-expiry branch already uses — there must be exactly one
+        definition of "at target" in this module.
+
+        The discriminator that makes this safe against the #518 echo is
+        ``old_position != position_at_send``: a genuine arrival on a
+        position-reporting cover is preceded by at least one intermediate
+        report between the dispatch origin and the target, whereas an
+        optimistic echo teleports from the origin straight to the target in
+        a single report (``old_position == position_at_send``). Covers that
+        publish no intermediate positions at all (Velux/KLF-200, #1306) never
+        satisfy this gate either, so they fall straight through to today's
+        unconditional grace return — this change is strictly additive.
+
+        Returns:
+            ``True`` if the arrival was verified and settled (``classify``
+            should return immediately, mirroring the post-grace-expiry
+            arrival branch), ``False`` otherwise (fall through to the
+            existing "ignore during grace" behaviour).
+
+        """
+        if position is None or event.old_state is None:
+            return False
+        position_at_send = cmd_svc.get_position_at_send(entity_id)
+        if position_at_send is None:
+            return False
+        old_position = cmd_svc.read_position_with_capabilities(
+            entity_id, caps, event.old_state
+        )
+        if old_position is None or old_position == position_at_send:
+            return False
+        if not cmd_svc.check_target_reached(entity_id, position):
+            return False
+        target_just_reached.add(entity_id)
+        self._debug_log(
+            "manual_override",
+            "Target reached for %s during grace period (was %s, position at "
+            "send %s) — skipping manual override check for this event",
+            entity_id,
+            old_position,
+            position_at_send,
+        )
+        if self._event_buffer is not None:
+            self._event_buffer.record(
+                {
+                    "ts": dt.datetime.now(dt.UTC).isoformat(),
+                    "event": "transit_arrived_during_grace",
+                    "entity_id": entity_id,
+                    "position": position,
+                    "old_position": old_position,
+                    "position_at_send": position_at_send,
+                    "target": cmd_svc.get_target(entity_id),
+                    "cover_state": event.new_state.state,
+                }
+            )
+        return True
+
+    def _check_optimistic_guard(
+        self,
+        event: Any,
+        entity_id: str,
+        old_position: int | None,
+        position: int | None,
+        target: int | None,
+        *,
+        cmd_svc: Any,
+        grace_mgr: Any,
+        now: dt.datetime,
+        logger: Any,
+    ) -> bool:
+        """Detect and handle the optimistic-target-replay signature (Issue #518).
+
+        Some cover firmware reports the commanded target position immediately
+        (before the motor moves), then updates to the real intermediate position
+        as the carriage travels.  When the grace period expires, the classifier
+        sees ``old_position == target`` (the optimistic report) and
+        ``position != target`` (the real intermediate), computing
+        ``old_distance = 0``, ``new_distance > 0`` — which the direction/progress
+        block misidentifies as drift-away and incorrectly clears ``wait_for_target``.
+
+        Detection signature: ``old_position == target AND position != target``
+        AND still within the 45-second transit-timeout backstop window.  The
+        backstop is the ultimate safety net: an optimistic cover that stalls
+        off-target is still cleared after 45 s.  True drift-away (Issue #285)
+        always starts from ``old_position != target``, so this guard leaves that
+        case untouched.
+
+        Returns:
+            ``True`` if the guard fired and ``classify`` should return immediately
+            (``wait_for_target`` is kept), ``False`` otherwise.
+
+        """
+        if not (
+            target is not None
+            and old_position is not None
+            and old_position == target
+            and position is not None
+            and position != target
+        ):
+            return False
+
+        elapsed = cmd_svc.transit_elapsed_without_progress(entity_id, now)
+        timeout = cmd_svc.transit_timeout_seconds
+        if elapsed is not None and elapsed >= timeout:
+            # Backstop exceeded — let the caller fall through to clear.
+            return False
+
+        grace_mgr.start_command_grace_period(entity_id)
+        cmd_svc.record_progress(entity_id, now)
+        self._debug_log(
+            "manual_override",
+            "Cover %s reported optimistic target %s before moving; "
+            "real position now %s — restarting grace period "
+            "(transit_elapsed=%.1fs)",
+            entity_id,
+            target,
+            position,
+            elapsed if elapsed is not None else 0.0,
+        )
+        if self._event_buffer is not None:
+            self._event_buffer.record(
+                {
+                    "ts": now.isoformat(),
+                    "event": "transit_optimistic_target_replay",
+                    "entity_id": entity_id,
+                    "old_position": old_position,
+                    "position": position,
+                    "target": target,
+                    "cover_state": event.new_state.state,
+                }
+            )
+        if logger is not None:
+            logger.debug("Wait for target: %s", cmd_svc.waiting_entities())
+        return True

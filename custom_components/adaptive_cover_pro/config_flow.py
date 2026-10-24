@@ -1,0 +1,8091 @@
+"""Config flow for Adaptive Cover Pro integration."""
+
+from __future__ import annotations
+
+import logging
+import re
+from dataclasses import dataclass, field
+from functools import cache
+from pathlib import Path
+from collections.abc import Mapping, Sequence
+from typing import Any
+
+import voluptuous as vol
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    OptionsFlow,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import selector
+from homeassistant.util import dt as dt_util
+
+from .const import (
+    ADAPTIVE_NAME_PREFIX,
+    BLANK_TIME,
+    BLIND_SPOT_ELEV_MODE_ABOVE,
+    BLIND_SPOT_FORM_KEYS,
+    BLIND_SPOT_SLOT_NUMBERS,
+    BLIND_SPOT_SLOTS,
+    blind_spot_legacy_to_gamma,
+    resolve_fov_left,
+    DEFAULT_AUTO_RESOLVE_TEMP_FROM_AREA,
+    DEFAULT_BLIND_SPOT_ELEVATION_MODE,
+    BUILDING_PROFILE_SENSOR_KEYS,
+    LIGHT_CLOUD_SENSOR_KEYS,
+    WEATHER_OVERRIDE_SENSOR_KEYS,
+    CONF_AUTO_RESOLVE_TEMP_FROM_AREA,
+    CONF_AWNING_ANGLE,
+    CONF_AWNING_SHADE_MODE,
+    CONF_AZIMUTH,
+    CONF_BUILDING_PROFILE_ID,
+    CONF_PROFILE_SENSOR_OVERRIDES,
+    CONF_CLIMATE_MODE,
+    CONF_CLIMATE_TEMP_HOLD_TIME,
+    CONF_CLOUD_ESCALATION_DELAY,
+    CONF_CLOUD_SUPPRESSION,
+    CONF_CLOUD_SUPPRESSION_HOLD_TIME,
+    CONF_CLOUDY_POSITION,
+    CONF_CLOUDY_TILT,
+    CONF_COMMAND_QUEUE,
+    CONF_COMMAND_QUEUE_GAP,
+    CONF_DAYTIME_GATE_SENSORS,
+    CONF_DAYTIME_GATE_TEMPLATE,
+    CONF_DAYTIME_GATE_TEMPLATE_MODE,
+    CONF_SUN_TRACKING_GATE_SENSORS,
+    CONF_SUN_TRACKING_GATE_TEMPLATE,
+    CONF_SUN_TRACKING_GATE_TEMPLATE_MODE,
+    CONF_DEFAULT_HEIGHT,
+    CONF_DEFAULT_TILT,
+    CONF_DELTA_POSITION,
+    CONF_DELTA_TIME,
+    CONF_DEVICE_ID,
+    CONF_DISTANCE,
+    CONF_ENABLE_BLIND_SPOT,
+    CONF_ENABLE_GLARE_ZONES,
+    CONF_ENABLE_MAX_POSITION,
+    CONF_ENABLE_MIN_POSITION,
+    CONF_ENABLE_MY_POSITION_ENTITIES,
+    CONF_ENABLE_POSITION_MATCHING,
+    CONF_ENABLE_PROXY_COVER,
+    CONF_ENABLE_SUN_TRACKING,
+    CONF_END_ENTITY,
+    CONF_END_OF_WINDOW_POS,
+    CONF_END_TIME,
+    CONF_ENDPOINT_USE_OPEN_CLOSE,
+    CONF_ENFORCE_DELTA_AT_ENDPOINTS,
+    CONF_EXTREME_HEAT_POSITION,
+    CONF_ENTITIES,
+    CONF_GROUP_AREA,
+    CONF_GROUP_ENABLE_CLIMATE_SENSOR,
+    CONF_GROUP_ENABLE_COVER_ENTITY,
+    CONF_GROUP_ENABLE_POSITION_SENSOR,
+    CONF_GROUP_ENABLE_STATE_SENSOR,
+    CONF_GROUP_ENABLE_WHO_WON_SENSOR,
+    CONF_GROUP_MEMBER_OPT_OUT,
+    CONF_GROUP_STAGGER_DELAY,
+    CONF_MEMBER_COVERS,
+    CONF_MEMBER_ENTRIES,
+    CONF_FORCE_OVERRIDE_MIN_MODE,
+    CONF_FORCE_OVERRIDE_POSITION,
+    CONF_FORCE_OVERRIDE_SENSORS,
+    CONF_MY_POSITION_VALUE,
+    CONF_SUNSET_USE_MY,
+    CUSTOM_POSITION_SAFETY_PRIORITY,
+    CUSTOM_POSITION_FORM_KEYS,
+    CUSTOM_POSITION_SLOT_NUMBERS,
+    CUSTOM_POSITION_SLOTS,
+    DEFAULT_CUSTOM_POSITION_PRIORITY,
+    DEFAULT_ENABLE_MY_POSITION_ENTITIES,
+    DEFAULT_ENABLE_POSITION_MATCHING,
+    DEFAULT_ENABLE_PROXY_COVER,
+    DEFAULT_ENDPOINT_USE_OPEN_CLOSE,
+    DEFAULT_EXTREME_HEAT_POSITION,
+    DEFAULT_MAX_COVERAGE_STEPS,
+    DEFAULT_MINIMIZE_MOVEMENTS,
+    DEFAULT_SNAP_CLOSED_BELOW,
+    DEFAULT_SNAP_CLOSED_THRESHOLD,
+    CONF_FOV_COMPUTE,
+    CONF_FOV_LEFT,
+    CONF_FOV_RIGHT,
+    CONF_HEIGHT_WIN,
+    CONF_INTERP,
+    CONF_INTERP_END,
+    CONF_INTERP_LIST,
+    CONF_INTERP_LIST_NEW,
+    CONF_INTERP_START,
+    CONF_INVERSE_STATE,
+    CONF_CLOUD_COVERAGE_ENTITY,
+    CONF_CLOUD_COVERAGE_RELEASE_THRESHOLD,
+    CONF_CLOUD_COVERAGE_THRESHOLD,
+    CONF_IRRADIANCE_ENTITY,
+    CONF_IRRADIANCE_PLANE,
+    CONF_IRRADIANCE_RELEASE_THRESHOLD,
+    CONF_IRRADIANCE_THRESHOLD,
+    CONF_IS_SUNNY_SENSOR,
+    CONF_IS_SUNNY_TEMPLATE,
+    CONF_IS_SUNNY_TEMPLATE_MODE,
+    CONF_LENGTH_AWNING,
+    CONF_LUX_ENTITY,
+    CONF_LUX_RELEASE_THRESHOLD,
+    CONF_LUX_THRESHOLD,
+    CONF_MANUAL_IGNORE_EXTERNAL,
+    CONF_MANUAL_IGNORE_INTERMEDIATE,
+    CONF_MANUAL_OVERRIDE_DURATION,
+    CONF_MANUAL_OVERRIDE_DURATION_MODE,
+    CONF_MANUAL_OVERRIDE_INPUT_ENTITIES,
+    CONF_MANUAL_OVERRIDE_INPUT_TEMPLATE,
+    CONF_MANUAL_OVERRIDE_RESET,
+    CONF_MANUAL_THRESHOLD,
+    CONF_MAX_COVERAGE_STEPS,
+    CONF_MAX_ELEVATION,
+    CONF_MAX_POSITION,
+    CONF_MIN_ELEVATION,
+    CONF_MIN_POSITION,
+    CONF_MIN_POSITION_SUN_TRACKING,
+    CONF_MINIMIZE_MOVEMENTS,
+    CONF_SNAP_CLOSED_BELOW,
+    CONF_SNAP_CLOSED_THRESHOLD,
+    CONF_MODE,
+    CONF_MOTION_MEDIA_PLAYERS,
+    CONF_MOTION_SENSORS,
+    CONF_MOTION_TEMPLATE,
+    CONF_MOTION_TEMPLATE_MODE,
+    CONF_MOTION_TIMEOUT,
+    CONF_MOTION_TIMEOUT_MODE,
+    DEFAULT_MOTION_TEMPLATE_MODE,
+    DEFAULT_MOTION_TIMEOUT_MODE,
+    DEFAULT_SUNRISE_GATES_START,
+    DEFAULT_TEMPLATE_COMBINE_MODE,
+    MOTION_TIMEOUT_MODE_HOLD,
+    MOTION_TIMEOUT_MODE_RETURN,
+    CONF_OPEN_CLOSE_THRESHOLD,
+    CONF_OUTSIDE_TEMP_SOURCE,
+    CONF_OUTSIDE_THRESHOLD,
+    CONF_OUTSIDE_THRESHOLD_RELEASE,
+    CONF_OUTSIDETEMP_ENTITY,
+    DEFAULT_OUTSIDE_TEMP_SOURCE,
+    OutsideTempSource,
+    CONF_POSITION_TOLERANCE,
+    CONF_PRESENCE_ENTITY,
+    CONF_PRESENCE_TEMPLATE,
+    CONF_PRESENCE_TEMPLATE_MODE,
+    CONF_RETURN_SUNSET,
+    CONF_SENSOR_TYPE,
+    CONF_SILL_HEIGHT,
+    CONF_START_ENTITY,
+    CONF_START_TIME,
+    CONF_SUMMER_CLOSE_BYPASS_SUN_FLOOR,
+    CONF_SUNRISE_GATES_START,
+    CONF_SUNRISE_OFFSET,
+    CONF_SUNRISE_TIME_ENTITY,
+    CONF_SUNSET_OFFSET,
+    CONF_SUNSET_POS,
+    CONF_SUNSET_TIME_ENTITY,
+    CONF_SUNSET_TILT,
+    CONF_SYNC_SELECT_ALL,
+    CONF_TEMP_ENTITY,
+    CONF_TEMP_EXTREME_HEAT,
+    CONF_TEMP_EXTREME_HEAT_RELEASE_THRESHOLD,
+    CONF_TEMP_HIGH,
+    CONF_TEMP_HIGH_RELEASE_THRESHOLD,
+    CONF_TEMP_LOW,
+    CONF_TEMP_LOW_RELEASE_THRESHOLD,
+    CONF_MAX_TILT,
+    CONF_MAX_TILT_SUN_ONLY,
+    CONF_MIN_TILT,
+    CONF_MIN_TILT_SUN_ONLY,
+    CONF_TILT_ANGLE_0,
+    CONF_TILT_ANGLE_100,
+    CONF_TILT_DEPTH,
+    CONF_TILT_DISTANCE,
+    CONF_TILT_HORIZONTAL_PERCENT,
+    CONF_TILT_MIN_REFLECTED_ELEVATION,
+    CONF_TILT_MODE,
+    CONF_TILT_SAFETY_MARGIN,
+    CONF_VENETIAN_TILT_TRANSFORM,
+    CONF_TRACKING_SEASONS,
+    CONF_TRANSPARENT_BLIND,
+    CONF_WINTER_CLOSE_INSULATION,
+    CONF_WEATHER_ENTITY,
+    CONF_WEATHER_IS_RAINING_SENSOR,
+    CONF_WEATHER_IS_RAINING_TEMPLATE,
+    CONF_WEATHER_IS_RAINING_TEMPLATE_MODE,
+    CONF_WEATHER_IS_WINDY_SENSOR,
+    CONF_WEATHER_IS_WINDY_TEMPLATE,
+    CONF_WEATHER_IS_WINDY_TEMPLATE_MODE,
+    CONF_WEATHER_OVERRIDE_MIN_MODE,
+    CONF_WEATHER_OVERRIDE_POSITION,
+    CONF_WEATHER_OVERRIDE_TILT,
+    CONF_WEATHER_RAIN_SENSOR,
+    CONF_WEATHER_RAIN_THRESHOLD,
+    CONF_WEATHER_SEVERE_SENSORS,
+    CONF_WEATHER_SEVERE_TEMPLATE,
+    CONF_WEATHER_SEVERE_TEMPLATE_MODE,
+    CONF_WEATHER_STATE,
+    CONF_WEATHER_TIMEOUT,
+    CONF_WEATHER_WIND_DIRECTION_SENSOR,
+    CONF_WEATHER_WIND_DIRECTION_TOLERANCE,
+    CONF_WEATHER_WIND_SPEED_SENSOR,
+    CONF_WEATHER_WIND_SPEED_THRESHOLD,
+    CONF_WEATHER_BYPASS_AUTO_CONTROL,
+    CONF_WEATHER_ENABLED,
+    CONF_WEATHER_OUTSIDE_WINDOW,
+    CONF_WINDOW_DEPTH,
+    CONF_WINDOW_WIDTH,
+    DEFAULT_DELTA_POSITION,
+    DEFAULT_DELTA_TIME,
+    DEFAULT_GROUP_ENABLE_COVER_ENTITY,
+    DEFAULT_GROUP_ENABLE_SENSOR,
+    DEFAULT_COMMAND_QUEUE_GAP,
+    DEFAULT_GROUP_STAGGER_DELAY,
+    DEFAULT_MANUAL_OVERRIDE_DURATION,
+    DEFAULT_MANUAL_OVERRIDE_DURATION_MODE,
+    DEFAULT_MOTION_TIMEOUT,
+    DEFAULT_POSITION_SELECTOR_FALLBACK,
+    DEFAULT_WEATHER_OUTSIDE_WINDOW,
+    DEFAULT_WEATHER_STATE,
+    GLARE_ZONE_FORM_KEYS,
+    GLARE_ZONE_SLOT_NUMBERS,
+    GLARE_ZONE_SLOTS,
+    GROUP_SCENE_PRIORITY,
+    MANUAL_OVERRIDE_DURATION_MODE_FIXED,
+    MANUAL_OVERRIDE_DURATION_MODES,
+    OPT_OUT_ALL_SCENES,
+    CONF_DEBUG_CATEGORIES,
+    CONF_DEBUG_EVENT_BUFFER_SIZE,
+    CONF_DEBUG_MODE,
+    CONF_DRY_RUN,
+    CONF_TRANSIT_TIMEOUT,
+    CONF_TRAVEL_TIME_CALIBRATION,
+    DEBUG_CATEGORIES_ALL,
+    DEFAULT_DEBUG_EVENT_BUFFER_SIZE,
+    DEFAULT_TRANSIT_TIMEOUT_SECONDS,
+    MAX_DEBUG_EVENT_BUFFER_SIZE,
+    MAX_TRANSIT_TIMEOUT,
+    MIN_TRANSIT_TIMEOUT,
+    MODE2_OPEN_HORIZONTAL_PERCENT,
+    DOMAIN,
+    TIME_OPTION_KEYS,
+    TIME_STRING_RE,
+    TRAVEL_CALIBRATION_SOURCE_MANUAL,
+    TRAVEL_TIME_MAX_SECONDS,
+    TRAVEL_TIME_MIN_SECONDS,
+    CoverType,
+    GroupScene,
+    TemplateCombineMode,
+)
+from .companion_card import (
+    CARD_ADD_URL,
+    CARD_DOWNLOAD_URL,
+    CARD_WIKI_URL,
+    HACS_DOWNLOAD_URL,
+    CardStatus,
+    async_get_card_status,
+)
+from .engine.sun_geometry import computed_fov_line, fov_from_reveal
+from .state.device_link import devices_for_entities, resolve_linked_device
+from .i18n_bundle import flatten_bundle, load_bundle_overlay, merge_labels
+from .managers.cover_command.state_store import TravelCalibration
+from .troubleshoot_i18n import load_troubleshoot_labels
+
+from .helpers import (
+    bound_cover_capabilities,
+    check_cover_capabilities,
+    clear_custom_position_slot,
+    clear_slot,
+    custom_position_slot_configured,
+    custom_position_slot_name,
+    custom_position_slot_sensors,
+    duration_seconds_or_none,
+    format_duration,
+    has_configured_window_end,
+    is_assumed_state,
+    manual_hold_is_unanchored,
+    mirror_legacy_slot_sensor_keys,
+    normalize_time_string,
+    resolve_sunrise_offset,
+    resolve_sunset_offset,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+# Cover-type picker options, derived from the policy registry so a new cover
+# type appears in the create flow automatically (no edit here). Order follows
+# registration order (blind, awning, tilt, venetian, …). Virtual entry types
+# that drive no cover (Building Profile) are filtered out via the
+# ``controls_cover`` discriminator — they get their own top-level create option,
+# not a cover-type dropdown entry.
+from .cover_types import POLICY_REGISTRY as _POLICY_REGISTRY  # noqa: E402
+from .cover_types import get_policy as _get_policy  # noqa: E402
+
+SENSOR_TYPE_MENU = [
+    k
+    for k in _POLICY_REGISTRY
+    if _get_policy(k).controls_cover and not _get_policy(k).is_orchestrator
+]
+
+_STANDALONE_SENTINEL = "__standalone__"
+# Sentinel value for the "no profile / unlink" choice in the link selector.
+_PROFILE_NONE_SENTINEL = "__none__"
+
+_WIKI_BASE_URL = "https://github.com/jrhubott/adaptive-cover-pro/wiki"
+
+
+def _geometry_wiki_link(sensor_type: str | None) -> str:
+    """Build the per-type wiki "Learn more" link from the policy's anchor.
+
+    A fifth cover type opts in by overriding ``CoverTypePolicy.wiki_anchor()``
+    on its subclass — no edit here is required.
+    """
+    # Avoid POLICY_REGISTRY lookup before its module-level import below.
+    from .cover_types import POLICY_REGISTRY as _registry, get_policy as _get
+
+    anchor = (
+        _get(sensor_type).wiki_anchor() if sensor_type in _registry else "Cover-Types"
+    )
+    return f"[Learn more]({_WIKI_BASE_URL}/{anchor})"
+
+
+CONFIG_SCHEMA = vol.Schema(
+    {
+        vol.Optional("name"): selector.TextSelector(),
+        vol.Optional(CONF_MODE): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=SENSOR_TYPE_MENU, translation_key="mode"
+            )
+        ),
+    }
+)
+
+# ---------------------------------------------------------------------------
+# Step-specific schemas (replace old monolithic OPTIONS / VERTICAL_OPTIONS / etc.)
+# ---------------------------------------------------------------------------
+
+# Geometry schemas live next to each cover-type policy. Re-exported here so
+# in-tree consumers (tests, sync coverage) keep their existing import paths.
+from .cover_types import (  # noqa: E402
+    POLICY_REGISTRY,
+    BlindPolicy,
+    TiltPolicy,
+    get_policy,
+)
+from .cover_types.awning import GEOMETRY_HORIZONTAL_SCHEMA  # noqa: E402, F401
+from .cover_types.blind import GEOMETRY_VERTICAL_SCHEMA  # noqa: E402, F401
+from .cover_types.tilt import (  # noqa: E402
+    GEOMETRY_TILT_SCHEMA,  # noqa: F401
+    tilt_horizontal_percent_error,
+)
+from .cover_types.venetian import GEOMETRY_VENETIAN_SCHEMA  # noqa: E402, F401
+from .unit_system import (  # noqa: E402
+    options_to_display,
+    sensor_unit_label,
+    user_input_to_canonical,
+)
+
+# Dynamic (sensor-unit / locale aware) section builders live in config_dynamic;
+# re-exported here so the step handlers and the existing test imports keep their
+# call sites. config_flow is a consumer of these — not their owner.
+from . import config_fields  # noqa: E402
+from .config_dynamic import (  # noqa: E402
+    behavior_schema as _behavior_schema,
+    blind_spot_slot_schema,
+    building_profile_sensors_schema,
+    clamp_blind_spots_to_fov,
+    glare_zone_slot_schema,
+    glare_zones_schema as _glare_zones_schema,
+    light_cloud_schema,
+    solar_properties_schema,
+    sun_tracking_schema,
+    temperature_climate_schema,
+    weather_override_schema,
+    window_facing_schema,
+)
+from .pipeline.handlers import (  # noqa: E402
+    HANDLER_PRIORITY_CONF,
+    resolve_handler_priority,
+)
+from .pipeline.helpers import SOLAR_TRACKING_FLOOR_PCT  # noqa: E402
+from .pipeline.types import CustomPositionSensorState, has_fixed_tilt  # noqa: E402
+from .priority_chain import build_priority_chain  # noqa: E402
+from .managers.cover_command.queue import normalize_queue_name  # noqa: E402
+from .profile_link import (  # noqa: E402
+    _building_profile_entries,
+    _command_queue_entries,
+    _copy_profile_to_cover,
+    _cover_entries,
+    _covers_linked_to,
+    clear_cover_override,
+    cleared_profile_keys,
+    compute_override_keys,
+    effective_profile_overrides,
+    merge_profile_into_config,
+    profile_for_cover,
+    propagate_profile_clears,
+)
+
+# Local Overrides step: the multi-select field key and the empty-state message.
+_OVERRIDE_SELECT_KEY = "clear_overrides"
+_LABELS_NO_OVERRIDES = "No local overrides — every linked cover matches this profile."
+
+# Profile-owned keys shown on each sensor step (for the inherit/override note).
+# The light/cloud and weather-override groups already exist as const frozensets;
+# the rest split between the temperature and behavior steps.
+_TEMPERATURE_PROFILE_KEYS = frozenset({CONF_OUTSIDETEMP_ENTITY})
+_BEHAVIOR_PROFILE_KEYS = frozenset(
+    {
+        CONF_SUNSET_TIME_ENTITY,
+        CONF_SUNRISE_TIME_ENTITY,
+        CONF_DAYTIME_GATE_SENSORS,
+        CONF_DAYTIME_GATE_TEMPLATE,
+        CONF_DAYTIME_GATE_TEMPLATE_MODE,
+    }
+)
+
+
+# Sub-bullet indent for a gate block in the config summary. Non-breaking on
+# purpose: a plain leading space collapses in the rendered markdown.
+_GATE_SUMMARY_INDENT = "\u00a0" * 4
+
+
+def _render_condition_gate_summary(
+    config: dict[str, Any],
+    emit,
+    labels,
+    *,
+    prefix: str,
+    indent: str,
+    sensors_key: str,
+    template_key: str,
+    mode_key: str,
+) -> bool:
+    """Render one condition gate's summary lines; return whether it rendered.
+
+    ACP has two of these (the daytime gate, #632, and the sun-tracking gate,
+    #1167) and they render identically — sensors / template / both, then an
+    explainer — differing only in their option keys and label prefix. One
+    renderer, two callers, per CODING_GUIDELINES § "No Code Duplication".
+
+    ``prefix`` selects the label family (``timing.gate`` / ``solar.gate``); each
+    must define ``<prefix>_sensors``, ``<prefix>_template``, ``<prefix>_both``
+    and ``<prefix>_explainer``. Caller-specific extras — the daytime gate's
+    offset-ignored footgun warning — stay at the call site, which is why this
+    returns whether anything was emitted.
+    """
+    from .templates import is_template_string
+
+    sensors = config.get(sensors_key) or []
+    template = config.get(template_key)
+    has_template = is_template_string(template)
+    if not sensors and not has_template:
+        return False
+
+    sensors_str = ", ".join(sensors)
+    if sensors and has_template:
+        emit(
+            labels[f"{prefix}_both"].format(
+                indent=indent,
+                sensors=sensors_str,
+                mode=config.get(mode_key, DEFAULT_TEMPLATE_COMBINE_MODE),
+            )
+        )
+    elif sensors:
+        emit(labels[f"{prefix}_sensors"].format(indent=indent, sensors=sensors_str))
+    else:
+        emit(labels[f"{prefix}_template"].format(indent=indent))
+    emit(labels[f"{prefix}_explainer"].format(indent=indent))
+    return True
+
+
+def _handler_priority_overrides(config: dict[str, Any]) -> dict[str, int]:
+    """Effective built-in handler priorities for *config* (override or default).
+
+    Fed to :func:`build_priority_chain` so the rendered ladder and the summary
+    decision-chain reflect the user's configured priorities, not just the class
+    defaults.
+    """
+    return {
+        name: resolve_handler_priority(config, name) for name in HANDLER_PRIORITY_CONF
+    }
+
+
+def _blind_spot_step_errors(user_input: dict[str, Any]) -> dict[str, str]:
+    """Return per-slot empty-wedge errors for the blind-spot step (#247/#701).
+
+    Edges are signed gamma from the window normal; the wedge is
+    ``-right_gamma <= gamma <= left_gamma``, so it is non-empty only when
+    ``left_gamma + right_gamma > 0``. Shared by the initial and options flows so
+    the gate is identical. A slot is only checked when both its gamma edges are
+    present; absent (optional) slots 2/3 produce no error.
+    """
+    errors: dict[str, str] = {}
+    for keys in BLIND_SPOT_SLOTS.values():
+        left = user_input.get(keys["left_gamma"])
+        right = user_input.get(keys["right_gamma"])
+        if left is not None and right is not None and left + right <= 0:
+            errors[keys["right_gamma"]] = (
+                "The blind-spot wedge is empty: left edge + right edge must be "
+                "greater than 0."
+            )
+    return errors
+
+
+def _tilt_angle_step_errors(user_input: dict[str, Any]) -> dict[str, str]:
+    """Return errors for the explicit tilt endpoint calibration.
+
+    Endpoint ordering, plus the optional three-point mid-point (#1222). The
+    mid-point rule is not restated here — it is
+    ``cover_types.tilt.tilt_horizontal_percent_error``, the same wrapper the
+    ``set_geometry`` service calls, over the same
+    ``engine.covers.tilt.hinge_is_usable`` predicate the engine's map is gated
+    on. One rule, three consumers.
+    """
+    angle_0 = user_input.get(CONF_TILT_ANGLE_0)
+    angle_100 = user_input.get(CONF_TILT_ANGLE_100)
+    if angle_0 is not None and angle_100 is not None and angle_0 >= angle_100:
+        return {CONF_TILT_ANGLE_100: "Must be greater than tilt_angle_0"}
+    message = tilt_horizontal_percent_error(user_input)
+    if message is not None:
+        return {CONF_TILT_HORIZONTAL_PERCENT: message}
+    return {}
+
+
+def _forecast_temp_source_notice(source: str | None, weather_entity: str | None) -> str:
+    """Non-blocking Markdown notice: forecast outdoor-temp source with no weather entity.
+
+    ``forecast_max``/``max_of_live_and_forecast`` (issue #547) silently degrade to the
+    live reading when no weather entity is configured (state/climate_provider.py
+    ``live_fallback``). The weather entity picker lives on the separate Weather,
+    Light & Cloud step, so point there directly instead of letting the mismatch
+    degrade silently (issue #912).
+    """
+    if weather_entity or source not in (
+        OutsideTempSource.FORECAST_MAX.value,
+        OutsideTempSource.MAX_OF_LIVE_AND_FORECAST.value,
+    ):
+        return ""
+    return (
+        "\n\n⚠️ **Forecast source needs a weather entity.** The outdoor-temperature "
+        "source above is forecast-based, but no weather entity is configured — the "
+        "forecast will silently fall back to the live reading. Configure one in "
+        "**☁️ Weather, Light & Cloud**."
+    )
+
+
+# Module-level constant for tests / imports. Identical to the legacy
+# vol.Schema(...) shape — metric labels, no hass needed. ``sun_tracking_schema``
+# is re-exported from ``config_dynamic`` above.
+SUN_TRACKING_SCHEMA = sun_tracking_schema()
+
+# Combined creation form for a Building Profile entry: the name field plus the
+# shared building-level sensor pickers, collected in one step. Reuses
+# ``building_profile_sensors_schema`` so the sensor set stays single-sourced.
+BUILDING_PROFILE_CREATE_SCHEMA = vol.Schema(
+    {
+        vol.Required("name"): selector.TextSelector(),
+        **building_profile_sensors_schema().schema,
+    }
+)
+
+
+def known_command_queue_names(hass) -> list[str]:
+    """Every queue name in use, deduped by normalization, in first-seen casing.
+
+    The union of two sources, because a queue exists as soon as ONE cover names
+    it: the ``command_queue`` stored on every cover entry, and the name of every
+    Command Queue entry. Neither alone is the truth — a user may create the
+    entry first, or may never create one at all.
+
+    Deduping on the normalized key while DISPLAYING the original casing is the
+    whole mitigation for the free-text typo class: "Facade South" and "facade
+    south" collapse to one row, so the second cover picks the existing name
+    instead of silently minting a near-miss.
+    """
+    seen: dict[str, str] = {}
+    for entry in _cover_entries(hass):
+        raw = entry.options.get(CONF_COMMAND_QUEUE)
+        key = normalize_queue_name(raw)
+        if key:
+            seen.setdefault(key, str(raw).strip())
+    for entry in _command_queue_entries(hass):
+        raw = entry.data.get("name")
+        key = normalize_queue_name(raw)
+        if key:
+            seen.setdefault(key, str(raw).strip())
+    return [seen[key] for key in sorted(seen)]
+
+
+def _covers_on_command_queue(hass, queue_entry) -> list:
+    """Every cover entry whose queue name normalizes to this queue's.
+
+    By NORMALIZED name, never ``entry_id`` — that is the linkage the runtime
+    uses, so this list is exactly the membership that will serialize.
+    """
+    key = normalize_queue_name(queue_entry.data.get("name"))
+    if not key:
+        return []
+    return [
+        entry
+        for entry in _cover_entries(hass)
+        if normalize_queue_name(entry.options.get(CONF_COMMAND_QUEUE)) == key
+    ]
+
+
+def command_queue_selector(hass) -> selector.SelectSelector:
+    """Build the cover-side queue picker: known names, plus free text.
+
+    ``custom_value=True`` so only the FIRST cover on a queue has to type the
+    name; every cover after it picks the existing row.
+    """
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                {"value": name, "label": name}
+                for name in known_command_queue_names(hass)
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+            custom_value=True,
+        )
+    )
+
+
+def command_queue_gap_for(hass, name: str) -> float:
+    """Resolve the gap a queue NAME uses: its owning entry's, or the default.
+
+    The single statement of the resolution the runtime performs (a member reads
+    ``queue.gap_seconds``, which is the entry's value while one is bound and the
+    default otherwise). Restating it in the summary rather than sharing it is
+    how the displayed number drifts from the transmitted one.
+    """
+    key = normalize_queue_name(name)
+    if hass is not None and key:
+        for entry in _command_queue_entries(hass):
+            if normalize_queue_name(entry.data.get("name")) == key:
+                return entry.options.get(
+                    CONF_COMMAND_QUEUE_GAP, DEFAULT_COMMAND_QUEUE_GAP
+                )
+    return DEFAULT_COMMAND_QUEUE_GAP
+
+
+def command_queue_gap_schema() -> vol.Schema:
+    """Build the gap field alone — the create form and settings step share it.
+
+    Built from the registry ``FieldSpec``, so the bounds, step and default come
+    from ``const`` exactly once and the create form can never drift from the
+    edit form.
+    """
+    spec = config_fields.FIELD_SPECS[CONF_COMMAND_QUEUE_GAP]
+    marker, sel = spec.to_marker(None, {})
+    return vol.Schema({marker: sel})
+
+
+# Command Queue create form (issue #1189): the name covers will reference, and
+# the gap the queue holds the air for after each member transmits.
+COMMAND_QUEUE_CREATE_SCHEMA = vol.Schema(
+    {
+        vol.Required("name"): selector.TextSelector(),
+        **command_queue_gap_schema().schema,
+    }
+)
+
+
+def _group_membership_schema_dict(hass, *, exclude_entry_id: str | None = None) -> dict:
+    """Build the two cover-group membership selectors (issue #790).
+
+    ACP members are picked as config entries (an ACP instance may expose no
+    ``cover.`` entity at all when its proxy is off, and one with a proxy must
+    still be orchestrated through its pipeline), generic covers as plain
+    entities. ``_cover_entries`` already excludes profiles and groups, so a
+    group can never nest another group; ``exclude_entry_id`` drops the group
+    itself when editing.
+    """
+    acp_options = [
+        {"value": e.entry_id, "label": e.title}
+        for e in _cover_entries(hass)
+        if e.entry_id != exclude_entry_id
+    ]
+    return {
+        vol.Optional(CONF_MEMBER_ENTRIES, default=[]): selector.SelectSelector(
+            selector.SelectSelectorConfig(options=acp_options, multiple=True)
+        ),
+        vol.Optional(CONF_MEMBER_COVERS, default=[]): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="cover", multiple=True)
+        ),
+        # LIVE area membership source (issue #790, Phase 4): the effective
+        # rosters are the lists above ∪ the area's covers, tracking registry
+        # changes — not a one-shot copy.
+        vol.Optional(CONF_GROUP_AREA): selector.AreaSelector(),
+    }
+
+
+def _sanitize_group_membership(
+    hass, user_input: dict, *, own_entry_id: str | None = None
+) -> dict[str, list[str]]:
+    """Clean the submitted membership rosters.
+
+    Deduplicates while preserving order, drops the group's own entry id, and
+    drops a generic entity that is already controlled by a selected ACP
+    member — the entry is preferred so the member's pipeline orchestrates the
+    cover instead of it being double-commanded through adopt mode.
+    """
+    member_entries = list(
+        dict.fromkeys(
+            entry_id
+            for entry_id in user_input.get(CONF_MEMBER_ENTRIES, [])
+            if entry_id != own_entry_id
+        )
+    )
+    owned_covers: set[str] = set()
+    for entry_id in member_entries:
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if entry is not None:
+            owned_covers.update(entry.options.get(CONF_ENTITIES, []))
+    member_covers = list(
+        dict.fromkeys(
+            entity_id
+            for entity_id in user_input.get(CONF_MEMBER_COVERS, [])
+            if entity_id not in owned_covers
+        )
+    )
+    return {
+        CONF_MEMBER_ENTRIES: member_entries,
+        CONF_MEMBER_COVERS: member_covers,
+    }
+
+
+# Transient opt-out multi-select in the group_arbitration step: one field
+# whose option values are "member_id|scene" tokens (labels carry the member
+# title), folded into the persisted CONF_GROUP_MEMBER_OPT_OUT dict on submit.
+# Entry ids are UUID hex (no "|"), so the separator is unambiguous.
+_OPT_OUT_FIELD = "scene_opt_outs"
+_OPT_OUT_TOKEN_SEP = "|"
+
+
+def _group_opt_out_choices() -> list[dict[str, str]]:
+    """Build the opt-out select options: the all-scenes sentinel plus every scene."""
+    return [
+        {"value": OPT_OUT_ALL_SCENES, "label": "All scenes"},
+        *(
+            {"value": str(scene), "label": str(scene).replace("_", " ").title()}
+            for scene in GroupScene
+        ),
+    ]
+
+
+# The sun-tracking step no longer carries any length field — the shaded distance
+# moved to the geometry step (#778), so this is now empty. Kept as a named
+# constant so the step handlers stay symmetric with the other steps.
+_SUN_TRACKING_LENGTH_KEYS: tuple[str, ...] = ()
+
+_BINARY_ON_DOMAINS = ["binary_sensor", "input_boolean", "switch", "schedule"]
+_PRESENCE_LIKE_DOMAINS = _BINARY_ON_DOMAINS + ["device_tracker", "person", "zone"]
+_NUMERIC_DOMAINS = ["sensor", "input_number", "number"]
+
+
+def _binary_on_selector(*, multiple: bool = False) -> selector.EntitySelector:
+    """Return a single or multi-pick selector for on/off entities."""
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=_BINARY_ON_DOMAINS, multiple=multiple)
+    )
+
+
+def _presence_like_selector(*, multiple: bool = False) -> selector.EntitySelector:
+    """Return a selector for presence-shaped entities (motion, occupancy, presence)."""
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=_PRESENCE_LIKE_DOMAINS, multiple=multiple)
+    )
+
+
+def _template_combine_mode_selector() -> selector.SelectSelector:
+    """Return the shared OR/AND combine-mode selector (motion + daytime gate)."""
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[m.value for m in TemplateCombineMode],
+            mode=selector.SelectSelectorMode.LIST,
+            translation_key="template_combine_mode",
+        )
+    )
+
+
+# ── Layer 2a: positions ─────────────────────────────────────────────────────
+# Every percentage target value lives here and only here (#613). Handlers and
+# the behavior step reference these positions; they never redefine one.
+POSITION_SCHEMA = vol.Schema(
+    {
+        vol.Required(
+            CONF_DEFAULT_HEIGHT, default=DEFAULT_POSITION_SELECTOR_FALLBACK
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(
+            CONF_ENABLE_MAX_POSITION, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(CONF_MAX_POSITION, default=100): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(
+            CONF_ENABLE_MIN_POSITION, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_ENFORCE_DELTA_AT_ENDPOINTS, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_ENDPOINT_USE_OPEN_CLOSE,
+            default=DEFAULT_ENDPOINT_USE_OPEN_CLOSE,
+        ): selector.BooleanSelector(),
+        vol.Optional(CONF_MIN_POSITION, default=0): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=99,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_MIN_POSITION_SUN_TRACKING): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=99,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_SUNSET_POS): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_END_OF_WINDOW_POS): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(
+            CONF_ENABLE_MY_POSITION_ENTITIES,
+            default=DEFAULT_ENABLE_MY_POSITION_ENTITIES,
+        ): selector.BooleanSelector(),
+        vol.Optional(CONF_MY_POSITION_VALUE): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=99,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_SUNSET_USE_MY, default=False): selector.BooleanSelector(),
+        vol.Optional(CONF_OPEN_CLOSE_THRESHOLD, default=50): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=99,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_INTERP, default=False): selector.BooleanSelector(),
+    }
+)
+
+# ── Layer 2b: behavior (timing & thresholds) ────────────────────────────────
+# Non-percentage tuning: sunset/sunrise timing, position tolerance/matching, and
+# inverse-state. Separated from the L2a positions so each surface is single-
+# purpose (#613).
+BEHAVIOR_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_SUNSET_TIME_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "input_datetime"])
+        ),
+        vol.Optional(CONF_SUNRISE_TIME_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "input_datetime"])
+        ),
+        vol.Optional(CONF_SUNSET_OFFSET, default=0): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=-120,
+                max=120,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="minutes",
+            )
+        ),
+        vol.Optional(CONF_SUNRISE_OFFSET, default=0): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=-120,
+                max=120,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="minutes",
+            )
+        ),
+        # Does that sunrise boundary also gate the window (issue #1340)? The
+        # literal False is the sanctioned selector-default convention; const
+        # owns the runtime default RuntimeConfig reads.
+        vol.Optional(
+            CONF_SUNRISE_GATES_START, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(CONF_RETURN_SUNSET, default=False): selector.BooleanSelector(),
+        # Daytime gate (issue #632): a binary-sensor list and/or a Jinja condition
+        # template that REPLACES the astronomical sunset/sunrise boundary when set.
+        # On/truthy = daytime (track); off/falsy = dark (apply sunset position).
+        # Mirrors the motion gate shape (sensors + template + combine mode). Lives on
+        # the behavior step beside the sunset-timing options it overrides.
+        vol.Optional(CONF_DAYTIME_GATE_SENSORS, default=[]): _binary_on_selector(
+            multiple=True
+        ),
+        vol.Optional(CONF_DAYTIME_GATE_TEMPLATE): selector.TemplateSelector(),
+        vol.Optional(
+            CONF_DAYTIME_GATE_TEMPLATE_MODE, default=DEFAULT_TEMPLATE_COMBINE_MODE
+        ): _template_combine_mode_selector(),
+        vol.Optional(CONF_POSITION_TOLERANCE, default=3): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=20,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(
+            CONF_ENABLE_POSITION_MATCHING,
+            default=DEFAULT_ENABLE_POSITION_MATCHING,
+        ): selector.BooleanSelector(),
+        vol.Optional(CONF_INVERSE_STATE, default=False): selector.BooleanSelector(),
+    }
+)
+
+# Keys in POSITION_SCHEMA with default=vol.UNDEFINED that voluptuous omits when
+# cleared by the user. Both flow handlers must call optional_entities() with this
+# list before dict.update() — otherwise the prior value survives a clear
+# (issue #439; same class as #323).
+_POSITION_OPTIONAL_KEYS: list[str] = [
+    CONF_SUNSET_POS,
+    CONF_END_OF_WINDOW_POS,
+    CONF_MY_POSITION_VALUE,
+    CONF_MIN_POSITION_SUN_TRACKING,
+]
+
+# Same clear-handling for the L2b behavior step's entity pickers.
+_BEHAVIOR_OPTIONAL_KEYS: list[str] = [
+    CONF_SUNSET_TIME_ENTITY,
+    CONF_SUNRISE_TIME_ENTITY,
+    # Daytime gate template has no schema default → cleared = absent (issue #632).
+    # The sensor list carries default=[] so it round-trips on its own (NOT here).
+    CONF_DAYTIME_GATE_TEMPLATE,
+]
+
+# Keys on the sun-tracking step that voluptuous omits when the user clears them,
+# for the same reason as the behavior list above: no schema default means a
+# cleared field is absent from user_input, and without this the previous value
+# silently survives the clear (issue #439; same class as #323).
+_SUN_TRACKING_OPTIONAL_KEYS: list[str] = [
+    CONF_MIN_ELEVATION,
+    CONF_MAX_ELEVATION,
+    # Sun-tracking gate template (issue #1167). Its sensor list carries
+    # default=[] and so round-trips on its own — deliberately NOT here.
+    CONF_SUN_TRACKING_GATE_TEMPLATE,
+]
+
+# Profile-owned keys shown on the sun-tracking step, for the inherit/override
+# note — the counterpart to _BEHAVIOR_PROFILE_KEYS one step over.
+_SUN_TRACKING_PROFILE_KEYS = frozenset(
+    {
+        CONF_SUN_TRACKING_GATE_SENSORS,
+        CONF_SUN_TRACKING_GATE_TEMPLATE,
+        CONF_SUN_TRACKING_GATE_TEMPLATE_MODE,
+    }
+)
+
+# ── Layer 4: global motion constraints ──────────────────────────────────────
+# Applied after the pipeline picks a position, regardless of which handler won:
+# movement deltas, the schedule window, and the movement-minimization controls
+# (relocated here from the sun-tracking step, #613).
+AUTOMATION_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_DELTA_POSITION, default=2): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=90,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_DELTA_TIME, default=2): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=2,
+                max=60,
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="minutes",
+            )
+        ),
+        vol.Optional(
+            CONF_MINIMIZE_MOVEMENTS, default=DEFAULT_MINIMIZE_MOVEMENTS
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_MAX_COVERAGE_STEPS, default=DEFAULT_MAX_COVERAGE_STEPS
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=10,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+            )
+        ),
+        vol.Optional(
+            CONF_SNAP_CLOSED_BELOW, default=DEFAULT_SNAP_CLOSED_BELOW
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_SNAP_CLOSED_THRESHOLD, default=DEFAULT_SNAP_CLOSED_THRESHOLD
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=50,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_START_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "input_datetime"])
+        ),
+        # No default: a cleared TimeSelector must leave the key absent so it can
+        # be stripped (issue #492). Blank stripping is enforced in
+        # async_step_automation since the suggested-values path can re-add it.
+        vol.Optional(CONF_START_TIME): selector.TimeSelector(),
+        vol.Optional(CONF_END_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["sensor", "input_datetime"])
+        ),
+        vol.Optional(CONF_END_TIME): selector.TimeSelector(),
+    }
+)
+
+MANUAL_OVERRIDE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(
+            CONF_MANUAL_OVERRIDE_DURATION, default={"hours": 2}
+        ): selector.DurationSelector(),
+        vol.Optional(
+            CONF_MANUAL_OVERRIDE_DURATION_MODE,
+            default=DEFAULT_MANUAL_OVERRIDE_DURATION_MODE,
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=list(MANUAL_OVERRIDE_DURATION_MODES),
+                mode=selector.SelectSelectorMode.LIST,
+                translation_key=CONF_MANUAL_OVERRIDE_DURATION_MODE,
+            )
+        ),
+        vol.Optional(
+            CONF_MANUAL_OVERRIDE_RESET, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(CONF_MANUAL_THRESHOLD): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=99,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(
+            CONF_MANUAL_IGNORE_INTERMEDIATE, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_MANUAL_IGNORE_EXTERNAL, default=False
+        ): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_MANUAL_OVERRIDE_INPUT_ENTITIES, default=[]
+        ): _binary_on_selector(multiple=True),
+        vol.Optional(CONF_MANUAL_OVERRIDE_INPUT_TEMPLATE): selector.TemplateSelector(),
+        vol.Optional(
+            CONF_TRANSIT_TIMEOUT,
+            default=DEFAULT_TRANSIT_TIMEOUT_SECONDS,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=MIN_TRANSIT_TIMEOUT,
+                max=MAX_TRANSIT_TIMEOUT,
+                step=5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="seconds",
+            )
+        ),
+    }
+)
+
+
+def _build_custom_position_schema_dict(sensor_type: str | None = None) -> dict:
+    """Compose the custom-position schema dict for the given cover type.
+
+    Delegates to ``config_fields.custom_position_schema``; per-slot and global
+    tilt fields are included for cover types whose policy advertises
+    custom-position tilt extras (venetian today). A new cover type opts in by
+    returning those keys from ``extra_field_keys`` — no edit here.
+    """
+    include_tilt = sensor_type in POLICY_REGISTRY and bool(
+        get_policy(sensor_type).extra_field_keys(config_fields.SECTION_CUSTOM_POSITION)
+    )
+    return dict(config_fields.custom_position_schema(include_tilt=include_tilt).schema)
+
+
+CUSTOM_POSITION_SCHEMA = vol.Schema(_build_custom_position_schema_dict())
+
+# Keys in CUSTOM_POSITION_SCHEMA that have no schema default (name, template,
+# position, priority, tilt). Voluptuous omits them from user_input when
+# cleared, so both flow handlers must call optional_entities() with this list
+# before dict.update() -- otherwise the prior value survives a clear (issue
+# #323). The `sensors` list key carries default=[] so a cleared multi-select
+# round-trips as [] on its own (it must NOT become None — None would re-enable
+# the legacy single-sensor fallback).
+# The axis-constraint keys (issue #943) are clearable too — an absent key is
+# how a constraint is turned off, so a cleared slider must round-trip to None.
+_CUSTOM_POSITION_OPTIONAL_KEYS: list[str] = [
+    slot[field]
+    for slot in CUSTOM_POSITION_SLOTS.values()
+    for field in (
+        "name",
+        "template",
+        "position",
+        "priority",
+        "tilt",
+        "position_max",
+        "tilt_min",
+        "tilt_max",
+    )
+] + [CONF_DEFAULT_TILT, CONF_SUNSET_TILT]
+
+# Built-in handler priority sliders: clearing one omits it from user_input, so
+# optional_entities() nulls it and resolve_handler_priority falls back to the
+# class default.
+_PIPELINE_PRIORITY_OPTIONAL_KEYS: list[str] = list(config_fields.PIPELINE_PRIORITY_KEYS)
+
+MOTION_OVERRIDE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_MOTION_SENSORS, default=[]): _presence_like_selector(
+            multiple=True
+        ),
+        vol.Optional(
+            CONF_MOTION_MEDIA_PLAYERS, default=[]
+        ): config_fields.media_player_selector(multiple=True),
+        vol.Optional(CONF_MOTION_TEMPLATE): selector.TemplateSelector(),
+        vol.Optional(
+            CONF_MOTION_TEMPLATE_MODE, default=DEFAULT_MOTION_TEMPLATE_MODE
+        ): _template_combine_mode_selector(),
+        vol.Optional(
+            CONF_MOTION_TIMEOUT, default=DEFAULT_MOTION_TIMEOUT
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=30,
+                max=3600,
+                step=30,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="seconds",
+            )
+        ),
+        vol.Optional(
+            CONF_MOTION_TIMEOUT_MODE, default=DEFAULT_MOTION_TIMEOUT_MODE
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[MOTION_TIMEOUT_MODE_RETURN, MOTION_TIMEOUT_MODE_HOLD],
+                mode=selector.SelectSelectorMode.LIST,
+                translation_key="motion_timeout_mode",
+            )
+        ),
+    }
+)
+
+DEBUG_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_DRY_RUN, default=False): selector.BooleanSelector(),
+        vol.Optional(CONF_DEBUG_MODE, default=False): selector.BooleanSelector(),
+        vol.Optional(
+            CONF_DEBUG_CATEGORIES,
+            default=[],
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=DEBUG_CATEGORIES_ALL,
+                multiple=True,
+                mode=selector.SelectSelectorMode.LIST,
+                translation_key="debug_categories",
+            )
+        ),
+        vol.Optional(
+            CONF_DEBUG_EVENT_BUFFER_SIZE,
+            default=DEFAULT_DEBUG_EVENT_BUFFER_SIZE,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=10,
+                max=MAX_DEBUG_EVENT_BUFFER_SIZE,
+                step=10,
+                mode=selector.NumberSelectorMode.SLIDER,
+            )
+        ),
+    }
+)
+
+
+# Module-level constant for tests / imports. Uses empty/fallback labels; the
+# retraction pickers are always part of the schema (no per-cover gate).
+# ``weather_override_schema`` is re-exported from ``config_dynamic`` above.
+WEATHER_OVERRIDE_SCHEMA = weather_override_schema()
+
+# Keys in WEATHER_OVERRIDE_SCHEMA with default=vol.UNDEFINED. Voluptuous omits
+# them from user_input when cleared, so both flow handlers must call
+# optional_entities() with this list before dict.update() -- otherwise the prior
+# value survives a clear (issue #323).
+_WEATHER_OVERRIDE_OPTIONAL_KEYS: list[str] = [
+    CONF_WEATHER_WIND_SPEED_SENSOR,
+    CONF_WEATHER_WIND_DIRECTION_SENSOR,
+    CONF_WEATHER_RAIN_SENSOR,
+    CONF_WEATHER_IS_RAINING_SENSOR,
+    CONF_WEATHER_IS_RAINING_TEMPLATE,
+    CONF_WEATHER_IS_WINDY_SENSOR,
+    CONF_WEATHER_IS_WINDY_TEMPLATE,
+    CONF_WEATHER_SEVERE_TEMPLATE,
+]
+
+
+# --- Light & Cloud (works without climate mode) ---
+# ``light_cloud_schema`` is re-exported from ``config_dynamic`` above.
+# Module-level constant for tests / imports.
+LIGHT_CLOUD_SCHEMA = light_cloud_schema()
+
+# Keys in LIGHT_CLOUD_SCHEMA with default=vol.UNDEFINED (entity fields use
+# explicit UNDEFINED; CONF_CLOUDY_POSITION uses bare vol.Optional which also
+# produces default=vol.UNDEFINED). Both flow handlers must call
+# optional_entities() with this list before dict.update() -- see #323 and #392.
+_LIGHT_CLOUD_OPTIONAL_KEYS: list[str] = [
+    CONF_CLOUDY_POSITION,
+    # Blank must mean absent, not an all-zero duration (#175) — otherwise the
+    # escalation can never be turned back off from the UI once configured.
+    # Unconditional, unlike the slat angle: this field renders for every cover
+    # type, so there is no form that could collect a stray null for it.
+    CONF_CLOUD_ESCALATION_DELAY,
+    CONF_WEATHER_ENTITY,
+    CONF_IS_SUNNY_SENSOR,
+    CONF_IS_SUNNY_TEMPLATE,
+    CONF_LUX_ENTITY,
+    CONF_IRRADIANCE_ENTITY,
+    CONF_CLOUD_COVERAGE_ENTITY,
+    # Hysteresis release thresholds (issue #864): blank = feature off, so a
+    # cleared value must be stripped from options like the other optional keys.
+    CONF_LUX_RELEASE_THRESHOLD,
+    CONF_IRRADIANCE_RELEASE_THRESHOLD,
+    CONF_CLOUD_COVERAGE_RELEASE_THRESHOLD,
+]
+
+# --- Temperature Climate Mode ---
+#
+# The temperature thresholds are interpreted in the configured **sensor's**
+# unit, not Home Assistant's locale unit — so the selector label reflects the
+# sensor's ``unit_of_measurement`` attribute when set, falling back to HA's
+# ``temperature_unit`` otherwise. Ranges are kept wide enough for either
+# Celsius or Fahrenheit users to enter sensible values.
+
+# ``temperature_climate_schema`` is re-exported from ``config_dynamic`` above.
+# Module-level constant for tests / imports. Uses literal "°" label (legacy).
+TEMPERATURE_CLIMATE_SCHEMA = temperature_climate_schema()
+
+# Keys in TEMPERATURE_CLIMATE_SCHEMA with default=vol.UNDEFINED (CONF_TEMP_ENTITY
+# is a bare vol.Optional). Both flow handlers must call optional_entities() with
+# this list before dict.update() -- see #323.
+_TEMPERATURE_CLIMATE_OPTIONAL_KEYS: list[str] = [
+    CONF_TEMP_ENTITY,
+    CONF_OUTSIDETEMP_ENTITY,
+    CONF_PRESENCE_ENTITY,
+    CONF_PRESENCE_TEMPLATE,
+    # Extreme-heat mode (issue #766): both have no schema default (blank = off),
+    # so they are cleared/stripped like the other optional keys.
+    CONF_TEMP_EXTREME_HEAT,
+    CONF_EXTREME_HEAT_POSITION,
+    # Temperature smoothing release edges (issue #917): no schema default
+    # (blank = hysteresis off), so they are cleared/stripped like the above.
+    CONF_TEMP_LOW_RELEASE_THRESHOLD,
+    CONF_TEMP_HIGH_RELEASE_THRESHOLD,
+    CONF_OUTSIDE_THRESHOLD_RELEASE,
+    CONF_TEMP_EXTREME_HEAT_RELEASE_THRESHOLD,
+]
+
+WEATHER_OPTIONS = vol.Schema(
+    {
+        vol.Optional(
+            CONF_WEATHER_STATE, default=DEFAULT_WEATHER_STATE
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                multiple=True,
+                sort=False,
+                options=[
+                    "clear-night",
+                    "clear",
+                    "cloudy",
+                    "fog",
+                    "hail",
+                    "lightning",
+                    "lightning-rainy",
+                    "partlycloudy",
+                    "pouring",
+                    "rainy",
+                    "snowy",
+                    "snowy-rainy",
+                    "sunny",
+                    "windy",
+                    "windy-variant",
+                    "exceptional",
+                ],
+            )
+        )
+    }
+)
+
+
+def _travel_entity_label(hass: HomeAssistant, entity_id: str) -> str:
+    """``Living Room (cover.living_room)``, or the bare id if HA has no name."""
+    state = hass.states.get(entity_id)
+    name = state.attributes.get("friendly_name") if state else None
+    return f"{name} (`{entity_id}`)" if name else f"`{entity_id}`"
+
+
+def _travel_time_manual_schema(entities: Sequence[str]) -> vol.Schema:
+    """One seconds field per configured cover, keyed by entity id.
+
+    Keyed by entity id because the answer has to be mapped back to a cover, and
+    a positional key would silently rebind if the cover list changed between
+    rendering the form and submitting it. HA renders the key as the label; the
+    step's description carries the friendly names alongside, plus which covers
+    cannot be measured and therefore need this page.
+
+    ``0`` means "no travel time" — see ``async_step_travel_time_manual`` for why
+    the field is a BOX. The bounds are the same constants the calibrator clamps
+    its own measurements to, so the UI cannot accept a value the manager would
+    reject.
+    """
+    return vol.Schema(
+        {
+            vol.Optional(entity_id, default=0): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=TRAVEL_TIME_MAX_SECONDS,
+                    step=0.5,
+                    mode=selector.NumberSelectorMode.BOX,
+                    unit_of_measurement="s",
+                )
+            )
+            for entity_id in entities
+        }
+    )
+
+
+INTERPOLATION_OPTIONS = vol.Schema(
+    {
+        vol.Optional(CONF_INTERP_START): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_INTERP_END): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="%",
+            )
+        ),
+        vol.Optional(CONF_INTERP_LIST, default=[]): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                multiple=True, custom_value=True, options=["0", "50", "100"]
+            )
+        ),
+        vol.Optional(CONF_INTERP_LIST_NEW, default=[]): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                multiple=True, custom_value=True, options=["0", "50", "100"]
+            )
+        ),
+    }
+)
+
+# Keys in INTERPOLATION_OPTIONS with no schema default. Voluptuous omits them
+# from user_input when cleared, so the flow handler must call
+# optional_entities() with this list before dict.update() -- otherwise the
+# prior custom range survives a clear (issue #1267).
+_INTERP_OPTIONAL_KEYS: list[str] = [CONF_INTERP_START, CONF_INTERP_END]
+
+
+def _get_azimuth_edges(data) -> int:
+    """Return the total azimuth sun-acceptance-angle span (fov_left + fov_right)."""
+    return data[CONF_FOV_LEFT] + data[CONF_FOV_RIGHT]
+
+
+_WEATHER_SAFETY_WIKI = (
+    "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Weather-Safety"
+)
+
+
+def _weather_override_placeholders(
+    hass: HomeAssistant | None,
+    options: dict[str, Any] | None,
+) -> dict[str, str]:
+    """description_placeholders for the weather_override step.
+
+    Returns ``learn_more``, ``wind_unit``, and ``rain_unit``. The unit strings
+    are read from the configured sensor's ``unit_of_measurement``; when no
+    sensor is configured (or its state is unavailable) the helper falls back to
+    HA's locale unit so the field still carries a unit label.
+    """
+    opts = options or {}
+    if hass is not None:
+        wind_fallback = str(hass.config.units.wind_speed_unit)
+        rain_fallback = str(hass.config.units.accumulated_precipitation_unit)
+    else:
+        wind_fallback = ""
+        rain_fallback = ""
+    return {
+        "learn_more": _WEATHER_SAFETY_WIKI,
+        "wind_unit": sensor_unit_label(
+            hass, opts.get(CONF_WEATHER_WIND_SPEED_SENSOR), wind_fallback
+        ),
+        "rain_unit": sensor_unit_label(
+            hass, opts.get(CONF_WEATHER_RAIN_SENSOR), rain_fallback
+        ),
+    }
+
+
+def _stringify_templatable(suggested: dict) -> dict:
+    """Coerce templatable threshold values to strings for the template editor.
+
+    The ``TemplateSelector`` code editor only renders a *string* value; legacy
+    entries store these thresholds as numbers, so a raw int/float collapses the
+    field to nothing (issue #577). Stringify them before
+    ``add_suggested_values_to_schema`` injects the suggested value. Whole-valued
+    floats render without a trailing ``.0``; ``None`` and existing strings
+    (including templates) are left untouched.
+    """
+    out = dict(suggested)
+    for key in config_fields.TEMPLATABLE_KEYS:
+        value = out.get(key)
+        if value is None or isinstance(value, str):
+            continue
+        if isinstance(value, float) and value.is_integer():
+            out[key] = str(int(value))
+        else:
+            out[key] = str(value)
+    return out
+
+
+# The duration formatter and the all-zero normaliser now live in ``helpers``
+# (issue #175) so ``building_overview`` and ``config_types`` can read a stored
+# duration without importing the config flow. Aliased under the old private
+# name because every call site in this module — and the unit tests that pin the
+# formatter's output — already reads it that way.
+_format_duration = format_duration
+
+
+def _build_cover_capabilities_text(
+    config: dict,
+    sensor_type: str | None,
+    hass: HomeAssistant | None = None,
+) -> str:
+    """Build a Cover Capabilities block for the Debug & Diagnostics screen.
+
+    Returns a markdown string (possibly empty) describing each bound cover's
+    detected features plus any cross-entity consistency warnings.
+    """
+    entities: list[str] = config.get(CONF_ENTITIES) or []
+    if hass is None or not entities:
+        return ""
+
+    cap_map, warnings = check_cover_capabilities(config, sensor_type, hass)
+
+    from .cover_types.base import (
+        CAP_HAS_CLOSE,
+        CAP_HAS_OPEN,
+        CAP_HAS_SET_POSITION,
+        CAP_HAS_SET_TILT_POSITION,
+        CAP_HAS_STOP,
+        caps_get,
+    )
+
+    cap_label_map = {
+        CAP_HAS_SET_POSITION: "set position",
+        CAP_HAS_SET_TILT_POSITION: "set tilt",
+        CAP_HAS_OPEN: "open",
+        CAP_HAS_CLOSE: "close",
+        CAP_HAS_STOP: "stop",
+    }
+
+    lines: list[str] = ["**Cover Capabilities**"]
+    for eid in entities:
+        caps = cap_map.get(eid)
+        if caps is None:
+            lines.append(f"{eid}: not ready (unavailable)")
+        else:
+            cap_list = ", ".join(
+                label for key, label in cap_label_map.items() if caps_get(caps, key)
+            )
+            lines.append(f"{eid}: {cap_list or 'none detected'}")
+
+    if warnings:
+        lines.extend(warnings)
+
+    return "\n".join(lines)
+
+
+async def _compute_todays_sun_times(hass: HomeAssistant, config: dict) -> dict | None:
+    """Compute today's raw/effective sunrise/sunset + solar-control window.
+
+    Runs the pandas/astral-heavy work in an executor. Returns ``None`` on any
+    failure so the summary renders gracefully when location/astral data is
+    unavailable. All returned datetimes are naive local (HA-configured TZ).
+    """
+    from datetime import timedelta
+
+    from homeassistant.util import dt as dt_util
+
+    from .config_types import CoverConfig
+    from .engine.sun_geometry import SunGeometry
+    from .state.sun_provider import SunProvider
+
+    def _to_local(value):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=dt_util.UTC)
+        return dt_util.as_local(value).replace(tzinfo=None)
+
+    def _compute() -> dict | None:
+        try:
+            sun_data = SunProvider(hass).create_sun_data(hass.config.time_zone)
+            sunrise_raw_utc = sun_data.sunrise()
+            sunset_raw_utc = sun_data.sunset()
+
+            cfg = CoverConfig.from_options(config)
+            geometry = SunGeometry(0.0, 0.0, sun_data, cfg, _LOGGER)
+            solar_start_utc, solar_end_utc = geometry.solar_times()
+
+            sunrise_local = _to_local(sunrise_raw_utc)
+            sunset_local = _to_local(sunset_raw_utc)
+            sunrise_eff = (
+                sunrise_local + timedelta(minutes=int(cfg.sunrise_off))
+                if sunrise_local is not None
+                else None
+            )
+            sunset_eff = (
+                sunset_local + timedelta(minutes=int(cfg.sunset_off))
+                if sunset_local is not None
+                else None
+            )
+
+            return {
+                "sunrise_raw": sunrise_local,
+                "sunset_raw": sunset_local,
+                "sunrise_eff": sunrise_eff,
+                "sunset_eff": sunset_eff,
+                "solar_start": _to_local(solar_start_utc),
+                "solar_end": _to_local(solar_end_utc),
+            }
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Failed to compute today's sun times", exc_info=True)
+            return None
+
+    return await hass.async_add_executor_job(_compute)
+
+
+def _cover_type_label(
+    sensor_type: str | None, labels: dict[str, str] | None = None
+) -> str:
+    """Return the human-readable label for a cover type, falling back to 'Cover'.
+
+    ``labels`` is the translated ``cover_types.*`` bundle threaded from
+    ``_build_config_summary``; ``None`` (entry titles, no flow context) keeps
+    the policy's English default.
+    """
+    if sensor_type is not None and sensor_type in POLICY_REGISTRY:
+        return get_policy(sensor_type).display_label(labels)
+    return "Cover"
+
+
+# ---------------------------------------------------------------------------
+# Configuration-summary i18n (issue #258)
+# ---------------------------------------------------------------------------
+#
+# Every user-facing phrase rendered by ``_build_config_summary`` lives here as a
+# dotted-key → English template. This dict is BOTH:
+#   * the single source of truth for the English output (so the 188 regression
+#     tests in test_config_flow_summary.py stay byte-identical), AND
+#   * the per-key fallback used when a translated key is missing/dropped.
+#
+# ``summary_i18n/en.json`` mirrors these exact keys/values as a nested tree. The
+# flattened dotted keys (``rules`` → ``force`` → ``rules.force``) match the
+# dotted keys here verbatim — see ``_load_summary_labels``. This data lives in a
+# dedicated ``summary_i18n/`` bundle rather than under ``translations/`` because
+# hassfest validates ``translations/en.json`` against HA's strict schema, which
+# forbids a custom ``config_summary`` top-level category.
+#
+# Each value is a Python ``str.format`` template. Literal ``{`` / ``}`` that are
+# NOT format fields (the cloud "weather not in {set}" notation) are escaped as
+# ``{{`` / ``}}``. Priority badges are NOT baked in — ``_badge(N)`` is prepended
+# AFTER ``.format()`` so handler-priority integers stay imported, never
+# duplicated into translation strings.
+#
+# DEFERRED (stay English / policy-owned, translated in a follow-up):
+#   * cover-type label (``policy.display_label()``)
+#   * physical-dimension block (``policy.summary_geometry_lines()``)
+#   * decision-priority short labels (Force/Weather/...) and the ✅/❌/→ marks
+#   * cover-capability warning lines built in ``helpers.check_cover_capabilities``
+_SUMMARY_LABELS_EN: dict[str, str] = {
+    # --- banners / section headers ---
+    "banner.dry_run": (
+        "⚠️ **Dry-run mode is ON** — positions are computed and logged, but "
+        "no commands are sent and covers will NOT move."
+    ),
+    "headers.your_cover": "**Your Cover**",
+    "cover.type_with_entities": "{type_label} controlling {entity_str}",
+    "cover.building_profile": "🏢 Linked to building profile: {name}",
+    "headers.cover_warnings": "**Cover Warnings**",
+    "headers.how_it_decides": "**How It Decides** (first matching rule wins)",
+    # --- singular/plural words ---
+    "words.sensor_singular": "sensor",
+    "words.sensor_plural": "sensors",
+    "words.source_singular": "source",
+    "words.source_plural": "sources",
+    # --- shared fragments ---
+    "fragments.as_minimum": " (as minimum)",
+    "fragments.as_maximum": " (at most {max}%)",
+    "fragments.safety": " 🔒 safety: acts outside the time window too",
+    "fragments.template_value": "[template]",
+    # --- Weather safety (90) ---
+    # ``{weather_tilt}`` (#1297) is filled with ``custom.tilt_note`` — the same
+    # ", tilt {tilt}%" fragment the custom-position line uses, because it says
+    # exactly the same thing about the same axis. Reused rather than duplicated
+    # so the two lines cannot drift, and so DE/FR gain nothing new to translate
+    # for the fragment itself. Widening this key's placeholder set is the one
+    # thing ``test_config_summary_placeholder_parity_de_fr`` guards, so the DE
+    # and FR bundles must carry ``{weather_tilt}`` too.
+    "rules.weather": (
+        "🌧️ Weather safety: if {wx_condition} → covers retract to "
+        "{weather_pos}%{weather_min}{weather_tilt}{delay}{bypass}"
+    ),
+    "weather.wind": "wind > {thresh}",
+    "weather.wind_dir": " from window ±{tol}°",
+    "weather.rain": "rain > {thresh}",
+    "weather.is_raining": "is-raining",
+    "weather.is_windy": "is-windy",
+    "weather.severe": "{count} severe weather sensor(s)",
+    "weather.condition_default": "weather condition",
+    "weather.condition_join": " or ",
+    "weather.delay": " (waits {delay}s after clearing)",
+    "weather.bypass": " ⚠️ halts all automation while triggered",
+    "weather.disabled_warning": (
+        "🌧️ Weather safety: ⚠️ sensors configured but the feature is "
+        "turned OFF — weather overrides are ignored"
+    ),
+    # A NEW key rather than a ``{}`` placeholder appended to ``rules.weather``:
+    # widening an existing key's placeholder set across three languages is what
+    # ``test_config_summary_placeholder_parity_de_fr`` exists to catch.
+    "warnings.weather_window_scoped": (
+        "⚠️ Weather safety only acts inside the time window — outside it the "
+        "cover follows the end-of-window / sunset position instead, and "
+        "weather will not protect it overnight."
+    ),
+    # The #1297 footgun: in minimum mode the weather handler defers entirely
+    # and a lower-priority handler wins the seat, so there is no weather result
+    # to carry a tilt on. Letting the tilt through anyway would hand the tilt
+    # axis to a handler the pipeline outprioritized — the hole #1153 closed —
+    # so the option genuinely no-ops here and the user is told rather than left
+    # to wonder why the slats never move.
+    "warnings.weather_tilt_min_mode": (
+        "⚠️ A weather safety tilt is set but minimum position mode is on — in "
+        "minimum mode weather only raises a position floor for another rule to "
+        "satisfy and never sets the slats, so the tilt is ignored."
+    ),
+    # --- Manual override (80) ---
+    "rules.manual": (
+        "✋ Manual override: pauses automatic control when you move the cover"
+        "{detail}"
+    ),
+    "manual.pauses_for": "pauses for {duration}",
+    "manual.until_sunset": "holds until the next sunset",
+    "manual.until_sunrise": "holds until the next sunrise",
+    "manual.until_next_sun_event": "holds until the next sunrise or sunset",
+    "manual.until_window_end": "holds until the time window ends",
+    "manual.until_window_end_no_window": (
+        "⚠️ Manual override is set to hold until the time window ends, but no "
+        "end time is configured — the configured duration is used instead"
+    ),
+    "manual.threshold": "threshold {threshold}%",
+    "manual.resets_on_move": "resets on next move",
+    "manual.ignore_intermediate": "ignores intermediate positions",
+    "manual.ignore_external": "ACP-only (ignores external moves)",
+    "manual.input_entities": "input-sensor override: {count} sensor(s)",
+    "manual.transit_timeout": "transit timeout: {seconds}s",
+    # --- Custom positions ---
+    "rules.custom_tilt_only": (
+        "🎯 {label}: if {trigger} is on → tilt only "
+        "(slat fixed at {slat}%; position driven by sun tracking)"
+    ),
+    "rules.custom": (
+        "🎯 {label}: if {trigger} is on → {target}{cp_min}{tilt_note}"
+        " — bypasses delta gates and auto-control{safety}"
+    ),
+    "custom.tilt_note": ", tilt {tilt}%",
+    "custom.trigger_sensors": "any of {n} sensors",
+    "custom.trigger_template": "template",
+    "custom.trigger_join": " or ",
+    "custom.tilt_bound_min": ", tilt at least {min}%",
+    "custom.tilt_bound_max": ", tilt at most {max}%",
+    "custom.tilt_bound_range": ", tilt {min}–{max}%",
+    "custom.no_position_claim": "the calculated position",
+    "custom.outside_window": (
+        "🕗 {label}: min/max constraints stay active outside the time window "
+        "(the slot still never drives a position out there)."
+    ),
+    "custom.scope_to_window": (
+        "🕗 {label}: only applies within the time window — once the window "
+        "closes the slot stands down and the end-of-window position applies."
+    ),
+    # Fallback slot label when no custom_position_name_N is configured
+    # (issue #1190) — the exact "Custom #{slot}" fragment extracted verbatim
+    # from the five templates below, so the no-name path stays byte-identical.
+    "custom.slot_label_default": "Custom #{slot}",
+    "warnings.custom_position_bound_conflict": (
+        "⚠️ {label}: the maximum ({max}%) is below the minimum ({min}%) — "
+        "the minimum wins and the maximum is ignored."
+    ),
+    "warnings.custom_tilt_only_conflict": (
+        "⚠️ {label}: tilt only is on — "
+        "Use as minimum / Use My position are ignored for this slot."
+    ),
+    "warnings.custom_tilt_only_bounds_discarded": (
+        "⚠️ {label}: slat fixed at {slat}% — the configured tilt bounds are "
+        "ignored for this slot."
+    ),
+    "warnings.custom_tilt_only_no_effect": (
+        "⚠️ {label}: tilt only is on with no slat angle and no tilt bounds "
+        "configured — this slot has no effect."
+    ),
+    "warnings.custom_outside_window_no_bounds": (
+        "⚠️ {label}: keep constraints active outside the time window is on, "
+        "but this slot configures no minimum or maximum — the setting has no "
+        "effect. Only min/max claims stay active out there; an exact position "
+        "never does."
+    ),
+    "warnings.custom_outside_window_redundant": (
+        "⚠️ {label}: keep constraints active outside the time window is on, "
+        "but priority 100 already acts outside the window (and past automatic "
+        "control and the delta gates) — the setting changes nothing here."
+    ),
+    "warnings.custom_scope_to_window_no_fixed_claim": (
+        "⚠️ {label}: only apply within the time window is on, but this slot "
+        "names no exact position and does not use My position — the setting "
+        "has no effect. It scopes the exact-position claim only; whether a "
+        "min/max bound survives the window is decided by keep constraints "
+        "active outside time window instead."
+    ),
+    "warnings.custom_scope_to_window_safety_ignored": (
+        "⚠️ {label}: only apply within the time window is on, but priority "
+        "100 is safety — acting outside the window is what that priority "
+        "means, so the setting is ignored here."
+    ),
+    "warnings.custom_scope_to_window_needs_return": (
+        '⚠️ {label}: "Move covers to current default position when end time is '
+        'reached" is OFF — the slot stands down at end time but nothing '
+        "repositions the cover, so it stays where the slot left it. Turn that "
+        "toggle on."
+    ),
+    "warnings.custom_and_no_sensors": (
+        "⚠️ {label}: combine mode AND is set but no trigger sensors are "
+        "configured — the template alone activates the slot."
+    ),
+    # NOTE: the safety-priority bypass warning moved to the shared triage engine
+    # (``troubleshoot_i18n`` bundle, ``TriageCode.CUSTOM_SAFETY_BYPASS``) so the
+    # summary and troubleshoot surfaces share one rule + one string (issue #970).
+    # --- Motion (75) ---
+    "rules.motion": (
+        "🚶 Occupancy: if no occupancy for {motion_timeout}s ({sources}) → {action}"
+    ),
+    "motion.template_source": "occupancy template",
+    "motion.action_hold": (
+        "covers hold current position (return to default when sun leaves the sun acceptance angle)"
+    ),
+    "motion.action_return": "covers return to default ({default_pos}%)",
+    "warnings.motion_hold_no_sensors": (
+        "⚠️ hold_position mode is set but no occupancy sources are "
+        "configured — the setting has no effect until an occupancy "
+        "source is added"
+    ),
+    # --- Cloud suppression (60) ---
+    "rules.cloud": ("☁️ Cloud suppression: skips sun tracking{cloud} → {fallback}"),
+    "cloud.is_sunny": "is_sunny={value}",
+    "cloud.lux": "lux < {thresh} lx",
+    "cloud.lux_no_thresh": "lux ({entity})",
+    "cloud.irradiance": "irradiance < {thresh} W/m²",
+    "cloud.irradiance_no_thresh": "irradiance ({entity})",
+    "cloud.coverage": "cloud > {thresh}%",
+    "cloud.coverage_no_thresh": "cloud ({entity})",
+    "cloud.weather_in": "weather not in {{{states}}}",
+    "cloud.weather_fallback": " (falls back to {weather})",
+    "cloud.when": " when {parts}",
+    "cloud.fallback_cloudy": "cloudy position {pos}%",
+    "cloud.fallback_default": "default ({default_pos}%)",
+    "cloud.hold_time": " · smoothing hold {secs}s",
+    "cloud.release": " · release when {parts}",
+    "cloud.lux_release": "lux ≥ {release} lx",
+    "cloud.irradiance_release": "irradiance ≥ {release} W/m²",
+    "cloud.coverage_release": "cloud ≤ {release}%",
+    # Item fragments for the ignored-settings warning below (#175). The
+    # position sibling reuses ``cloud.fallback_cloudy`` rather than gaining a
+    # twin.
+    "cloud.ignored_tilt": "cloudy slat angle {tilt}%",
+    "cloud.ignored_escalation": "open-fully delay {delay}",
+    # Suffix on the rendered cloud line when a delay is configured (#175).
+    # Says what the cover DOES, not what the option is called, because the
+    # summary's job is to describe behaviour.
+    "cloud.escalation": " · opens fully after {delay}",
+    "info.light_sensors_off": (
+        "📊 Light sensors configured ({names}) but cloud suppression is off."
+    ),
+    "info.light_lux": "lux",
+    "info.light_irradiance": "irradiance",
+    "info.light_cloud_coverage": "cloud coverage",
+    # One warning for every Light & Cloud target stranded by the master toggle
+    # (#175), replacing the single-key ``warnings.cloudy_pos_ignored``. The
+    # sentence leads with fixed text so ``{items}`` can carry one item or
+    # several without breaking sentence case. Adding a key to the list is a
+    # rendering change only — this string never changes again.
+    "warnings.cloud_settings_ignored": (
+        "⚠️ Cloud suppression is disabled, so {items} will be ignored."
+    ),
+    # --- Climate (50) ---
+    "rules.climate": ("🌡️ Climate mode: adjusts strategy for heating/cooling{detail}"),
+    "climate.comfort_range": "comfort range {lo}–{hi}°C",
+    "climate.using": "using {entity}",
+    "climate.using_area": "using area temperature sensor",
+    "climate.outside_thresh": "outside: {entity} > {thresh}°C",
+    "climate.outside": "outside: {entity}",
+    "climate.weather": "weather: {entity}",
+    "climate.presence": "presence: {entity}",
+    "climate.transparent": "transparent blind",
+    "climate.winter_close": "closes fully in winter for insulation",
+    "climate.summer_full_close": "closes fully in summer heat",
+    "climate.extreme_heat": "holds {pos}% all day above {thresh}°C outside",
+    "climate.hold_time": " · smoothing hold {secs}s",
+    "climate.release": " · release when {parts}",
+    "climate.temp_low_release": "winter ≥ {release}°",
+    "climate.temp_high_release": "summer ≤ {release}°",
+    "climate.outside_release": "outside ≤ {release}°",
+    "climate.extreme_heat_release": "extreme ≤ {release}°",
+    "warnings.forecast_source_no_weather_entity": (
+        "⚠️ Outdoor-temperature source is forecast-based but no weather entity "
+        "is configured — the forecast will silently fall back to the live "
+        "reading. Configure a weather entity in Weather, Light & Cloud."
+    ),
+    # --- Glare (45) ---
+    "rules.glare": (
+        "🔆 Glare zones: lowers blind further to protect floor areas from "
+        "glare{detail}"
+    ),
+    "glare.zones": "zones: {names}",
+    "glare.window": "{width:.2f}m window",
+    "glare.z_height": "Z height: {values}",
+    "glare.z_value": "{z:.2f}m",
+    # --- Solar (40) ---
+    "rules.solar": (
+        "☀️ Tracks the sun{sun_desc} and calculates position to block "
+        "direct sunlight{today}"
+    ),
+    "rules.solar_disabled": (
+        "☀️ Sun tracking disabled — covers hold position; climate, manual "
+        "override, custom positions, and other overrides remain active"
+    ),
+    "solar.azimuth": "azimuth {azimuth}°",
+    "solar.fov": "±{fov_l}°/{fov_r}° sun acceptance angle",
+    "solar.elev_above": "above {elev}°",
+    "solar.elev_below": "below {elev}°",
+    "solar.elevation": "elevation {parts}",
+    "solar.elev_join": " and ",
+    "solar.today_window": (" (today: sun in window {start} → {end})"),
+    "solar.today_no_window": " (today: sun does not enter window)",
+    "solar.minimize_one_step": "moves straight to full coverage and holds (1 step)",
+    "solar.minimize_steps": "reaches full coverage in up to {steps} steps",
+    "solar.minimize": (
+        "{indent}🪟 Minimize movements — {detail}, rounding toward more "
+        "coverage to reduce motor movements."
+    ),
+    "solar.snap_closed_below": (
+        "{indent}📎 Snap closed below {threshold}% — a sun-tracking demand "
+        "under {threshold}% (but above 0%) goes straight to fully closed "
+        "instead of leaving a barely-open sliver."
+    ),
+    "solar.gate_sensors": (
+        "{indent}🚦 Sun tracking gate: {sensors} decide whether to sun-track."
+    ),
+    "solar.gate_template": (
+        "{indent}🚦 Sun tracking gate: a template decides whether to sun-track."
+    ),
+    "solar.gate_both": (
+        "{indent}🚦 Sun tracking gate: {sensors} and a template ({mode}) decide "
+        "whether to sun-track."
+    ),
+    "solar.gate_explainer": (
+        "{indent}While the gate reads false, solar positioning is skipped and the "
+        "cover falls through to the default position. Climate mode, motion and "
+        "manual override are unaffected, and the operating window stays open — "
+        "unlike the daytime gate, which closes the window and suppresses all of "
+        "them. Glare zones keep running but drop their sun-tracking-only limits, "
+        "since those apply only while tracking is live."
+    ),
+    # --- Timing window ---
+    "timing.from_entity": "from {entity}",
+    "timing.from_time": "from {time}",
+    "timing.from_sunrise": "from sunrise",
+    "timing.until_entity": "until {entity}",
+    "timing.until_time": "until {time}",
+    "timing.active_daylight": "Active during daylight",
+    "timing.line": "{indent}🕒 {timing}.",
+    "timing.sunrise_gates_start": (
+        "{indent}🌄 Waits for sunrise before starting — the window opens at the "
+        "start time or sunrise, whichever is later."
+    ),
+    "timing.ann_via": "via {entity}",
+    "timing.ann_today": "today ~{time}",
+    "timing.offset_plus": "+{minutes} min",
+    "timing.offset_minus": "{minutes} min",
+    "timing.after_end_to_default": "{indent}🔚 After end time → {default_pos}%.",
+    "timing.after_sunset": "{indent}🌅 After sunset{ann} → {target}.",
+    "timing.after_label": "{indent}🌅 After {label}{ann} → {target}.",
+    "timing.label_end_or_sunset": "end time/sunset",
+    "timing.label_sunset": "sunset",
+    "timing.after_sunrise": (
+        "{indent}🌄 After sunrise{ann} → {default_pos}% (tracking resumes)."
+    ),
+    "timing.return_sunset": "{indent}🔚 Move to default position at end time: on",
+    "timing.end_of_window": (
+        "{indent}🔚 End-of-window position → {target} from end time until sunset "
+        "(then the sunset position applies, if set)."
+    ),
+    "timing.end_of_window_needs_return": (
+        '{indent}⚠️ End-of-window position is set but "Move covers when end time '
+        'is reached" is OFF — it will not be applied. Turn that toggle on.'
+    ),
+    # --- Daytime gate (issue #632) ---
+    "timing.gate_sensors": "{indent}🌗 Daytime gate: {sensors} decide day vs dark.",
+    "timing.gate_template": "{indent}🌗 Daytime gate: a template decides day vs dark.",
+    "timing.gate_both": (
+        "{indent}🌗 Daytime gate: {sensors} and a template ({mode}) decide day "
+        "vs dark."
+    ),
+    "timing.gate_explainer": (
+        "{indent}When the gate reads daytime ACP sun-tracks; when it reads dark "
+        "ACP applies the sunset position. The gate replaces the astronomical "
+        "sunset/sunrise boundary; start/end times still clamp the window."
+    ),
+    "timing.gate_offset_ignored": (
+        "{indent}⚠️ Sunset/Sunrise Offset is ignored while a daytime gate is set "
+        "— the gate, not the clock, decides the boundary."
+    ),
+    # --- Blind spot ---
+    "blind_spot.line": (
+        "🟥 Blind spot: ignores sun at {bs} (gamma from the window normal — e.g. "
+        "tree or roof overhang)."
+    ),
+    "blind_spot.range": "{left}°–{right}°",
+    "blind_spot.elevation": "up to {elev}° elevation",
+    "blind_spot.elevation_above": "above {elev}° elevation",
+    # --- Default fallback (0) ---
+    "rules.default": "🌙 Default (no rule matches) → {default_pos}%",
+    "default.tilt": (
+        "  ↳ Default tilt: {tilt}% (used whenever the position falls back to default)"
+    ),
+    "default.sunset_tilt": (
+        "  ↳ Sunset tilt: {tilt}% (used whenever the position falls back to default, "
+        "during sunset)"
+    ),
+    # --- Position limits ---
+    "headers.position_limits": "**Position Limits**",
+    "limits.range": "Range: {lo}–{hi}{qualifier}",
+    "limits.qualifier_both": " (during sun tracking only)",
+    "limits.qualifier_min": " (min during sun tracking only)",
+    "limits.qualifier_max": " (max during sun tracking only)",
+    "limits.default": "Default: {pos}%",
+    "limits.min_change": "Min change: {delta}%",
+    "limits.min_interval": "Min interval: {delta} min",
+    "limits.position_tolerance": "Position tolerance: {tol}%",
+    "limits.position_matching_on": "📍 Position matching on (re-sends until the cover reaches target)",
+    "limits.position_matching_off": "📍 Position matching off (commands once; a settle past tolerance becomes a manual override)",
+    "limits.inverse_state": "Inverse state",
+    "limits.open_close_threshold": "Open/close threshold: {thresh}%",
+    "limits.calibration": "Calibration {lo}→{hi}",
+    "limits.calibration_on": "Position calibration on",
+    "limits.travel_time": "Travel time: {done}/{total} covers",
+    "limits.travel_time_manual": "Travel time: {done}/{total} covers ({manual} entered by hand)",
+    "limits.sun_tracking_min": "Sun-tracking min: {pos}%",
+    "limits.separator": " · ",
+    "warnings.travel_time_unmeasurable": (
+        "⚠️ {entities} report an assumed state, so their travel time cannot be "
+        "measured and none has been entered — dashboards will not show them "
+        "moving. Enter a time under Calibration → Travel Time."
+    ),
+    "warnings.sun_track_min_below_floor": (
+        "⚠️ Sun-tracking min {sun_min}% < min position {min_pos}% — "
+        "always-on floor dominates; sun-tracking floor will be raised to "
+        "{min_pos}%."
+    ),
+    "warnings.snap_closed_below_conflicts_min_pos": (
+        "⚠️ Snap closed below {threshold}% + min position {min_pos}% — the "
+        "always-on floor already covers the entire snap band and will win, "
+        "so this setting can never take effect. Lower the min position below "
+        "{floor_bound}% or raise the threshold above {threshold_bound}% for "
+        "it to do anything."
+    ),
+    "warnings.snap_closed_below_conflicts_max_pos": (
+        "⚠️ Snap closed below {threshold}% + max position {max_pos}% — the "
+        "always-on ceiling already covers the entire snap band and will win, "
+        "so this setting can never take effect. Raise the max position above "
+        "{ceiling_bound}% or raise the threshold above {threshold_bound}% for "
+        "it to do anything."
+    ),
+    "warnings.snap_closed_below_floor_active": (
+        "⚠️ Snap closed below {threshold}% + a mixed cover group (some "
+        "support set_position, some are open/close-only) — the sun-tracking "
+        "floor stays active for the whole group (issue #569), so a demand it "
+        "collapses to closed settles at {floor_pct}% instead of a true 0% on "
+        "the position-capable cover(s)."
+    ),
+    "warnings.mode2_min_position": (
+        "⚠️ Tilt MODE2 + min position {min_pos}% — in MODE2 the open "
+        "(horizontal) slat angle IS 50%, so any min position ≥ 50 "
+        "collapses every climate/glare-control decision to the floor "
+        "and the cover stops blocking heat."
+    ),
+    # --- Named command queue (issue #1189) ---
+    "movement.queue": '🚦 Commands serialized on queue "{queue}" ({gap}s gap)',
+    # --- My preset / Somfy ---
+    "my.entities_enabled": "🎛️ My-preset entities: enabled",
+    "my.entities_disabled": "🎛️ My-preset entities: disabled",
+    "my.somfy_preset": "🎛️ Somfy My preset: {pos}% (used where enabled above)",
+    "my.label_my_set": "My ({pos}%)",
+    "my.label_my_unset": "My (not set → {pct}%)",
+    "my.label_plain": "{pct}%",
+    "warnings.somfy_my_unset": (
+        "⚠️ Somfy My preset is enabled for one or more targets but "
+        "My Preset Value is not set — falls back to configured %."
+    ),
+    # --- Proxy cover ---
+    "headers.proxy_enabled": "**Proxy cover**: enabled",
+    "headers.proxy_disabled": "**Proxy cover**: disabled",
+    "warnings.proxy_no_min": (
+        "⚠️ Proxy cover is enabled but no custom-position slot has "
+        "Use as minimum on — the managed cover will not clamp."
+    ),
+    # --- Decision priority chain ---
+    "headers.decision_priority": (
+        "**Decision Priority** (highest wins, ✅ active ❌ not configured)"
+    ),
+    # --- Cover Group (issue #790) ---
+    "group.header": "**Cover Group**",
+    "group.members": (
+        "Controls {acp_count} ACP member(s) + {generic_count} generic cover(s)"
+    ),
+    "group.member_acp": "- 🪟 {title} (ACP)",
+    "group.member_generic": "- 🪟 {entity} (generic)",
+    "group.scene_priority": (
+        "Group scenes apply at priority {scene_priority} "
+        "(above manual override, below weather safety)"
+    ),
+    "group.lock": (
+        "🔒 Group lock at priority {lock_priority} — freezes members in "
+        "place; a member's own safety still wins ties"
+    ),
+    "group.stagger": "Members commanded {stagger}s apart",
+    "group.cover_entity": (
+        "Aggregate cover entity exposed — dragging it commands every member"
+    ),
+    "group.area": ("Membership tracks area '{area}' — covers there join automatically"),
+    "warnings.group_empty": (
+        "⚠️ This group has no members — it will not command anything."
+    ),
+}
+
+
+_SUMMARY_I18N_DIR = Path(__file__).parent / "summary_i18n"
+
+
+def _flatten_summary_labels(node: object, prefix: str = "") -> dict[str, str]:
+    """Flatten a nested label tree to dotted keys (``rules.force`` → template).
+
+    Thin delegate to the shared :func:`i18n_bundle.flatten_bundle` (issue #882
+    extracted the flatten/overlay/merge logic so summary_i18n and reason_i18n
+    share one implementation — no duplication).
+    """
+    return flatten_bundle(node, prefix)
+
+
+@cache
+def _summary_label_overlay(language: str) -> tuple[tuple[str, str], ...]:
+    """Return the flattened ``summary_i18n/<language>.json`` bundle.
+
+    Cached (the bundles are shipped, read-only) and returned as a tuple of items
+    so the cached value cannot be mutated by callers. ``en`` and any missing or
+    malformed file yield an empty overlay — the English defaults then apply.
+    Delegates the read/flatten to the shared :func:`i18n_bundle.load_bundle_overlay`.
+    """
+    return tuple(load_bundle_overlay(_SUMMARY_I18N_DIR, language).items())
+
+
+def _load_summary_labels_sync(language: str) -> dict[str, str]:
+    """Build the config-summary labels for ``language``.
+
+    English defaults overlaid with the translated bundle. Pure/synchronous —
+    safe to unit-test directly.
+    """
+    return merge_labels(_SUMMARY_LABELS_EN, dict(_summary_label_overlay(language)))
+
+
+async def _load_summary_labels(hass: HomeAssistant, language: str) -> dict[str, str]:
+    """Load the translated config-summary labels for ``language``.
+
+    The labels live in the integration's ``summary_i18n/`` bundle (a custom
+    ``config_summary`` category cannot live under ``translations/`` — hassfest
+    rejects it). This overlays the language bundle onto the English defaults so
+    any missing key falls back to English. ``language`` is pre-resolved by the
+    caller via ``_resolve_summary_language`` (issue #905) — this helper just
+    loads whatever language string it's handed. File I/O is offloaded to the
+    executor.
+
+    Both ``ConfigFlow.async_step_summary`` and ``OptionsFlow.async_step_summary``
+    call this single helper (no duplication).
+    """
+    return await hass.async_add_executor_job(_load_summary_labels_sync, language)
+
+
+def _resolve_summary_language(hass: HomeAssistant, context: dict[str, Any]) -> str:
+    """Resolve the language for the config-summary labels (issue #905).
+
+    Prefers the per-user flow language (``context["language"]``) when HA
+    supplies one. HA does not currently populate this for config/options
+    flows — no HA-core code path sets it, so it's always absent in
+    practice — leaving the summary permanently stuck in English even though
+    the ``summary_i18n/{de,fr}.json`` bundles exist (issue #258 built the
+    bundle; #905 is that the language was never actually selected). Falls
+    back to the HA instance language (``hass.config.language``) as a
+    best-effort proxy, and finally to English.
+
+    This is intentionally scoped to the server-rendered summary block only.
+    Per-user language is not available server-side in a flow, but reading
+    the system language for the rest of the flow's UI (menu/step labels) was
+    exactly the #227 bug — see
+    ``tests/test_config_flow_integration.py::test_config_flow_does_not_use_system_language``,
+    which guards against ``hass.config.language`` appearing anywhere else in
+    this module.
+    """
+    return context.get("language") or hass.config.language or "en"
+
+
+def _build_group_summary(
+    config: dict,
+    hass: HomeAssistant | None,
+    L: dict[str, str],
+) -> str:
+    """Compact configuration summary for a Cover Group entry (issue #790).
+
+    Header, roster counts, and the member list (ACP member titles resolve
+    only when ``hass`` is available). An empty roster gets a warning — a
+    memberless group commands nothing.
+    """
+    member_entries: list[str] = config.get(CONF_MEMBER_ENTRIES) or []
+    member_covers: list[str] = config.get(CONF_MEMBER_COVERS) or []
+    lines = [L["group.header"], ""]
+    if not member_entries and not member_covers:
+        lines.append(L["warnings.group_empty"])
+        return "\n".join(lines)
+    lines.append(
+        L["group.members"].format(
+            acp_count=len(member_entries), generic_count=len(member_covers)
+        )
+    )
+    if hass is not None:
+        for entry_id in member_entries:
+            entry = hass.config_entries.async_get_entry(entry_id)
+            if entry is not None:
+                lines.append(L["group.member_acp"].format(title=entry.title))
+    lines.extend(
+        L["group.member_generic"].format(entity=entity_id)
+        for entity_id in member_covers
+    )
+    # Arbitration (Phase 2): priorities from the imported consts, never baked
+    # into the templates.
+    lines.append("")
+    lines.append(L["group.scene_priority"].format(scene_priority=GROUP_SCENE_PRIORITY))
+    lines.append(L["group.lock"].format(lock_priority=CUSTOM_POSITION_SAFETY_PRIORITY))
+    stagger = config.get(CONF_GROUP_STAGGER_DELAY, DEFAULT_GROUP_STAGGER_DELAY)
+    if stagger:
+        lines.append(L["group.stagger"].format(stagger=stagger))
+    if config.get(CONF_GROUP_ENABLE_COVER_ENTITY, DEFAULT_GROUP_ENABLE_COVER_ENTITY):
+        lines.append(L["group.cover_entity"])
+    area_id = config.get(CONF_GROUP_AREA)
+    if area_id:
+        lines.append(L["group.area"].format(area=area_id))
+    return "\n".join(lines)
+
+
+# How It Decides — tie-break order when two rules share the same effective
+# priority. Higher-priority rules always sort first (by value); this index only
+# decides ties, mirroring the evaluation order so built-ins beat custom slots on
+# a tie (issue #923). Values are relative, not priorities — never conflate them.
+_HID_ORDER_INDEX: dict[str, int] = {
+    "weather": 0,
+    "manual_override": 1,
+    "motion_timeout": 2,
+    "cloud_suppression": 3,
+    "climate": 4,
+    "glare_zone": 5,
+    "solar": 6,
+    "default": 7,
+}
+# Custom slot N breaks ties after every built-in: base + N (1..10).
+_HID_CUSTOM_ORDER_BASE = 100
+
+
+@dataclass(frozen=True, slots=True)
+class _HidBlock:
+    """One sortable rule in the How It Decides section.
+
+    Holds a rule's primary (badged) line plus any sub-bullets/warnings that must
+    travel with it through the priority sort.
+    """
+
+    priority: int
+    order_index: int
+    lines: list[str] = field(default_factory=list)
+
+
+def _build_config_summary(  # noqa: C901, PLR0912, PLR0915
+    config: dict,
+    sensor_type: str | None,
+    hass: HomeAssistant | None = None,
+    sun_times: dict | None = None,
+    labels: dict[str, str] | None = None,
+    troubleshoot_labels: dict[str, str] | None = None,
+) -> str:
+    """Build a narrative summary of the current configuration.
+
+    Produces four sections:
+      1. Your Cover  — what is controlled and physical setup
+      2. How It Decides — full decision chain sorted by descending priority:
+         each rule's trigger, target, and today's sun times inline, with a bold
+         **[N]** priority badge leading each rule (issue #923)
+      3. Position Limits — compact one-liner for range/default/delta/flags
+      4. Decision Priority — compact chain showing active/inactive handlers
+
+    ``labels`` maps the summary's dotted keys to translated templates. When
+    ``None`` (unit tests, no hass) the English defaults in ``_SUMMARY_LABELS_EN``
+    are used, so the output is byte-identical to the pre-i18n strings.
+
+    ``troubleshoot_labels`` maps the shared triage-engine ``TriageCode`` keys to
+    translated templates for the findings the summary renders through the engine
+    (issue #970 — the custom-position safety-bypass warning). ``None`` uses the
+    English defaults, keeping the English summary byte-identical.
+    """
+    L = labels or _SUMMARY_LABELS_EN
+    # English triage templates via the public loader (I/O-free for "en" —
+    # ``load_bundle_overlay`` short-circuits, so this is the same dict of English
+    # defaults, no file read). Avoids importing the private ``_TRIAGE_TEMPLATES_EN``.
+    TL = troubleshoot_labels or load_troubleshoot_labels("en")
+
+    # Cover groups render their own compact summary — a group has no cover
+    # chain, geometry, or handler ladder (issue #790).
+    if sensor_type is not None and get_policy(sensor_type).is_orchestrator:
+        return _build_group_summary(config, hass, L)
+
+    _ph = L["fragments.template_value"]
+    # ---- Gather all values up front ----------------------------------------
+    # ``L`` here is the FULL flow bundle (``_SUMMARY_LABELS_EN`` keys + the
+    # policy-owned ``cover_types.*`` / ``geometry.*`` keys when a translated
+    # bundle is loaded). The policies layer it over their own English base
+    # (``COVER_TYPE_LABELS_EN`` / ``GEOMETRY_LABELS_EN``), so passing ``L`` —
+    # even the policy-key-less ``_SUMMARY_LABELS_EN`` default — still yields
+    # English for the policy lines while translating everything present.
+    type_label = _cover_type_label(sensor_type, L)
+
+    entities: list[str] = config.get(CONF_ENTITIES) or []
+    default_pos = config.get(CONF_DEFAULT_HEIGHT, 0)
+    weather_pos = config.get(CONF_WEATHER_OVERRIDE_POSITION, 0)
+    motion_timeout = config.get(CONF_MOTION_TIMEOUT, 300)
+    manual_dur = config.get(CONF_MANUAL_OVERRIDE_DURATION)
+
+    from .helpers import motion_entities
+    from .templates import is_template_string
+
+    has_weather = any(
+        [
+            config.get(CONF_WEATHER_WIND_SPEED_SENSOR),
+            config.get(CONF_WEATHER_RAIN_SENSOR),
+            config.get(CONF_WEATHER_IS_RAINING_SENSOR),
+            config.get(CONF_WEATHER_IS_WINDY_SENSOR),
+            is_template_string(config.get(CONF_WEATHER_IS_RAINING_TEMPLATE)),
+            is_template_string(config.get(CONF_WEATHER_IS_WINDY_TEMPLATE)),
+            is_template_string(config.get(CONF_WEATHER_SEVERE_TEMPLATE)),
+            bool(config.get(CONF_WEATHER_SEVERE_SENSORS)),
+        ]
+    )
+
+    def _thresh_display(value: Any, *, placeholder: str) -> str:
+        return placeholder if is_template_string(str(value)) else str(value)
+
+    _motion_sources = motion_entities(config)
+    _has_motion_template = is_template_string(config.get(CONF_MOTION_TEMPLATE))
+    has_motion = bool(_motion_sources) or _has_motion_template
+    # Build per-slot custom position data:
+    # list of
+    #   (slot, trigger_desc, position, priority, use_my, tilt, tilt_only,
+    #    has_trigger)
+    # ``position`` is None for a constraint-only slot (issue #943) — one that
+    # bounds an axis without naming a position.
+    _custom_slots: list[
+        tuple[int, str, int | None, int, bool, int | None, bool, bool]
+    ] = []
+    _and_no_sensor_slots: list[int] = []
+    # slot -> configured custom_position_name_N (issue #910); feeds the
+    # Decision Priority chain's per-slot label below.
+    _custom_slot_names: dict[int, str] = {}
+    for _i, _slot_keys in CUSTOM_POSITION_SLOTS.items():
+        if not custom_position_slot_configured(config, _slot_keys):
+            continue
+        _sensors = custom_position_slot_sensors(config, _slot_keys)
+        _has_tpl = is_template_string(config.get(_slot_keys["template"]))
+        # Footgun: AND mode with no sensors degenerates to template-only.
+        if (
+            _has_tpl
+            and not _sensors
+            and config.get(_slot_keys["template_mode"]) == "and"
+        ):
+            _and_no_sensor_slots.append(_i)
+        _trigger_parts: list[str] = []
+        if len(_sensors) == 1:
+            _trigger_parts.append(_sensors[0])
+        elif _sensors:
+            _trigger_parts.append(L["custom.trigger_sensors"].format(n=len(_sensors)))
+        if _has_tpl:
+            _trigger_parts.append(L["custom.trigger_template"])
+        _trigger = L["custom.trigger_join"].join(_trigger_parts)
+        _pos = config.get(_slot_keys["position"])
+        _pri = int(
+            config.get(_slot_keys["priority"]) or DEFAULT_CUSTOM_POSITION_PRIORITY
+        )
+        _use_my = bool(config.get(_slot_keys["use_my"]))
+        _slot_tilt = config.get(_slot_keys["tilt"])
+        _tilt_only = bool(config.get(_slot_keys["tilt_only"]))
+        _has_trigger = bool(_sensors) or _has_tpl
+        _custom_slots.append(
+            (
+                _i,
+                _trigger,
+                int(_pos) if _pos is not None else None,
+                _pri,
+                _use_my,
+                _slot_tilt,
+                _tilt_only,
+                _has_trigger,
+            )
+        )
+        _name = custom_position_slot_name(config, _slot_keys)
+        if _name:
+            _custom_slot_names[_i] = _name
+    has_custom_position = bool(_custom_slots)
+    my_pos = config.get(CONF_MY_POSITION_VALUE)  # None = not configured
+    has_cloud = bool(config.get(CONF_CLOUD_SUPPRESSION))
+    has_climate = bool(config.get(CONF_CLIMATE_MODE))
+    sun_tracking_enabled = config.get(CONF_ENABLE_SUN_TRACKING, True)
+    summary_policy = (
+        get_policy(sensor_type)
+        if sensor_type is not None and sensor_type in POLICY_REGISTRY
+        else BlindPolicy()
+    )
+    has_glare = summary_policy.supports_glare_zones and bool(
+        config.get(CONF_ENABLE_GLARE_ZONES)
+    )
+
+    def _pos_label(raw_pct: int, use_my: bool) -> str:
+        """Render a target as 'My (N%)' when the My preset flag is active."""
+        if use_my and my_pos is not None:
+            return L["my.label_my_set"].format(pos=my_pos)
+        if use_my:
+            return L["my.label_my_unset"].format(pct=raw_pct)
+        return L["my.label_plain"].format(pct=raw_pct)
+
+    def _badge(priority: int) -> str:
+        """Render a priority badge as a bold leading prefix: ``**[N]** ``."""
+        return f"**[{priority}]** "
+
+    # Effective built-in handler priorities (configured overrides or class
+    # defaults). Each rule's badge reads its own handler here so a re-ordered
+    # chain shows the user's real numbers, not the hardcoded defaults.
+    _prio = _handler_priority_overrides(config)
+
+    def _fmt_sun_dt(value) -> str | None:
+        """Format a sun-times datetime as HH:MM; None passes through."""
+        return value.strftime("%H:%M") if value is not None else None
+
+    def _offset_str(minutes: int) -> str:
+        """Format a minutes offset as (+N min) / (-N min); 0 → empty."""
+        if minutes > 0:
+            return L["timing.offset_plus"].format(minutes=minutes)
+        if minutes < 0:
+            return L["timing.offset_minus"].format(minutes=minutes)
+        return ""
+
+    _solar_start = sun_times.get("solar_start") if sun_times else None
+    _solar_end = sun_times.get("solar_end") if sun_times else None
+    _sunset_eff = sun_times.get("sunset_eff") if sun_times else None
+    _sunrise_eff = sun_times.get("sunrise_eff") if sun_times else None
+
+    lines: list[str] = []
+
+    # Dry-run banner — surfaced first because it overrides everything below: when
+    # on, the full decision chain is still computed and logged but no commands are
+    # sent, so covers never move. Without this the summary reads as if it drives
+    # covers regardless of the dry-run toggle on the Debug screen.
+    if config.get(CONF_DRY_RUN):
+        lines.append(L["banner.dry_run"])
+        lines.append("")
+
+    # =========================================================================
+    # Section 1: Your Cover
+    # =========================================================================
+    lines.append(L["headers.your_cover"])
+
+    # Type + entities
+    if entities:
+        entity_str = ", ".join(entities)
+        lines.append(
+            L["cover.type_with_entities"].format(
+                type_label=type_label, entity_str=entity_str
+            )
+        )
+    else:
+        lines.append(type_label)
+
+    # Physical dimensions in plain English. The render mode is per-cover-type;
+    # each ``CoverTypePolicy.summary_geometry_lines`` owns its block. Legacy
+    # configs without ``sensor_type`` fall back to the vertical-blind layout
+    # via ``summary_policy`` chosen at the top of this function. ``L`` threads
+    # the translated ``geometry.*`` bundle (or the policy-key-less EN default,
+    # which still renders English over the policy's own base layer).
+    lines.extend(summary_policy.summary_geometry_lines(config, L))
+
+    # Building profile link — show the profile name when this is a linked cover.
+    _profile_id = config.get(CONF_BUILDING_PROFILE_ID)
+    if _profile_id and hass is not None:
+        _profile_entry = hass.config_entries.async_get_entry(_profile_id)
+        if _profile_entry is not None:
+            lines.append(L["cover.building_profile"].format(name=_profile_entry.title))
+
+    # =========================================================================
+    # Section 1c: Cover Capability Warnings
+    # =========================================================================
+    cap_map, cap_warnings = check_cover_capabilities(config, sensor_type, hass)
+    if cap_warnings:
+        lines.append("")
+        lines.append(L["headers.cover_warnings"])
+        lines.extend(cap_warnings)
+
+    # =========================================================================
+    # Section 2: How It Decides
+    # =========================================================================
+    lines.append("")
+    lines.append(L["headers.how_it_decides"])
+
+    # Collect each rule as a sortable block instead of appending straight to
+    # ``lines`` (issue #923). Blocks are sorted by descending effective priority
+    # (ties broken by ``_HID_ORDER_INDEX``) and flattened just before Section 3,
+    # so custom slots interleave with built-ins by their real priority and every
+    # rule's sub-bullets/warnings travel with it.
+    _hid_blocks: list[_HidBlock] = []
+    _cur: _HidBlock | None = None
+
+    def _open(priority: int, order_index: int, text: str) -> None:
+        """Open a rule block whose primary line carries the bold priority badge."""
+        nonlocal _cur
+        _cur = _HidBlock(priority, order_index, [_badge(priority) + text])
+        _hid_blocks.append(_cur)
+
+    def _open_note(priority: int, order_index: int, text: str) -> None:
+        """Open a badge-less block (a warning/info line) at a category's slot."""
+        nonlocal _cur
+        _cur = _HidBlock(priority, order_index, [text])
+        _hid_blocks.append(_cur)
+
+    def _sub(text: str) -> None:
+        """Append a sub-bullet/continuation line to the current block."""
+        _cur.lines.append(text)
+
+    # Weather safety override (90). The master toggle (issue #719) gates the
+    # whole feature. A summary config missing the key is treated as enabled
+    # (back-compat — the warning must only fire on an explicit opt-out); a new
+    # cover that leaves the toggle off after configuring sensors gets the
+    # OFF-with-sensors footgun warning instead of the normal rule line.
+    weather_enabled = config.get(CONF_WEATHER_ENABLED, True)
+    if has_weather and not weather_enabled:
+        _open_note(
+            _prio["weather"],
+            _HID_ORDER_INDEX["weather"],
+            L["weather.disabled_warning"],
+        )
+    elif has_weather:
+        wx_parts = []
+        wind_sensor = config.get(CONF_WEATHER_WIND_SPEED_SENSOR)
+        wind_thresh = config.get(CONF_WEATHER_WIND_SPEED_THRESHOLD)
+        wind_dir_sensor = config.get(CONF_WEATHER_WIND_DIRECTION_SENSOR)
+        wind_dir_tol = config.get(CONF_WEATHER_WIND_DIRECTION_TOLERANCE)
+        rain_sensor = config.get(CONF_WEATHER_RAIN_SENSOR)
+        rain_thresh = config.get(CONF_WEATHER_RAIN_THRESHOLD)
+        is_rain = config.get(CONF_WEATHER_IS_RAINING_SENSOR) or is_template_string(
+            config.get(CONF_WEATHER_IS_RAINING_TEMPLATE)
+        )
+        is_wind = config.get(CONF_WEATHER_IS_WINDY_SENSOR) or is_template_string(
+            config.get(CONF_WEATHER_IS_WINDY_TEMPLATE)
+        )
+        severe = config.get(CONF_WEATHER_SEVERE_SENSORS) or []
+        severe_count = len(severe) + (
+            1 if is_template_string(config.get(CONF_WEATHER_SEVERE_TEMPLATE)) else 0
+        )
+        if wind_sensor and wind_thresh is not None:
+            wind_part = L["weather.wind"].format(
+                thresh=_thresh_display(wind_thresh, placeholder=_ph)
+            )
+            if wind_dir_sensor and wind_dir_tol is not None:
+                wind_part += L["weather.wind_dir"].format(
+                    tol=_thresh_display(wind_dir_tol, placeholder=_ph)
+                )
+            wx_parts.append(wind_part)
+        if rain_sensor and rain_thresh is not None:
+            wx_parts.append(
+                L["weather.rain"].format(
+                    thresh=_thresh_display(rain_thresh, placeholder=_ph)
+                )
+            )
+        if is_rain:
+            wx_parts.append(L["weather.is_raining"])
+        if is_wind:
+            wx_parts.append(L["weather.is_windy"])
+        if severe_count:
+            wx_parts.append(L["weather.severe"].format(count=severe_count))
+        wx_condition = (
+            L["weather.condition_join"].join(wx_parts)
+            if wx_parts
+            else L["weather.condition_default"]
+        )
+        wx_delay = config.get(CONF_WEATHER_TIMEOUT)
+        delay_str = L["weather.delay"].format(delay=wx_delay) if wx_delay else ""
+        weather_min_str = (
+            L["fragments.as_minimum"]
+            if config.get(CONF_WEATHER_OVERRIDE_MIN_MODE)
+            else ""
+        )
+        bypass_str = (
+            L["weather.bypass"] if config.get(CONF_WEATHER_BYPASS_AUTO_CONTROL) else ""
+        )
+        # Gated on the policy ClassVar, never on the cover-type string: a stored
+        # tilt left behind by a cover-type switch must not promise slat movement
+        # to a cover that has no slat axis (#1297).
+        weather_tilt = config.get(CONF_WEATHER_OVERRIDE_TILT)
+        weather_tilt_supported = (
+            sensor_type is not None
+            and get_policy(sensor_type).weather_override_includes_tilt
+        )
+        weather_tilt_str = (
+            L["custom.tilt_note"].format(tilt=weather_tilt)
+            if weather_tilt is not None and weather_tilt_supported
+            else ""
+        )
+        _open(
+            _prio["weather"],
+            _HID_ORDER_INDEX["weather"],
+            L["rules.weather"].format(
+                wx_condition=wx_condition,
+                weather_pos=weather_pos,
+                weather_min=weather_min_str,
+                weather_tilt=weather_tilt_str,
+                delay=delay_str,
+                bypass=bypass_str,
+            ),
+        )
+        # Scoping weather to the window (issue #1308) turns a safety override
+        # into a daytime-only rule — the one thing a user who set it for storm
+        # protection must not discover at 03:00.
+        if not config.get(CONF_WEATHER_OUTSIDE_WINDOW, DEFAULT_WEATHER_OUTSIDE_WINDOW):
+            _sub(L["warnings.weather_window_scoped"])
+        # A tilt paired with min mode is a setting that silently does nothing —
+        # the min-mode seat is position-only by design (#1153).
+        if weather_tilt_str and config.get(CONF_WEATHER_OVERRIDE_MIN_MODE):
+            _sub(L["warnings.weather_tilt_min_mode"])
+
+    # Manual override (80). The duration mode (issue #1044) decides what the
+    # hold is measured against: ``fixed`` shows the numeric duration, every
+    # other mode shows the boundary it runs to — the numeric duration is then
+    # only the unresolvable-anchor fallback, so printing it would mislead.
+    mo_parts = []
+    manual_mode = (
+        config.get(CONF_MANUAL_OVERRIDE_DURATION_MODE)
+        or DEFAULT_MANUAL_OVERRIDE_DURATION_MODE
+    )
+    # Same predicate the runtime resolver uses, so the ⚠️ fires for exactly the
+    # configs whose hold falls back to the numeric duration — including the
+    # truthy-but-unset ``BLANK_TIME`` sentinel (issue #1044).
+    manual_window_end_missing = manual_hold_is_unanchored(config)
+    # The summary's only computed-key label lookup. An out-of-schema stored mode
+    # (hand-edited .storage, a value from a build that knew a mode this one
+    # doesn't) must degrade to the fixed rendering the way the runtime half
+    # does, not raise and take the whole Configuration Summary form down.
+    manual_mode_label = (
+        None
+        if manual_mode == MANUAL_OVERRIDE_DURATION_MODE_FIXED
+        or manual_window_end_missing
+        else L.get(f"manual.{manual_mode}")
+    )
+    if manual_mode_label is None:
+        if manual_dur is not None:
+            mo_parts.append(
+                L["manual.pauses_for"].format(duration=_format_duration(manual_dur))
+            )
+    else:
+        mo_parts.append(manual_mode_label)
+    threshold = config.get(CONF_MANUAL_THRESHOLD)
+    if threshold is not None:
+        mo_parts.append(L["manual.threshold"].format(threshold=threshold))
+    if config.get(CONF_MANUAL_OVERRIDE_RESET):
+        mo_parts.append(L["manual.resets_on_move"])
+    if config.get(CONF_MANUAL_IGNORE_INTERMEDIATE):
+        mo_parts.append(L["manual.ignore_intermediate"])
+    if config.get(CONF_MANUAL_IGNORE_EXTERNAL):
+        mo_parts.append(L["manual.ignore_external"])
+    input_entities = config.get(CONF_MANUAL_OVERRIDE_INPUT_ENTITIES) or []
+    input_count = len(input_entities) + (
+        1 if is_template_string(config.get(CONF_MANUAL_OVERRIDE_INPUT_TEMPLATE)) else 0
+    )
+    if input_count:
+        mo_parts.append(L["manual.input_entities"].format(count=input_count))
+    transit_timeout = config.get(CONF_TRANSIT_TIMEOUT)
+    if (
+        transit_timeout is not None
+        and int(transit_timeout) != DEFAULT_TRANSIT_TIMEOUT_SECONDS
+    ):
+        mo_parts.append(
+            L["manual.transit_timeout"].format(seconds=int(transit_timeout))
+        )
+    mo_str = f" ({', '.join(mo_parts)})" if mo_parts else ""
+    _open(
+        _prio["manual_override"],
+        _HID_ORDER_INDEX["manual_override"],
+        L["rules.manual"].format(detail=mo_str),
+    )
+    if manual_window_end_missing:
+        _sub(L["manual.until_window_end_no_window"])
+
+    # Custom positions — each slot at its own configured priority. Each slot is
+    # its own sortable block; its warnings are folded in (issue #923) so they
+    # travel with the slot's line through the priority sort instead of clumping
+    # after every slot in separate passes.
+    #
+    # The safety-priority bypass warning (issue #711/#716) is rendered from the
+    # shared triage engine so the summary and troubleshoot surfaces share one
+    # CONFIG rule + one string (issue #970). Run the CONFIG rules once and index
+    # the CUSTOM_SAFETY_BYPASS findings by slot; the per-slot loop below renders
+    # the matching finding in place, byte-identically to the legacy string.
+    from .const import TriageCode
+    from .diagnostics.triage import RuleInput, run_triage
+    from .reason_i18n import render
+
+    _safety_findings = {
+        f.reason.params["slot"]: f
+        for f in run_triage({"options": config}, only=RuleInput.CONFIG)
+        if f.reason.code == TriageCode.CUSTOM_SAFETY_BYPASS
+    }
+    if has_custom_position:
+        for (
+            _slot,
+            _trigger,
+            _pos,
+            _pri,
+            _use_my,
+            _slot_tilt,
+            _tilt_only,
+            _has_trigger,
+        ) in _custom_slots:
+            # Configured name replaces the generic "Custom #{slot}" label
+            # outright (issue #1190) — computed once per slot and reused by
+            # every .format() call site below, mirroring the precedent
+            # already shipped for the Decision Priority chain
+            # (priority_chain.py, issue #910).
+            _slot_label = _custom_slot_names.get(_slot) or L[
+                "custom.slot_label_default"
+            ].format(slot=_slot)
+            tilt_note = (
+                L["custom.tilt_note"].format(tilt=_slot_tilt)
+                if _slot_tilt is not None
+                else ""
+            )
+            # Priority-100 slots inherit the old force-override safety
+            # semantics — flag it inline so the behavior is discoverable.
+            safety_note = (
+                L["fragments.safety"] if _pri >= CUSTOM_POSITION_SAFETY_PRIORITY else ""
+            )
+            _order = _HID_CUSTOM_ORDER_BASE + _slot
+            _keys = CUSTOM_POSITION_SLOTS[_slot]
+            # Read once, used by both branches below (issue #1215 finding 2 —
+            # a real fixed tilt still needs these to know whether it is
+            # discarding a configured bound; the constraint-rendering branch
+            # needs them to render the bound itself).
+            _t_min = config.get(_keys["tilt_min"])
+            _t_max = config.get(_keys["tilt_max"])
+            if has_fixed_tilt(tilt_only=_tilt_only, tilt=_slot_tilt):
+                # A REAL fixed tilt (tilt_only + a configured slat angle)
+                # fixes the slat angle and lets the position pipeline (solar
+                # etc.) drive the carriage — min_mode/use_my are ignored.
+                _open(
+                    _pri,
+                    _order,
+                    L["rules.custom_tilt_only"].format(
+                        label=_slot_label, trigger=_trigger, slat=_slot_tilt
+                    ),
+                )
+                # Footgun (issue #1215 finding 2): the #514 precedence above
+                # is deliberate and preserved, but it silently drops any
+                # tilt_min/tilt_max also configured on this slot. Say so.
+                if _t_min is not None or _t_max is not None:
+                    _sub(
+                        L["warnings.custom_tilt_only_bounds_discarded"].format(
+                            label=_slot_label, slat=_slot_tilt
+                        )
+                    )
+            else:
+                _pos_max = config.get(_keys["position_max"])
+                # tilt_only normalizes min_mode / use_my off unconditionally
+                # (snapshot_builder.py's tilt_only mutual-exclusion pass,
+                # keyed on the bare flag) — a slot only reaches this branch
+                # under tilt_only when it has no fixed slat angle (a real
+                # fixed tilt takes the branch above), so both flags must
+                # render as off here too, or the summary would claim a floor
+                # / My-path the runtime never applies (issue #1215 residual
+                # risk). The mutual-exclusion ⚠️ warning below reads the raw
+                # values — reporting the conflict is its job.
+                _is_min = bool(config.get(_keys["min_mode"])) and not _tilt_only
+                _use_my_effective = _use_my and not _tilt_only
+                # ``position_mode`` is NONE for every tilt_only slot regardless
+                # of a fixed tilt (types.py's ``position_mode`` keys on the
+                # bare flag, unlike ``tilt_mode``), and snapshot_builder.py
+                # wipes ``position_max`` the same way — on the bare tilt_only
+                # flag, and independently on ``use_my`` too (issue #1215
+                # finding 1, mirroring snapshot_builder.py's own ``if
+                # tilt_only or use_my: position_max = None``). Normalize both
+                # the stored position claim and its ceiling here too, or a
+                # tilt_only / use_my slot that also stores a
+                # ``custom_position_N`` / ``position_max`` would render a
+                # phantom "→ N%" / "(at most N%)" the handler never applies
+                # (issue #1215 audit findings 1-2).
+                if _tilt_only:
+                    _pos = None
+                if _tilt_only or _use_my:
+                    _pos_max = None
+                # A constraint-only slot names no position — the pipeline's own
+                # result is what gets clamped (issue #943).
+                target = (
+                    _pos_label(_pos, _use_my_effective)
+                    if _pos is not None
+                    else L["custom.no_position_claim"]
+                )
+                # "(as minimum)" only when there is a floor to apply: a min_mode
+                # toggle with no stored position contributes no floor (the
+                # derived mode is a lone MAX), so the fragment would be a phantom
+                # (audit finding D). Mirrors the pipeline's derived-mode logic.
+                cp_min = (
+                    L["fragments.as_minimum"] if (_is_min and _pos is not None) else ""
+                )
+                # A lone position_max on a FIXED-position slot is ignored — the
+                # exact position keeps its claim (audit finding 5), so only
+                # surface the ceiling when it actually applies (min-mode range,
+                # or a constraint-only slot with no position of its own). Render
+                # its value, like the tilt-bound fragments do (audit finding 6).
+                if _pos_max is not None and (_is_min or _pos is None):
+                    cp_min += L["fragments.as_maximum"].format(max=_pos_max)
+                # Tilt bounds (issue #943). Mutually exclusive with the fixed
+                # tilt note above — tilt_only is handled in the other branch.
+                if _t_min is not None and _t_max is not None:
+                    tilt_note += L["custom.tilt_bound_range"].format(
+                        min=_t_min, max=_t_max
+                    )
+                elif _t_min is not None:
+                    tilt_note += L["custom.tilt_bound_min"].format(min=_t_min)
+                elif _t_max is not None:
+                    tilt_note += L["custom.tilt_bound_max"].format(max=_t_max)
+                _open(
+                    _pri,
+                    _order,
+                    L["rules.custom"].format(
+                        label=_slot_label,
+                        trigger=_trigger,
+                        target=target,
+                        cp_min=cp_min,
+                        tilt_note=tilt_note,
+                        safety=safety_note,
+                    ),
+                )
+                # Footgun (issue #943): a ceiling below the floor. The clamp
+                # applies the floor last, so the floor silently wins — say so
+                # rather than let the user think the maximum is in effect.
+                if (
+                    _is_min
+                    and _pos is not None
+                    and _pos_max is not None
+                    and _pos_max < _pos
+                ):
+                    _sub(
+                        L["warnings.custom_position_bound_conflict"].format(
+                            label=_slot_label, max=_pos_max, min=_pos
+                        )
+                    )
+            # Mutual-exclusion warning: tilt_only wins over min_mode / use_my
+            # (issue #514). Surface the conflict so the user knows the latter two
+            # are ignored for that slot.
+            if _tilt_only and (
+                config.get(f"custom_position_min_mode_{_slot}") or _use_my
+            ):
+                _sub(L["warnings.custom_tilt_only_conflict"].format(label=_slot_label))
+            # Footgun (issue #1215 finding 6): tilt_only with no slat angle
+            # AND no tilt bounds leaves the slot with position_mode == NONE
+            # and tilt_mode == NONE — it does nothing at all. ``_slot_tilt is
+            # None`` is implied whenever ``_tilt_only`` reaches here without
+            # having taken the ``has_fixed_tilt`` branch above, but spelling
+            # it out keeps this check correct even if the branch above ever
+            # changes shape.
+            if _tilt_only and _slot_tilt is None and _t_min is None and _t_max is None:
+                _sub(L["warnings.custom_tilt_only_no_effect"].format(label=_slot_label))
+            # Outside-window constraints (issue #943 item B). Rendered as its own
+            # sub-line rather than folded into the rule template so the flag can
+            # be surfaced on BOTH branches above without either template gaining
+            # a placeholder. Whether it does anything depends on the EFFECTIVE
+            # claims, so the question goes to the same derivation the pipeline
+            # reads — ``CustomPositionSensorState.has_bounded_claim``, which is
+            # ``position_mode`` / ``tilt_mode`` and therefore already knows that
+            # a real fixed tilt wipes the tilt bounds, that tilt_only disclaims
+            # the position axis, and that use_my is hardware-pinned (#514 /
+            # #1215). Re-deriving it from the raw wire format here is what let
+            # this warning drift out of step with the gather.
+            #
+            # Built once and shared with the #1318 block below: both window
+            # options ask "which claims does this slot EFFECTIVELY make?", and
+            # a second hand-rolled answer is exactly the drift this derivation
+            # was extracted to stop.
+            _claims = CustomPositionSensorState(
+                entity_ids=(),
+                is_on=True,
+                position=config.get(_keys["position"]),
+                priority=_pri,
+                min_mode=bool(config.get(_keys["min_mode"])),
+                use_my=_use_my,
+                tilt=_slot_tilt,
+                tilt_only=_tilt_only,
+                slot=_slot,
+                position_max=config.get(_keys["position_max"]),
+                tilt_min=_t_min,
+                tilt_max=_t_max,
+            )
+            if config.get(_keys["outside_window"]):
+                _has_bounds = _claims.has_bounded_claim
+                if _pri >= CUSTOM_POSITION_SAFETY_PRIORITY:
+                    # Priority 100 already commands outside the window (#563),
+                    # so the checkbox buys nothing and reads as if it did.
+                    _sub(
+                        L["warnings.custom_outside_window_redundant"].format(
+                            label=_slot_label
+                        )
+                    )
+                elif not _has_bounds:
+                    _sub(
+                        L["warnings.custom_outside_window_no_bounds"].format(
+                            label=_slot_label
+                        )
+                    )
+                else:
+                    _sub(L["custom.outside_window"].format(label=_slot_label))
+            # Scope the FIXED claim to the time window (issue #1318) — the
+            # inverse-polarity sibling of the block above, and disjoint from it:
+            # that key extends BOUNDED claims past the clock, this one withdraws
+            # an exact-position / Use-My claim at it. A slot may set both, so
+            # neither branch suppresses the other.
+            if config.get(_keys["scope_to_window"]):
+                if _pri >= CUSTOM_POSITION_SAFETY_PRIORITY:
+                    # The #563 exemption is unconditional in the handler —
+                    # acting outside the window IS what priority 100 means, so
+                    # say so rather than let a user believe they just scheduled
+                    # their storm protection off.
+                    _sub(
+                        L["warnings.custom_scope_to_window_safety_ignored"].format(
+                            label=_slot_label
+                        )
+                    )
+                elif not _claims.has_fixed_claim:
+                    # A bounded-claim slot defers before the gate is reached and
+                    # answers to ``outside_window`` instead — point the user at
+                    # the key that actually governs them.
+                    _sub(
+                        L["warnings.custom_scope_to_window_no_fixed_claim"].format(
+                            label=_slot_label
+                        )
+                    )
+                else:
+                    _sub(L["custom.scope_to_window"].format(label=_slot_label))
+                    if not config.get(CONF_RETURN_SUNSET):
+                        # Footgun: the line just rendered promises the
+                        # end-of-window position takes over, but that reposition
+                        # is the ``return_sunset`` force-send. With it off the
+                        # slot stands down and nothing moves the cover — the
+                        # outside-window dispatch guard blocks any other send —
+                        # so it simply stays where the slot left it. Only warned
+                        # on this branch: the two above already say the option
+                        # does nothing at all for the slot.
+                        _sub(
+                            L["warnings.custom_scope_to_window_needs_return"].format(
+                                label=_slot_label
+                            )
+                        )
+            # Footgun (issue #711): a safety-priority slot with a live trigger
+            # bypasses the auto-control toggle, manual override, and the time
+            # window — it can move the cover at any hour with automation off.
+            # Rendered from the shared triage engine (issue #970); the finding is
+            # present for exactly the slots this guard fires on (a configured
+            # slot at or above safety priority — the loop only visits configured
+            # slots, so ``_has_trigger`` is always True here).
+            if _pri >= CUSTOM_POSITION_SAFETY_PRIORITY and _has_trigger:
+                # Defensive .get: the finding is present for exactly the slots
+                # this guard fires on today, so this renders byte-identically —
+                # but should the triage slot-gate ever drift from the summary's
+                # (both are hand-copies of the helpers), a missing finding is
+                # skipped rather than raising KeyError in the summary. Drift is
+                # locked out by tests/test_triage_rules.py's parity tests.
+                _safety_finding = _safety_findings.get(_slot)
+                if _safety_finding is not None:
+                    _sub(render(_safety_finding.reason, TL))
+            # Footgun warning: AND combine mode with no sensors — the template
+            # gates nothing and the slot degenerates to template-only OR.
+            if _slot in _and_no_sensor_slots:
+                _sub(L["warnings.custom_and_no_sensors"].format(label=_slot_label))
+
+    # Motion timeout (75)
+    timeout_mode = config.get(CONF_MOTION_TIMEOUT_MODE, DEFAULT_MOTION_TIMEOUT_MODE)
+    if has_motion:
+        n = len(_motion_sources)
+        sensor_word = L["words.source_singular"] if n == 1 else L["words.source_plural"]
+        src_parts = []
+        if n:
+            src_parts.append(f"{n} {sensor_word}")
+        if _has_motion_template:
+            src_parts.append(L["motion.template_source"])
+        sources = ", ".join(src_parts)
+        if timeout_mode == MOTION_TIMEOUT_MODE_HOLD:
+            action = L["motion.action_hold"]
+        else:
+            action = L["motion.action_return"].format(default_pos=default_pos)
+        _open(
+            _prio["motion_timeout"],
+            _HID_ORDER_INDEX["motion_timeout"],
+            L["rules.motion"].format(
+                motion_timeout=motion_timeout,
+                sources=sources,
+                action=action,
+            ),
+        )
+    elif timeout_mode == MOTION_TIMEOUT_MODE_HOLD:
+        _open_note(
+            _prio["motion_timeout"],
+            _HID_ORDER_INDEX["motion_timeout"],
+            L["warnings.motion_hold_no_sensors"],
+        )
+
+    # Cloud suppression (60)
+    #
+    # Resolved before the toggle branch because both the rendered cloud line
+    # and the ignored-settings warning below need the same value. Gated on the
+    # policy ClassVar, never on the cover-type string: a stored slat angle left
+    # behind by a cover-type switch (#1132 deletes nothing) or written by
+    # ``acp.set_light_cloud`` (no cover-type gate) must not promise slat
+    # movement to a cover with no slat axis — the #1297 rule, applied to #175.
+    cloudy_tilt_cfg = (
+        config.get(CONF_CLOUDY_TILT)
+        if sensor_type is not None
+        and get_policy(sensor_type).cloud_suppression_includes_tilt
+        else None
+    )
+    # Resolved here for the same reason: the cloud line and the warning below
+    # both need it (#175). NOT policy-gated — every cover type can be told to
+    # stop holding a cloudy position. ``duration_seconds_or_none`` is the same
+    # normaliser ``RuntimeConfig`` arms the feature with, so the summary can
+    # never claim an escalation the manager will not run: an all-zero duration
+    # is a blank field, and describing it as "opens fully after 0 min" would be
+    # a promise the code deliberately does not keep.
+    escalation_cfg = config.get(CONF_CLOUD_ESCALATION_DELAY)
+    escalation_delay_text = (
+        _format_duration(escalation_cfg)
+        if duration_seconds_or_none(escalation_cfg) is not None
+        else None
+    )
+    if has_cloud:
+        cloud_parts = []
+        is_sunny_value = config.get(CONF_IS_SUNNY_SENSOR) or (
+            L["fragments.template_value"]
+            if is_template_string(config.get(CONF_IS_SUNNY_TEMPLATE))
+            else None
+        )
+        # The weather-state list is not an independent OR trigger — it's the
+        # lowest rung of _read_sunny's resolution ladder, only reached when no
+        # is_sunny sensor/template is configured or it has never yet produced
+        # an opinion (issue #1302). Build it once and nest it as an in-place
+        # fallback qualifier on the is_sunny fragment when one is configured;
+        # only render it as a peer trigger when it's the sole is_sunny source.
+        wx_states = config.get(CONF_WEATHER_STATE) or []
+        wx_fragment = (
+            L["cloud.weather_in"].format(states=", ".join(wx_states))
+            if wx_states and config.get(CONF_WEATHER_ENTITY)
+            else ""
+        )
+        if is_sunny_value:
+            is_sunny_part = L["cloud.is_sunny"].format(value=is_sunny_value)
+            if wx_fragment:
+                is_sunny_part += L["cloud.weather_fallback"].format(weather=wx_fragment)
+            cloud_parts.append(is_sunny_part)
+        if v := config.get(CONF_LUX_ENTITY):
+            t = config.get(CONF_LUX_THRESHOLD)
+            cloud_parts.append(
+                L["cloud.lux"].format(thresh=_thresh_display(t, placeholder=_ph))
+                if t is not None
+                else L["cloud.lux_no_thresh"].format(entity=v)
+            )
+        if v := config.get(CONF_IRRADIANCE_ENTITY):
+            t = config.get(CONF_IRRADIANCE_THRESHOLD)
+            cloud_parts.append(
+                L["cloud.irradiance"].format(thresh=_thresh_display(t, placeholder=_ph))
+                if t is not None
+                else L["cloud.irradiance_no_thresh"].format(entity=v)
+            )
+        if v := config.get(CONF_CLOUD_COVERAGE_ENTITY):
+            t = config.get(CONF_CLOUD_COVERAGE_THRESHOLD)
+            cloud_parts.append(
+                L["cloud.coverage"].format(thresh=_thresh_display(t, placeholder=_ph))
+                if t is not None
+                else L["cloud.coverage_no_thresh"].format(entity=v)
+            )
+        if wx_fragment and not is_sunny_value:
+            cloud_parts.append(wx_fragment)
+        cloud_str = (
+            L["cloud.when"].format(parts=", ".join(cloud_parts)) if cloud_parts else ""
+        )
+        cloudy_pos = config.get(CONF_CLOUDY_POSITION)
+        if cloudy_pos is not None:
+            fallback_label = L["cloud.fallback_cloudy"].format(pos=cloudy_pos)
+        else:
+            fallback_label = L["cloud.fallback_default"].format(default_pos=default_pos)
+        cloud_line = L["rules.cloud"].format(cloud=cloud_str, fallback=fallback_label)
+        # The slat target, right beside the carriage target it accompanies
+        # (#175). Reuses ``custom.tilt_note`` — the same ", tilt {tilt}%"
+        # fragment the custom-position and weather lines use, because it says
+        # exactly the same thing about the same axis, so the three cannot
+        # drift and DE/FR gain nothing new to translate.
+        if cloudy_tilt_cfg is not None:
+            cloud_line += L["custom.tilt_note"].format(tilt=cloudy_tilt_cfg)
+        # Then when we give up on both of them (#175). Placed after the two
+        # targets it supersedes and before the smoothing suffixes, so the line
+        # reads in the order the behaviour happens.
+        if escalation_delay_text is not None:
+            cloud_line += L["cloud.escalation"].format(delay=escalation_delay_text)
+        # Smoothing suffixes (issue #864): a non-zero hold-time and any
+        # configured per-trigger hysteresis release edges.
+        hold_time = config.get(CONF_CLOUD_SUPPRESSION_HOLD_TIME)
+        if hold_time:
+            cloud_line += L["cloud.hold_time"].format(secs=hold_time)
+        release_parts = []
+        if (rl := config.get(CONF_LUX_RELEASE_THRESHOLD)) is not None:
+            release_parts.append(
+                L["cloud.lux_release"].format(
+                    release=_thresh_display(rl, placeholder=_ph)
+                )
+            )
+        if (ri := config.get(CONF_IRRADIANCE_RELEASE_THRESHOLD)) is not None:
+            release_parts.append(
+                L["cloud.irradiance_release"].format(
+                    release=_thresh_display(ri, placeholder=_ph)
+                )
+            )
+        if (rc := config.get(CONF_CLOUD_COVERAGE_RELEASE_THRESHOLD)) is not None:
+            release_parts.append(
+                L["cloud.coverage_release"].format(
+                    release=_thresh_display(rc, placeholder=_ph)
+                )
+            )
+        if release_parts:
+            cloud_line += L["cloud.release"].format(parts=", ".join(release_parts))
+        _open(
+            _prio["cloud_suppression"],
+            _HID_ORDER_INDEX["cloud_suppression"],
+            cloud_line,
+        )
+    elif any(
+        [
+            config.get(CONF_LUX_ENTITY),
+            config.get(CONF_IRRADIANCE_ENTITY),
+            config.get(CONF_CLOUD_COVERAGE_ENTITY),
+            config.get(CONF_IS_SUNNY_SENSOR),
+        ]
+    ):
+        # Sensors configured but suppression toggle off — mention them as informational
+        sensor_names = []
+        if config.get(CONF_LUX_ENTITY):
+            sensor_names.append(L["info.light_lux"])
+        if config.get(CONF_IRRADIANCE_ENTITY):
+            sensor_names.append(L["info.light_irradiance"])
+        if config.get(CONF_CLOUD_COVERAGE_ENTITY):
+            sensor_names.append(L["info.light_cloud_coverage"])
+        if v := config.get(CONF_IS_SUNNY_SENSOR):
+            sensor_names.append(v)
+        _open_note(
+            _prio["cloud_suppression"],
+            _HID_ORDER_INDEX["cloud_suppression"],
+            L["info.light_sensors_off"].format(names=", ".join(sensor_names)),
+        )
+
+    # Warn about every Light & Cloud target that only means something while
+    # suppression is on. ONE guard, ONE line, listing whichever are configured
+    # (#175) — a second and third ``if cfg is not None and not has_cloud``
+    # block would be three ⚠️ lines saying the same thing about the same
+    # disabled toggle. The guard, the join and the line are the shared policy;
+    # the table below is the only part that grows, so a fourth setting is a
+    # tuple rather than a block. ``is not None`` throughout: 0 % is a real
+    # answer on both axes (closed carriage, closed slats).
+    ignored_cloud_settings = [
+        L[label].format(**{placeholder: value})
+        for value, label, placeholder in (
+            (config.get(CONF_CLOUDY_POSITION), "cloud.fallback_cloudy", "pos"),
+            (cloudy_tilt_cfg, "cloud.ignored_tilt", "tilt"),
+            (escalation_delay_text, "cloud.ignored_escalation", "delay"),
+        )
+        if value is not None
+    ]
+    if ignored_cloud_settings and not has_cloud:
+        _open_note(
+            _prio["cloud_suppression"],
+            _HID_ORDER_INDEX["cloud_suppression"],
+            L["warnings.cloud_settings_ignored"].format(
+                items=", ".join(ignored_cloud_settings)
+            ),
+        )
+
+    # Climate mode (50)
+    if has_climate:
+        cl_parts = []
+        lo = config.get(CONF_TEMP_LOW)
+        hi = config.get(CONF_TEMP_HIGH)
+        temp_entity = config.get(CONF_TEMP_ENTITY)
+        if lo is not None and hi is not None:
+            cl_parts.append(
+                L["climate.comfort_range"].format(
+                    lo=_thresh_display(lo, placeholder=_ph),
+                    hi=_thresh_display(hi, placeholder=_ph),
+                )
+            )
+        if temp_entity:
+            cl_parts.append(L["climate.using"].format(entity=temp_entity))
+        elif config.get(
+            CONF_AUTO_RESOLVE_TEMP_FROM_AREA, DEFAULT_AUTO_RESOLVE_TEMP_FROM_AREA
+        ):
+            # No explicit sensor but area auto-resolution is on (#786): the
+            # effective sensor comes from the cover's HA area at runtime.
+            cl_parts.append(L["climate.using_area"])
+        outside = config.get(CONF_OUTSIDETEMP_ENTITY)
+        if outside:
+            out_thresh = config.get(CONF_OUTSIDE_THRESHOLD)
+            if out_thresh is not None:
+                cl_parts.append(
+                    L["climate.outside_thresh"].format(
+                        entity=outside,
+                        thresh=_thresh_display(out_thresh, placeholder=_ph),
+                    )
+                )
+            else:
+                cl_parts.append(L["climate.outside"].format(entity=outside))
+        weather_ent = config.get(CONF_WEATHER_ENTITY)
+        if weather_ent:
+            cl_parts.append(L["climate.weather"].format(entity=weather_ent))
+        presence = config.get(CONF_PRESENCE_ENTITY) or (
+            L["fragments.template_value"]
+            if is_template_string(config.get(CONF_PRESENCE_TEMPLATE))
+            else None
+        )
+        if presence:
+            cl_parts.append(L["climate.presence"].format(entity=presence))
+        if config.get(CONF_TRANSPARENT_BLIND):
+            cl_parts.append(L["climate.transparent"])
+        if config.get(CONF_WINTER_CLOSE_INSULATION):
+            cl_parts.append(L["climate.winter_close"])
+        if config.get(CONF_SUMMER_CLOSE_BYPASS_SUN_FLOOR):
+            cl_parts.append(L["climate.summer_full_close"])
+        extreme_thresh = config.get(CONF_TEMP_EXTREME_HEAT)
+        if extreme_thresh is not None:
+            # Unset hold falls back to fully closed (DEFAULT_EXTREME_HEAT_POSITION).
+            hold = config.get(CONF_EXTREME_HEAT_POSITION)
+            hold_display = hold if hold is not None else DEFAULT_EXTREME_HEAT_POSITION
+            cl_parts.append(
+                L["climate.extreme_heat"].format(
+                    pos=hold_display,
+                    thresh=_thresh_display(extreme_thresh, placeholder=_ph),
+                )
+            )
+        cl_str = f" ({', '.join(cl_parts)})" if cl_parts else ""
+        climate_line = L["rules.climate"].format(detail=cl_str)
+        # Temperature smoothing suffixes (issue #917): a non-zero hold-time and
+        # any configured per-crossing hysteresis release edges. Mirrors the cloud
+        # smoothing suffixes above.
+        climate_hold = config.get(CONF_CLIMATE_TEMP_HOLD_TIME)
+        if climate_hold:
+            climate_line += L["climate.hold_time"].format(secs=climate_hold)
+        climate_release_parts = []
+        if (rl := config.get(CONF_TEMP_LOW_RELEASE_THRESHOLD)) is not None:
+            climate_release_parts.append(
+                L["climate.temp_low_release"].format(
+                    release=_thresh_display(rl, placeholder=_ph)
+                )
+            )
+        if (rh := config.get(CONF_TEMP_HIGH_RELEASE_THRESHOLD)) is not None:
+            climate_release_parts.append(
+                L["climate.temp_high_release"].format(
+                    release=_thresh_display(rh, placeholder=_ph)
+                )
+            )
+        if (ro := config.get(CONF_OUTSIDE_THRESHOLD_RELEASE)) is not None:
+            climate_release_parts.append(
+                L["climate.outside_release"].format(
+                    release=_thresh_display(ro, placeholder=_ph)
+                )
+            )
+        if (rx := config.get(CONF_TEMP_EXTREME_HEAT_RELEASE_THRESHOLD)) is not None:
+            climate_release_parts.append(
+                L["climate.extreme_heat_release"].format(
+                    release=_thresh_display(rx, placeholder=_ph)
+                )
+            )
+        if climate_release_parts:
+            climate_line += L["climate.release"].format(
+                parts=", ".join(climate_release_parts)
+            )
+        _open(_prio["climate"], _HID_ORDER_INDEX["climate"], climate_line)
+
+        # Warn if the outdoor-temp source is forecast-based but no weather
+        # entity is configured — it silently degrades to the live reading
+        # (issue #912).
+        if not weather_ent and config.get(CONF_OUTSIDE_TEMP_SOURCE) in (
+            OutsideTempSource.FORECAST_MAX.value,
+            OutsideTempSource.MAX_OF_LIVE_AND_FORECAST.value,
+        ):
+            _sub(L["warnings.forecast_source_no_weather_entity"])
+
+    # Glare zones — vertical only (45, below climate)
+    if has_glare:
+        zone_names = [
+            config.get(f"glare_zone_{i}_name")
+            for i in GLARE_ZONE_SLOT_NUMBERS
+            if config.get(f"glare_zone_{i}_name")
+        ]
+        width = config.get(CONF_WINDOW_WIDTH)
+        gz_parts = []
+        if zone_names:
+            gz_parts.append(L["glare.zones"].format(names=", ".join(zone_names)))
+        if width:
+            gz_parts.append(L["glare.window"].format(width=float(width)))
+        z_values = [
+            float(config.get(f"glare_zone_{i}_z") or 0.0)
+            for i in GLARE_ZONE_SLOT_NUMBERS
+            if config.get(f"glare_zone_{i}_name")
+        ]
+        if any(z > 0 for z in z_values):
+            gz_parts.append(
+                L["glare.z_height"].format(
+                    values=", ".join(L["glare.z_value"].format(z=z) for z in z_values)
+                )
+            )
+        gz_str = f" ({', '.join(gz_parts)})" if gz_parts else ""
+        _open(
+            _prio["glare_zone"],
+            _HID_ORDER_INDEX["glare_zone"],
+            L["rules.glare"].format(detail=gz_str),
+        )
+
+    # Solar tracking — baseline calculation (40)
+    azimuth = config.get(CONF_AZIMUTH)
+    fov_l = config.get(CONF_FOV_LEFT)
+    fov_r = config.get(CONF_FOV_RIGHT)
+    min_elev = config.get(CONF_MIN_ELEVATION)
+    max_elev = config.get(CONF_MAX_ELEVATION)
+    if sun_tracking_enabled:
+        sun_parts = []
+        if azimuth is not None:
+            sun_parts.append(L["solar.azimuth"].format(azimuth=azimuth))
+        if fov_l is not None and fov_r is not None:
+            sun_parts.append(L["solar.fov"].format(fov_l=fov_l, fov_r=fov_r))
+        elev_parts = []
+        if min_elev is not None:
+            elev_parts.append(L["solar.elev_above"].format(elev=min_elev))
+        if max_elev is not None:
+            elev_parts.append(L["solar.elev_below"].format(elev=max_elev))
+        if elev_parts:
+            sun_parts.append(
+                L["solar.elevation"].format(parts=L["solar.elev_join"].join(elev_parts))
+            )
+        sun_desc = f" ({', '.join(sun_parts)})" if sun_parts else ""
+        # Today's solar window annotation
+        if _solar_start is not None and _solar_end is not None:
+            today_str = L["solar.today_window"].format(
+                start=_fmt_sun_dt(_solar_start), end=_fmt_sun_dt(_solar_end)
+            )
+        elif sun_times is not None:
+            today_str = L["solar.today_no_window"]
+        else:
+            today_str = ""
+        _open(
+            _prio["solar"],
+            _HID_ORDER_INDEX["solar"],
+            L["rules.solar"].format(sun_desc=sun_desc, today=today_str),
+        )
+        if config.get(CONF_MINIMIZE_MOVEMENTS, False):
+            steps = int(config.get(CONF_MAX_COVERAGE_STEPS, 1))
+            indent = _GATE_SUMMARY_INDENT
+            if steps <= 1:
+                detail = L["solar.minimize_one_step"]
+            else:
+                detail = L["solar.minimize_steps"].format(steps=steps)
+            _sub(L["solar.minimize"].format(indent=indent, detail=detail))
+        if config.get(CONF_SNAP_CLOSED_BELOW, False):
+            snap_threshold = int(
+                config.get(CONF_SNAP_CLOSED_THRESHOLD, DEFAULT_SNAP_CLOSED_THRESHOLD)
+            )
+            _sub(
+                L["solar.snap_closed_below"].format(
+                    indent=_GATE_SUMMARY_INDENT, threshold=snap_threshold
+                )
+            )
+        # Sun-tracking gate (issue #1167) — suppresses solar positioning while it
+        # reads false, letting the chain fall through to the default position.
+        # Only rendered under the enabled branch: with the master toggle off the
+        # gate cannot change anything, and showing it there would imply it might.
+        _render_condition_gate_summary(
+            config,
+            _sub,
+            L,
+            prefix="solar.gate",
+            indent=_GATE_SUMMARY_INDENT,
+            sensors_key=CONF_SUN_TRACKING_GATE_SENSORS,
+            template_key=CONF_SUN_TRACKING_GATE_TEMPLATE,
+            mode_key=CONF_SUN_TRACKING_GATE_TEMPLATE_MODE,
+        )
+    else:
+        _open(
+            _prio["solar"],
+            _HID_ORDER_INDEX["solar"],
+            L["rules.solar_disabled"],
+        )
+
+    # Timing window (sub-bullet under ☀️)
+    start_time = config.get(CONF_START_TIME)
+    start_entity = config.get(CONF_START_ENTITY)
+    end_time = config.get(CONF_END_TIME)
+    end_entity = config.get(CONF_END_ENTITY)
+    sunset_pos = config.get(CONF_SUNSET_POS)
+    eow_pos = config.get(CONF_END_OF_WINDOW_POS)
+    sunset_off = resolve_sunset_offset(config)
+    sunrise_off = resolve_sunrise_offset(config)
+    sunset_time_entity = config.get(CONF_SUNSET_TIME_ENTITY)
+    sunrise_time_entity = config.get(CONF_SUNRISE_TIME_ENTITY)
+    timing_parts = []
+    # A blank/unset start no longer means "no lower bound" once an end bound
+    # IS configured — it anchors to astronomical sunrise instead of midnight
+    # (issue #1256), matching the start_time option's documented "leave
+    # blank to start at sunrise". With no end bound either, the window stays
+    # unbounded on both sides and this stays silent, as before.
+    #
+    # The summary twin of ``TimeWindowManager.has_configured_end``: this line
+    # renders the very condition that property gates at runtime, so both go
+    # through the one definition rather than each hand-rolling it (issue
+    # #1061). Three copies of this predicate had accumulated — #1044's helper,
+    # #1256's module-local one in the time-window manager, and this one — and
+    # they did not agree about the empty string.
+    end_bound_configured = has_configured_window_end(config)
+    if start_entity:
+        timing_parts.append(L["timing.from_entity"].format(entity=start_entity))
+    elif start_time and start_time != BLANK_TIME:
+        timing_parts.append(L["timing.from_time"].format(time=start_time))
+    elif end_bound_configured:
+        timing_parts.append(L["timing.from_sunrise"])
+    if end_entity:
+        timing_parts.append(L["timing.until_entity"].format(entity=end_entity))
+    elif end_time and end_time != BLANK_TIME:
+        timing_parts.append(L["timing.until_time"].format(time=end_time))
+    # A schedule key present but blank (cleared TimeSelector → "00:00:00") still
+    # means the user configured the automation window — show "Active during
+    # daylight" rather than nothing, so the summary reflects the real behavior
+    # (issue #492). CONF_*_TIME default to BLANK_TIME, so test membership too.
+    schedule_configured = any(
+        config.get(key) not in (None, BLANK_TIME)
+        for key in (CONF_START_ENTITY, CONF_END_ENTITY)
+    ) or any(key in config for key in (CONF_START_TIME, CONF_END_TIME))
+    if (
+        timing_parts
+        or sunset_pos is not None
+        or schedule_configured
+        or eow_pos is not None
+    ):
+        timing_str = (
+            " ".join(timing_parts) if timing_parts else L["timing.active_daylight"]
+        )
+        indent = _GATE_SUMMARY_INDENT
+        _sub(L["timing.line"].format(indent=indent, timing=timing_str))
+        # The sunrise floor (issue #1340) raises the window's lower bound to
+        # max(start, sunrise). Rendered only where it can actually bite: a
+        # blank start already waits for sunrise (#1256), so the line would be
+        # a lie there.
+        if config.get(CONF_SUNRISE_GATES_START, DEFAULT_SUNRISE_GATES_START) and (
+            start_entity or (start_time and start_time != BLANK_TIME)
+        ):
+            _sub(L["timing.sunrise_gates_start"].format(indent=indent))
+        if sunset_pos is not None:
+            # Merge today's effective time (or entity ID) and offset into one parenthetical
+            def _sun_annotation(
+                today_dt, offset_min: int, entity_id: str | None = None
+            ) -> str:
+                parts = []
+                if entity_id is not None:
+                    parts.append(L["timing.ann_via"].format(entity=entity_id))
+                elif today_dt is not None:
+                    parts.append(
+                        L["timing.ann_today"].format(time=_fmt_sun_dt(today_dt))
+                    )
+                off = _offset_str(int(offset_min))
+                if off:
+                    parts.append(off)
+                return f" ({', '.join(parts)})" if parts else ""
+
+            sunset_ann = _sun_annotation(_sunset_eff, sunset_off, sunset_time_entity)
+            sunrise_ann = _sun_annotation(
+                _sunrise_eff, sunrise_off, sunrise_time_entity
+            )
+            has_end_time = bool(end_time or end_entity)
+            _sunset_use_my = bool(config.get(CONF_SUNSET_USE_MY))
+            _sunset_target = _pos_label(int(sunset_pos), _sunset_use_my)
+            if has_end_time and int(sunset_pos) != int(default_pos):
+                _sub(
+                    L["timing.after_end_to_default"].format(
+                        indent=indent, default_pos=default_pos
+                    )
+                )
+                _sub(
+                    L["timing.after_sunset"].format(
+                        indent=indent, ann=sunset_ann, target=_sunset_target
+                    )
+                )
+            else:
+                label = (
+                    L["timing.label_end_or_sunset"]
+                    if has_end_time
+                    else L["timing.label_sunset"]
+                )
+                _sub(
+                    L["timing.after_label"].format(
+                        indent=indent,
+                        label=label,
+                        ann=sunset_ann,
+                        target=_sunset_target,
+                    )
+                )
+            _sub(
+                L["timing.after_sunrise"].format(
+                    indent=indent, ann=sunrise_ann, default_pos=default_pos
+                )
+            )
+            if config.get(CONF_RETURN_SUNSET):
+                _sub(L["timing.return_sunset"].format(indent=indent))
+
+        # End-of-window position (issue #625) — renders independently of
+        # sunset_pos (a user may set it WITHOUT a sunset position). Footgun:
+        # the position only applies when CONF_RETURN_SUNSET ("Move covers when
+        # end time is reached") is on.
+        if eow_pos is not None:
+            _sub(
+                L["timing.end_of_window"].format(
+                    indent=indent, target=_pos_label(int(eow_pos), use_my=False)
+                )
+            )
+            if not config.get(CONF_RETURN_SUNSET):
+                _sub(L["timing.end_of_window_needs_return"].format(indent=indent))
+
+    # Daytime gate (issue #632) — when configured it OWNS the day/night boundary,
+    # replacing the astronomical sunset/sunrise calc. Rendered independently of the
+    # timing window so it shows even with no sunset_pos / schedule configured.
+    if _render_condition_gate_summary(
+        config,
+        _sub,
+        L,
+        prefix="timing.gate",
+        indent=_GATE_SUMMARY_INDENT,
+        sensors_key=CONF_DAYTIME_GATE_SENSORS,
+        template_key=CONF_DAYTIME_GATE_TEMPLATE,
+        mode_key=CONF_DAYTIME_GATE_TEMPLATE_MODE,
+    ) and (sunset_off or sunrise_off):
+        # Footgun: sunset/sunrise offsets are no-ops once the gate owns the
+        # boundary. Only warn when an offset is actually set (avoid noise).
+        # Daytime-gate-specific, so it stays outside the shared renderer.
+        _sub(L["timing.gate_offset_ignored"].format(indent=_GATE_SUMMARY_INDENT))
+
+    # Blind spot (sub-bullet / informational, no priority of its own). One line
+    # per active slot — a slot is active when its left & right are both set
+    # (issue #701). Slot 1 reuses the legacy unsuffixed keys.
+    if config.get(CONF_ENABLE_BLIND_SPOT):
+        fov_left_cfg = resolve_fov_left(config)
+        for keys in BLIND_SPOT_SLOTS.values():
+            # Signed-gamma keys are the primary source (issue #247); fall back to
+            # converting the legacy FOV-relative edges via the shared helper.
+            left_gamma = config.get(keys["left_gamma"])
+            right_gamma = config.get(keys["right_gamma"])
+            if left_gamma is None or right_gamma is None:
+                old_l = config.get(keys["left"])
+                old_r = config.get(keys["right"])
+                if old_l is None or old_r is None:
+                    continue
+                left_gamma, right_gamma = blind_spot_legacy_to_gamma(
+                    fov_left_cfg, old_l, old_r
+                )
+            # Display the wedge bounds: low = -right_gamma, high = left_gamma.
+            bs_e = config.get(keys["elevation"])
+            bs_parts = [
+                L["blind_spot.range"].format(left=-right_gamma, right=left_gamma)
+            ]
+            if bs_e is not None:
+                # "above" blocks high sun; "below" (default) blocks low sun (#702).
+                bs_mode = config.get(
+                    keys["elevation_mode"], DEFAULT_BLIND_SPOT_ELEVATION_MODE
+                )
+                elev_key = (
+                    "blind_spot.elevation_above"
+                    if bs_mode == BLIND_SPOT_ELEV_MODE_ABOVE
+                    else "blind_spot.elevation"
+                )
+                bs_parts.append(L[elev_key].format(elev=bs_e))
+            _sub(L["blind_spot.line"].format(bs=" ".join(bs_parts)))
+
+    # Default fallback (priority 0) — shown as the final row of the chain
+    _open(
+        0,
+        _HID_ORDER_INDEX["default"],
+        L["rules.default"].format(default_pos=default_pos),
+    )
+    # Explicit tilt for venetian covers (solar-computed when absent)
+    _default_tilt = config.get(CONF_DEFAULT_TILT)
+    _sunset_tilt = config.get(CONF_SUNSET_TILT)
+    if _default_tilt is not None:
+        _sub(L["default.tilt"].format(tilt=_default_tilt))
+    if _sunset_tilt is not None:
+        _sub(L["default.sunset_tilt"].format(tilt=_sunset_tilt))
+
+    # Emit the collected rules highest-priority-first (issue #923). Ties break by
+    # _HID_ORDER_INDEX (evaluation order), so built-ins beat custom slots on a
+    # tie; sub-bullets ride inside each block and stay adjacent to their rule.
+    _hid_blocks.sort(key=lambda b: (-b.priority, b.order_index))
+    for _block in _hid_blocks:
+        lines.extend(_block.lines)
+
+    # =========================================================================
+    # Section 3: Position Limits
+    # =========================================================================
+    limit_parts = []
+    min_pos = config.get(CONF_MIN_POSITION)
+    max_pos = config.get(CONF_MAX_POSITION)
+    enable_min = config.get(CONF_ENABLE_MIN_POSITION)
+    enable_max = config.get(CONF_ENABLE_MAX_POSITION)
+    if min_pos is not None or max_pos is not None:
+        lo_str = f"{min_pos}%" if min_pos is not None else "0%"
+        hi_str = f"{max_pos}%" if max_pos is not None else "100%"
+        # Per-side tracking-only qualifier for precision
+        if enable_min and enable_max:
+            qualifier = L["limits.qualifier_both"]
+        elif enable_min and not enable_max:
+            qualifier = L["limits.qualifier_min"]
+        elif enable_max and not enable_min:
+            qualifier = L["limits.qualifier_max"]
+        else:
+            qualifier = ""
+        limit_parts.append(
+            L["limits.range"].format(lo=lo_str, hi=hi_str, qualifier=qualifier)
+        )
+    if default_pos is not None:
+        limit_parts.append(L["limits.default"].format(pos=default_pos))
+    delta_pos = config.get(CONF_DELTA_POSITION)
+    delta_time = config.get(CONF_DELTA_TIME)
+    if delta_pos is not None:
+        limit_parts.append(L["limits.min_change"].format(delta=delta_pos))
+    if delta_time is not None:
+        limit_parts.append(L["limits.min_interval"].format(delta=delta_time))
+    pos_tol = config.get(CONF_POSITION_TOLERANCE)
+    if pos_tol is not None:
+        limit_parts.append(L["limits.position_tolerance"].format(tol=pos_tol))
+    if config.get(CONF_ENABLE_POSITION_MATCHING):
+        limit_parts.append(L["limits.position_matching_on"])
+    else:
+        limit_parts.append(L["limits.position_matching_off"])
+    if config.get(CONF_INVERSE_STATE):
+        limit_parts.append(L["limits.inverse_state"])
+    oc_thresh = config.get(CONF_OPEN_CLOSE_THRESHOLD)
+    if oc_thresh is not None:
+        limit_parts.append(L["limits.open_close_threshold"].format(thresh=oc_thresh))
+    if config.get(CONF_INTERP):
+        interp_lo = config.get(CONF_INTERP_START)
+        interp_hi = config.get(CONF_INTERP_END)
+        if interp_lo is not None and interp_hi is not None:
+            limit_parts.append(
+                L["limits.calibration"].format(lo=interp_lo, hi=interp_hi)
+            )
+        else:
+            limit_parts.append(L["limits.calibration_on"])
+    # Travel time sits beside the position curve because both answer "what did
+    # we measure about this hardware" — and because the two are the reason the
+    # options menu now groups them under one Calibration parent.
+    _travel_entities = list(config.get(CONF_ENTITIES) or [])
+    _travel_table = config.get(CONF_TRAVEL_TIME_CALIBRATION) or {}
+    if _travel_entities and _travel_table:
+        _done = sum(1 for eid in _travel_entities if eid in _travel_table)
+        _manual = sum(
+            1
+            for eid in _travel_entities
+            if (_travel_table.get(eid) or {}).get("source")
+            == TRAVEL_CALIBRATION_SOURCE_MANUAL
+        )
+        _key = "limits.travel_time_manual" if _manual else "limits.travel_time"
+        limit_parts.append(
+            L[_key].format(done=_done, total=len(_travel_entities), manual=_manual)
+        )
+    min_pos_sun_track = config.get(CONF_MIN_POSITION_SUN_TRACKING)
+    if min_pos_sun_track is not None:
+        limit_parts.append(L["limits.sun_tracking_min"].format(pos=min_pos_sun_track))
+    if limit_parts:
+        lines.append("")
+        lines.append(L["headers.position_limits"])
+        lines.append(L["limits.separator"].join(limit_parts))
+
+    # Named command queue (issue #1189). Its own line rather than a
+    # ``limit_parts`` fragment: the other entries there are numeric limits on
+    # this cover alone, while this one names a constraint SHARED with other
+    # config entries, and the gap it reports may be owned by an entry the user
+    # has to go elsewhere to edit. The gap is resolved exactly the way the
+    # runtime resolves it — the owning entry's value, or the default when no
+    # entry owns the name — so the summary can never promise a number the
+    # dispatcher would not use.
+    _queue_name = str(config.get(CONF_COMMAND_QUEUE) or "").strip()
+    if _queue_name:
+        lines.append(
+            L["movement.queue"].format(
+                queue=_queue_name,
+                gap=command_queue_gap_for(hass, _queue_name),
+            )
+        )
+
+    # Footgun: a cover whose state Home Assistant only assumes can never be
+    # measured, so leaving it without a hand-entered time silently means "this
+    # cover will never animate" — exactly the kind of quiet no-op the summary
+    # exists to surface. Needs hass: assumed_state is a live entity attribute,
+    # not config.
+    if hass is not None:
+        _unmeasurable = [
+            eid
+            for eid in _travel_entities
+            if eid not in _travel_table and is_assumed_state(hass.states.get(eid))
+        ]
+        if _unmeasurable:
+            lines.append(
+                L["warnings.travel_time_unmeasurable"].format(
+                    entities=", ".join(_unmeasurable)
+                )
+            )
+
+    # Footgun: sun-tracking floor below always-on floor is a no-op (issue #467).
+    # The always-on min_pos dominates, so min_pos_sun_tracking < min_pos is a
+    # configuration mistake. Surface it so the user can correct it.
+    if (
+        min_pos_sun_track is not None
+        and min_pos is not None
+        and min_pos > min_pos_sun_track
+    ):
+        lines.append(
+            L["warnings.sun_track_min_below_floor"].format(
+                sun_min=min_pos_sun_track, min_pos=min_pos
+            )
+        )
+
+    # Footgun: the opposite-polarity clamp at/beyond the snap threshold makes
+    # the declutter snap completely inert (issue #1379). ``apply_config_limits``
+    # runs AFTER the snap and always wins (floor-wins-on-conflict — the same
+    # precedence ``clamp_to_bounds`` guarantees), so once that clamp already
+    # dominates the entire snap band, the setting can never change the
+    # outcome: a demand it collapses gets pulled straight back to the clamp,
+    # and a demand it leaves untouched was already going to land on that same
+    # clamp anyway.
+    #
+    # Derivation (audit round 2 — off-by-one on both branches). The snap band
+    # is INTEGER percentages, not a continuous interval, and that rounding is
+    # where the boundary actually sits:
+    #
+    #   * full_coverage_at_zero=True (blind/tilt/venetian): the snap targets
+    #     0. ``gap_to_closed_pct == percentage`` (``PositionConverter.
+    #     snap_closed_below_threshold``), so the band ``0 < gap < threshold``
+    #     is the integers ``{1, ..., threshold-1}``; its HIGHEST member is
+    #     ``threshold-1``, not ``threshold``. With the floor at *m*
+    #     (``min_pos_sun_tracking`` when set, else ``min_pos`` — it overrides
+    #     min_pos per ``PositionConverter.apply_limits``), snap-on gives
+    #     ``max(0, m) == m`` and snap-off gives ``max(P, m)`` for every band
+    #     member P; these agree for every P in the band iff
+    #     ``m >= max(band) == threshold-1``. ``m == 0`` is excluded — that is
+    #     ``apply_limits``'s own "no floor configured" case, never a clamp.
+    #   * full_coverage_at_zero=False (awning): the snap targets 100.
+    #     ``gap_to_closed_pct == 100-percentage``, so ``0 < gap < threshold``
+    #     is the integers ``{101-threshold, ..., 99}``; its LOWEST member is
+    #     ``101-threshold``, not ``100-threshold``. With the ceiling at
+    #     max_pos (no sun-tracking-only max exists), snap-on gives
+    #     ``min(100, max_pos) == max_pos`` and snap-off gives
+    #     ``min(P, max_pos)`` for every band member P; these agree for every
+    #     P iff ``max_pos <= min(band) == 101-threshold``. ``max_pos == 100``
+    #     is excluded — ``apply_config_limits`` never applies that ceiling at
+    #     all (it is the "no ceiling configured" sentinel).
+    #
+    #   Escaping either inert state needs the SAME kind of +1 correction: the
+    #   floor must clear ``threshold-1`` (so raising the threshold must clear
+    #   ``m+1``, not merely ``m``), and the ceiling must clear
+    #   ``101-threshold`` (so raising the threshold must clear
+    #   ``101-max_pos``, not ``100-max_pos``) — a bound phrased with the old,
+    #   un-adjusted arithmetic names a value that is STILL inert.
+    if config.get(CONF_SNAP_CLOSED_BELOW, False):
+        _snap_threshold = int(
+            config.get(CONF_SNAP_CLOSED_THRESHOLD, DEFAULT_SNAP_CLOSED_THRESHOLD)
+        )
+        # Reuses ``summary_policy`` (resolved once above, with the same
+        # unknown-type-falls-back-to-BlindPolicy guard the rest of the
+        # summary already relies on) rather than re-resolving the policy a
+        # second time here.
+        _snap_full_coverage_at_zero = not summary_policy.axes[0].open_blocks_sun
+        if _snap_full_coverage_at_zero:
+            _effective_min = (
+                min_pos_sun_track if min_pos_sun_track is not None else min_pos
+            )
+            if (
+                _effective_min is not None
+                and _effective_min != 0
+                and _effective_min >= _snap_threshold - 1
+            ):
+                lines.append(
+                    L["warnings.snap_closed_below_conflicts_min_pos"].format(
+                        threshold=_snap_threshold,
+                        min_pos=_effective_min,
+                        floor_bound=_snap_threshold - 1,
+                        threshold_bound=_effective_min + 1,
+                    )
+                )
+        elif (
+            max_pos is not None and max_pos != 100 and max_pos <= 101 - _snap_threshold
+        ):
+            lines.append(
+                L["warnings.snap_closed_below_conflicts_max_pos"].format(
+                    threshold=_snap_threshold,
+                    max_pos=max_pos,
+                    ceiling_bound=101 - _snap_threshold,
+                    threshold_bound=101 - max_pos,
+                )
+            )
+
+        # Footgun (round 1 OPTIONAL 5): the sun-tracking 1 % floor
+        # (``solar_floor`` / ``SOLAR_TRACKING_FLOOR_PCT``) is switched off only
+        # when EVERY bound entity supports the position axis (the conservative
+        # mixed-instance rule, issue #569 — see
+        # ``PipelineSnapshotBuilder.build``'s ``all_positionable`` rollup,
+        # which this mirrors). One open/close-only cover in an otherwise
+        # position-capable group keeps that floor active for the WHOLE group,
+        # so a demand the snap collapses to 0 is floored back up to
+        # ``SOLAR_TRACKING_FLOOR_PCT`` — silently, since only the live
+        # pipeline's per-entity capability data knows this, not the static
+        # config the rest of this function reads. Reuses ``cap_map`` —
+        # already resolved from ``hass`` above for the "Cover Warnings"
+        # section — rather than querying capabilities a second time.
+        # Only matters for the full_coverage_at_zero (closed-end-is-0) axes:
+        # an awning's snap target (100) is always far above the floor, so
+        # solar_floor is a no-op there regardless of floor_active.
+        # Irrelevant when every entity is open/close-only too (the group
+        # covered by cap_map): none of them would ever receive the literal
+        # numeric snap value in the first place, so the 1%-vs-0% distinction
+        # this warning exists for cannot apply to any of them.
+        if _snap_full_coverage_at_zero and cap_map:
+            _snap_has_positionable = any(
+                summary_policy.position_axis_supported(c) for c in cap_map.values()
+            )
+            _snap_has_non_positionable = any(
+                not summary_policy.position_axis_supported(c) for c in cap_map.values()
+            )
+            if _snap_has_positionable and _snap_has_non_positionable:
+                lines.append(
+                    L["warnings.snap_closed_below_floor_active"].format(
+                        threshold=_snap_threshold,
+                        floor_pct=SOLAR_TRACKING_FLOOR_PCT,
+                    )
+                )
+
+    # MODE2 + min_position footgun warning (issue #373).
+    # In MODE2 the OPEN (horizontal) slat angle IS 50%, so any min_position
+    # >= 50% collapses every climate/glare-control decision to the floor and
+    # the cover stops blocking heat or glare. Surface this as a ⚠️ line so
+    # users see it before saving the config.
+    if (
+        sensor_type in (CoverType.TILT, CoverType.VENETIAN)
+        and TiltPolicy.is_mode2(config.get(CONF_TILT_MODE))
+        and min_pos is not None
+        and min_pos >= MODE2_OPEN_HORIZONTAL_PERCENT
+    ):
+        lines.append(L["warnings.mode2_min_position"].format(min_pos=min_pos))
+
+    # Somfy My preset info / warning
+    _any_use_my = bool(config.get(CONF_SUNSET_USE_MY)) or any(
+        bool(config.get(f"custom_position_use_my_{_i}"))
+        for _i in CUSTOM_POSITION_SLOT_NUMBERS
+    )
+    _my_entities_enabled = bool(
+        config.get(
+            CONF_ENABLE_MY_POSITION_ENTITIES, DEFAULT_ENABLE_MY_POSITION_ENTITIES
+        )
+    )
+    lines.append(
+        L["my.entities_enabled"] if _my_entities_enabled else L["my.entities_disabled"]
+    )
+    if my_pos is not None:
+        lines.append(L["my.somfy_preset"].format(pos=my_pos))
+    elif _any_use_my or _my_entities_enabled:
+        lines.append(L["warnings.somfy_my_unset"])
+
+    # Proxy cover toggle (system-wide; not part of the decision chain)
+    proxy_enabled = bool(config.get(CONF_ENABLE_PROXY_COVER))
+    lines.append("")
+    lines.append(
+        L["headers.proxy_enabled"] if proxy_enabled else L["headers.proxy_disabled"]
+    )
+    if proxy_enabled:
+        _any_min_mode = any(
+            bool(config.get(f"custom_position_min_mode_{_i}"))
+            for _i in CUSTOM_POSITION_SLOT_NUMBERS
+        )
+        if not _any_min_mode:
+            lines.append(L["warnings.proxy_no_min"])
+
+    # =========================================================================
+    # Section 4: Decision Priority (compact reference)
+    # =========================================================================
+    def _ch(active: bool, short: str) -> str:
+        mark = "✅" if active else "❌"
+        return f"{mark}{short}"
+
+    # Build the full priority chain (fixed anchors + per-slot custom positions)
+    # via the shared helper, which owns the priority integers and ordering.
+    _chain_entries = build_priority_chain(
+        has_weather=has_weather,
+        has_motion=has_motion,
+        has_cloud=has_cloud,
+        has_climate=has_climate,
+        sun_tracking_enabled=sun_tracking_enabled,
+        has_glare=has_glare,
+        supports_glare=summary_policy.supports_glare_zones,
+        custom_slots=_custom_slots,
+        priorities=_handler_priority_overrides(config),
+        slot_names=_custom_slot_names,
+    )
+    chain = [_ch(e.active, e.label) for e in _chain_entries]
+
+    lines.append("")
+    lines.append(L["headers.decision_priority"])
+    lines.append(" → ".join(chain))
+
+    return "\n".join(lines)
+
+
+def _render_priority_scale(config: dict, policy) -> str:
+    """Render the decision-priority ladder for the custom-slot step (#613).
+
+    Shows every fixed handler anchor at its declared priority plus each
+    configured custom slot interleaved at its own priority and marked with
+    ``◀``, so the user sees where a 1–100 slot priority lands. Built from the
+    shared :func:`build_priority_chain` — the priority integers live there, not
+    here. HA options flows cannot recompute live as the slider moves, so the
+    ladder reflects the *last submitted* priorities and refreshes on re-render.
+    """
+    custom_slots: list[tuple] = []
+    slot_names: dict[int, str] = {}
+    for slot, slot_keys in CUSTOM_POSITION_SLOTS.items():
+        if not custom_position_slot_configured(config, slot_keys):
+            continue
+        priority = int(
+            config.get(slot_keys["priority"]) or DEFAULT_CUSTOM_POSITION_PRIORITY
+        )
+        # build_priority_chain reads index 0 (slot) and 3 (priority).
+        custom_slots.append((slot, None, 0, priority, False, None, False))
+        name = custom_position_slot_name(config, slot_keys)
+        if name:
+            slot_names[slot] = name
+
+    entries = build_priority_chain(
+        has_weather=True,
+        has_motion=True,
+        has_cloud=True,
+        has_climate=True,
+        sun_tracking_enabled=True,
+        has_glare=True,
+        supports_glare=policy.supports_glare_zones,
+        custom_slots=custom_slots,
+        priorities=_handler_priority_overrides(config),
+        slot_names=slot_names,
+    )
+
+    lines = ["```"]
+    for entry in entries:
+        marker = "◀" if entry.slot is not None else " "
+        lines.append(f"{entry.priority:>3} {marker} {entry.label}")
+    lines.append("```")
+    return "\n".join(lines)
+
+
+async def _get_devices_from_entities(
+    hass: HomeAssistant, entity_ids: list[str]
+) -> dict[str, str]:
+    """Get ``{device_id: display name}`` for the devices behind the cover entities.
+
+    The entity → device hop itself belongs to ``state/device_link``, which needs
+    exactly the same walk to resolve a stored ``CONF_DEVICE_ID`` against the live
+    registry; this is only the naming layer on top of it.
+    """
+    return {
+        device_id: device.name_by_user or device.name or device_id
+        for device_id, device in devices_for_entities(hass, entity_ids).items()
+    }
+
+
+async def _get_device_name_for_entity(
+    hass: HomeAssistant, entity_id: str
+) -> str | None:
+    """Return the parent device's display name for entity_id, or None.
+
+    Returns name_by_user or name only — never the device_id UUID — so callers
+    can safely use the result as a default user-facing name.
+    """
+    entity_reg = er.async_get(hass)
+    entity_entry = entity_reg.async_get(entity_id)
+    if not entity_entry or not entity_entry.device_id:
+        return None
+    device_reg = dr.async_get(hass)
+    device_entry = device_reg.async_get(entity_entry.device_id)
+    if not device_entry:
+        return None
+    return device_entry.name_by_user or device_entry.name or None
+
+
+_SHARED_OPTIONS_EXCLUDED = frozenset(
+    {CONF_ENTITIES, CONF_AZIMUTH, CONF_DEVICE_ID, CONF_TEMP_ENTITY}
+)
+
+# Maps each syncable category (matching options menu names) to its config keys.
+# Used by the sync flow to let users choose which setting groups to copy.
+SYNC_CATEGORIES: dict[str, frozenset[str]] = {
+    "geometry": frozenset(
+        {
+            CONF_HEIGHT_WIN,
+            CONF_WINDOW_DEPTH,
+            CONF_SILL_HEIGHT,
+            CONF_WINDOW_WIDTH,
+            CONF_LENGTH_AWNING,
+            CONF_AWNING_ANGLE,
+            CONF_AWNING_SHADE_MODE,
+            CONF_TILT_DEPTH,
+            CONF_TILT_DISTANCE,
+            CONF_TILT_MODE,
+            CONF_TILT_ANGLE_0,
+            CONF_TILT_ANGLE_100,
+            CONF_TILT_HORIZONTAL_PERCENT,
+            # Shared tilt-axis limit/shape controls (#964): now part of the
+            # tilt geometry fragment reached by tilt-only, louvered-roof, and
+            # venetian covers, so they sync with the tilt geometry above.
+            CONF_MIN_TILT,
+            CONF_MAX_TILT,
+            CONF_MIN_TILT_SUN_ONLY,
+            CONF_MAX_TILT_SUN_ONLY,
+            CONF_TILT_SAFETY_MARGIN,
+            # The reflected-beam floor (#1282) is slat + room geometry, which is
+            # what a sibling window on the same facade shares.
+            CONF_TILT_MIN_REFLECTED_ELEVATION,
+            CONF_VENETIAN_TILT_TRANSFORM,
+            # Per-window aperture fields relocated from sun_tracking (#778). They
+            # live on the geometry step and sync with the physical measurements.
+            # CONF_AZIMUTH is intentionally NOT listed — it stays in
+            # _SHARED_OPTIONS_EXCLUDED so it never copies across covers.
+            CONF_FOV_LEFT,
+            CONF_FOV_RIGHT,
+            CONF_DISTANCE,
+        }
+    ),
+    "sun_tracking": frozenset(
+        {
+            CONF_ENABLE_SUN_TRACKING,
+            CONF_MIN_ELEVATION,
+            CONF_MAX_ELEVATION,
+            CONF_ENABLE_BLIND_SPOT,
+            # The gate rides with the toggle it ANDs with (issue #1167) — copying
+            # sun-tracking settings to a sibling window that omitted the gate
+            # would otherwise leave that sibling tracking unconditionally.
+            CONF_SUN_TRACKING_GATE_SENSORS,
+            CONF_SUN_TRACKING_GATE_TEMPLATE,
+            CONF_SUN_TRACKING_GATE_TEMPLATE_MODE,
+        }
+    ),
+    "blind_spot": frozenset(
+        keys[sub]
+        for keys in BLIND_SPOT_SLOTS.values()
+        for sub in ("left", "right", "elevation", "elevation_mode")
+    ),
+    "position": frozenset(
+        {
+            CONF_DEFAULT_HEIGHT,
+            CONF_MAX_POSITION,
+            CONF_ENABLE_MAX_POSITION,
+            CONF_MIN_POSITION,
+            CONF_ENABLE_MIN_POSITION,
+            CONF_ENFORCE_DELTA_AT_ENDPOINTS,
+            CONF_ENDPOINT_USE_OPEN_CLOSE,
+            CONF_MIN_POSITION_SUN_TRACKING,
+            CONF_SUNSET_POS,
+            CONF_END_OF_WINDOW_POS,
+            CONF_ENABLE_MY_POSITION_ENTITIES,
+            CONF_MY_POSITION_VALUE,
+            CONF_SUNSET_USE_MY,
+            CONF_SUNSET_OFFSET,
+            CONF_SUNRISE_OFFSET,
+            CONF_SUNRISE_GATES_START,
+            CONF_SUNSET_TIME_ENTITY,
+            CONF_SUNRISE_TIME_ENTITY,
+            CONF_DAYTIME_GATE_SENSORS,
+            CONF_DAYTIME_GATE_TEMPLATE,
+            CONF_DAYTIME_GATE_TEMPLATE_MODE,
+            CONF_OPEN_CLOSE_THRESHOLD,
+            CONF_POSITION_TOLERANCE,
+            CONF_ENABLE_POSITION_MATCHING,
+            CONF_INVERSE_STATE,
+            CONF_INTERP,
+            CONF_RETURN_SUNSET,
+        }
+    ),
+    "interp": frozenset(
+        {
+            CONF_INTERP_START,
+            CONF_INTERP_END,
+            CONF_INTERP_LIST,
+            CONF_INTERP_LIST_NEW,
+        }
+    ),
+    "automation": frozenset(
+        {
+            CONF_DELTA_POSITION,
+            CONF_DELTA_TIME,
+            CONF_MINIMIZE_MOVEMENTS,
+            CONF_MAX_COVERAGE_STEPS,
+            CONF_SNAP_CLOSED_BELOW,
+            CONF_SNAP_CLOSED_THRESHOLD,
+            CONF_START_TIME,
+            CONF_START_ENTITY,
+            CONF_END_TIME,
+            CONF_END_ENTITY,
+            # Issue #1189. The one option whose whole point is that many covers
+            # share a value — Copy-to-covers fans one queue assignment across a
+            # whole facade in a single gesture, which for the 16-instance
+            # install this feature exists for is the difference between usable
+            # and not.
+            CONF_COMMAND_QUEUE,
+        }
+    ),
+    "manual_override": frozenset(
+        {
+            CONF_MANUAL_OVERRIDE_DURATION,
+            CONF_MANUAL_OVERRIDE_DURATION_MODE,
+            CONF_MANUAL_OVERRIDE_RESET,
+            CONF_MANUAL_THRESHOLD,
+            CONF_MANUAL_IGNORE_INTERMEDIATE,
+            CONF_MANUAL_IGNORE_EXTERNAL,
+            CONF_MANUAL_OVERRIDE_INPUT_ENTITIES,
+            CONF_MANUAL_OVERRIDE_INPUT_TEMPLATE,
+            CONF_TRANSIT_TIMEOUT,
+        }
+    ),
+    # Legacy aliases (issue #563): force override merged into custom-position
+    # slot 5. Kept for programmatic sync callers; the legacy keys are inert on
+    # current code but still drive a rolled-back install.
+    "force_override_values": frozenset(
+        {
+            CONF_FORCE_OVERRIDE_POSITION,
+            CONF_FORCE_OVERRIDE_MIN_MODE,
+        }
+    ),
+    "force_override_sensors": frozenset(
+        {
+            CONF_FORCE_OVERRIDE_SENSORS,
+        }
+    ),
+    "force_override": frozenset(
+        {
+            CONF_FORCE_OVERRIDE_SENSORS,
+            CONF_FORCE_OVERRIDE_POSITION,
+            CONF_FORCE_OVERRIDE_MIN_MODE,
+        }
+    ),
+    "custom_position_values": frozenset(
+        keys[k]
+        for keys in CUSTOM_POSITION_SLOTS.values()
+        for k in (
+            "position",
+            "priority",
+            "min_mode",
+            "use_my",
+            "template_mode",
+            "tilt",
+            "tilt_only",
+            "position_max",
+            "tilt_min",
+            "tilt_max",
+            # Issue #1318. The legacy ``custom_position`` alias below is built
+            # from ``keys.values()`` and so picks this up automatically; listing
+            # it here keeps the granular category from disagreeing with the
+            # alias about whether the flag travels with a slot's values.
+            "scope_to_window",
+        )
+    )
+    | {CONF_DEFAULT_TILT, CONF_SUNSET_TILT},
+    "custom_position_sensors": frozenset(
+        keys[k]
+        for keys in CUSTOM_POSITION_SLOTS.values()
+        for k in ("sensor", "sensors", "template")
+    ),
+    # Legacy alias: full union of custom_position_values + custom_position_sensors
+    "custom_position": frozenset(
+        v for keys in CUSTOM_POSITION_SLOTS.values() for v in keys.values()
+    ),
+    "motion_override_values": frozenset(
+        {
+            CONF_MOTION_TEMPLATE_MODE,
+            CONF_MOTION_TIMEOUT,
+            CONF_MOTION_TIMEOUT_MODE,
+        }
+    ),
+    "motion_override_sensors": frozenset(
+        {
+            CONF_MOTION_SENSORS,
+            CONF_MOTION_MEDIA_PLAYERS,
+            CONF_MOTION_TEMPLATE,
+        }
+    ),
+    # Legacy alias: full union of motion_override_values + motion_override_sensors
+    "motion_override": frozenset(
+        {
+            CONF_MOTION_SENSORS,
+            CONF_MOTION_MEDIA_PLAYERS,
+            CONF_MOTION_TEMPLATE,
+            CONF_MOTION_TEMPLATE_MODE,
+            CONF_MOTION_TIMEOUT,
+            CONF_MOTION_TIMEOUT_MODE,
+        }
+    ),
+    "weather_override_values": frozenset(
+        {
+            CONF_WEATHER_ENABLED,
+            CONF_WEATHER_OUTSIDE_WINDOW,
+            CONF_WEATHER_BYPASS_AUTO_CONTROL,
+            CONF_WEATHER_WIND_SPEED_THRESHOLD,
+            CONF_WEATHER_WIND_DIRECTION_TOLERANCE,
+            CONF_WEATHER_RAIN_THRESHOLD,
+            CONF_WEATHER_OVERRIDE_POSITION,
+            CONF_WEATHER_OVERRIDE_MIN_MODE,
+            CONF_WEATHER_TIMEOUT,
+            CONF_WEATHER_IS_RAINING_TEMPLATE_MODE,
+            CONF_WEATHER_IS_WINDY_TEMPLATE_MODE,
+            CONF_WEATHER_SEVERE_TEMPLATE_MODE,
+        }
+    ),
+    # Canonical membership lives in const.WEATHER_OVERRIDE_SENSOR_KEYS so the
+    # building-profile sensor-key set can reuse it without duplication.
+    "weather_override_sensors": WEATHER_OVERRIDE_SENSOR_KEYS,
+    # Legacy alias: full union of weather_override_values + weather_override_sensors
+    "weather_override": frozenset(
+        {
+            CONF_WEATHER_ENABLED,
+            CONF_WEATHER_OUTSIDE_WINDOW,
+            CONF_WEATHER_BYPASS_AUTO_CONTROL,
+            CONF_WEATHER_WIND_SPEED_SENSOR,
+            CONF_WEATHER_WIND_DIRECTION_SENSOR,
+            CONF_WEATHER_WIND_SPEED_THRESHOLD,
+            CONF_WEATHER_WIND_DIRECTION_TOLERANCE,
+            CONF_WEATHER_RAIN_SENSOR,
+            CONF_WEATHER_RAIN_THRESHOLD,
+            CONF_WEATHER_IS_RAINING_SENSOR,
+            CONF_WEATHER_IS_RAINING_TEMPLATE,
+            CONF_WEATHER_IS_RAINING_TEMPLATE_MODE,
+            CONF_WEATHER_IS_WINDY_SENSOR,
+            CONF_WEATHER_IS_WINDY_TEMPLATE,
+            CONF_WEATHER_IS_WINDY_TEMPLATE_MODE,
+            CONF_WEATHER_SEVERE_TEMPLATE,
+            CONF_WEATHER_SEVERE_TEMPLATE_MODE,
+            CONF_WEATHER_SEVERE_SENSORS,
+            CONF_WEATHER_OVERRIDE_POSITION,
+            CONF_WEATHER_OVERRIDE_MIN_MODE,
+            CONF_WEATHER_TIMEOUT,
+        }
+    ),
+    "light_cloud_values": frozenset(
+        {
+            CONF_WEATHER_STATE,
+            CONF_LUX_THRESHOLD,
+            CONF_IRRADIANCE_PLANE,
+            CONF_IRRADIANCE_THRESHOLD,
+            CONF_CLOUD_COVERAGE_THRESHOLD,
+            CONF_CLOUD_SUPPRESSION,
+            CONF_CLOUD_SUPPRESSION_HOLD_TIME,
+            CONF_LUX_RELEASE_THRESHOLD,
+            CONF_IRRADIANCE_RELEASE_THRESHOLD,
+            CONF_CLOUD_COVERAGE_RELEASE_THRESHOLD,
+            CONF_CLOUDY_POSITION,
+            CONF_CLOUDY_TILT,
+            CONF_CLOUD_ESCALATION_DELAY,
+            CONF_IS_SUNNY_TEMPLATE_MODE,
+        }
+    ),
+    # Canonical membership lives in const.LIGHT_CLOUD_SENSOR_KEYS so the
+    # building-profile sensor-key set can reuse it without duplication.
+    "light_cloud_sensors": LIGHT_CLOUD_SENSOR_KEYS,
+    # Legacy alias: full union of light_cloud_values + light_cloud_sensors
+    "light_cloud": frozenset(
+        {
+            CONF_WEATHER_ENTITY,
+            CONF_WEATHER_STATE,
+            CONF_LUX_ENTITY,
+            CONF_LUX_THRESHOLD,
+            CONF_IRRADIANCE_ENTITY,
+            CONF_IRRADIANCE_PLANE,
+            CONF_IRRADIANCE_THRESHOLD,
+            CONF_CLOUD_COVERAGE_ENTITY,
+            CONF_CLOUD_COVERAGE_THRESHOLD,
+            CONF_CLOUD_SUPPRESSION,
+            CONF_CLOUD_SUPPRESSION_HOLD_TIME,
+            CONF_LUX_RELEASE_THRESHOLD,
+            CONF_IRRADIANCE_RELEASE_THRESHOLD,
+            CONF_CLOUD_COVERAGE_RELEASE_THRESHOLD,
+            CONF_CLOUDY_POSITION,
+            CONF_CLOUDY_TILT,
+            CONF_CLOUD_ESCALATION_DELAY,
+            CONF_IS_SUNNY_SENSOR,
+            CONF_IS_SUNNY_TEMPLATE,
+            CONF_IS_SUNNY_TEMPLATE_MODE,
+        }
+    ),
+    "temperature_climate_values": frozenset(
+        {
+            CONF_CLIMATE_MODE,
+            CONF_AUTO_RESOLVE_TEMP_FROM_AREA,
+            CONF_TEMP_LOW,
+            CONF_TEMP_HIGH,
+            CONF_OUTSIDE_TEMP_SOURCE,
+            CONF_OUTSIDE_THRESHOLD,
+            CONF_TRANSPARENT_BLIND,
+            CONF_WINTER_CLOSE_INSULATION,
+            CONF_SUMMER_CLOSE_BYPASS_SUN_FLOOR,
+            CONF_TEMP_EXTREME_HEAT,
+            CONF_EXTREME_HEAT_POSITION,
+            CONF_PRESENCE_TEMPLATE_MODE,
+            CONF_TRACKING_SEASONS,
+            # Temperature smoothing (issue #917).
+            CONF_CLIMATE_TEMP_HOLD_TIME,
+            CONF_TEMP_LOW_RELEASE_THRESHOLD,
+            CONF_TEMP_HIGH_RELEASE_THRESHOLD,
+            CONF_OUTSIDE_THRESHOLD_RELEASE,
+            CONF_TEMP_EXTREME_HEAT_RELEASE_THRESHOLD,
+        }
+    ),
+    "temperature_climate_sensors": frozenset(
+        {
+            CONF_TEMP_ENTITY,
+            CONF_OUTSIDETEMP_ENTITY,
+            CONF_PRESENCE_ENTITY,
+            CONF_PRESENCE_TEMPLATE,
+        }
+    ),
+    # Legacy alias: full union of temperature_climate_values + temperature_climate_sensors
+    "temperature_climate": frozenset(
+        {
+            CONF_CLIMATE_MODE,
+            CONF_AUTO_RESOLVE_TEMP_FROM_AREA,
+            CONF_TEMP_ENTITY,
+            CONF_TEMP_LOW,
+            CONF_TEMP_HIGH,
+            CONF_OUTSIDETEMP_ENTITY,
+            CONF_OUTSIDE_TEMP_SOURCE,
+            CONF_OUTSIDE_THRESHOLD,
+            CONF_PRESENCE_ENTITY,
+            CONF_PRESENCE_TEMPLATE,
+            CONF_PRESENCE_TEMPLATE_MODE,
+            CONF_TRANSPARENT_BLIND,
+            CONF_WINTER_CLOSE_INSULATION,
+            CONF_SUMMER_CLOSE_BYPASS_SUN_FLOOR,
+            CONF_TEMP_EXTREME_HEAT,
+            CONF_EXTREME_HEAT_POSITION,
+            CONF_TRACKING_SEASONS,
+            # Temperature smoothing (issue #917).
+            CONF_CLIMATE_TEMP_HOLD_TIME,
+            CONF_TEMP_LOW_RELEASE_THRESHOLD,
+            CONF_TEMP_HIGH_RELEASE_THRESHOLD,
+            CONF_OUTSIDE_THRESHOLD_RELEASE,
+            CONF_TEMP_EXTREME_HEAT_RELEASE_THRESHOLD,
+        }
+    ),
+    # Legacy alias for backward compat
+    "climate": frozenset(
+        {
+            CONF_WEATHER_ENTITY,
+            CONF_LUX_ENTITY,
+            CONF_LUX_THRESHOLD,
+            CONF_IRRADIANCE_ENTITY,
+            CONF_IRRADIANCE_THRESHOLD,
+            CONF_CLOUD_COVERAGE_ENTITY,
+            CONF_CLOUD_COVERAGE_THRESHOLD,
+            CONF_CLOUD_SUPPRESSION,
+            CONF_CLOUDY_POSITION,
+            CONF_CLOUDY_TILT,
+            CONF_CLOUD_ESCALATION_DELAY,
+            CONF_IS_SUNNY_SENSOR,
+            CONF_IS_SUNNY_TEMPLATE,
+            CONF_IS_SUNNY_TEMPLATE_MODE,
+            CONF_CLIMATE_MODE,
+            CONF_AUTO_RESOLVE_TEMP_FROM_AREA,
+            CONF_TEMP_ENTITY,
+            CONF_TEMP_LOW,
+            CONF_TEMP_HIGH,
+            CONF_OUTSIDETEMP_ENTITY,
+            CONF_OUTSIDE_TEMP_SOURCE,
+            CONF_OUTSIDE_THRESHOLD,
+            CONF_PRESENCE_ENTITY,
+            CONF_PRESENCE_TEMPLATE,
+            CONF_PRESENCE_TEMPLATE_MODE,
+            CONF_TRANSPARENT_BLIND,
+            CONF_WINTER_CLOSE_INSULATION,
+            CONF_SUMMER_CLOSE_BYPASS_SUN_FLOOR,
+            CONF_TEMP_EXTREME_HEAT,
+            CONF_EXTREME_HEAT_POSITION,
+            CONF_TRACKING_SEASONS,
+        }
+    ),
+    "glare_zones": frozenset(
+        {CONF_ENABLE_GLARE_ZONES}
+        | {
+            f"glare_zone_{i}_{axis}"
+            for i in GLARE_ZONE_SLOT_NUMBERS
+            for axis in ("name", "x", "y", "radius", "z")
+        }
+    ),
+    "weather": frozenset(
+        {
+            CONF_WEATHER_STATE,
+        }
+    ),
+}
+
+# Categories shown in the sync selector UI.
+# Mixed categories (force_override, custom_position, motion_override, weather_override,
+# light_cloud, temperature_climate) are split into *_values (thresholds/flags/modes)
+# and *_sensors (entity_id assignments) so users can copy global values without
+# overwriting room-specific sensor assignments (issue #125).
+# Legacy aliases remain in SYNC_CATEGORIES for programmatic callers.
+_SYNC_UI_CATEGORIES: list[str] = [
+    "geometry",
+    "sun_tracking",
+    "blind_spot",
+    "position",
+    "interp",
+    "automation",
+    "manual_override",
+    "custom_position_values",
+    "custom_position_sensors",
+    "motion_override_values",
+    "motion_override_sensors",
+    "weather_override_values",
+    "weather_override_sensors",
+    "light_cloud_values",
+    "light_cloud_sensors",
+    "temperature_climate_values",
+    "temperature_climate_sensors",
+    "glare_zones",
+]
+
+
+def _extract_shared_options(
+    entry: ConfigEntry,
+    categories: list[str] | None = None,
+) -> dict[str, Any]:
+    """Return options safe to copy across covers.
+
+    Excludes per-window fields: CONF_ENTITIES, CONF_AZIMUTH, CONF_DEVICE_ID.
+    When categories is None, returns all shared options (used by duplicate flow).
+    When categories is a list, returns only options belonging to those categories.
+
+    Also canonicalizes any time-typed option (``TIME_OPTION_KEYS``) that isn't
+    already in the one accepted wire format: a source entry predating the
+    v3.11 -> v3.12 repair, or one that was ``disabled_by``-set before that
+    migration shipped (so it never ran), can still carry a raw value like
+    ``"7:30"``. Values ``normalize_time_string`` can't rescue are dropped
+    rather than copied — on Duplicate that means the key is simply absent
+    from the new entry; on Sync, where the result is merged as
+    ``{**target.options, **shared_options}``, a dropped key leaves the
+    target's own existing value in place rather than clearing it (issue
+    #1057).
+    """
+    if categories is None:
+        result = {
+            k: v for k, v in entry.options.items() if k not in _SHARED_OPTIONS_EXCLUDED
+        }
+    else:
+        allowed_keys = frozenset().union(
+            *(SYNC_CATEGORIES[c] for c in categories if c in SYNC_CATEGORIES)
+        )
+        result = {k: v for k, v in entry.options.items() if k in allowed_keys}
+
+    for key in TIME_OPTION_KEYS:
+        if key not in result:
+            continue
+        value = result[key]
+        if value is None or TIME_STRING_RE.match(str(value)):
+            continue  # absent-equivalent or already canonical
+        canonical = normalize_time_string(value)
+        if TIME_STRING_RE.match(str(canonical)):
+            _LOGGER.debug(
+                "_extract_shared_options: entry '%s' %s=%r stored as %r",
+                entry.entry_id,
+                key,
+                value,
+                canonical,
+            )
+            result[key] = canonical
+        else:
+            _LOGGER.warning(
+                "_extract_shared_options: entry '%s' %s=%r is not a valid time "
+                "(expected HH:MM:SS) and was dropped rather than copied",
+                entry.entry_id,
+                key,
+                value,
+            )
+            del result[key]  # unrescuable — drop rather than copy garbage
+    return result
+
+
+# Fallback line for a destination type that is filtered out but whose policy
+# offers no capability warning of its own — the blocked list must always say
+# something rather than list a bare label (issue #1132).
+#
+# Reachable, and not rarely: the two sides disagree on quantifier.
+# ``entities_satisfy_selector`` blocks a type when ANY bound cover misses the
+# feature, while ``TiltPolicy`` / ``LouveredRoofPolicy.cover_capability_warnings``
+# only warn when NO bound cover has it. A two-cover instance where exactly one
+# advertises set_tilt_position blocks Tilt and produces an empty warning list.
+_BLOCKED_TYPE_GENERIC_REASON = (
+    "⚠️ The covers bound to this instance do not advertise the features this "
+    "cover type requires."
+)
+
+
+def _eligible_cover_types(
+    current_type: str | None,
+    known: Mapping[str, Mapping[str, bool] | None],
+) -> tuple[list[str], list[str]]:
+    """Split the offerable cover types into ``(eligible, blocked)`` (issue #1132).
+
+    Starts from ``SENSOR_TYPE_MENU`` — the same registry-derived list the create
+    flow offers, so virtual entry types (Building Profile, Group) can never
+    appear — drops the type this instance already is, and asks each remaining
+    candidate policy whether its own entity picker would have admitted the
+    covers already bound here.
+    """
+    eligible: list[str] = []
+    blocked: list[str] = []
+    for candidate in SENSOR_TYPE_MENU:
+        if candidate == current_type:
+            continue
+        if get_policy(candidate).entities_satisfy_selector(known):
+            eligible.append(candidate)
+        else:
+            blocked.append(candidate)
+    return eligible, blocked
+
+
+def _offered_cover_types(current_type: str | None, eligible: list[str]) -> list[str]:
+    """Build the picker's list: the alternatives plus the type it already is (#1200).
+
+    ``eligible`` answers "what can this instance switch TO", which is the
+    question the abort and the blocked-types explanation are both asking — so
+    the current type is rightly absent from it. The dropdown asks a different
+    question: what the field's value is allowed to be, and it opens on the
+    value the instance already has. Without the current type in the option set
+    that pre-selection is impossible and the frontend highlights whichever
+    alternative happens to sort first.
+
+    Deliberately never consults capabilities: a venetian entry bound to a
+    position-only cover would otherwise be rendered as blocked and
+    pre-selected at the same time.
+
+    That guarantee covers ``current_type`` — the type the FLOW is on — which is
+    the stored type only while no switch is pending. Mid-dialog venetian →
+    blind, ``current_type`` is blind and the stored venetian is back among the
+    blocked types like any other unsatisfiable one, so a revert to it is not
+    offered here.
+    """
+    if current_type not in SENSOR_TYPE_MENU:
+        return eligible
+    return [t for t in SENSOR_TYPE_MENU if t == current_type or t in eligible]
+
+
+def _blocked_types_text(
+    blocked: list[str],
+    known: Mapping[str, Mapping[str, bool] | None],
+    labels: dict[str, str] | None = None,
+) -> str:
+    """Render one explained line per cover type the bound covers rule out.
+
+    Each policy states its own requirement through
+    ``prospective_capability_warnings`` — the same pre-configuration hook the
+    "Change Cover Type" confirm screen asks (issue #1137) — so this explains a
+    decision ``entities_satisfy_selector`` made using the same matrix that
+    made it, and never grows a second one.
+
+    Covers HA cannot read yet (``None`` caps) are dropped first, exactly as
+    ``helpers.check_cover_capabilities`` drops them before the same call. The
+    warning builders read a missing capability as an absent one, so an
+    unavailable entity would otherwise be reported as "does not support
+    set_position" — and it is the one entity ``entities_satisfy_selector``
+    deliberately skips, so blaming it here contradicts the filter that produced
+    this list.
+    """
+    readable = {eid: caps for eid, caps in known.items() if caps is not None}
+    lines: list[str] = []
+    for cover_type in blocked:
+        policy = get_policy(cover_type)
+        reasons = policy.prospective_capability_warnings(readable)
+        reason = reasons[0] if reasons else _BLOCKED_TYPE_GENERIC_REASON
+        lines.append(f"- **{policy.display_label(labels)}** — {reason}")
+    return "\n".join(lines)
+
+
+def _stranded_option_keys(
+    current_type: str | None, new_type: str, options: Mapping[str, Any]
+) -> list[str]:
+    """Return stored keys the outgoing type reads and the incoming one does not.
+
+    Advisory only (issue #1132): nothing is deleted, so switching back finds the
+    configuration intact. Both sides come from ``live_option_keys()`` so the
+    comparison stays on the policy layer.
+    """
+    outgoing = get_policy(current_type).live_option_keys()
+    incoming = get_policy(new_type).live_option_keys()
+    return sorted((outgoing - incoming) & set(options))
+
+
+_POLARITY_DEFAULT_LINE = (
+    "⚠️ **0 % and 100 % mean the opposite on the new type.** The default "
+    "position is re-seeded from **{old}%** to **{new}%** — the value a cover "
+    "created as this type would start with."
+)
+_POLARITY_CARRIED_LINE = (
+    "⚠️ These stored positions now mean the opposite of what they did. They "
+    "are left exactly as they are — check them on the Position screen and on "
+    "the screen that owns each one: {keys}."
+)
+
+
+def _no_coverage_position(cover_type: str | None) -> int:
+    """Return the position that means "no coverage" for *cover_type*.
+
+    ``position_for_intent(sun_through=True)`` is the same seam ``#1126``'s
+    ``_seed_default_position`` uses, so the answer here can never disagree with
+    the value a freshly created cover of this type is given. It is also the
+    polarity test itself: the endpoint moves iff the primary axis flips.
+    """
+    return get_policy(cover_type).position_for_intent(sun_through=True)
+
+
+def _polarity_reseed(current_type: str | None, new_type: str) -> dict[str, int]:
+    """Option values a switch to *new_type* rewrites, or ``{}`` if none.
+
+    Only ``default_percentage`` qualifies (``PositionRole.RESEED``): it is the
+    one primary-axis position a policy already owns an answer for, seeded at
+    creation from the very endpoint compared here. Empty when the two types
+    share a polarity — a switch that changes nothing about positions rewrites
+    nothing.
+    """
+    endpoint = _no_coverage_position(new_type)
+    if _no_coverage_position(current_type) == endpoint:
+        return {}
+    return dict.fromkeys(config_fields.reseeded_position_keys(), endpoint)
+
+
+def _inverted_position_keys(new_type: str, options: Mapping[str, Any]) -> list[str]:
+    """Return stored primary-axis positions that will mean the opposite.
+
+    Every disclosed key comes from ``config_fields.disclosed_position_keys()``,
+    so a percentage option added to the registry cannot go unnamed here — the
+    completeness guard fails first. Filtered to keys the INCOMING type actually
+    reads: one the new type ignores is inert, and ``{stranded_options}`` already
+    says so.
+    """
+    live = get_policy(new_type).live_option_keys()
+    return [
+        key
+        for key in config_fields.disclosed_position_keys()
+        if key in live
+        and options.get(key) is not None
+        and options.get(key) != config_fields.polarity_neutral_value(key)
+    ]
+
+
+def _position_polarity_text(
+    current_type: str | None, new_type: str, options: Mapping[str, Any]
+) -> str:
+    """Disclose a switch that inverts what a stored position means (issue #1132).
+
+    ``default_percentage`` is stored by every cover type, so it can never appear
+    in ``{stranded_options}`` — yet on a blind 100 % is the no-coverage end and
+    on an awning that end is 0 %. Carried over silently, "stay out of the way"
+    becomes "shade as hard as you can" on every fallback (outside the time
+    window, ``return_sunset``, sun tracking off). Every other stored
+    primary-axis position inverts the same way and is named rather than
+    rewritten, because none of them has a policy-defined answer to re-seed from.
+
+    Empty when the two types share a polarity, so a switch that changes nothing
+    about positions says nothing about them.
+    """
+    reseed = _polarity_reseed(current_type, new_type)
+    if not reseed:
+        return ""
+    lines = [
+        _POLARITY_DEFAULT_LINE.format(
+            old=options.get(CONF_DEFAULT_HEIGHT, _no_coverage_position(current_type)),
+            new=reseed[CONF_DEFAULT_HEIGHT],
+        )
+    ]
+    carried = _inverted_position_keys(new_type, options)
+    if carried:
+        lines.append(
+            _POLARITY_CARRIED_LINE.format(keys=", ".join(f"`{k}`" for k in carried))
+        )
+    return "\n\n".join(lines)
+
+
+def _build_cover_entity_schema(
+    sensor_type: str,
+    devices: dict[str, str] | None = None,
+) -> vol.Schema:
+    """Build entity selector schema based on cover type.
+
+    When devices is provided and non-empty, a device association selector is
+    appended so both fields appear on the same form.
+    """
+    entity_selector = selector.EntitySelector(
+        selector.EntitySelectorConfig(
+            multiple=True,
+            filter=get_policy(sensor_type).entity_selector_filter(),
+        )
+    )
+    schema_dict: dict = {vol.Optional(CONF_ENTITIES, default=[]): entity_selector}
+    if devices:
+        options_list = [
+            {"value": _STANDALONE_SENTINEL, "label": "None (standalone device)"}
+        ]
+        for device_id, device_name in devices.items():
+            options_list.append({"value": device_id, "label": device_name})
+        schema_dict[vol.Required(CONF_DEVICE_ID, default=_STANDALONE_SENTINEL)] = (
+            selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=options_list,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        )
+    schema_dict[
+        vol.Optional(CONF_ENABLE_PROXY_COVER, default=DEFAULT_ENABLE_PROXY_COVER)
+    ] = selector.BooleanSelector()
+    return vol.Schema(schema_dict)
+
+
+def _get_geometry_schema(
+    sensor_type: str | None,
+    hass: HomeAssistant | None = None,
+    options: dict | None = None,
+) -> vol.Schema:
+    """Return the geometry schema for the given sensor type.
+
+    Falls back to the vertical-blind schema for unknown / missing types so
+    legacy configs still render *something* in the options flow. When *hass*
+    is supplied the schema follows HA's configured unit system (metric vs.
+    US-customary); ``hass=None`` keeps the legacy metric schema and is the
+    path the existing test suite uses.
+    """
+    cls = POLICY_REGISTRY.get(sensor_type) if sensor_type is not None else None
+    if cls is None:
+        if hass is None:
+            base = GEOMETRY_VERTICAL_SCHEMA
+        else:
+            from .cover_types.blind import geometry_vertical_schema
+
+            base = geometry_vertical_schema(hass)
+        # Unknown type has no policy → plain window-facing fields, no FOV button.
+        base = base.extend(window_facing_schema(hass).schema)
+        return base.extend(solar_properties_schema(hass, options).schema)
+    policy = get_policy(sensor_type)
+    # Compose the shared per-window facing fields (azimuth / FOV / distance)
+    # onto the policy's geometry schema, then layer the FOV-from-measurements
+    # button (#565) for the types that support it. The button lives here (moved
+    # from the sun-tracking step, #778) so it sits beside the width/depth it
+    # derives from. Routed through the policy so no cover-type string branch
+    # leaks in.
+    base = policy.geometry_schema(hass, options)
+    base = base.extend(
+        window_facing_schema(
+            hass, include_distance=policy.includes_shaded_distance()
+        ).schema
+    )
+    # Optional solar-transmittance description (#1236) — appended last so the
+    # pinned azimuth → FOV → shaded-distance order above is untouched.
+    base = base.extend(solar_properties_schema(hass, options).schema)
+    return policy.fov_compute_schema(base)
+
+
+def _geometry_unit_keys(
+    sensor_type: str | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return ``(length_keys, slat_keys)`` for the given cover type.
+
+    ``length_keys`` are option keys stored in canonical metres,
+    ``slat_keys`` in canonical centimetres. Empty tuples for unknown types.
+
+    ``CONF_DISTANCE`` (shaded area) is appended for every cover type whose policy
+    includes the shaded-distance field — it moved from the sun-tracking step to
+    the geometry step (#778) and is stored in canonical metres like the other
+    window lengths. Types that hide it (the tilt-only louvered roof, #830) omit
+    it here too so the unit-conversion keys stay in step with the rendered form.
+    """
+    cls = POLICY_REGISTRY.get(sensor_type) if sensor_type is not None else None
+    if cls is None:
+        return ((), ())
+    policy = get_policy(sensor_type)
+    length_keys = policy.geometry_length_keys()
+    if policy.includes_shaded_distance():
+        length_keys = (*length_keys, CONF_DISTANCE)
+    return (
+        length_keys,
+        policy.geometry_slat_keys(),
+    )
+
+
+def _fov_compute_supported(sensor_type: str | None) -> bool:
+    """Whether *sensor_type*'s policy exposes the FOV-from-measurements button."""
+    return (
+        sensor_type in POLICY_REGISTRY and get_policy(sensor_type).supports_fov_compute
+    )
+
+
+_SUN_TRACKING_WIKI = (
+    "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Sun-Tracking"
+)
+
+
+def _sun_tracking_placeholders(
+    sensor_type: str | None,
+    source_config: dict[str, Any],
+) -> dict[str, str]:
+    """Build description placeholders for the sun-tracking form.
+
+    The step description references ``{learn_more}``. The FOV-from-measurements
+    preview moved to the geometry step with the fields it describes (#778), so
+    ``computed_fov`` is no longer produced here — see ``_geometry_placeholders``.
+    """
+    return {"learn_more": _SUN_TRACKING_WIKI}
+
+
+def _geometry_placeholders(
+    sensor_type: str | None,
+    source_config: dict[str, Any],
+) -> dict[str, str]:
+    """Build description placeholders for the geometry form.
+
+    Always includes ``geometry_wiki_link``. For cover types with the FOV-from-
+    measurements button (#565, now on the geometry step per #778) it adds a
+    read-only ``computed_fov`` preview of the angle the button would produce from
+    the window width + reveal depth, rendered in the button's own help text
+    (``data_description.fov_compute``).
+
+    The preview is shown for *every* depth, including a flush window (depth 0):
+    that is not "nothing to derive" — ``fov_from_reveal`` returns the full
+    hemisphere (90°/90°) there, which is the correct, informative answer. Cover
+    types without the button get an empty ``computed_fov`` — the key is always
+    present because HA raises if a referenced placeholder is missing.
+    """
+    computed = ""
+    if _fov_compute_supported(sensor_type):
+        computed = computed_fov_line(
+            source_config.get(CONF_WINDOW_WIDTH),
+            source_config.get(CONF_WINDOW_DEPTH),
+        )
+    return {
+        "geometry_wiki_link": _geometry_wiki_link(sensor_type),
+        "computed_fov": computed,
+    }
+
+
+def _resolve_fov_compute_submit(
+    sensor_type: str | None,
+    user_input: dict[str, Any],
+    source_config: dict[str, Any],
+) -> bool:
+    """Process a geometry submit for the FOV-from-measurements button (#565).
+
+    Single home for the button logic shared by the create-flow and options-flow
+    ``async_step_geometry`` handlers (no-duplication guideline). The
+    ``CONF_FOV_COMPUTE`` toggle is transient — always popped from *user_input*
+    here so it never persists.
+
+    When the toggle was ticked, ``fov_left``/``fov_right`` are overwritten in
+    *user_input* with the angle derived from the window width + reveal depth read
+    from *source_config*, and ``True`` is returned so the caller re-renders the
+    form with the populated, un-ticked sliders (the "button press"). Otherwise
+    ``False`` is returned and the user's typed fov values pass through.
+
+    Callers pass the *canonicalized submitted input* as *source_config* so the
+    derived FOV reflects the width/depth the user just typed (both are Required
+    on the geometry step, so always present), not a stale stored value (#565).
+    """
+    pressed = bool(user_input.pop(CONF_FOV_COMPUTE, False))
+    if not pressed or not _fov_compute_supported(sensor_type):
+        return False
+
+    width = float(source_config.get(CONF_WINDOW_WIDTH) or 0.0)
+    depth = float(source_config.get(CONF_WINDOW_DEPTH) or 0.0)
+    derived = round(fov_from_reveal(width, depth))
+    user_input[CONF_FOV_LEFT] = derived
+    user_input[CONF_FOV_RIGHT] = derived
+    return True
+
+
+def _get_sun_tracking_schema(
+    sensor_type: str | None,
+    hass: HomeAssistant | None = None,
+) -> vol.Schema:
+    """Return the sun-tracking schema for *sensor_type*.
+
+    Adds the glare-zones toggle for cover types that support it. The FOV-field
+    shaping (azimuth / FOV / distance and the "Generate FOV from measurements"
+    button) moved to the geometry step (#778) — see ``_get_geometry_schema``.
+    """
+    base = sun_tracking_schema(hass) if hass is not None else SUN_TRACKING_SCHEMA
+    if sensor_type in POLICY_REGISTRY:
+        policy = get_policy(sensor_type)
+        if policy.supports_glare_zones:
+            base = base.extend(
+                {
+                    vol.Optional(
+                        CONF_ENABLE_GLARE_ZONES, default=False
+                    ): selector.BooleanSelector(),
+                }
+            )
+    return base
+
+
+def _glare_zone_length_keys() -> tuple[str, ...]:
+    """Return the 16 metres-stored option keys for the 4 glare zone slots."""
+    return tuple(
+        f"glare_zone_{i}_{axis}"
+        for i in GLARE_ZONE_SLOT_NUMBERS
+        for axis in ("x", "y", "radius", "z")
+    )
+
+
+# Glare-zones schema is built in ``config_dynamic`` (locale-aware). Thin alias
+# preserves the existing call sites / signature ``(options, hass)``.
+_build_glare_zones_schema = _glare_zones_schema
+
+
+# ── Per-slot options pages (issue #945) ──────────────────────────────────────
+# Each of the three paged areas (custom positions, blind spots, glare zones) is
+# a sub-menu that lists its configured slots plus an "Add" entry; picking one
+# opens a focused single-slot page. The metadata below lets one shared engine
+# drive all three. ``area`` is the singular token used in the dynamic step names
+# (``custom_position_slot_3`` / ``add_blind_spot``); the sub-menu step keeps its
+# historical id via ``_area_menu`` so the init-menu wiring and translations are
+# unchanged.
+_SLOT_AREA_META: dict[str, tuple[tuple[int, ...], dict[int, dict[str, str]]]] = {
+    "custom_position": (CUSTOM_POSITION_SLOT_NUMBERS, CUSTOM_POSITION_SLOTS),
+    "blind_spot": (BLIND_SPOT_SLOT_NUMBERS, BLIND_SPOT_SLOTS),
+    "glare_zone": (GLARE_ZONE_SLOT_NUMBERS, GLARE_ZONE_SLOTS),
+}
+
+# Each area's sub-key → generic form-key map, so one lookup answers "what does
+# this sub-key render as". ``_clear_slot_keys`` inverts it through the markers
+# the page actually builds to get the sub-keys "➕ Add…" must spare (#1071) —
+# membership in the map alone is not enough, because parts of a page are gated
+# per instance (custom position's tilt block renders only for tilt-capable
+# cover types).
+_SLOT_AREA_FORM_KEYS: Mapping[str, Mapping[str, str]] = {
+    "custom_position": CUSTOM_POSITION_FORM_KEYS,
+    "blind_spot": BLIND_SPOT_FORM_KEYS,
+    "glare_zone": GLARE_ZONE_FORM_KEYS,
+}
+
+# The metres-stored generic length keys for a single glare-zone page — the
+# per-slot analogue of ``_glare_zone_length_keys`` used for locale conversion.
+_GLARE_ZONE_FORM_LENGTH_KEYS: tuple[str, ...] = tuple(
+    GLARE_ZONE_FORM_KEYS[sub] for sub in ("x", "y", "radius", "z")
+)
+
+
+def _area_menu(area: str) -> str:
+    """Return the sub-menu step id for a slot *area* token.
+
+    Only glare zones differ (singular token ``glare_zone`` → plural historical
+    step ``glare_zones``); the other two areas' tokens already match their step.
+    """
+    return "glare_zones" if area == "glare_zone" else area
+
+
+def _apply_create_defaults(options: dict, sensor_type: str | None) -> None:
+    """Seed the create wizard's constant-backed defaults (issue #133 / #1126).
+
+    Quick setup skips some steps (e.g. automation, position) leaving critical
+    keys absent from the accumulated config. ``setdefault`` so an already
+    collected value always wins. ``CONF_DEFAULT_HEIGHT`` seeds the policy's
+    no-coverage endpoint — ``position_for_intent(sun_through=True)`` — rather
+    than a literal, so awning's polarity-flipped position axis (100 % = fully
+    extended = maximum shading) still yields the "leave it alone" value (0,
+    not 100).
+
+    Resolves the policy itself and early-returns on
+    ``not (controls_cover and not is_orchestrator)`` — mirrors the gate
+    ``__init__.py:_seed_default_position`` applies for the same reason: a
+    Building Profile builds no coordinator, and a cover group builds a
+    ``GroupCoordinator`` that reads none of these keys, so neither wants any
+    of the seven defaults below. Unlike that migration-side helper, this one
+    does not catch ``ValueError`` from ``get_policy`` — every call site here
+    is a live wizard step where ``sensor_type`` is always a just-selected or
+    already-loaded-and-valid cover type, and the surrounding config-flow code
+    already calls ``get_policy`` unguarded on the same value, so letting an
+    unknown type raise here matches the pre-refactor failure mode instead of
+    silently skipping the defaults.
+
+    Shared by all three sites that can mint a fresh entry's options —
+    ``async_step_update`` (the entry the normal create wizard actually
+    creates), ``async_step_summary`` (the pre-create preview, so it can never
+    disagree with what ``async_step_update`` is about to write), and
+    ``async_step_duplicate_configure`` (the Duplicate-cover create path,
+    which cannot rely on the source entry already carrying the key — a
+    disabled source entry is never migrated, so an old, still-broken copy
+    would otherwise propagate the missing key forever).
+    """
+    policy = get_policy(sensor_type)
+    if not (policy.controls_cover and not policy.is_orchestrator):
+        return
+    options.setdefault(CONF_DELTA_POSITION, DEFAULT_DELTA_POSITION)
+    options.setdefault(CONF_DELTA_TIME, DEFAULT_DELTA_TIME)
+    options.setdefault(CONF_MANUAL_OVERRIDE_DURATION, DEFAULT_MANUAL_OVERRIDE_DURATION)
+    options.setdefault(CONF_MOTION_SENSORS, [])
+    options.setdefault(CONF_MOTION_TIMEOUT, DEFAULT_MOTION_TIMEOUT)
+    options.setdefault(CONF_ENABLE_POSITION_MATCHING, DEFAULT_ENABLE_POSITION_MATCHING)
+    options.setdefault(
+        CONF_DEFAULT_HEIGHT, policy.position_for_intent(sun_through=True)
+    )
+
+
+# Wiki link surfaced as the ``{learn_more}`` placeholder on each slot sub-menu.
+_SLOT_AREA_WIKI: dict[str, str] = {
+    "custom_position": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Custom-Position",
+    "blind_spot": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Blindspot",
+    "glare_zone": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Glare-Zones",
+}
+
+
+class ConfigFlowHandler(ConfigFlow, domain=DOMAIN):
+    """Handle ConfigFlow."""
+
+    VERSION = 3
+    # 3.6 (issue #719): the v3.5→v3.6 block enables the weather override for every
+    # pre-existing entry so upgrades keep firing weather safety overrides; new
+    # installs default to off via the schema.
+    # 3.5 (issue #693): formerly seeded the now-removed CONF_SHOW_WEATHER_RETRACTION
+    # toggle. The toggle is gone (retraction pickers are always shown), so the
+    # v3.4→v3.5 block is a no-op minor bump kept to advance stale entries.
+    # 3.4 (issue #591/#606): MINOR_VERSION raised so HA triggers
+    # async_migrate_entry for entries below 3.4.  The v3.3→v3.4 block enables
+    # position matching for every pre-existing entry so upgrades keep the old
+    # reconcile/chase behavior; new installs default to off via the schema.
+    # 3.3 (issue #563 trailing defect): copy legacy custom_position_sensor_N
+    # into the new list key.
+    # 3.7 (issue #547): no-op bump for the additive outside_temp_source option
+    # (absent key reads as "live"); advances stale minor-6 entries.
+    # 3.8 (issue #247): blind spot stored as signed gamma from the window normal.
+    # The v3.7→v3.8 block setdefault-seeds the new blind_spot_*_gamma keys from
+    # the legacy FOV-relative edges; legacy keys are retained (read-only).
+    # 3.10 (issue #964): tilt safety margin renamed to the neutral
+    # CONF_TILT_SAFETY_MARGIN (shared by all tilt-axis covers). The v3.9→v3.10
+    # block copies the legacy venetian_tilt_safety_margin value into the new key;
+    # the legacy key is retained (read-only). (3.9 was a no-op bump for #943.)
+    # 3.11 (issue #1025): added the awning shade-mode option. The v3.10→v3.11
+    # block setdefault-seeds CONF_AWNING_SHADE_MODE to the window-glass default so
+    # pre-existing awnings keep the shipped overhang behaviour; an absent key
+    # already reads as "window" and an older build ignores it.
+    # 3.12 (issue #1049): repair start_time/end_time already stored in a
+    # non-canonical shape ("00:00", "7:30", non-ASCII digits) to the HH:MM:SS
+    # wire format every literal BLANK_TIME comparison expects. The one block
+    # that rewrites an existing key rather than only seeding one — see the
+    # rollback reasoning at the block itself in __init__.py.
+    # Rollback-safe: every other migration block is additive (existing keys
+    # retained), and the v3.12 rewrite only ever moves a value into the format
+    # older builds already expect.
+    # 3.13 (issue #1126): the minimal create wizard (#945 Part 2) has no
+    # position step, so an entry created since then never got
+    # default_percentage written and every runtime read fell back to a
+    # hard-coded 0 (fully closed). The v3.12→v3.13 block setdefault-seeds the
+    # policy's no-coverage endpoint (position_for_intent(sun_through=True));
+    # an older build already understands default_percentage.
+    # 3.14 (issue #1140): added the additive day_night_concurrent_rail_travel
+    # option. An absent key reads as the default, so the v3.13→v3.14 block seeds
+    # nothing and exists only to advance a stale minor so it stops re-triggering
+    # migration every restart. The default has since flipped to OFF and the
+    # block stays a no-op on purpose — see the note there.
+    # 3.15 (issue #1138): the same shape again for the additive
+    # day_night_external_command_interlock option — absent reads as "on", so the
+    # v3.14→v3.15 block is a no-op bump and nothing else.
+    # 3.18 (issue #943 item B): the same shape once more for the additive
+    # per-slot custom_position_outside_window_N flag — absent reads as "off".
+    # 3.19 (issues #1236 + #1237): the same shape again for the additive
+    # optional solar options (solar_properties_enabled / solar_cover_side /
+    # solar_cover_shade / solar_g_total / solar_g_glazing, plus glass_area and
+    # irradiance_plane) — absent reads as "feature off", so the v3.18 → v3.19
+    # block seeds nothing.
+    # 3.20 (issue #1308): the same shape again for the additive
+    # weather_outside_window option — absent reads as "weather keeps acting
+    # outside the time window", which is what every install already does, so
+    # the v3.19 → v3.20 block seeds nothing.
+    # 3.21 (issue #1318): the same shape once more for the additive per-slot
+    # custom_position_scope_to_window_N flag — absent reads as "the slot keeps
+    # its exact position after the window closes", which is both today's
+    # behaviour and what #895 asked for, so the v3.20 → v3.21 block seeds
+    # nothing.
+    # 3.22 (issue #1340): the same shape once more for the additive
+    # sunrise_gates_start opt-in — absent reads as OFF, which is what every
+    # install does today (#438 is the decision of record), so the v3.21 → v3.22
+    # block seeds nothing.
+    MINOR_VERSION = 22
+
+    def __init__(self) -> None:  # noqa: D107
+        super().__init__()
+        self.type_blind: str | None = None
+        self.config: dict[str, Any] = {}
+        self.mode: str = "basic"
+        self.selected_source_entry_id: str | None = None
+        self._has_device_options: bool = False
+        self._cover_devices: dict[str, str] = {}
+
+    def optional_entities(self, keys: list, user_input: dict[str, Any]) -> None:
+        """Set value to None if key does not exist in user_input."""
+        for key in keys:
+            if key not in user_input:
+                user_input[key] = None
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow for this handler."""
+        return OptionsFlowHandler(config_entry)
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
+        """Handle the initial step — always show the create menu.
+
+        Creating a cover and creating a building profile are distinct top-level
+        choices. The duplicate option only appears when prior entries exist.
+        """
+        acp_entries = _cover_entries(self.hass)
+        menu_options = [
+            "create_new",
+            "create_building_profile",
+            "create_group",
+            "create_command_queue",
+        ] + (["duplicate_existing"] if acp_entries else [])
+        return self.async_show_menu(step_id="user", menu_options=menu_options)
+
+    async def async_step_create_new(self, user_input: dict[str, Any] | None = None):
+        """Handle create new cover flow."""
+        if user_input:
+            self.config = user_input
+            self.type_blind = self.config[CONF_MODE]
+            # Minimal create wizard (#945 Part 2): capture the cover(s) and
+            # geometry only, then create — everything else is edited in Options.
+            return await self.async_step_cover_entities()
+        return self.async_show_form(
+            step_id="create_new",
+            data_schema=CONFIG_SCHEMA,
+        )
+
+    async def async_step_create_building_profile(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Create a Building Profile entry from a single combined form.
+
+        One step collects the profile name together with the shared
+        building-level sensor IDs, then delegates to the shared finalize
+        (``async_step_update``) — the same path the cover flow uses.
+        """
+        if user_input is not None:
+            self.config = dict(user_input)
+            self.type_blind = CoverType.BUILDING_PROFILE
+            return await self.async_step_update()
+        return self.async_show_form(
+            step_id="create_building_profile",
+            data_schema=BUILDING_PROFILE_CREATE_SCHEMA,
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides"
+            },
+        )
+
+    async def async_step_create_group(self, user_input: dict[str, Any] | None = None):
+        """Create a Cover Group entry from a single combined form (issue #790).
+
+        One step collects the group name together with the two membership
+        rosters (ACP members first, generic covers below), then delegates to
+        the shared finalize (``async_step_update``) — the same path the
+        Building Profile flow uses.
+        """
+        if user_input is not None:
+            self.config = {
+                "name": user_input["name"],
+                **_sanitize_group_membership(self.hass, user_input),
+            }
+            if user_input.get(CONF_GROUP_AREA):
+                self.config[CONF_GROUP_AREA] = user_input[CONF_GROUP_AREA]
+            self.type_blind = CoverType.GROUP
+            return await self.async_step_update()
+        return self.async_show_form(
+            step_id="create_group",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("name"): selector.TextSelector(),
+                    **_group_membership_schema_dict(self.hass),
+                }
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Cover-Groups"
+            },
+        )
+
+    async def async_step_create_command_queue(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Create a Command Queue entry from a single combined form (issue #1189).
+
+        One step collects the queue name together with its gap, then delegates
+        to the shared finalize (``async_step_update``) — the same path the
+        Building Profile and Cover Group flows use.
+
+        Creating a queue is entirely optional: a cover can name a queue that has
+        no entry behind it and still serialize, at the default gap. This entry
+        exists to change that gap and to show which covers joined.
+
+        The NAME is the identity, which is why a duplicate is refused outright
+        rather than merely discouraged. A Building Profile links by ``entry_id``
+        and can afford two entries with one title; this entry binds itself to a
+        shared runtime object by normalized name, so two of them both
+        ``attach()`` and both ``set_gap()`` — the bound gap becomes whichever
+        loaded last, and unloading or deleting EITHER reverts the queue to the
+        5 s default while the surviving entry's UI still shows its own value.
+        """
+        if user_input is not None:
+            key = normalize_queue_name(user_input.get("name"))
+            if key and any(
+                normalize_queue_name(entry.data.get("name")) == key
+                for entry in _command_queue_entries(self.hass)
+            ):
+                return self.async_abort(reason="already_configured")  # type: ignore[return-value]
+            self.config = dict(user_input)
+            self.type_blind = CoverType.COMMAND_QUEUE
+            return await self.async_step_update()
+        return self.async_show_form(
+            step_id="create_command_queue",
+            data_schema=COMMAND_QUEUE_CREATE_SCHEMA,
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Automation"
+            },
+        )
+
+    async def async_step_cover_entities(self, user_input: dict[str, Any] | None = None):
+        """Select cover entities and optionally link to a physical device.
+
+        Pass 1 (entities only): user selects cover entities; if they have associated
+        physical devices the form is re-rendered with a device selector appended.
+        Pass 2 (combined, only when devices exist): both fields are submitted together
+        and the flow proceeds to geometry.
+        """
+        if user_input is not None:
+            if self._has_device_options:
+                # Pass 2: process entity + device selection
+                self.config.update(user_input)
+                device_id = user_input.get(CONF_DEVICE_ID, _STANDALONE_SENTINEL)
+                if device_id and device_id != _STANDALONE_SENTINEL:
+                    self.config[CONF_DEVICE_ID] = device_id
+                else:
+                    self.config.pop(CONF_DEVICE_ID, None)
+                return await self.async_step_geometry()
+
+            # Pass 1: store entities, auto-name, check for associated devices
+            self.config.update(user_input)
+            if CONF_ENTITIES in user_input and user_input[CONF_ENTITIES]:
+                first_entity_id = user_input[CONF_ENTITIES][0]
+                entity_reg = er.async_get(self.hass)
+                entity_entry = entity_reg.async_get(first_entity_id)
+                if entity_entry and not self.config.get("name"):
+                    device_name = await _get_device_name_for_entity(
+                        self.hass, first_entity_id
+                    )
+                    if device_name:
+                        self.config["name"] = device_name
+                        self.config["_title_is_device_name"] = True
+                    else:
+                        entity_name = (
+                            entity_entry.original_name
+                            or entity_entry.name
+                            or first_entity_id.split(".")[-1].replace("_", " ").title()
+                        )
+                        self.config["name"] = f"{ADAPTIVE_NAME_PREFIX} {entity_name}"
+
+            entity_ids = self.config.get(CONF_ENTITIES, [])
+            devices = await _get_devices_from_entities(self.hass, entity_ids)
+            if devices:
+                self._has_device_options = True
+                self._cover_devices = devices
+                schema = _build_cover_entity_schema(self.type_blind, devices=devices)
+                return self.async_show_form(
+                    step_id="cover_entities",
+                    data_schema=self.add_suggested_values_to_schema(
+                        schema, self.config
+                    ),
+                    description_placeholders={
+                        "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/First-Time-Setup"
+                    },
+                )
+            return await self.async_step_geometry()
+
+        schema = _build_cover_entity_schema(self.type_blind)
+        return self.async_show_form(
+            step_id="cover_entities",
+            data_schema=schema,
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/First-Time-Setup"
+            },
+        )
+
+    async def async_step_geometry(self, user_input: dict[str, Any] | None = None):
+        """Configure cover geometry dimensions."""
+        length_keys, slat_keys = _geometry_unit_keys(self.type_blind)
+        if user_input is not None:
+            errors = _tilt_angle_step_errors(user_input)
+            if errors:
+                schema = _get_geometry_schema(self.type_blind, self.hass, self.config)
+                return self.async_show_form(
+                    step_id="geometry",
+                    data_schema=schema,
+                    errors=errors,
+                    description_placeholders={
+                        "geometry_wiki_link": _geometry_wiki_link(self.type_blind)
+                    },
+                )
+            # Canonicalize first: the FOV-from-measurements button (#565/#778)
+            # must derive from the width/depth the user just typed, so it reads
+            # them from the canonicalized submit rather than the stored config.
+            canonical = user_input_to_canonical(
+                self.hass, user_input, length_keys=length_keys, slat_keys=slat_keys
+            )
+            if _resolve_fov_compute_submit(self.type_blind, canonical, canonical):
+                return self._show_geometry_form(canonical)
+            self.config.update(canonical)
+            # Defensive parity with the options-flow save (issue #852): blind
+            # spots aren't configured yet this early in the create flow, so
+            # this is normally a no-op, but keeps both save sites identical.
+            clamp_blind_spots_to_fov(self.config)
+            # Minimal create wizard (#945 Part 2): geometry is the last collected
+            # step — advance straight to the summary, then create.
+            return await self.async_step_summary()
+
+        return self._show_geometry_form(self.config)
+
+    def _show_geometry_form(
+        self,
+        values: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Render the create-flow geometry form (initial + button re-render)."""
+        length_keys, slat_keys = _geometry_unit_keys(self.type_blind)
+        src = values if values is not None else self.config
+        schema = _get_geometry_schema(self.type_blind, self.hass, self.config)
+        suggested = options_to_display(
+            self.hass, src, length_keys=length_keys, slat_keys=slat_keys
+        )
+        return self.async_show_form(
+            step_id="geometry",
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders=_geometry_placeholders(self.type_blind, src),
+        )
+
+    async def async_step_summary(self, user_input: dict[str, Any] | None = None):
+        """Show a read-only summary of all collected configuration before creating the entry."""
+        if user_input is not None:
+            return await self.async_step_update()
+        from .troubleshoot_i18n import load_troubleshoot_labels
+
+        # Seed the same constant-backed defaults async_step_update applies
+        # (issue #1126) so the pre-create preview and the created entry can
+        # never disagree about the default position — otherwise the summary
+        # would still render "Default → 0 %" for a quick-setup cover that is
+        # actually about to be created at its per-type no-coverage endpoint.
+        _apply_create_defaults(self.config, self.type_blind)
+
+        sun_times = await _compute_todays_sun_times(self.hass, self.config)
+        _language = _resolve_summary_language(self.hass, self.context)
+        labels = await _load_summary_labels(self.hass, _language)
+        troubleshoot_labels = await self.hass.async_add_executor_job(
+            load_troubleshoot_labels, _language
+        )
+        summary_text = _build_config_summary(
+            self.config,
+            self.type_blind,
+            self.hass,
+            sun_times,
+            labels=labels,
+            troubleshoot_labels=troubleshoot_labels,
+        )
+        return self.async_show_form(
+            step_id="summary",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "summary": summary_text,
+                # The wiki link is supplied as a placeholder, not baked into the
+                # translation string — hassfest forbids literal URLs in strings.
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/First-Time-Setup",
+            },
+        )
+
+    async def async_step_update(self, user_input: dict[str, Any] | None = None):
+        """Create entry."""
+        if self.type_blind is None:
+            msg = "type_blind must be set before calling async_step_update"
+            raise ValueError(msg)
+
+        # "name" is Optional in CONFIG_SCHEMA (#771) — the cover_entities Pass 1
+        # auto-fill at the top of this class only runs when at least one entity
+        # is selected, so a user who submits zero entities reaches here with no
+        # name ever having been filled in. Building Profiles keep their own
+        # Required name field and never hit this path.
+        if get_policy(self.type_blind).controls_cover and not self.config.get("name"):
+            self.config["name"] = (
+                f"{ADAPTIVE_NAME_PREFIX} {_cover_type_label(self.type_blind)}"
+            )
+
+        if self.config.pop("_title_is_device_name", False):
+            title = self.config["name"]
+        else:
+            title = f"{_cover_type_label(self.type_blind)} {self.config['name']}"
+
+        # Build options from the full accumulated config dict, mirroring the
+        # options-flow contract (data=self.options).  Strip only the data-level
+        # keys that belong in entry.data rather than entry.options; override
+        # CONF_MODE (which holds the cover-type string in self.config) with the
+        # strategy-mode value stored on self.mode.
+        _DATA_KEYS = {"name", CONF_SENSOR_TYPE}
+        options = {k: v for k, v in self.config.items() if k not in _DATA_KEYS}
+        # CONF_MODE in self.config is the cover-type selector value (CoverType.*).
+        # entry.options["mode"] must carry the strategy mode ("basic" / "advanced").
+        options[CONF_MODE] = self.mode
+
+        # Quick setup skips some steps (e.g. automation, position) leaving
+        # critical keys absent from self.config.  Apply constant-backed
+        # defaults so the coordinator never receives None for gating values,
+        # and so a newly created cover starts at its per-type no-coverage
+        # position instead of 0 % (issues #133 / #1126). Virtual entry types
+        # skip this: a Building Profile builds no coordinator, and a cover
+        # group builds a GroupCoordinator that reads none of the
+        # cover-automation options — both keep only what their create step
+        # collected.
+        _apply_create_defaults(options, self.type_blind)
+
+        # If the user linked a Building Profile during creation, merge its
+        # non-empty shared-sensor keys into options now — after all form steps
+        # have run. This ensures profile values survive optional_entities() calls
+        # in later steps that would otherwise overwrite absent keys with None.
+        profile_id = options.get(CONF_BUILDING_PROFILE_ID)
+        if profile_id:
+            _profile_entry = self.hass.config_entries.async_get_entry(profile_id)
+            if _profile_entry is not None:
+                merge_profile_into_config(_profile_entry, options)
+
+        return self.async_create_entry(
+            title=title,
+            data={
+                "name": self.config["name"],
+                CONF_SENSOR_TYPE: self.type_blind,
+            },
+            options=options,
+        )
+
+    async def async_step_duplicate_existing(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle duplicate existing configuration flow."""
+        return await self.async_step_duplicate_select(user_input)
+
+    async def async_step_duplicate_select(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select the source cover to duplicate from."""
+        acp_entries = _cover_entries(self.hass)
+
+        if not acp_entries:
+            return self.async_abort(reason="source_not_found")  # type: ignore[return-value]
+
+        if user_input is not None:
+            self.selected_source_entry_id = user_input["source_entry"]
+            return await self.async_step_duplicate_configure()
+
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id="duplicate_select",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("source_entry"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                {"value": e.entry_id, "label": e.title}
+                                for e in acp_entries
+                            ],
+                        )
+                    )
+                }
+            ),
+        )
+
+    async def async_step_duplicate_configure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure the unique fields for the duplicated cover."""
+        source_entry = self.hass.config_entries.async_get_entry(
+            self.selected_source_entry_id or ""
+        )
+        if not source_entry:
+            return self.async_abort(reason="source_not_found")  # type: ignore[return-value]
+
+        if user_input is not None:
+            shared_options = _extract_shared_options(source_entry)
+            sensor_type = source_entry.data.get(CONF_SENSOR_TYPE)
+            new_name = await self._ensure_unique_name(user_input["name"], suffix="Copy")
+
+            new_options = {
+                **shared_options,
+                CONF_ENTITIES: user_input.get(CONF_ENTITIES, []),
+                CONF_AZIMUTH: user_input[CONF_AZIMUTH],
+                # CONF_DEVICE_ID intentionally omitted — device association skipped for duplicates
+            }
+            # The source entry may itself be missing CONF_DEFAULT_HEIGHT — a
+            # cover created during the #1126 window and then disabled is
+            # never migrated (HA does not migrate disabled entries), so
+            # _extract_shared_options can copy nothing for the key. Route
+            # through the same seed helper the other two create sites use
+            # instead of relying on that accident (#1126).
+            _apply_create_defaults(new_options, sensor_type)
+
+            return self.async_create_entry(  # type: ignore[return-value]
+                title=f"{_cover_type_label(sensor_type)} {new_name}",
+                data={"name": new_name, CONF_SENSOR_TYPE: sensor_type},
+                options=new_options,
+            )
+
+        source_azimuth = source_entry.options.get(CONF_AZIMUTH, 180)
+        sensor_type = source_entry.data.get(CONF_SENSOR_TYPE)
+        cover_entity_selector = selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                multiple=True,
+                filter=get_policy(sensor_type).entity_selector_filter(),
+            )
+        )
+
+        schema = vol.Schema(
+            {
+                vol.Required("name"): selector.TextSelector(),
+                vol.Optional(CONF_ENTITIES, default=[]): cover_entity_selector,
+                vol.Required(
+                    CONF_AZIMUTH, default=source_azimuth
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=359,
+                        mode=selector.NumberSelectorMode.SLIDER,
+                        unit_of_measurement="°",
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id="duplicate_configure",
+            data_schema=schema,
+        )
+
+    async def _ensure_unique_name(self, name: str, suffix: str = "Imported") -> str:
+        """Ensure name doesn't conflict with existing entries.
+
+        Appends ' (suffix)' or ' (suffix N)' if a conflict exists.
+        Default suffix is 'Imported' for backward compatibility with legacy import flow.
+        """
+        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+        existing_names = {e.data.get("name") for e in existing_entries}
+
+        if name not in existing_names:
+            return name
+
+        suffixed_name = f"{name} ({suffix})"
+        if suffixed_name not in existing_names:
+            return suffixed_name
+
+        counter = 2
+        while f"{name} ({suffix} {counter})" in existing_names:
+            counter += 1
+
+        return f"{name} ({suffix} {counter})"
+
+
+class OptionsFlowHandler(OptionsFlow):
+    """Options to adjust parameters."""
+
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Initialize options flow."""
+        self._config_entry = config_entry
+        self.current_config: dict = dict(config_entry.data)
+        self.options = dict(config_entry.options)
+        self.sensor_type: CoverType = (  # type: ignore[misc]
+            self.current_config.get(CONF_SENSOR_TYPE) or CoverType.BLIND
+        )
+        self.selected_sync_targets: list[str] = []
+        self.selected_sync_categories: list[str] = []
+        # Which slot each per-slot options page (issue #945) is editing. Set on
+        # the GET (menu dispatch / "Add") and read on the shared POST handler,
+        # whose step_id carries no slot number so the translation block is
+        # authored once. Keyed by area name (custom_position/blind_spot/
+        # glare_zone).
+        self._active_slot: dict[str, int] = {}
+        # Which area the delete chooser (issue #1071) was opened from. Same
+        # trick as ``_active_slot``: the three areas share one ``delete_slot``
+        # step id so the translation block is authored once, so the area lives
+        # here instead of in the step id.
+        self._delete_area: str = ""
+        # Entities whose travel time THIS flow session edited. Everything else
+        # in the table is re-read live at save time — see ``_merge_travel_time``.
+        self._travel_time_edited: set[str] = set()
+        # "Change Cover Type" (issue #1132). ``_pending_cover_type`` carries the
+        # picked destination from the picker to the confirm screen. A switch is
+        # pending whenever ``self.sensor_type`` has moved away from the stored
+        # one — see ``_cover_type_changed``; there is no sticky flag, so a round
+        # trip back to the original type is simply not a switch any more.
+        #
+        # ``_pre_switch_options`` snapshots the option values a pending switch is
+        # allowed to touch, taken the first time one is confirmed. It is what
+        # lets a mid-dialog entry write persist the pre-switch configuration,
+        # and what a round trip restores from.
+        #
+        # ``_switch_applied_values`` is the other half: the values the switch
+        # itself wrote. A rollback needs both — the baseline to restore to, and
+        # what the switch put there, so it can tell its own value from one the
+        # user has since typed over.
+        self._pending_cover_type: str | None = None
+        self._pre_switch_options: dict[str, Any] | None = None
+        self._switch_applied_values: dict[str, Any] = {}
+
+    def __getattr__(self, name: str):
+        """Dispatch dynamic per-slot options steps (issue #945).
+
+        HA resolves a step via ``getattr(handler, f"async_step_{step_id}")``, so
+        the per-slot menu entries (``custom_position_slot_3``), the "Add"
+        entries (``add_blind_spot``) and the delete entries (``delete_glare_zone``
+        for the chooser, ``delete_glare_zone_slot_2`` for one slot — issue
+        #1071) resolve here instead of dozens of hand-written near-identical
+        methods. Only those exact shapes match; every other miss raises
+        ``AttributeError`` so ``hasattr`` probes behave normally and there is no
+        recursion (the returned coroutine touches ``self`` only when awaited,
+        after ``__init__`` has run).
+        """
+        slot_match = re.fullmatch(
+            r"async_step_(custom_position|blind_spot|glare_zone)_slot_(\d+)", name
+        )
+        if slot_match:
+            area, slot_n = slot_match.group(1), int(slot_match.group(2))
+
+            async def _open_slot(user_input=None, _area=area, _n=slot_n):
+                self._active_slot[_area] = _n
+                return await getattr(self, f"_render_{_area}_slot")(user_input)
+
+            return _open_slot
+
+        add_match = re.fullmatch(
+            r"async_step_add_(custom_position|blind_spot|glare_zone)", name
+        )
+        if add_match:
+            area = add_match.group(1)
+
+            async def _add_slot(user_input=None, _area=area):
+                free = self._lowest_free_slot(_area)
+                if free is None:  # every slot full — fall back to the sub-menu
+                    return await getattr(self, f"async_step_{_area_menu(_area)}")()
+                # A slot can be un-configured yet still hold keys left by an
+                # older blank-out (issue #1071) — and such a slot never appears
+                # on the menu, so Delete cannot reach it. Drop the ones this
+                # page has no field for; the rendered keys stay and are seeded
+                # back so a half-finished slot's entered data survives the reuse.
+                self._clear_slot_keys(_area, free, keep_rendered=True)
+                self._active_slot[_area] = free
+                return await getattr(self, f"_render_{_area}_slot")(user_input)
+
+            return _add_slot
+
+        delete_match = re.fullmatch(
+            r"async_step_delete_(custom_position|blind_spot|glare_zone)"
+            r"(?:_slot_(\d+))?",
+            name,
+        )
+        if delete_match:
+            area, slot_n = delete_match.group(1), delete_match.group(2)
+            if slot_n is None:  # "Delete…" row → the per-area delete chooser
+
+                async def _delete_menu(user_input=None, _area=area):
+                    self._delete_area = _area
+                    return self._slot_menu(_area, delete=True)
+
+                return _delete_menu
+
+            async def _delete_one(user_input=None, _area=area, _n=int(slot_n)):
+                return await self._delete_slot(_area, _n)
+
+            return _delete_one
+
+        raise AttributeError(name)
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options."""
+        # Command Queue entries own one number and a membership view. Routed
+        # BEFORE the profile branch below, because both virtual entry types
+        # report ``controls_cover == False`` and the profile menu would
+        # otherwise swallow this one (issue #1189).
+        if get_policy(self.sensor_type).is_command_queue:
+            return self.async_show_menu(
+                step_id="init",
+                menu_options=[
+                    "queue_settings",
+                    "queue_overview",
+                    "done",
+                ],
+                description_placeholders={
+                    "instance_name": self._config_entry.title,
+                    "coffee_url": "https://www.buymeacoffee.com/jrhubott",
+                    "profile_line": "",
+                },
+            )
+
+        # Building Profile entries have no cover, geometry, or handlers to
+        # configure — show a small menu (edit shared sensors, view the overview
+        # of linked covers) instead of the full cover-options menu.
+        if not get_policy(self.sensor_type).controls_cover:
+            return self.async_show_menu(
+                step_id="init",
+                menu_options=[
+                    "profile_sensors",
+                    "profile_overview",
+                    "profile_overrides",
+                    "done",
+                ],
+                description_placeholders={
+                    "instance_name": self._config_entry.title,
+                    "coffee_url": "https://www.buymeacoffee.com/jrhubott",
+                    "profile_line": "",
+                },
+            )
+
+        # Cover groups are orchestrators, not geometry covers — their own
+        # small menu (membership + arbitration + summary), never the cover
+        # categories.
+        if get_policy(self.sensor_type).is_orchestrator:
+            return self.async_show_menu(
+                step_id="init",
+                menu_options=[
+                    "group_membership",
+                    "group_arbitration",
+                    "group_entities",
+                    "summary",
+                    "done",
+                ],
+                description_placeholders={
+                    "instance_name": self._config_entry.title,
+                    "coffee_url": "https://www.buymeacoffee.com/jrhubott",
+                    "profile_line": "",
+                },
+            )
+
+        # Ordered by the 4-layer pipeline model (#613): physical setup →
+        # positions → handlers in priority order → global motion constraints.
+
+        # ── Layer 1: What am I? (physical setup) ─────────────────────
+        keys = [
+            "cover_entities",
+            # Switch this instance to another cover type in place, keeping every
+            # entity_id (issue #1132). Offered unconditionally on the cover menu
+            # so "nothing you can switch to" is an explained screen rather than
+            # a silently missing row.
+            "change_cover_type",
+            "geometry",
+            "sun_tracking",
+        ]
+        # Link this cover to a Building Profile (shared sensor IDs). Only shown
+        # for real covers, and only when at least one profile exists to link to.
+        if get_policy(self.sensor_type).controls_cover and _building_profile_entries(
+            self.hass
+        ):
+            keys.append("building_profile")
+        if self.options.get(CONF_ENABLE_BLIND_SPOT):
+            keys.append("blind_spot")
+
+        # ── Layer 2: Where can I go? / how do I behave? ──────────────
+        keys.append("position")  # L2a positions (% values)
+        keys.append("behavior")  # L2b timing & thresholds
+
+        # ── Layer 3: How do I decide? (handlers, priority high → low) ─
+        keys.extend(
+            [
+                "weather_override",  # Priority 90
+                "manual_override",  # Priority 80
+                "custom_position",  # Priority 1-100 per slot (100 = safety)
+                "motion_override",  # Priority 75
+                "light_cloud",  # Cloud suppression, priority 60
+                "temperature_climate",  # Climate, priority 50
+            ]
+        )
+        if get_policy(self.sensor_type).supports_glare_zones and self.options.get(
+            CONF_ENABLE_GLARE_ZONES
+        ):
+            keys.append("glare_zones")  # Priority 45
+
+        # Re-order the whole handler chain (built-in priority overrides).
+        keys.append("pipeline_priorities")
+
+        # ── Layer 4: How do I move? (global motion constraints) ──────
+        keys.append("automation")
+        # Calibration groups the two "measure the hardware, then store what we
+        # measured" surfaces: the position interpolation curve (conditional on
+        # CONF_INTERP, as it always was) and travel time. The parent owns the
+        # word "calibration" so its children can be told apart — which is why
+        # ``interp`` no longer sits at the top level.
+        #
+        # Sits with Movement & Schedule rather than in Layer 2: both describe
+        # how a cover physically moves once the position is already decided,
+        # not what position to pick.
+        keys.append("calibration")
+
+        # ── Admin ────────────────────────────────────────────────────
+        keys.append("sync")  # Multi-cover management
+        # Companion Lovelace card status, and a one-click add when it is
+        # missing (issue #1168). Offered unconditionally: when the card IS
+        # installed the screen is where a user reads back which version they
+        # are on, so a row that disappeared on success would take that with it.
+        keys.append("card")
+        # "troubleshoot" is a read-only diagnostics surface (issue #970) — it
+        # sits with the other read-only/diagnostic entries (summary, debug) and
+        # is offered on the cover menu ONLY (never the profile or group menus).
+        keys.extend(["summary", "troubleshoot", "debug", "done"])
+
+        # Use a list so HA translates labels client-side using the user's language preference.
+        # Icons are embedded directly in each translation string (e.g. "🪟 Covers & Device").
+        menu_options: list[str] = keys
+
+        # Build the profile_line placeholder: shows the linked profile's title
+        # when this cover is linked, or collapses to "" when unlinked.
+        _linked_profile_id = self.options.get(CONF_BUILDING_PROFILE_ID)
+        _profile_line = ""
+        if _linked_profile_id:
+            _profile_entry = self.hass.config_entries.async_get_entry(
+                _linked_profile_id
+            )
+            if _profile_entry is not None:
+                _profile_line = f"\n🏢 Building Profile: **{_profile_entry.title}**"
+
+        return self.async_show_menu(  # type: ignore[return-value]
+            step_id="init",
+            menu_options=menu_options,
+            description_placeholders={
+                "instance_name": self.config_entry.title,
+                "coffee_url": "https://www.buymeacoffee.com/jrhubott",
+                "profile_line": _profile_line,
+            },
+        )
+
+    async def async_step_troubleshoot(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Read-only diagnostics triage for this cover (issue #970, Phase 1).
+
+        Resolves diagnostics WITHOUT running an update cycle — it never calls
+        ``async_refresh`` (which runs the full pipeline and can move a cover).
+        The view-build → triage → render sequence lives in
+        :func:`~.diagnostics.resolve.build_troubleshoot_result` (issue #1059) —
+        the single seam this step shares with the ``get_troubleshooting``
+        service, so they can never diverge. This step only adds its own
+        menu-building on top: each finding's ``fix_step`` routes to the options
+        step that fixes it (deduped, first-seen order), then a re-check
+        (``troubleshoot``) and a back (``init``) entry — a list so HA
+        translates labels client-side (#227).
+        """
+        from .diagnostics import resolve
+        from .troubleshoot_i18n import load_troubleshoot_labels
+
+        read = resolve.read_diagnostics(self.hass, self._config_entry.entry_id)
+        labels = await self.hass.async_add_executor_job(
+            load_troubleshoot_labels,
+            _resolve_summary_language(self.hass, self.context),
+        )
+        result = resolve.build_troubleshoot_result(
+            self.hass,
+            read,
+            options=self.options,
+            sensor_type=self.sensor_type,
+            labels=labels,
+        )
+
+        menu_options = [
+            *dict.fromkeys(f.fix_step for f in result.findings if f.fix_step),
+            "troubleshoot",
+            "init",
+        ]
+        return self.async_show_menu(  # type: ignore[return-value]
+            step_id="troubleshoot",
+            menu_options=menu_options,
+            description_placeholders={"report": result.report},
+        )
+
+    async def async_step_card(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Route to the companion-card screen this install needs (issue #1168).
+
+        Renders nothing itself. Which leaf applies depends on whether the card
+        is already here, whether its version is knowable, and whether HACS is
+        around to add it. Every leaf owns its own translation block, so all the
+        prose stays in ``translations/`` and gets translated the normal way —
+        nothing user-visible is assembled from f-strings here, which would ship
+        an English sentence inside an otherwise German or French screen.
+
+        HACS present but not yet ready lands on ``card_add`` too: the add link
+        is harmless when the repository is already registered (it just opens
+        the repository's page), so an unknowable state degrades to a useful
+        screen rather than to a false "not installed".
+        """
+        status = async_get_card_status(self.hass)
+        if not status.installed:
+            if status.hacs_present:
+                return await self.async_step_card_add()
+            return await self.async_step_card_manual()
+        if (
+            status.installed_version
+            and status.available_version
+            and status.available_version != status.installed_version
+        ):
+            return await self.async_step_card_installed_update(status=status)
+        if status.installed_version:
+            return await self.async_step_card_installed_version(status=status)
+        return await self.async_step_card_installed()
+
+    async def async_step_card_installed(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm the card is present, with no version to report.
+
+        Reached whenever the version is unknowable, which is not the same as
+        "found as a dashboard resource". A hand-registered resource with no
+        ``?v=`` stamp is the common case, but HACS also reports a null
+        ``installed_version`` for a repository tracked from a branch rather
+        than a release.
+
+        The screen therefore claims exactly two things, both of which the
+        router established: the card is installed, and its version is unknown.
+        In particular it must not mention HACS — this leaf is reachable with
+        HACS absent, where ``card_manual`` is busy saying the opposite.
+        """
+        if user_input is not None:
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="card_installed",
+            data_schema=vol.Schema({}),
+            description_placeholders={"learn_more": CARD_WIKI_URL},
+        )
+
+    async def async_step_card_installed_version(
+        self,
+        user_input: dict[str, Any] | None = None,
+        *,
+        status: CardStatus | None = None,
+    ) -> FlowResult:
+        """Confirm the card is present and name the version it is on.
+
+        Deliberately does NOT say "up to date": this leaf is reached whenever
+        ``available_version`` is falsy *or* equal to the installed one, and an
+        unknown available version is not evidence of being current. Like
+        ``card_installed`` it must also not mention HACS, being equally
+        reachable on a system that has none.
+
+        ``status`` is threaded from the router so the render path resolves it
+        once; HA passes only ``user_input``, so the submit path never needs it.
+        Reached without one, re-enter through the router rather than rendering
+        a screen whose version placeholder would come out empty.
+        """
+        if user_input is not None:
+            return await self.async_step_init()
+        if status is None:
+            return await self.async_step_card()
+        return self.async_show_form(
+            step_id="card_installed_version",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "installed_version": status.installed_version,
+                "learn_more": CARD_WIKI_URL,
+            },
+        )
+
+    async def async_step_card_installed_update(
+        self,
+        user_input: dict[str, Any] | None = None,
+        *,
+        status: CardStatus | None = None,
+    ) -> FlowResult:
+        """Report that a newer card version is waiting in HACS."""
+        if user_input is not None:
+            return await self.async_step_init()
+        if status is None:
+            return await self.async_step_card()
+        return self.async_show_form(
+            step_id="card_installed_update",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "installed_version": status.installed_version,
+                "available_version": status.available_version,
+                "learn_more": CARD_WIKI_URL,
+            },
+        )
+
+    async def async_step_card_add(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Offer the one-click HACS add for the companion card."""
+        if user_input is not None:
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="card_add",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "install_url": CARD_ADD_URL,
+                "learn_more": CARD_WIKI_URL,
+            },
+        )
+
+    async def async_step_card_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Explain the manual route — no HACS on this system to hand off to."""
+        if user_input is not None:
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="card_manual",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "hacs_url": HACS_DOWNLOAD_URL,
+                "download_url": CARD_DOWNLOAD_URL,
+                "learn_more": CARD_WIKI_URL,
+            },
+        )
+
+    async def async_step_cover_entities(self, user_input: dict[str, Any] | None = None):
+        """Adjust cover entities and device association on a single combined form."""
+        entity_ids = self.options.get(CONF_ENTITIES, [])
+        devices = await _get_devices_from_entities(self.hass, entity_ids)
+
+        if user_input is not None:
+            self.options.update(user_input)
+            device_id = user_input.get(CONF_DEVICE_ID, _STANDALONE_SENTINEL)
+            if device_id and device_id != _STANDALONE_SENTINEL:
+                self.options[CONF_DEVICE_ID] = device_id
+            else:
+                self.options.pop(CONF_DEVICE_ID, None)
+            return await self.async_step_init()
+
+        # Resolve the same way setup does (issue #1369): the stored id may name
+        # a composite HA has since split, which owns no entities and so is not
+        # in the option list above — the field would open blank and invite the
+        # user to "fix" a link that is already in force. Assigned, not
+        # ``setdefault``: ``self.options`` already carries the stale id, so a
+        # default would never be reached.
+        current_device = (
+            resolved.id
+            if (
+                resolved := resolve_linked_device(
+                    self.hass, self.options, own_entry_id=self._config_entry.entry_id
+                )
+            )
+            else self.options.get(CONF_DEVICE_ID)
+        ) or _STANDALONE_SENTINEL
+        schema = _build_cover_entity_schema(self.sensor_type, devices=devices or None)
+        suggested = dict(self.options)
+        if devices:
+            suggested[CONF_DEVICE_ID] = current_device
+        return self.async_show_form(
+            step_id="cover_entities",
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/First-Time-Setup"
+            },
+        )
+
+    async def async_step_change_cover_type(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Pick a new cover type for this instance (issue #1132).
+
+        Offers every registry type whose own entity picker would have admitted
+        the covers already bound here, and explains the ones it filtered out
+        instead of hiding them. The dropdown reuses the ``selector.mode`` label
+        bundle the create flow already ships, so no per-type string is added.
+
+        The type the instance already is is offered too, and is what the field
+        opens on (issue #1200). It is not a switch target — picking it returns
+        to the menu — but a required select with no suggested value opens on
+        an arbitrary alternative, which reads as a claim about what this
+        instance currently is.
+        """
+        known = bound_cover_capabilities(self.hass, self.options)
+        eligible, blocked = _eligible_cover_types(self.sensor_type, known)
+        if not eligible:
+            return self.async_abort(reason="no_eligible_cover_types")  # type: ignore[return-value]
+
+        if user_input is not None:
+            new_type = user_input[CONF_SENSOR_TYPE]
+            # Compared against the type the FLOW is on, never the stored one.
+            # Mid-dialog A → B, the flow is on B and picking A is the revert —
+            # which still has ``_apply_pending_cover_type``'s unwind to run.
+            # Keying on the stored type would strand a pending switch the user
+            # believed they had just cancelled.
+            if new_type == self.sensor_type:
+                return await self.async_step_init()
+            self._pending_cover_type = new_type
+            return await self.async_step_change_cover_type_confirm()
+
+        labels = await _load_summary_labels(
+            self.hass, _resolve_summary_language(self.hass, self.context)
+        )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_SENSOR_TYPE): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=_offered_cover_types(self.sensor_type, eligible),
+                        translation_key="mode",
+                    )
+                )
+            }
+        )
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id="change_cover_type",
+            data_schema=self.add_suggested_values_to_schema(
+                schema, {CONF_SENSOR_TYPE: self.sensor_type}
+            ),
+            description_placeholders={
+                "current_type": get_policy(self.sensor_type).display_label(labels),
+                "blocked_types": _blocked_types_text(blocked, known, labels) or "—",
+                "learn_more": f"{_WIKI_BASE_URL}/Cover-Types",
+            },
+        )
+
+    async def async_step_change_cover_type_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm the cover-type switch before anything is written (issue #1132).
+
+        Same one-extra-click shape as ``async_step_sync_confirm``. Unticking the
+        box returns to the menu with nothing changed.
+
+        Renders under a second step id when the pick cancels a pending switch
+        rather than making one — see
+        ``async_step_change_cover_type_revert_confirm``.
+        """
+        new_type = self._pending_cover_type
+        if new_type is None:
+            return await self.async_step_init()
+
+        if user_input is not None:
+            if not user_input.get("confirm"):
+                self._pending_cover_type = None
+                return await self.async_step_init()
+            # In-memory only. ``CONF_SENSOR_TYPE`` lives in ``entry.data``, and
+            # persisting it here would strand every non-Save exit from the
+            # dialog — abandoning it, or any step that aborts — with an entry
+            # permanently switched, never reloaded, and missing the geometry the
+            # user was on their way to enter. The whole switch lands together in
+            # ``_update_options``; until then the coordinator keeps running the
+            # OUTGOING policy, which is what a half-configured type must never
+            # be allowed to do.
+            self._apply_pending_cover_type(new_type)
+            self._pending_cover_type = None
+            # Straight into the EXISTING generic geometry step, which renders
+            # ``_get_geometry_schema(self.sensor_type, …)`` — the incoming
+            # type's own schema, including its type-specific keys. No bespoke
+            # per-type collection form is needed.
+            return await self.async_step_geometry()
+
+        labels = await _load_summary_labels(
+            self.hass, _resolve_summary_language(self.hass, self.context)
+        )
+        # Everything this screen states is the NET change against what is
+        # actually stored, not against a previous hop inside the same dialog:
+        # nothing has been written yet, so "switching from X to Y" is only true
+        # of the stored type and the pre-switch values.
+        stored_type = self._stored_cover_type
+        baseline = self._switch_baseline_options()
+        stranded = _stranded_option_keys(stored_type, new_type, baseline)
+        # Capability advice for the DESTINATION type, from the same helper the
+        # create flow and the configuration summary already render. Read from
+        # the live options — which covers are bound is not part of the switch.
+        # ``prospective=True`` (issue #1137): ``self.options`` still belong to
+        # the OUTGOING type here (the destination's own options, e.g. a
+        # day/night control model, aren't collected until the geometry step
+        # that follows), so an option-aware capability question would judge
+        # the destination against options it doesn't own yet.
+        _, capability_notes = check_cover_capabilities(
+            self.options, new_type, self.hass, prospective=True
+        )
+        # A pick that lands back on the stored type cancels the pending switch
+        # instead of making one, and the wording above degenerates there: the
+        # net change against stored state is nothing, so both ends name the
+        # same cover type. Same screen, same handler, second step id — which is
+        # the only handle the frontend has for choosing another description.
+        #
+        # ``_cover_type_changed`` is redundant today: the picker returns to the
+        # menu when the pick equals ``self.sensor_type``, so reaching here with
+        # ``new_type == stored_type`` already implies the flow moved off it. It
+        # stays because it is the revert copy's own precondition rather than a
+        # restatement of that early return — the screen asserts an unsaved
+        # switch exists and names it via ``pending_type``. Drop the conjunct and
+        # relaxing the early return would silently point a "you have a pending
+        # switch to X" screen at an entry with no pending switch, where X is the
+        # type it already is.
+        reverting = new_type == stored_type and self._cover_type_changed
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id=(
+                "change_cover_type_revert_confirm"
+                if reverting
+                else "change_cover_type_confirm"
+            ),
+            data_schema=vol.Schema(
+                {vol.Required("confirm", default=False): selector.BooleanSelector()}
+            ),
+            description_placeholders={
+                "from_type": get_policy(stored_type).display_label(labels),
+                "to_type": get_policy(new_type).display_label(labels),
+                # The switch a revert cancels — the only placeholder on this
+                # screen read from in-memory rather than stored state.
+                "pending_type": get_policy(self.sensor_type).display_label(labels),
+                "stranded_options": "\n".join(f"- `{k}`" for k in stranded) or "—",
+                "capability_notes": "\n".join(f"- {n}" for n in capability_notes)
+                or "—",
+                "position_polarity": _position_polarity_text(
+                    stored_type, new_type, baseline
+                )
+                or "—",
+            },
+        )
+
+    async def async_step_change_cover_type_revert_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm cancelling a pending, unsaved cover-type switch (issue #1200).
+
+        Deliberately no logic of its own: cancelling a pending switch IS a
+        switch — back to the stored type — and runs the same unwind every other
+        pick runs. The step exists only because a step's description is chosen
+        by its id, so revert-specific copy needs an id of its own.
+        """
+        return await self.async_step_change_cover_type_confirm(user_input)
+
+    # ---- Pending cover-type switch (issue #1132) ------------------------- #
+
+    @property
+    def _stored_cover_type(self) -> str:
+        """The cover type this entry currently is on disk."""
+        return self._config_entry.data.get(CONF_SENSOR_TYPE) or CoverType.BLIND
+
+    @property
+    def _cover_type_changed(self) -> bool:
+        """Whether a cover-type switch is pending.
+
+        Derived, never sticky: a dialog that switches A → B → A has nothing
+        left to apply, so it must not write ``data`` (a no-op) and must not
+        schedule the reload that write would otherwise need.
+        """
+        return self.sensor_type != self._stored_cover_type
+
+    def _switch_baseline_options(self) -> dict[str, Any]:
+        """``self.options`` as they stood before any pending switch touched them."""
+        if self._pre_switch_options is None:
+            return self.options
+        return self._pre_switch_options
+
+    def _pending_switch_option_keys(self) -> set[str]:
+        """Option keys a pending switch has already changed in ``self.options``.
+
+        Two ways a confirmed-but-unsaved switch shows up: the polarity re-seed
+        it applied itself, and the incoming type's own keys, collected by the
+        follow-on geometry step. Both belong to the switch, so both unwind with
+        it — and neither may ride along on a write that leaves ``data`` alone.
+        """
+        stored = self._stored_cover_type
+        if self.sensor_type == stored:
+            return set()
+        incoming_only = (
+            get_policy(self.sensor_type).live_option_keys()
+            - get_policy(stored).live_option_keys()
+        )
+        return set(_polarity_reseed(stored, self.sensor_type)) | incoming_only
+
+    def _options_without_pending_switch(self) -> dict[str, Any]:
+        """``self.options`` with a pending switch's contribution rolled back.
+
+        What a mid-dialog write persists. The invariant is that the type change
+        and the option values it implies are either both stored or neither is;
+        only ``_update_options`` can store the type, so every other write takes
+        the "neither" side. Ordinary edits made in the same dialog are
+        untouched — they belong to the entry as it stands, not to the switch.
+
+        Which is why a re-seeded key is restored only while the re-seeded value
+        is still the one sitting there. Confirm blind → awning, then open
+        Position and type 30: ``default_percentage`` no longer holds anything
+        the switch put there, so there is nothing of the switch's left to roll
+        back and 30 is an ordinary edit like any other. Restoring the baseline
+        50 over it would discard a value the user typed — recoverable only by
+        going on to Save & Close, and lost outright if the dialog is abandoned.
+        The incoming type's own keys carry no such test and unwind
+        unconditionally: the stored type does not read them at all, so no value
+        of theirs can be an edit to the entry as it stands.
+        """
+        baseline = self._pre_switch_options
+        options = dict(self.options)
+        if baseline is None:
+            return options
+        applied = self._switch_applied_values
+        for key in self._pending_switch_option_keys():
+            if key in applied and options.get(key) != applied[key]:
+                continue
+            if key in baseline:
+                options[key] = baseline[key]
+            else:
+                options.pop(key, None)
+        return options
+
+    def _apply_pending_cover_type(self, new_type: str) -> None:
+        """Move the flow onto *new_type* in memory and re-derive its option delta.
+
+        The delta is always computed against the STORED type and the pre-switch
+        option values, never against a previous hop's result. Chaining instead
+        would re-seed once per flip — blind(50) → awning → blind lands on 100,
+        a value neither type asked for and the user never chose — and would
+        leave a round trip looking like a switch that still has to be written.
+        """
+        if self._pre_switch_options is None:
+            self._pre_switch_options = dict(self.options)
+        stored = self._stored_cover_type
+        # Unwind whatever the previous hop (if any) applied, then apply the
+        # single net switch stored → new_type.
+        self.options = self._options_without_pending_switch()
+        self.current_config[CONF_SENSOR_TYPE] = new_type
+        self.sensor_type = new_type  # type: ignore[assignment]
+        reseed = _polarity_reseed(stored, new_type)
+        self.options.update(reseed)
+        # Remember what the switch wrote, not just which keys it touched, so a
+        # later rollback can tell its own value from one the user typed over.
+        self._switch_applied_values = dict(reseed)
+        if new_type == stored:
+            self._pre_switch_options = None
+
+    async def async_step_geometry(self, user_input: dict[str, Any] | None = None):
+        """Adjust geometry parameters."""
+        length_keys, slat_keys = _geometry_unit_keys(self.sensor_type)
+        if user_input is not None:
+            errors = _tilt_angle_step_errors(user_input)
+            if errors:
+                schema = _get_geometry_schema(self.sensor_type, self.hass, self.options)
+                suggested = options_to_display(
+                    self.hass,
+                    user_input,
+                    length_keys=length_keys,
+                    slat_keys=slat_keys,
+                )
+                return self.async_show_form(
+                    step_id="geometry",
+                    data_schema=self.add_suggested_values_to_schema(schema, suggested),
+                    errors=errors,
+                    description_placeholders={
+                        "geometry_wiki_link": _geometry_wiki_link(self.sensor_type)
+                    },
+                )
+            # Canonicalize first so the FOV-from-measurements button (#565/#778)
+            # derives from the width/depth the user just typed, not stored values.
+            canonical = user_input_to_canonical(
+                self.hass, user_input, length_keys=length_keys, slat_keys=slat_keys
+            )
+            if _resolve_fov_compute_submit(self.sensor_type, canonical, canonical):
+                return self._show_geometry_form(canonical)
+            self.options.update(canonical)
+            # A narrower FOV can strand stale blind-spot slots past the new
+            # span (issue #852); re-clamp right after the FOV lands.
+            clamp_blind_spots_to_fov(self.options)
+            return await self.async_step_init()
+
+        return self._show_geometry_form(self.options)
+
+    def _show_geometry_form(
+        self,
+        values: dict[str, Any] | None = None,
+    ) -> FlowResult:
+        """Render the options-flow geometry form (initial + button re-render)."""
+        length_keys, slat_keys = _geometry_unit_keys(self.sensor_type)
+        src = values if values is not None else self.options
+        schema = _get_geometry_schema(self.sensor_type, self.hass, self.options)
+        suggested = options_to_display(
+            self.hass, src, length_keys=length_keys, slat_keys=slat_keys
+        )
+        return self.async_show_form(
+            step_id="geometry",
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders=_geometry_placeholders(self.sensor_type, src),
+        )
+
+    # ── Per-slot paging engine (issue #945) ─────────────────────────────
+    # Shared helpers that let the three paged areas list, add, and route to
+    # single-slot pages. The dynamic ``async_step_<area>_slot_<n>`` /
+    # ``async_step_add_<area>`` entrypoints resolve via ``__getattr__`` and set
+    # ``self._active_slot[area]`` before delegating to ``_render_<area>_slot``.
+
+    def _slot_configured(self, area: str, n: int) -> bool:
+        """Return True when slot *n* of *area* holds a usable configuration."""
+        _, slots = _SLOT_AREA_META[area]
+        keys = slots[n]
+        if area == "custom_position":
+            return custom_position_slot_configured(self.options, keys)
+        if area == "blind_spot":
+            return (
+                self.options.get(keys["left_gamma"]) is not None
+                and self.options.get(keys["right_gamma"]) is not None
+            )
+        # glare_zone — a zone participates once it has a non-blank name.
+        return bool(self.options.get(keys["name"]))
+
+    def _lowest_free_slot(self, area: str) -> int | None:
+        """Return the lowest unconfigured slot number, or None when all full."""
+        numbers, _ = _SLOT_AREA_META[area]
+        for n in numbers:
+            if not self._slot_configured(area, n):
+                return n
+        return None
+
+    def _slot_label(self, area: str, n: int) -> str:
+        """Build the dynamic menu label for a configured slot."""
+        _, slots = _SLOT_AREA_META[area]
+        keys = slots[n]
+        if area == "custom_position":
+            name = custom_position_slot_name(self.options, keys) or f"Slot {n}"
+            prio = self.options.get(keys["priority"])
+            suffix = f" · P{int(prio)}" if prio is not None else ""
+            return f"{n} · {name}{suffix}"
+        if area == "blind_spot":
+            left = self.options.get(keys["left_gamma"])
+            right = self.options.get(keys["right_gamma"])
+            return f"{n} · edges {left}° / {right}°"
+        return f"{n} · {self.options.get(keys['name'])}"
+
+    def _slot_menu(self, area: str, *, delete: bool = False) -> FlowResult:
+        """Render an area's slot sub-menu, or its delete chooser (issue #1071).
+
+        The sub-menu lists configured slots + Add + Delete + Back; the chooser
+        (``delete=True``) is the confirm step — one row per configured slot plus
+        Cancel. Both share the configured-slot scan and the label builder.
+        """
+        numbers, _ = _SLOT_AREA_META[area]
+        configured = [n for n in numbers if self._slot_configured(area, n)]
+        if delete:
+            menu_options: dict[str, str] = {
+                f"delete_{area}_slot_{n}": f"🗑️ {self._slot_label(area, n)}"
+                for n in configured
+            }
+            menu_options[_area_menu(area)] = "⬅️ Cancel"
+            step_id = "delete_slot"
+        else:
+            menu_options = {
+                f"{area}_slot_{n}": self._slot_label(area, n) for n in configured
+            }
+            if area == "custom_position" and self._custom_position_include_tilt():
+                menu_options["custom_position_tilt_defaults"] = (
+                    "🎚️ Default & sunset tilt"
+                )
+            if self._lowest_free_slot(area) is not None:
+                menu_options[f"add_{area}"] = "➕ Add…"
+            if configured:
+                menu_options[f"delete_{area}"] = "🗑️ Delete…"
+            menu_options["init"] = "⬅️ Back"
+            step_id = _area_menu(area)
+        return self.async_show_menu(  # type: ignore[return-value]
+            step_id=step_id,
+            menu_options=menu_options,
+            description_placeholders={"learn_more": _SLOT_AREA_WIKI[area]},
+        )
+
+    async def async_step_delete_slot(self, user_input: dict[str, Any] | None = None):
+        """Re-render the shared delete chooser (area in ``_delete_area``, #1071).
+
+        The three areas share one step id so the chooser's translation block is
+        authored once — the same shape as ``async_step_<area>_slot``, whose slot
+        number lives in ``_active_slot`` rather than in the step id. HA requires
+        every returned ``step_id`` to resolve to a handler method, so this must
+        exist even though a menu selection routes straight to its target step.
+        """
+        if not self._delete_area:
+            # Reached without the chooser having set an area (a replayed or
+            # out-of-order step). There is nothing to list, so fall back to the
+            # options root rather than indexing _SLOT_AREA_META[""].
+            return await self.async_step_init()
+        return self._slot_menu(self._delete_area, delete=True)
+
+    def _slot_schema(self, area: str, n: int) -> vol.Schema:
+        """Build the single-slot page schema for slot *n* of *area*.
+
+        The one place that knows how each area's page is assembled, so the
+        renderers and the "➕ Add…" reuse path agree on what the page shows
+        without either re-deriving it (issue #1071).
+        """
+        if area == "custom_position":
+            return config_fields.custom_position_slot_schema(
+                include_tilt=self._custom_position_include_tilt()
+            )
+        if area == "blind_spot":
+            return blind_spot_slot_schema(n, self.options)
+        return glare_zone_slot_schema(n, self.options, self.hass)
+
+    def _clear_slot_keys(
+        self, area: str, n: int, *, keep_rendered: bool = False
+    ) -> None:
+        """Drop the stored option keys owned by slot *n* of *area* (#1071).
+
+        ``keep_rendered`` spares the sub-keys this page actually renders for
+        this instance — the "➕ Add…" reuse policy, so half-entered data comes
+        back as a pre-filled form instead of being thrown away. It is resolved
+        from the schema's own markers rather than from ``*_FORM_KEYS``
+        membership: a field the page gates off (custom position's tilt block on
+        a cover type without tilt) is in the map but has no UI, so sparing it
+        would strand a value the user can neither see nor reset. Delete takes
+        the default and wipes the whole key map.
+        """
+        keep: set[str] = set()
+        if keep_rendered:
+            rendered = {str(marker) for marker in self._slot_schema(area, n).schema}
+            keep = {
+                sub
+                for sub, form_key in _SLOT_AREA_FORM_KEYS[area].items()
+                if form_key in rendered
+            }
+        if area == "custom_position":
+            clear_custom_position_slot(self.options, n, keep=keep)
+            return
+        _, slots = _SLOT_AREA_META[area]
+        clear_slot(self.options, slots[n], keep=keep)
+
+    async def _delete_slot(self, area: str, n: int) -> FlowResult:
+        """Erase slot *n* and return to the area sub-menu (issue #1071)."""
+        self._clear_slot_keys(area, n)
+        return await getattr(self, f"async_step_{_area_menu(area)}")()
+
+    # ── Custom positions ────────────────────────────────────────────────
+
+    def _section_adds_extra_fields(self, section: str) -> bool:
+        """Whether this cover type's policy adds any extra field to *section*.
+
+        The one gate behind every ``include_tilt`` kwarg the option steps pass
+        to their schema builder. Written once rather than mirrored per section:
+        the registry-membership guard (an unregistered ``sensor_type`` must
+        answer False rather than raise) and the ``extra_field_keys`` lookup are
+        the same policy in all three places, and only the section differs.
+        Reading ``extra_field_keys`` rather than each ``*_includes_tilt``
+        ClassVar keeps that one method the single seam that decides which
+        cover types surface a second axis in a given step.
+        """
+        sensor_type = self.sensor_type
+        return sensor_type in POLICY_REGISTRY and bool(
+            get_policy(sensor_type).extra_field_keys(section)
+        )
+
+    def _custom_position_include_tilt(self) -> bool:
+        """Whether this cover type carries per-slot / global tilt fields."""
+        return self._section_adds_extra_fields(config_fields.SECTION_CUSTOM_POSITION)
+
+    async def async_step_custom_position(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """List custom-position slots as a sub-menu (issue #945)."""
+        return self._slot_menu("custom_position")
+
+    async def async_step_custom_position_slot(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle the shared single-slot POST/re-render (slot in _active_slot)."""
+        return await self._render_custom_position_slot(user_input)
+
+    async def _render_custom_position_slot(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        n = self._active_slot["custom_position"]
+        slot_keys = CUSTOM_POSITION_SLOTS[n]
+        if user_input is not None:
+            # Fill cleared optional (no-default) fields so a clear round-trips.
+            form_optional = [
+                CUSTOM_POSITION_FORM_KEYS[sub]
+                for sub in (
+                    "name",
+                    "template",
+                    "position",
+                    "priority",
+                    "tilt",
+                    # Axis constraints (issue #943): clearing one is how the
+                    # user turns the constraint off, so it must round-trip.
+                    "position_max",
+                    "tilt_min",
+                    "tilt_max",
+                )
+            ]
+            self.optional_entities(form_optional, user_input)
+            mapped = {
+                slot_keys[sub]: user_input[form_key]
+                for sub, form_key in CUSTOM_POSITION_FORM_KEYS.items()
+                if form_key in user_input
+            }
+            self.options.update(mapped)
+            # Mirror on the merged options so a cleared slot nulls its stale
+            # legacy single-sensor key (rollback fidelity, issue #563).
+            mirror_legacy_slot_sensor_keys(self.options)
+            return await self.async_step_custom_position()
+        seeded = {
+            form_key: self.options.get(slot_keys[sub])
+            for sub, form_key in CUSTOM_POSITION_FORM_KEYS.items()
+        }
+        schema = self._slot_schema("custom_position", n)
+        return self.async_show_form(
+            step_id="custom_position_slot",
+            data_schema=self.add_suggested_values_to_schema(schema, seeded),
+            description_placeholders={
+                "slot": str(n),
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Custom-Position",
+                "priority_scale": _render_priority_scale(
+                    self.options, get_policy(self.sensor_type)
+                ),
+            },
+        )
+
+    async def async_step_custom_position_tilt_defaults(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Venetian global default/sunset tilt (peeled off the slot pages)."""
+        if user_input is not None:
+            self.optional_entities([CONF_DEFAULT_TILT, CONF_SUNSET_TILT], user_input)
+            self.options.update(user_input)
+            return await self.async_step_custom_position()
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_DEFAULT_TILT): config_fields.position_slider(),
+                vol.Optional(CONF_SUNSET_TILT): config_fields.position_slider(),
+            }
+        )
+        return self.async_show_form(
+            step_id="custom_position_tilt_defaults",
+            data_schema=self.add_suggested_values_to_schema(schema, self.options),
+        )
+
+    # ── Blind spots ─────────────────────────────────────────────────────
+
+    async def async_step_blind_spot(self, user_input: dict[str, Any] | None = None):
+        """List blind-spot slots as a sub-menu (issue #945)."""
+        return self._slot_menu("blind_spot")
+
+    async def async_step_blind_spot_slot(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle the shared single-slot POST/re-render (slot in _active_slot)."""
+        return await self._render_blind_spot_slot(user_input)
+
+    async def _render_blind_spot_slot(self, user_input: dict[str, Any] | None = None):
+        n = self._active_slot["blind_spot"]
+        slot_keys = BLIND_SPOT_SLOTS[n]
+        schema = self._slot_schema("blind_spot", n)
+        if user_input is not None:
+            left = user_input.get(BLIND_SPOT_FORM_KEYS["left_gamma"])
+            right = user_input.get(BLIND_SPOT_FORM_KEYS["right_gamma"])
+            if left is not None and right is not None and left + right <= 0:
+                return self.async_show_form(
+                    step_id="blind_spot_slot",
+                    data_schema=self.add_suggested_values_to_schema(schema, user_input),
+                    errors={
+                        BLIND_SPOT_FORM_KEYS["right_gamma"]: (
+                            "The blind-spot wedge is empty: left edge + right "
+                            "edge must be greater than 0."
+                        )
+                    },
+                    description_placeholders={
+                        "slot": str(n),
+                        "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Blindspot",
+                    },
+                )
+            # Fill cleared optional (no-default) fields so a clear round-trips
+            # (issue #1267). left_gamma always carries a schema default= and
+            # is excluded on purpose.
+            self.optional_entities(
+                [
+                    BLIND_SPOT_FORM_KEYS["right_gamma"],
+                    BLIND_SPOT_FORM_KEYS["elevation"],
+                ],
+                user_input,
+            )
+            mapped = {
+                slot_keys[sub]: user_input[form_key]
+                for sub, form_key in BLIND_SPOT_FORM_KEYS.items()
+                if form_key in user_input
+            }
+            self.options.update(mapped)
+            return await self.async_step_blind_spot()
+        seeded = {
+            form_key: self.options.get(slot_keys[sub])
+            for sub, form_key in BLIND_SPOT_FORM_KEYS.items()
+            if self.options.get(slot_keys[sub]) is not None
+        }
+        return self.async_show_form(
+            step_id="blind_spot_slot",
+            data_schema=self.add_suggested_values_to_schema(schema, seeded),
+            description_placeholders={
+                "slot": str(n),
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Blindspot",
+            },
+        )
+
+    # ── Glare zones ─────────────────────────────────────────────────────
+
+    async def async_step_glare_zones(self, user_input: dict[str, Any] | None = None):
+        """List glare zones as a sub-menu (issue #945)."""
+        return self._slot_menu("glare_zone")
+
+    async def async_step_glare_zone_slot(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Handle the shared single-zone POST/re-render (zone in _active_slot)."""
+        return await self._render_glare_zone_slot(user_input)
+
+    async def _render_glare_zone_slot(self, user_input: dict[str, Any] | None = None):
+        n = self._active_slot["glare_zone"]
+        slot_keys = GLARE_ZONE_SLOTS[n]
+        if user_input is not None:
+            canonical = user_input_to_canonical(
+                self.hass, user_input, length_keys=_GLARE_ZONE_FORM_LENGTH_KEYS
+            )
+            mapped = {
+                slot_keys[sub]: canonical[form_key]
+                for sub, form_key in GLARE_ZONE_FORM_KEYS.items()
+                if form_key in canonical
+            }
+            self.options.update(mapped)
+            return await self.async_step_glare_zones()
+        metres = {
+            GLARE_ZONE_FORM_KEYS[sub]: self.options[wire]
+            for sub, wire in slot_keys.items()
+            if wire in self.options
+        }
+        suggested = options_to_display(
+            self.hass, metres, length_keys=_GLARE_ZONE_FORM_LENGTH_KEYS
+        )
+        schema = self._slot_schema("glare_zone", n)
+        return self.async_show_form(
+            step_id="glare_zone_slot",
+            data_schema=self.add_suggested_values_to_schema(schema, suggested),
+            description_placeholders={
+                "slot": str(n),
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Glare-Zones",
+            },
+        )
+
+    async def async_step_sun_tracking(self, user_input: dict[str, Any] | None = None):
+        """Adjust sun tracking parameters."""
+        if user_input is not None:
+            self.optional_entities(_SUN_TRACKING_OPTIONAL_KEYS, user_input)
+            # The FOV button + shaded distance moved to the geometry step (#778);
+            # this step now carries only behavioural fields, so nothing here is
+            # unit-dependent.
+            if (
+                user_input.get(CONF_MAX_ELEVATION) is not None
+                and user_input.get(CONF_MIN_ELEVATION) is not None
+                and user_input[CONF_MAX_ELEVATION] <= user_input[CONF_MIN_ELEVATION]
+            ):
+                return self._show_sun_tracking_form(
+                    user_input,
+                    errors={
+                        CONF_MAX_ELEVATION: "Must be greater than 'Minimal Elevation'"
+                    },
+                )
+            # Drop the legacy ``fov_mode`` key from entries created before the
+            # button replaced the mode selector (#565) — it is inert and no
+            # longer written.
+            self.options.pop("fov_mode", None)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self._show_sun_tracking_form(self.options)
+
+    def _show_sun_tracking_form(
+        self,
+        values: dict[str, Any],
+        *,
+        errors: dict | None = None,
+    ):
+        """Render the sun-tracking form."""
+        schema = _get_sun_tracking_schema(self.sensor_type, self.hass)
+        return self.async_show_form(
+            step_id="sun_tracking",
+            data_schema=self.add_suggested_values_to_schema(schema, values),
+            errors=errors,
+            description_placeholders={
+                **_sun_tracking_placeholders(self.sensor_type, self.options),
+                # The gate is profile-owned (issue #1167), so a linked cover gets
+                # the same inherit/override breakdown the behavior step shows for
+                # the daytime gate. Empty string when the cover is unlinked.
+                "profile_inherit": self._profile_inherit_note(
+                    _SUN_TRACKING_PROFILE_KEYS
+                ),
+            },
+        )
+
+    async def async_step_position(self, user_input: dict[str, Any] | None = None):
+        """Adjust position settings."""
+        if user_input is not None:
+            self.optional_entities(_POSITION_OPTIONAL_KEYS, user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="position",
+            data_schema=self.add_suggested_values_to_schema(
+                POSITION_SCHEMA, user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Position",
+            },
+        )
+
+    async def async_step_behavior(self, user_input: dict[str, Any] | None = None):
+        """Manage L2b timing & threshold behavior options."""
+        if user_input is not None:
+            self.optional_entities(_BEHAVIOR_OPTIONAL_KEYS, user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="behavior",
+            data_schema=self.add_suggested_values_to_schema(
+                _behavior_schema(self.options), user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Position",
+                "position_matching_wiki": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Position-Matching",
+                "profile_inherit": self._profile_inherit_note(_BEHAVIOR_PROFILE_KEYS),
+            },
+        )
+
+    async def async_step_automation(self, user_input: dict[str, Any] | None = None):
+        """Manage automation options."""
+        if user_input is not None:
+            self.optional_entities([CONF_START_ENTITY, CONF_END_ENTITY], user_input)
+            # A blank queue means "no queue", and that must be storable —
+            # otherwise a cover could join one but never leave. Same strip
+            # pattern as the time keys below: drop it from the submission AND
+            # from the stored options, since the suggested-values path can
+            # re-add it. Stored EXACTLY as typed (normalization is a match-time
+            # concern) so the dropdown can keep showing the user's own casing.
+            if not str(user_input.get(CONF_COMMAND_QUEUE) or "").strip():
+                user_input.pop(CONF_COMMAND_QUEUE, None)
+                self.options.pop(CONF_COMMAND_QUEUE, None)
+            # A cleared TimeSelector either omits the key or coerces to the blank
+            # sentinel "00:00:00". Treat both as "unset": drop the key from the
+            # submission and from any previously-stored option so it never
+            # persists as a literal midnight window (issue #492).
+            #
+            # Canonicalise first: TimeSelector validates via parse_time but
+            # stores the raw submission, so a non-frontend flow client can hand
+            # us "00:00" — which is midnight, yet fails the BLANK_TIME test
+            # below and every other literal sentinel check (issue #1049).
+            for time_key in (CONF_START_TIME, CONF_END_TIME):
+                if time_key in user_input:
+                    user_input[time_key] = normalize_time_string(user_input[time_key])
+                if user_input.get(time_key) in (None, BLANK_TIME):
+                    user_input.pop(time_key, None)
+                    self.options.pop(time_key, None)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        # The queue picker is appended here rather than declared in the static
+        # AUTOMATION_SCHEMA because its options are drawn from the OTHER loaded
+        # config entries, which a module-level schema cannot see.
+        schema = AUTOMATION_SCHEMA.extend(
+            {
+                vol.Optional(CONF_COMMAND_QUEUE): command_queue_selector(self.hass),
+            }
+        )
+        return self.async_show_form(
+            step_id="automation",
+            data_schema=self.add_suggested_values_to_schema(
+                schema, user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Automation"
+            },
+        )
+
+    async def async_step_manual_override(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manage manual override options."""
+        if user_input is not None:
+            self.optional_entities(
+                [CONF_MANUAL_THRESHOLD, CONF_MANUAL_OVERRIDE_INPUT_TEMPLATE], user_input
+            )
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="manual_override",
+            data_schema=self.add_suggested_values_to_schema(
+                MANUAL_OVERRIDE_SCHEMA, user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides"
+            },
+        )
+
+    async def async_step_motion_override(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manage motion/occupancy-based control."""
+        if user_input is not None:
+            self.optional_entities([CONF_MOTION_TEMPLATE], user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="motion_override",
+            data_schema=self.add_suggested_values_to_schema(
+                MOTION_OVERRIDE_SCHEMA, user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides"
+            },
+        )
+
+    def _weather_override_include_tilt(self) -> bool:
+        """Whether this cover type carries a weather-override tilt slider."""
+        return self._section_adds_extra_fields(config_fields.SECTION_WEATHER_OVERRIDE)
+
+    async def async_step_weather_override(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manage weather-based safety overrides."""
+        include_tilt = self._weather_override_include_tilt()
+        if user_input is not None:
+            # Profile-owned pickers are shown (inherit/override model), so they
+            # are present in user_input; null any cleared field as usual. The
+            # tilt joins that list only when it was rendered — otherwise a
+            # single-axis cover would collect a stray null for a field its
+            # form never showed.
+            optional_keys = (
+                [*_WEATHER_OVERRIDE_OPTIONAL_KEYS, CONF_WEATHER_OVERRIDE_TILT]
+                if include_tilt
+                else _WEATHER_OVERRIDE_OPTIONAL_KEYS
+            )
+            self.optional_entities(optional_keys, user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        suggested = _stringify_templatable(self.options)
+        placeholders = dict(_weather_override_placeholders(self.hass, self.options))
+        placeholders["profile_inherit"] = self._profile_inherit_note(
+            WEATHER_OVERRIDE_SENSOR_KEYS
+        )
+        return self.async_show_form(
+            step_id="weather_override",
+            data_schema=self.add_suggested_values_to_schema(
+                weather_override_schema(
+                    self.hass, suggested, include_tilt=include_tilt
+                ),
+                suggested,
+            ),
+            description_placeholders=placeholders,
+        )
+
+    def _profile_inherit_note(self, keys) -> str:
+        """Markdown note of the profile's value per profile-owned key on a step.
+
+        Empty when the cover is unlinked. Lets a linked cover see whether the
+        Building Profile assigns a value (and whether the cover overrides it)
+        next to the pickers — HA can't annotate individual schema fields.
+        """
+        from .building_overview import profile_value_breakdown
+
+        profile = profile_for_cover(self.hass, self.options)
+        if profile is None:
+            return ""
+        return profile_value_breakdown(
+            profile.options or {}, self.options, keys, profile_title=profile.title
+        )
+
+    async def async_step_building_profile(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Link this cover to a Building Profile (or unlink it).
+
+        Linking copies the profile's non-empty shared-sensor subset into this
+        cover's own options (reusing ``_copy_profile_to_cover``) and reloads the
+        cover. Selecting the none/unlink choice clears the link; the last-copied
+        sensor IDs are left in place (no teardown).
+        """
+        if user_input is not None:
+            chosen = user_input.get(CONF_BUILDING_PROFILE_ID) or _PROFILE_NONE_SENTINEL
+            if chosen != _PROFILE_NONE_SENTINEL:
+                profile = self.hass.config_entries.async_get_entry(chosen)
+                if profile is not None:
+                    overridden = effective_profile_overrides(self._config_entry.options)
+                    _copy_profile_to_cover(self.hass, profile, self._config_entry)
+                    # Stage the write the copier just made to disk, over the
+                    # keys the copier owns and no others.
+                    #
+                    # Re-reading ``self.options`` wholesale discarded every
+                    # unsaved edit in this dialog — including a pending
+                    # cover-type switch's re-seed and the incoming type's
+                    # geometry, while the switch itself stayed pending, so Save
+                    # & Close flipped ``data`` to a type whose options
+                    # contradicted the disclosure the user had just read.
+                    # Diffing what the copier changed fixes that but makes
+                    # linking mean two things: an unsaved edit to a
+                    # profile-owned key survives when the profile happens to
+                    # name what is already stored (empty diff) and is
+                    # overwritten when it does not — same gesture, opposite
+                    # outcome, decided by state the user cannot see. The
+                    # survivor then reads as a local override, because
+                    # ``_recompute_profile_overrides`` is a pure value-diff
+                    # against the profile at save.
+                    #
+                    # Linking means adopt, which is what the copier does on disk
+                    # for a cover with no recorded overrides, so staging it here
+                    # lands where hitting Save first would have.
+                    # ``merge_profile_into_config`` is the single source of
+                    # truth for the subset (profile-defined, non-empty, not
+                    # already overridden); nothing else in ``self.options`` is
+                    # touched, so a pending switch's keys — positions and the
+                    # incoming type's geometry, never shared sensors — stay put.
+                    adopted: dict[str, Any] = {
+                        CONF_BUILDING_PROFILE_ID: profile.entry_id
+                    }
+                    merge_profile_into_config(profile, adopted, overridden=overridden)
+                    self.options.update(adopted)
+            elif self.options.pop(CONF_BUILDING_PROFILE_ID, None) is not None:
+                self._persist_entry()
+            return await self.async_step_init()
+
+        profiles = _building_profile_entries(self.hass)
+        options = [
+            {"value": _PROFILE_NONE_SENTINEL, "label": "None (unlinked)"},
+            *({"value": e.entry_id, "label": e.title} for e in profiles),
+        ]
+        current = self.options.get(CONF_BUILDING_PROFILE_ID) or _PROFILE_NONE_SENTINEL
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_BUILDING_PROFILE_ID, default=current
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=options,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="building_profile",
+            data_schema=schema,
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides"
+            },
+        )
+
+    async def async_step_group_membership(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Edit the cover-group membership rosters (issue #790).
+
+        Same one page as the create flow: ACP members first, generic covers
+        below. Submitting returns to the group menu (issue #1003) — only
+        ``async_step_done`` saves and closes the dialog. Sanitization drops
+        duplicates, the group itself, and generic entities owned by a
+        selected ACP member.
+        """
+        if user_input is not None:
+            sanitized = _sanitize_group_membership(
+                self.hass,
+                user_input,
+                own_entry_id=self._config_entry.entry_id,
+            )
+            self.options.update(sanitized)
+            if user_input.get(CONF_GROUP_AREA):
+                self.options[CONF_GROUP_AREA] = user_input[CONF_GROUP_AREA]
+            else:
+                self.options.pop(CONF_GROUP_AREA, None)
+            # A removed member's opt-out entry is stale — prune it in the
+            # same save so the arbitration step never lists ghosts.
+            opt_out = self.options.get(CONF_GROUP_MEMBER_OPT_OUT)
+            if opt_out:
+                roster = set(sanitized[CONF_MEMBER_ENTRIES])
+                self.options[CONF_GROUP_MEMBER_OPT_OUT] = {
+                    member: scenes
+                    for member, scenes in opt_out.items()
+                    if member in roster
+                }
+            return await self.async_step_init()
+
+        schema = vol.Schema(
+            _group_membership_schema_dict(
+                self.hass, exclude_entry_id=self._config_entry.entry_id
+            )
+        )
+        return self.async_show_form(
+            step_id="group_membership",
+            data_schema=self.add_suggested_values_to_schema(schema, self.options),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Cover-Groups"
+            },
+        )
+
+    async def async_step_group_arbitration(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Edit stagger and per-member scene opt-out (issue #790, Phase 2).
+
+        Opt-outs use ONE multi-select whose options are ``member|scene``
+        pairs with human labels — the same dynamic-row pattern as the
+        profile-overrides step, so the field itself stays translatable.
+        Unchecked members are pruned so ``CONF_GROUP_MEMBER_OPT_OUT`` holds
+        only members that actually opt out. The group lock ignores opt-out.
+        """
+        member_ids = [
+            entry_id
+            for entry_id in self.options.get(CONF_MEMBER_ENTRIES, [])
+            if self.hass.config_entries.async_get_entry(entry_id) is not None
+        ]
+        if user_input is not None:
+            self.options[CONF_GROUP_STAGGER_DELAY] = user_input.get(
+                CONF_GROUP_STAGGER_DELAY, DEFAULT_GROUP_STAGGER_DELAY
+            )
+            opt_out: dict[str, list[str]] = {}
+            for token in user_input.get(_OPT_OUT_FIELD, []):
+                member_id, _, scene_value = token.partition(_OPT_OUT_TOKEN_SEP)
+                if member_id in member_ids:
+                    opt_out.setdefault(member_id, []).append(scene_value)
+            self.options[CONF_GROUP_MEMBER_OPT_OUT] = opt_out
+            return await self.async_step_init()
+
+        stagger_spec = config_fields.FIELD_SPECS[CONF_GROUP_STAGGER_DELAY]
+        stagger_marker, stagger_selector = stagger_spec.to_marker(
+            self.hass, self.options
+        )
+        current_opt_out = self.options.get(CONF_GROUP_MEMBER_OPT_OUT, {})
+        choices: list[dict[str, str]] = []
+        selected: list[str] = []
+        for member_id in member_ids:
+            entry = self.hass.config_entries.async_get_entry(member_id)
+            for choice in _group_opt_out_choices():
+                token = f"{member_id}{_OPT_OUT_TOKEN_SEP}{choice['value']}"
+                choices.append(
+                    {"value": token, "label": f"{entry.title} — {choice['label']}"}
+                )
+                if choice["value"] in current_opt_out.get(member_id, []):
+                    selected.append(token)
+        schema_dict: dict = {
+            stagger_marker: stagger_selector,
+            vol.Optional(_OPT_OUT_FIELD, default=selected): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=choices,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            ),
+        }
+        return self.async_show_form(
+            step_id="group_arbitration",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema(schema_dict),
+                {CONF_GROUP_STAGGER_DELAY: self.options.get(CONF_GROUP_STAGGER_DELAY)},
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Cover-Groups"
+            },
+        )
+
+    async def async_step_group_entities(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Edit the group's entity-exposure toggles (issue #790, Phase 3).
+
+        Five booleans: the opt-in aggregate cover (off by default) and the
+        four aggregate sensors (on by default). Saving reloads the entry, so
+        toggles take effect immediately.
+        """
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_init()
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_GROUP_ENABLE_COVER_ENTITY,
+                    default=DEFAULT_GROUP_ENABLE_COVER_ENTITY,
+                ): selector.BooleanSelector(),
+                **{
+                    vol.Optional(
+                        key, default=DEFAULT_GROUP_ENABLE_SENSOR
+                    ): selector.BooleanSelector()
+                    for key in (
+                        CONF_GROUP_ENABLE_POSITION_SENSOR,
+                        CONF_GROUP_ENABLE_STATE_SENSOR,
+                        CONF_GROUP_ENABLE_CLIMATE_SENSOR,
+                        CONF_GROUP_ENABLE_WHO_WON_SENSOR,
+                    )
+                },
+            }
+        )
+        return self.async_show_form(
+            step_id="group_entities",
+            data_schema=self.add_suggested_values_to_schema(schema, self.options),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Cover-Groups"
+            },
+        )
+
+    async def async_step_profile_sensors(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Edit the shared building-level sensor IDs on a Building Profile entry.
+
+        This is the only options step for a profile: it exposes exactly the
+        ``BUILDING_PROFILE_SENSOR_KEYS`` pickers.  Mirrors the create-flow's
+        ``async_step_create_building_profile`` sensor section.  Submitting
+        returns to the profile menu (issue #1003) — only ``async_step_done``
+        actually saves and closes the dialog.
+
+        Every field here is a bare no-default ``vol.Optional``, so the frontend
+        omits a cleared one from ``user_input`` rather than sending it empty;
+        ``optional_entities`` nulls those so the clear sticks (issue #1085).
+        Reaching the linked covers is ``async_step_done``'s job — see
+        ``_propagate_profile_clears``.
+        """
+        if user_input is not None:
+            self.optional_entities(list(BUILDING_PROFILE_SENSOR_KEYS), user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+
+        schema = building_profile_sensors_schema()
+        return self.async_show_form(
+            step_id="profile_sensors",
+            data_schema=self.add_suggested_values_to_schema(schema, self.options),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides"
+            },
+        )
+
+    async def async_step_profile_overview(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Read-only overview of every cover linked to this Building Profile.
+
+        Scoped to this profile's linked covers — what shared sensors they
+        inherit (with divergence warnings) and how their per-cover settings
+        compare. Renders markdown only; submitting returns to the menu.
+        """
+        if user_input is not None:
+            return await self.async_step_init()
+        from .building_overview import build_building_overview
+
+        linked = _covers_linked_to(self.hass, self._config_entry)
+        overview_text = build_building_overview(self._config_entry, linked, self.hass)
+        return self.async_show_form(
+            step_id="profile_overview",
+            data_schema=vol.Schema({}),
+            description_placeholders={"overview": overview_text},
+        )
+
+    async def async_step_queue_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Edit the gap this Command Queue holds after each member transmits.
+
+        The only editable setting a queue has. Members read it live, so saving
+        takes effect on the next transmission without reloading any cover.
+        """
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="queue_settings",
+            data_schema=self.add_suggested_values_to_schema(
+                command_queue_gap_schema(), self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Automation"
+            },
+        )
+
+    async def async_step_queue_overview(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Read-only list of the covers currently on this queue.
+
+        Membership is resolved the same way the runtime resolves it — by
+        NORMALIZED name — so a cover that typed a different casing shows up
+        here exactly as it will be serialized in practice. That is the point of
+        the page: it is where a user finds out whether the name they typed
+        actually joined the queue they meant.
+        """
+        if user_input is not None:
+            return await self.async_step_init()
+        members = _covers_on_command_queue(self.hass, self._config_entry)
+        gap = self.options.get(CONF_COMMAND_QUEUE_GAP, DEFAULT_COMMAND_QUEUE_GAP)
+        lines = [f"**{self._config_entry.data.get('name')}** — {gap}s gap", ""]
+        if members:
+            lines.extend(f"- 🪟 {entry.title}" for entry in members)
+        else:
+            lines.append("_No covers are assigned to this queue._")
+        return self.async_show_form(
+            step_id="queue_overview",
+            data_schema=vol.Schema({}),
+            description_placeholders={"overview": "\n".join(lines)},
+        )
+
+    async def async_step_profile_overrides(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """View and clear linked covers' local sensor overrides.
+
+        Lists every shared sensor a linked cover has overridden (or set locally
+        where the profile is blank). Selecting entries and submitting clears them:
+        an overridden key re-inherits the profile value; a local key is removed.
+        """
+        from .building_overview import build_override_records
+
+        linked = _covers_linked_to(self.hass, self._config_entry)
+        records = build_override_records(self._config_entry, linked)
+        by_token = {f"{r.entry_id}|{r.key}": r for r in records}
+
+        if user_input is not None:
+            for token in user_input.get(_OVERRIDE_SELECT_KEY, []):
+                record = by_token.get(token)
+                cover = self.hass.config_entries.async_get_entry(record.entry_id)
+                if record is not None and cover is not None:
+                    clear_cover_override(
+                        self.hass, self._config_entry, cover, record.key
+                    )
+            return await self.async_step_init()
+
+        if not records:
+            return self.async_show_form(
+                step_id="profile_overrides",
+                data_schema=vol.Schema({}),
+                description_placeholders={"overrides": _LABELS_NO_OVERRIDES},
+            )
+
+        options = [
+            {
+                "value": token,
+                "label": (
+                    f"{r.cover_name} — {r.label}: {r.local_text} "
+                    f"(profile: {r.profile_text if r.profile_sets_it else 'not set'})"
+                ),
+            }
+            for token, r in by_token.items()
+        ]
+        schema = vol.Schema(
+            {
+                vol.Optional(_OVERRIDE_SELECT_KEY, default=[]): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=options,
+                        multiple=True,
+                        mode=selector.SelectSelectorMode.LIST,
+                    )
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="profile_overrides",
+            data_schema=schema,
+            description_placeholders={"overrides": ""},
+        )
+
+    async def async_step_pipeline_priorities(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Re-order the built-in handler decision chain (priority overrides)."""
+        if user_input is not None:
+            # A cleared slider is omitted; null it so the handler reverts to its
+            # class-default priority instead of keeping the stale override.
+            self.optional_entities(_PIPELINE_PRIORITY_OPTIONAL_KEYS, user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="pipeline_priorities",
+            data_schema=self.add_suggested_values_to_schema(
+                config_fields.pipeline_priorities_schema(), user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides",
+                "priority_scale": _render_priority_scale(
+                    self.options, get_policy(self.sensor_type)
+                ),
+            },
+        )
+
+    async def async_step_sync(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select target covers and setting categories to sync."""
+        # The STORED type, not ``self.sensor_type`` (issue #1132). What this
+        # step copies is whatever ``_persist_entry`` just wrote, and that write
+        # deliberately rolls a pending switch back out — so the values leaving
+        # here are the outgoing type's. Filtering targets by the type the user
+        # is about to switch to would offer covers of one type and hand them
+        # another type's positions: a blind's "raised 80 %" written onto an
+        # awning as "extended 80 %", on someone else's cover. The filter and
+        # the copied values have to name the same type, and only the stored one
+        # is on both sides. ``available`` below already reads the stored
+        # options for the same reason.
+        current_type = self._stored_cover_type
+        other_entries = [
+            e
+            for e in self.hass.config_entries.async_entries(DOMAIN)
+            if e.entry_id != self._config_entry.entry_id
+            and e.data.get(CONF_SENSOR_TYPE) == current_type
+        ]
+
+        if not other_entries:
+            return self.async_abort(reason="no_covers_to_sync")  # type: ignore[return-value]
+
+        available = [
+            cat
+            for cat in _SYNC_UI_CATEGORIES
+            if cat in SYNC_CATEGORIES
+            and any(k in self._config_entry.options for k in SYNC_CATEGORIES[cat])
+        ]
+
+        if user_input is not None:
+            # "Select all covers" (#772) turns target_entries into an exclude
+            # list: every same-type other cover is targeted except those
+            # checked. Off, target_entries is the usual explicit include list.
+            if user_input.get(CONF_SYNC_SELECT_ALL):
+                excluded = set(user_input.get("target_entries", []))
+                targets = [
+                    e.entry_id for e in other_entries if e.entry_id not in excluded
+                ]
+            else:
+                targets = user_input.get("target_entries", [])
+            if not targets:
+                return await self.async_step_init()
+            selected = user_input.get("sync_categories", [])
+            if not selected:
+                return await self.async_step_init()
+            self.selected_sync_targets = targets
+            self.selected_sync_categories = selected
+            return await self.async_step_sync_confirm()
+
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id="sync",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_SYNC_SELECT_ALL, default=False
+                    ): selector.BooleanSelector(),
+                    vol.Required("target_entries", default=[]): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            multiple=True,
+                            options=[
+                                {"value": e.entry_id, "label": e.title}
+                                for e in other_entries
+                            ],
+                        )
+                    ),
+                    vol.Required(
+                        "sync_categories", default=[]
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            multiple=True,
+                            options=available,
+                            translation_key="sync_categories",
+                        )
+                    ),
+                }
+            ),
+        )
+
+    async def async_step_sync_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Confirm and execute sync to selected covers."""
+        if user_input is not None:
+            if user_input.get("confirm"):
+                # Save current cover's settings first so sync copies the latest
+                # values. Through the seam: a pending cover-type switch is not
+                # one of this cover's settings until Save & Close writes it.
+                self._persist_entry()
+                shared_options = _extract_shared_options(
+                    self._config_entry, categories=self.selected_sync_categories
+                )
+                for entry_id in self.selected_sync_targets:
+                    target = self.hass.config_entries.async_get_entry(entry_id)
+                    if target:
+                        merged_options = clamp_blind_spots_to_fov(
+                            {**target.options, **shared_options}
+                        )
+                        self.hass.config_entries.async_update_entry(
+                            target,
+                            options=merged_options,
+                        )
+            return await self.async_step_init()
+
+        # Build summary of selected targets
+        target_titles = []
+        for entry_id in self.selected_sync_targets:
+            target = self.hass.config_entries.async_get_entry(entry_id)
+            if target:
+                target_titles.append(f"• {target.title}")
+
+        # Build summary of selected categories using friendly names
+        _category_labels = {
+            "geometry": "Window Dimensions",
+            "sun_tracking": "Sun Tracking",
+            "blind_spot": "Blind Spot Configuration",
+            "position": "Position Settings",
+            "interp": "Position Calibration",
+            "automation": "Schedule & Timing",
+            "manual_override": "Manual Override",
+            "custom_position_values": "Custom Positions — Values & Priorities",
+            "custom_position_sensors": "Custom Positions — Trigger Sensors",
+            "motion_override_values": "Occupancy Detection — Timeout",
+            "motion_override_sensors": "Occupancy Detection — Sensors",
+            "weather_override_values": "Weather Override — Thresholds & Position",
+            "weather_override_sensors": "Weather Override — Sensors",
+            "light_cloud_values": "Light & Cloud — Thresholds",
+            "light_cloud_sensors": "Light & Cloud — Sensors",
+            "temperature_climate_values": "Climate Mode — Thresholds & Settings",
+            "temperature_climate_sensors": "Climate Mode — Room Sensors",
+            "glare_zones": "Glare Zones",
+            # Legacy aliases (kept for back-compat; not shown in UI)
+            "force_override": "Force Override",
+            "custom_position": "Custom Positions",
+            "motion_override": "Occupancy Detection",
+            "weather_override": "Weather Override",
+            "light_cloud": "Light Sensors & Cloud Suppression",
+            "temperature_climate": "Temperature & Climate Mode",
+        }
+        category_lines = [
+            f"• {_category_labels.get(c, c)}" for c in self.selected_sync_categories
+        ]
+
+        return self.async_show_form(  # type: ignore[return-value]
+            step_id="sync_confirm",
+            data_schema=vol.Schema(
+                {vol.Required("confirm", default=False): selector.BooleanSelector()}
+            ),
+            description_placeholders={
+                "source_name": self._config_entry.title,
+                "entries_summary": "\n".join(target_titles) or "(none selected)",
+                "categories_summary": "\n".join(category_lines) or "(none selected)",
+            },
+        )
+
+    # ---- Calibration ---------------------------------------------------- #
+    #
+    # Two unrelated things are called "calibration" in this integration: the
+    # position INTERPOLATION curve (``interp``) and TRAVEL TIME. Grouping them
+    # under one parent is what lets each keep a name that says which it is.
+
+    def _coordinator(self):
+        """Return this entry's live coordinator, or None if it is not loaded."""
+        return getattr(self._config_entry, "runtime_data", None)
+
+    def _travel_table(self) -> dict[str, dict[str, Any]]:
+        """Return the LIVE travel-time table with this session's edits on top.
+
+        Deliberately not ``self.options``. That is a snapshot taken when the flow
+        opened, and this is the one key written from outside the flow: a
+        measurement run started from the Travel Time menu keeps going after the
+        user navigates on and writes its results straight to the config entry.
+        Reading the snapshot would show every freshly-measured cover as "not
+        calibrated" on the very page that just ran the measurement, and would
+        pre-fill the manual form with stale numbers.
+
+        One definition serving four callers — the status block, the manual
+        form's suggested values, the manual write, and the save-time merge — so
+        the live-plus-edits rule cannot be applied inconsistently between them.
+        """
+        live = dict(self._config_entry.options.get(CONF_TRAVEL_TIME_CALIBRATION) or {})
+        session = self.options.get(CONF_TRAVEL_TIME_CALIBRATION) or {}
+        for entity_id in self._travel_time_edited:
+            if entity_id in session:
+                live[entity_id] = session[entity_id]
+            else:
+                live.pop(entity_id, None)
+        return live
+
+    def _travel_time_status(self) -> str:
+        """Markdown status block shown on the Travel Time menu.
+
+        Re-rendered every time the menu is entered, which is how a run in
+        progress is watched: back out and back in to see it advance.
+        """
+        entities = list(self.options.get(CONF_ENTITIES) or [])
+        table = self._travel_table()
+        coordinator = self._coordinator()
+        lines: list[str] = []
+        if coordinator is not None:
+            calibrator = coordinator.travel_calibration
+            lines.append(f"State: **{calibrator.state}**")
+            if calibrator.active_entity:
+                lines.append(f"Measuring: `{calibrator.active_entity}`")
+        for entity_id in entities:
+            row = table.get(entity_id)
+            label = _travel_entity_label(self.hass, entity_id)
+            if row:
+                lines.append(
+                    f"- {label}: **{row.get('full_travel_seconds')}s** "
+                    f"({row.get('source')})"
+                )
+            elif is_assumed_state(self.hass.states.get(entity_id)):
+                lines.append(f"- {label}: ⚠️ not measurable — enter a time manually")
+            else:
+                lines.append(f"- {label}: not calibrated")
+        return "\n".join(lines) or "(no covers configured)"
+
+    async def async_step_calibration(self, user_input: dict[str, Any] | None = None):
+        """Group the position-curve and travel-time calibration surfaces."""
+        menu_options = ["travel_time"]
+        # Same condition the top-level menu used before this step existed: the
+        # interpolation page is only meaningful once the feature is switched on.
+        if self.options.get(CONF_INTERP):
+            menu_options.append("interp")
+        menu_options.append("init")
+        return self.async_show_menu(step_id="calibration", menu_options=menu_options)
+
+    async def async_step_travel_time(self, user_input: dict[str, Any] | None = None):
+        """Travel-time calibration: measure, enter by hand, or clear."""
+        coordinator = self._coordinator()
+        running = coordinator is not None and coordinator.travel_calibration.is_running
+        # Never offer both: starting a second run is a no-op, and hiding the
+        # start entry is clearer than letting it be pressed and do nothing.
+        menu_options = ["travel_time_cancel"] if running else ["travel_time_run"]
+        menu_options += ["travel_time_manual", "travel_time_reset", "calibration"]
+        return self.async_show_menu(
+            step_id="travel_time",
+            menu_options=menu_options,
+            description_placeholders={"travel_time_status": self._travel_time_status()},
+        )
+
+    async def async_step_travel_time_run(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Start a measurement run in the background and return to the menu.
+
+        Fire-and-forget on purpose. The run drives every cover stop-to-stop and
+        takes minutes; awaiting it here would hold the config-flow dialog open
+        for the duration. Returning to the menu (rather than aborting the flow)
+        also preserves any edits made earlier in this session.
+
+        Scoped to the config entry, not to ``hass``: the run outlives this
+        dialog, and saving the flow can reload the entry. A bare
+        ``hass.async_create_task`` would survive that reload and keep driving
+        covers through the torn-down coordinator's command service — writing
+        options from a stale object while the new coordinator is already
+        automating. Entry-scoped, the reload cancels it.
+        """
+        coordinator = self._coordinator()
+        if coordinator is not None:
+            self._config_entry.async_create_background_task(
+                self.hass,
+                coordinator.async_run_travel_calibration(),
+                name=f"acp_travel_calibration_{self._config_entry.entry_id}",
+            )
+        return await self.async_step_travel_time()
+
+    async def async_step_travel_time_cancel(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Stop an in-flight run and send the covers back where they started."""
+        coordinator = self._coordinator()
+        if coordinator is not None:
+            coordinator.async_cancel_travel_calibration(restore=True)
+        return await self.async_step_travel_time()
+
+    async def async_step_travel_time_reset(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Clear every stored travel time for this instance."""
+        # Mark every affected entity edited so the save-time merge treats this
+        # session as authoritative for them — otherwise the live table would be
+        # merged straight back over the clear.
+        self._travel_time_edited.update(self._travel_table())
+        self._travel_time_edited.update(self.options.get(CONF_ENTITIES) or [])
+        self.options[CONF_TRAVEL_TIME_CALIBRATION] = {}
+        return await self.async_step_travel_time()
+
+    async def async_step_travel_time_manual(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Type a travel time per cover — the only path for unmeasurable covers.
+
+        ``0`` clears an entry. That is why the field is a BOX rather than the
+        SLIDER the guidelines prescribe for optional numerics: the rule exists
+        because BOX turns a cleared field into ``0``, and here ``0`` is *defined*
+        as cleared, so the ambiguity it guards against cannot arise — while a
+        0–300 s slider would make entering a value like 23.5 needlessly fiddly.
+        """
+        entities = list(self.options.get(CONF_ENTITIES) or [])
+        if user_input is not None:
+            # 0 clears; anything between 0 and the floor is a typo, not a
+            # setting. Rejecting rather than clamping keeps the number the user
+            # sees the number that was stored, and holds the promise
+            # TRAVEL_TIME_MIN_SECONDS makes: a value the UI accepts is never one
+            # the calibrator would have discarded as implausible.
+            too_short = [
+                eid
+                for eid in entities
+                if user_input.get(eid)
+                and float(user_input[eid]) < TRAVEL_TIME_MIN_SECONDS
+            ]
+            if too_short:
+                return self.async_show_form(
+                    step_id="travel_time_manual",
+                    data_schema=self.add_suggested_values_to_schema(
+                        _travel_time_manual_schema(entities), user_input
+                    ),
+                    errors={"base": "travel_time_too_short"},
+                    description_placeholders={
+                        "cover_list": self._travel_time_status(),
+                        "min_seconds": f"{TRAVEL_TIME_MIN_SECONDS:g}",
+                    },
+                )
+            table = self._travel_table()
+            for entity_id in entities:
+                submitted = user_input.get(entity_id)
+                submitted = float(submitted) if submitted else None
+                stored = (table.get(entity_id) or {}).get("full_travel_seconds")
+                stored = float(stored) if stored else None
+                # Only a value the user actually CHANGED counts as an edit. The
+                # form carries one field per cover and submits all of them, so
+                # marking every field edited would make opening this page to set
+                # one cover claim authority over the rest — and the save-time
+                # merge would then overwrite a concurrent measurement of a cover
+                # the user never touched, collapsing a per-entity merge into an
+                # all-or-nothing one.
+                if submitted == stored:
+                    continue
+                self._travel_time_edited.add(entity_id)
+                if submitted is None:
+                    table.pop(entity_id, None)
+                    continue
+                table[entity_id] = TravelCalibration(
+                    full_travel_seconds=submitted,
+                    calibrated_at=dt_util.utcnow().isoformat(),
+                    source=TRAVEL_CALIBRATION_SOURCE_MANUAL,
+                ).to_dict()
+            self.options[CONF_TRAVEL_TIME_CALIBRATION] = table
+            return await self.async_step_travel_time()
+
+        table = self._travel_table()
+        suggested = {
+            entity_id: (table.get(entity_id) or {}).get("full_travel_seconds") or 0
+            for entity_id in entities
+        }
+        return self.async_show_form(
+            step_id="travel_time_manual",
+            data_schema=self.add_suggested_values_to_schema(
+                _travel_time_manual_schema(entities), suggested
+            ),
+            description_placeholders={
+                "cover_list": self._travel_time_status(),
+                "min_seconds": f"{TRAVEL_TIME_MIN_SECONDS:g}",
+            },
+        )
+
+    async def async_step_interp(self, user_input: dict[str, Any] | None = None):
+        """Show interpolation options."""
+        if user_input is not None:
+            if len(user_input[CONF_INTERP_LIST]) != len(
+                user_input[CONF_INTERP_LIST_NEW]
+            ):
+                return self.async_show_form(
+                    step_id="interp",
+                    data_schema=self.add_suggested_values_to_schema(
+                        INTERPOLATION_OPTIONS, user_input
+                    ),
+                    errors={
+                        CONF_INTERP_LIST_NEW: "Must have same length as 'Calculated positions (input)' list"
+                    },
+                    description_placeholders={
+                        "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Position"
+                    },
+                )
+            self.optional_entities(_INTERP_OPTIONAL_KEYS, user_input)
+            self.options.update(user_input)
+            return await self.async_step_calibration()
+        return self.async_show_form(
+            step_id="interp",
+            data_schema=self.add_suggested_values_to_schema(
+                INTERPOLATION_OPTIONS, user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Position"
+            },
+        )
+
+    def _light_cloud_include_tilt(self) -> bool:
+        """Whether this cover type carries a cloudy slat-angle slider (#175)."""
+        return self._section_adds_extra_fields(config_fields.SECTION_LIGHT_CLOUD)
+
+    async def async_step_light_cloud(self, user_input: dict[str, Any] | None = None):
+        """Manage light sensors, weather conditions, and cloud suppression."""
+        suggested = _stringify_templatable(user_input or self.options)
+        include_tilt = self._light_cloud_include_tilt()
+        if user_input is not None:
+            # The cloudy slat angle joins the optional-keys list only when it
+            # was rendered — otherwise a single-axis cover would collect a
+            # stray null for a field its form never showed (#175). Without it
+            # in the list a cleared slider silently keeps its previous value,
+            # which is the #323/#377 defect class.
+            optional_keys = (
+                [*_LIGHT_CLOUD_OPTIONAL_KEYS, CONF_CLOUDY_TILT]
+                if include_tilt
+                else _LIGHT_CLOUD_OPTIONAL_KEYS
+            )
+            self.optional_entities(optional_keys, user_input)
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="light_cloud",
+            data_schema=self.add_suggested_values_to_schema(
+                light_cloud_schema(self.hass, suggested, include_tilt=include_tilt),
+                suggested,
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/How-It-Decides",
+                "profile_inherit": self._profile_inherit_note(LIGHT_CLOUD_SENSOR_KEYS),
+            },
+        )
+
+    async def async_step_temperature_climate(
+        self, user_input: dict[str, Any] | None = None
+    ):
+        """Manage temperature-based climate mode."""
+        suggested = _stringify_templatable(user_input or self.options)
+        if user_input is not None:
+            self.optional_entities(_TEMPERATURE_CLIMATE_OPTIONAL_KEYS, user_input)
+            if user_input.get(CONF_CLIMATE_MODE) and not user_input.get(
+                CONF_TEMP_ENTITY
+            ):
+                return self.async_show_form(
+                    step_id="temperature_climate",
+                    data_schema=self.add_suggested_values_to_schema(
+                        temperature_climate_schema(self.hass, suggested), suggested
+                    ),
+                    errors={CONF_TEMP_ENTITY: "Required when climate mode is enabled"},
+                    description_placeholders={
+                        "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Climate-Mode",
+                        "profile_inherit": self._profile_inherit_note(
+                            _TEMPERATURE_PROFILE_KEYS
+                        ),
+                        "forecast_notice": _forecast_temp_source_notice(
+                            self.options.get(
+                                CONF_OUTSIDE_TEMP_SOURCE, DEFAULT_OUTSIDE_TEMP_SOURCE
+                            ),
+                            self.options.get(CONF_WEATHER_ENTITY),
+                        ),
+                    },
+                )
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="temperature_climate",
+            data_schema=self.add_suggested_values_to_schema(
+                temperature_climate_schema(self.hass, suggested), suggested
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Climate-Mode",
+                "profile_inherit": self._profile_inherit_note(
+                    _TEMPERATURE_PROFILE_KEYS
+                ),
+                "forecast_notice": _forecast_temp_source_notice(
+                    self.options.get(
+                        CONF_OUTSIDE_TEMP_SOURCE, DEFAULT_OUTSIDE_TEMP_SOURCE
+                    ),
+                    self.options.get(CONF_WEATHER_ENTITY),
+                ),
+            },
+        )
+
+    async def async_step_weather(self, user_input: dict[str, Any] | None = None):
+        """Manage weather conditions."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="weather",
+            data_schema=self.add_suggested_values_to_schema(
+                WEATHER_OPTIONS, user_input or self.options
+            ),
+            description_placeholders={
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Climate-Mode"
+            },
+        )
+
+    async def async_step_summary(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Show a read-only summary of the current configuration."""
+        if user_input is not None:
+            return await self.async_step_init()
+        from .troubleshoot_i18n import load_troubleshoot_labels
+
+        sun_times = await _compute_todays_sun_times(self.hass, self.options)
+        _language = _resolve_summary_language(self.hass, self.context)
+        labels = await _load_summary_labels(self.hass, _language)
+        troubleshoot_labels = await self.hass.async_add_executor_job(
+            load_troubleshoot_labels, _language
+        )
+        summary_text = _build_config_summary(
+            self.options,
+            self.sensor_type,
+            self.hass,
+            sun_times,
+            labels=labels,
+            troubleshoot_labels=troubleshoot_labels,
+        )
+        return self.async_show_form(
+            step_id="summary",
+            data_schema=vol.Schema({}),
+            description_placeholders={"summary": summary_text},
+        )
+
+    async def async_step_debug(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage Debug & Diagnostics options."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self.async_step_init()
+        caps_text = _build_cover_capabilities_text(
+            self.options, self.sensor_type, self.hass
+        )
+        return self.async_show_form(
+            step_id="debug",
+            data_schema=self.add_suggested_values_to_schema(
+                DEBUG_SCHEMA, user_input or self.options
+            ),
+            description_placeholders={
+                "cover_capabilities": caps_text,
+                "learn_more": "https://github.com/jrhubott/adaptive-cover-pro/wiki/Configuration-Debug-Diagnostics",
+            },
+        )
+
+    async def async_step_done(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Save and exit the options flow."""
+        return await self._update_options()
+
+    def _merge_travel_time(self) -> None:
+        """Rebase the travel-time table on the live entry before saving.
+
+        ``self.options`` is a snapshot taken when this flow opened, and
+        ``async_create_entry`` writes it back wholesale. The travel-time table is
+        the one key that is also written from OUTSIDE the flow: a calibration run
+        started from the Travel Time menu keeps going while the user carries on
+        editing, and finishes by writing its results straight to the entry.
+        Saving the snapshot as-is would silently erase everything it measured.
+
+        ``_travel_table`` already resolves live-plus-this-session's-edits, per
+        entity — a manual time typed for cover A and a measurement taken for
+        cover B in the same window both survive. All that is left here is to drop
+        rows for covers the instance no longer controls, the same prune the
+        calibrator applies, done here too so removing a cover cleans up even
+        without a run.
+        """
+        entities = set(self.options.get(CONF_ENTITIES) or [])
+        merged = {
+            eid: row for eid, row in self._travel_table().items() if eid in entities
+        }
+        if merged:
+            self.options[CONF_TRAVEL_TIME_CALIBRATION] = merged
+        else:
+            self.options.pop(CONF_TRAVEL_TIME_CALIBRATION, None)
+
+    async def _update_options(self) -> FlowResult:
+        """Update config entry options."""
+        self._recompute_profile_overrides()
+        self._propagate_profile_clears()
+        self._merge_travel_time()
+        if self._cover_type_changed:
+            self._persist_entry(commit_cover_type=True)
+        return self.async_create_entry(title="", data=self.options)  # type: ignore[return-value]
+
+    def _persist_entry(self, *, commit_cover_type: bool = False) -> None:
+        """Write this flow's own config entry — the single seam (issue #1132).
+
+        Two kinds of write reach the same config entry, and only one of them
+        may land a cover-type switch:
+
+        * ``commit_cover_type=True`` — Save & Close. ``data`` and ``options`` go
+          out in a single ``async_update_entry`` rather than letting
+          ``OptionsFlowManager.async_finish_flow`` write the options a moment
+          later. Two writes would mean two update-listener runs, and — worse —
+          ``async_schedule_reload`` starts its reload task eagerly, so a reload
+          scheduled here begins unloading before ``async_finish_flow`` gets to
+          write the options (there *is* an await between this step returning and
+          that write). The rebuilt coordinator could then read pre-edit options.
+          One write, one listener run, no ordering to reason about.
+
+          ``_async_update_listener`` diffs options only, so it never reacts to
+          the ``data`` half — but it may well reload for the options half.
+          Asking it first, through the shared predicate, is what keeps this from
+          becoming a second reload stacked on the one the write already causes.
+          "Options changed" is not the question: a delta confined to the
+          runtime-applicable keys is applied in place and never reloads.
+
+        * everything else — a mid-dialog write ("Copy to other covers" saving
+          this cover first, a Building Profile unlink). These leave ``data``
+          alone, so they must also leave behind the option values a pending
+          switch implies; otherwise the entry reloads as the OLD type carrying
+          the NEW type's numbers, and a blind comes back up with a no-sun
+          default of 0 % — fully closed on every fallback. Routing them through
+          here rather than guarding each one is what makes that true of a write
+          site added later, too, and is locked by
+          ``test_options_flow_writes_its_own_entry_through_one_seam``.
+        """
+        if not (commit_cover_type and self._cover_type_changed):
+            self.hass.config_entries.async_update_entry(
+                self._config_entry, options=self._options_without_pending_switch()
+            )
+            return
+
+        # Imported here, not at module scope: ``config_flow`` is loaded by HA's
+        # platform loader, and reaching into the package root at import time is
+        # the one edge that could reintroduce a cycle.
+        from . import options_write_reloads
+
+        reload_needed = not options_write_reloads(self._config_entry, self.options)
+        self.hass.config_entries.async_update_entry(
+            self._config_entry,
+            data={**self._config_entry.data, CONF_SENSOR_TYPE: self.sensor_type},
+            options=dict(self.options),
+        )
+        if reload_needed:
+            self.hass.config_entries.async_schedule_reload(self._config_entry.entry_id)
+
+    def _recompute_profile_overrides(self) -> None:
+        """Refresh the cover's local-override list against its profile on save.
+
+        Single, stateless recompute point (inherit/override model): a shared
+        sensor whose value now equals the profile's drops out of the list; a
+        changed one is recorded. Skipped for unlinked covers / profiles.
+        """
+        profile = profile_for_cover(self.hass, self.options)
+        if profile is None:
+            self.options.pop(CONF_PROFILE_SENSOR_OVERRIDES, None)
+            return
+        overrides = compute_override_keys(self.options, profile.options or {})
+        if overrides:
+            self.options[CONF_PROFILE_SENSOR_OVERRIDES] = overrides
+        else:
+            self.options.pop(CONF_PROFILE_SENSOR_OVERRIDES, None)
+
+    def _propagate_profile_clears(self) -> None:
+        """Push the shared sensors this dialog emptied out to the linked covers.
+
+        Only a Building Profile has linked covers, so this is a no-op for a
+        cover's own options flow. A saved profile carries every shared key with
+        most of them blank (``optional_entities`` writes ``None`` for each field
+        the user did not fill in), so the stored value alone cannot say which
+        one the user just cleared — the set → blank transition between the
+        entry as the dialog opened it and the options about to be written can,
+        and this is the last point where both halves are in hand (issue #1085).
+        ``_async_profile_propagate`` handles the rest of the save: it re-copies
+        the profile's non-empty keys but can never remove one.
+        """
+        propagate_profile_clears(
+            self.hass,
+            self._config_entry,
+            cleared_profile_keys(self._config_entry.options, self.options),
+        )
+
+    def optional_entities(self, keys: list, user_input: dict[str, Any]):
+        """Set value to None if key does not exist."""
+        for key in keys:
+            if key not in user_input:
+                user_input[key] = None

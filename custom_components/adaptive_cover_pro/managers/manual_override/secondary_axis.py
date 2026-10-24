@@ -1,0 +1,413 @@
+"""Secondary-axis manual-override check and the shared threshold formula.
+
+Co-located so the single-source-of-truth threshold helper sits next to both
+of its consumers — the position-delta detector
+(:mod:`.position_delta`) and the secondary-axis check below — without
+creating an import cycle through the manager.
+
+Dispatched-value anchoring rule (issue #1006)
+---------------------------------------------
+The manual-override gate correlates an incoming cover state change with "this
+is ACP's own movement" by comparing the actuator feedback against the value ACP
+last DISPATCHED for that axis — never a mutable per-cycle value that a
+mid-transit handler reevaluation may have changed after the command was sent:
+
+* Position axis — ``our_state`` derives from the recorded command target
+  (``CoverCommandService.get_target``), written only by the dispatch chokepoint
+  ``_prepare_service_call``. A reevaluation that sends no replacement command
+  leaves it intact.
+* Secondary (tilt/blend) axis — ``SecondaryAxisCheck.expected`` is anchored to
+  the last dispatched value via the single shared rule
+  :func:`resolve_dispatched_secondary_expected`. Every multi-axis policy
+  (venetian tilt, day/night-shade blend — both driving the same
+  ``DualAxisSequencer`` and its ``last_tilt_target`` store) delegates to that
+  one helper rather than mirroring the rule. When no value has been dispatched
+  the helper returns ``None`` and the check yields NO delta-based manual
+  detection on this axis — ACP has no commanded reference to police, so a
+  reevaluated ``result.tilt`` must not stand in for one.
+
+Both read sites express the same concept; the shared helper keeps them in sync
+so an in-flight movement whose expected target/tilt was recomputed mid-transit
+is not orphaned and misclassified as a manual move.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+from collections.abc import Callable
+from typing import Any
+
+from ...const import POSITION_TOLERANCE_PERCENT
+from ...position_utils import flip_if
+
+
+def resolve_dispatched_secondary_expected(
+    sequencer: Any, entity_id: str | None, result: Any
+) -> int | None:
+    """Resolve a secondary-axis ``expected`` anchored to ACP's last DISPATCHED value.
+
+    Single source of the issue #1006 anchoring rule, shared by every multi-axis
+    policy's ``secondary_axis_check`` (venetian tilt, day/night-shade blend) so
+    the rule lives in exactly one place. Returns:
+
+    * the value ACP last DISPATCHED for this entity
+      (``sequencer.last_tilt_target(entity_id)``) — the value the actuator is
+      actually travelling toward — when ACP has a per-entity command context and
+      has dispatched an independent secondary-axis command;
+    * ``None`` when ACP has a per-entity context but NO dispatched value is
+      stored (suppress mode never sent an independent tilt, an HA restart, a
+      drift-verify pop, or an Auto-Control off→on ``clear_tilt_targets``). ACP
+      has no commanded reference to police, so the caller must build a check that
+      yields NO independent manual-detection on this axis rather than falling
+      back to the mutable per-cycle ``result.tilt`` — a mid-transit handler
+      reevaluation can change ``result.tilt`` without sending a replacement
+      command, and comparing the actuator's end-of-travel arrival against that
+      recomputed value is exactly the #1006 miscorrelation;
+    * ``result.tilt`` only when there is no per-entity context at all
+      (``entity_id`` or ``sequencer`` is ``None`` — the direct-delta unit paths
+      that predate the anchor and hand-feed the expected value).
+
+    This mirrors the position axis, whose ``our_state`` derives from the recorded
+    command target written only by the dispatch chokepoint — never re-anchored by
+    a reevaluation that sends nothing.
+    """
+    if entity_id is not None and sequencer is not None:
+        return sequencer.last_tilt_target(entity_id)
+    return result.tilt
+
+
+def resolve_single_axis_suppression(
+    sequencer: Any,
+    entity_id: str,
+    delta: float,
+    primary_axis_suppression: Callable[[str, float], bool],
+) -> bool:
+    """Compose the secondary axis' own suppression verdict from its two windows.
+
+    Single source of the issue #1329/#1333 composition rule, shared by every
+    multi-axis policy's ``is_in_tilt_suppression`` — venetian's tilt axis and
+    day/night-shade's blend axis, the two policies that drive the same
+    ``DualAxisSequencer``. Extracted for exactly the reason
+    :func:`resolve_dispatched_secondary_expected` (issue #1006) was, in this
+    same module: the formula is cover-type-agnostic (it operates purely on the
+    shared sequencer plus an injected per-policy callable), so mirroring it in
+    two policies would let the two drift. The suppression *decision* stays a
+    policy method on each subclass; only this boolean composition lives here.
+
+    ORs two windows, in this order:
+
+    * ``primary_axis_suppression(entity_id, delta)`` — the caller's own
+      position-anchored window (back-rotate + command grace), re-evaluated so
+      the composed predicate is correct when called directly. In the one
+      production call path this disjunct is always False by the time it runs:
+      ``SecondaryAxisCheck.evaluate`` already tried the identical callable as
+      ``suppression=`` and falls through to ``single_axis_suppression`` only
+      when that returned False.
+    * ``sequencer.is_in_tilt_publish_lag(entity_id, delta)`` — the SEPARATE
+      window anchored to ACP's own last secondary-axis dispatch
+      (``_tilt_sent_at``) and delta-capped at ``VENETIAN_TILT_VERIFY_TOLERANCE``.
+      This is the term that actually guards a routine secondary-axis-only send
+      once the position window is closed (or was never opened at all).
+
+    Returns ``False`` with no sequencer attached — the base
+    ``CoverTypePolicy.is_in_tilt_suppression`` contract for a policy that has
+    no dual-axis machinery wired.
+
+    NON-CONSUMING CONTRACT: this result is for ``single_axis_suppression=``
+    wiring ONLY; never wire it to ``suppression=``; a True result must never
+    produce ``consumed=True``. The publish-lag term is anchored to THIS axis'
+    own dispatch alone, which does not command the other axis, so consuming on
+    it would blind the other axis' independent check and reintroduce the
+    cross-axis blinding issue #930 (finding #2) fixed.
+    """
+    if sequencer is None:
+        return False
+    return primary_axis_suppression(
+        entity_id, delta
+    ) or sequencer.is_in_tilt_publish_lag(entity_id, delta)
+
+
+def effective_manual_threshold(user_threshold: int | None) -> int:
+    """Resolve the effective manual-override threshold for a delta comparison.
+
+    Floored at ``POSITION_TOLERANCE_PERCENT`` so motor rounding and reporting
+    imprecision can't trip false positives even when the user configures
+    ``manual_threshold = 0`` or leaves it unset. The floor reads the CONSTANT and
+    not ``CONF_POSITION_TOLERANCE``, deliberately: a user who widens the arrival
+    tolerance to 15 must not thereby have a genuine 14% nudge swallowed.
+
+    Both the primary-axis check in ``PositionDeltaDetector.detect`` and the
+    secondary-axis check in ``SecondaryAxisCheck.evaluate`` delegate here; keeping
+    the two in sync via a single helper prevents the formula from drifting (e.g.
+    the day ``POSITION_TOLERANCE_PERCENT`` changes).
+
+    Both callers compare with STRICT ``>``, and that is part of the contract
+    rather than an accident of each call site (issue #1273). Because the floor is
+    the same constant ``CoverCommandService._position_matches`` tests with ``<=``
+    to decide the cover ARRIVED, a delta equal to the threshold has to fall on
+    the not-a-touch side on every axis; the secondary axis used ``>=`` and so
+    disagreed with the primary one on exactly that value.
+    """
+    return max(
+        user_threshold if user_threshold is not None else 0, POSITION_TOLERANCE_PERCENT
+    )
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SecondaryAxisResult:
+    """Outcome of evaluating a non-primary axis for manual-override drift.
+
+    ``consumed`` short-circuits the position-axis check (caller returns
+    immediately). ``is_manual`` arms the override via ``set_last_updated``.
+    ``event_name`` (with ``event_kwargs``) appends a record to the diagnostics
+    ring buffer.
+    """
+
+    consumed: bool = False
+    is_manual: bool = False
+    event_name: str | None = None
+    event_kwargs: dict[str, Any] | None = None
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class SecondaryAxisCheck:
+    """Per-cover-type plug for manual-override evaluation on a secondary axis.
+
+    Built once per cover-state-change cycle by ``CoverTypePolicy.secondary_axis_check``.
+    Encapsulates the expected value (e.g. tilt resolved by the engine), the
+    HA state attribute to read, an optional suppression callback (e.g.
+    venetian's motor back-rotate window), and a label that flavours the
+    diagnostic event names. The engine calls ``evaluate`` once and dispatches
+    on the returned ``SecondaryAxisResult`` — it stays ignorant of which axis
+    is being checked.
+
+    ``excursion_match`` (issue #927) is an optional axis-agnostic callback that
+    receives the raw PUBLISHED value (not a delta) and reports whether it
+    matches an integration-issued excursion the axis owner recorded (e.g.
+    venetian's drift-reset endpoint publish). It is consulted BEFORE
+    ``suppression`` so a matching publish is recognised whether or not a
+    time-based grace window happens to be open at the same instant. The record
+    is trajectory-tracked, not one-shot-popped: an endpoint publish marks it and
+    a target-return publish consumes it (#930).
+
+    ``single_axis_suppression`` (issue #1329) is an optional, narrower
+    suppression callback consulted only as a last resort, right before
+    ``evaluate`` would otherwise declare a manual move on THIS axis alone.
+    Unlike ``suppression`` — whose True result implies the OTHER axis may be
+    co-drifting from the same physical command and therefore consumes
+    (blinds) both axes' checks for the cycle — a True result here suppresses
+    only this axis's own delta verdict and does NOT consume: the caller's
+    independent axis check still runs afterward. This matters for a
+    suppression source anchored to THIS axis's own dispatch alone (venetian's
+    tilt-only publish-lag window, and day/night-shade's blend-only one —
+    issue #1333 — both composed by :func:`resolve_single_axis_suppression`):
+    such a send does not *command* the other axis, though mechanical
+    back-drive can still move it slightly, so folding this source into
+    ``suppression`` would blind the other axis's check on that same publish
+    instead of letting it evaluate a back-driven value on its own merits —
+    reintroducing the cross-axis blinding issue #930 (finding #2) fixed.
+    """
+
+    # ``None`` (issue #1006) means ACP has no DISPATCHED value to police on this
+    # axis (empty anchor): the value-based ``excursion_match`` still runs, but no
+    # delta-based manual detection may fire — a mid-transit reevaluation must not
+    # be able to assert an expectation ACP never commanded.
+    expected: int | None
+    attribute: str  # e.g. "current_tilt_position"
+    label: str  # e.g. "tilt" — flavours the rejection-reason text
+    suppression: Callable[[str, float], bool] | None = None
+    # Value-based (not delta-based) predicate over the raw published value;
+    # matches an integration-issued excursion so its stale late publishes aren't
+    # misread as a manual move. Trajectory advanced (trajectory-tracked, not
+    # one-shot-popped): endpoint publish marks, target-return consumes
+    # (issue #927/#930).
+    excursion_match: Callable[[str, float], bool] | None = None
+    # Non-consuming counterpart to ``suppression`` — see the class docstring
+    # (issues #1329 venetian tilt / #1333 day/night-shade blend, both wiring
+    # their policy's ``is_in_tilt_suppression`` here). Checked only immediately
+    # before the numeric manual verdict would otherwise fire.
+    single_axis_suppression: Callable[[str, float], bool] | None = None
+    # AUTHORITATIVE note on the wire/logical mismatch (issue #1227) — callers
+    # (``VenetianPolicy``/``DayNightShadePolicy.secondary_axis_check``) should
+    # point back here rather than re-deriving this explanation.
+    #
+    # Whether the reported value needs a frame flip before the delta
+    # comparison. ``expected`` is the LOGICAL dispatched value
+    # (``last_tilt_target``), but the actuator publishes the WIRE value — with
+    # ``inverse_tilt`` these differ by ``100 - x``, so an un-flipped
+    # ``abs(expected - new_value)`` reads a fully-verified tilt as a
+    # ~``|2·x-100|`` manual move. ``flip_if`` (this module's import from
+    # ``position_utils``, the project's single source for this conditional —
+    # issues #1036/#1042) is its own inverse, so the same flag maps the
+    # reported wire value back to logical. Callers derive the flag from
+    # ``DualAxisSequencer.tilt_inverted``, a sibling of the config-level
+    # ``cover_types.base.axis_inverted`` predicate (#1028) — same question,
+    # answered from the sequencer's own dispatch-time inversion callable
+    # instead of re-reading options. Defaults to ``False`` (identity) for
+    # axes/covers without inversion. The excursion/suppression callbacks keep
+    # receiving the RAW value — they normalise internally (venetian's
+    # ``_publish_matches`` applies ``_to_wire``).
+    inverted: bool = False
+
+    def consume_excursion(self, entity_id: str, new_state) -> None:
+        """Advance the excursion trajectory state under another gate.
+
+        When another gate (e.g. command grace or wait_for_target) already
+        suppressed this update, feed the published value to ``excursion_match``
+        anyway for its side effects so the excursion trajectory keeps advancing
+        while ``evaluate`` is short-circuited: an endpoint publish marks the
+        record, a target-return publish consumes it (issue #927/#930).
+        Intermediate and endpoint publishes do NOT pop the record — only a
+        target-return (or window expiry) does — so it can't linger and later
+        swallow a genuine move to the same value.
+        """
+        if self.excursion_match is None:
+            return
+        new_value = new_state.attributes.get(self.attribute)
+        if new_value is None:
+            return
+        # Side-effect call: advances trajectory state (mark endpoint / consume
+        # on target-return); the boolean return is intentionally discarded.
+        self.excursion_match(entity_id, new_value)
+
+    def evaluate(
+        self,
+        entity_id: str,
+        new_state,
+        manual_threshold: int | None,
+    ) -> SecondaryAxisResult:
+        """Decide what (if anything) the secondary axis tells the manager to do."""
+        new_value = new_state.attributes.get(self.attribute)
+        if new_value is None:
+            return SecondaryAxisResult()
+
+        effective_threshold = effective_manual_threshold(manual_threshold)
+
+        # Normalise the reported WIRE value back into ``expected``'s LOGICAL
+        # space up front (see the ``inverted`` field for why) — identity when
+        # False. Computed before the excursion branch below so EVERY
+        # ``new_position`` this method reports (both branches of
+        # ``manual_override_rejected_tilt_suppression`` and
+        # ``manual_override_set``) is consistently LOGICAL, matching every
+        # other tilt diagnostic on the ``event_timeline``
+        # (``tilt_command_sent``/``tilt_command_verified``/``tilt_command_drift``
+        # all report the logical value; issue #1227 PR-3). The
+        # excursion/suppression MATCH calls below keep using the RAW
+        # ``new_value`` — only the diagnostic payload is normalised here.
+        reported = flip_if(new_value, inverted=self.inverted)
+
+        # Issue #927: consult the value-based excursion predicate FIRST, before
+        # the delta-based suppression grace check. A drift-reset publish must be
+        # recognised and its trajectory state advanced (endpoint marked /
+        # target-return consumed) even when the command-grace window is
+        # simultaneously open — otherwise the grace term short-circuits, the
+        # record lingers the full publish-lag window, and a genuine later move to
+        # the endpoint value gets swallowed. This matches on the raw published
+        # value, so a user move to the mirror value (same delta, different value)
+        # is not swallowed.
+        if self.excursion_match is not None and self.excursion_match(
+            entity_id, new_value
+        ):
+            return SecondaryAxisResult(
+                consumed=True,
+                event_name="manual_override_rejected_tilt_suppression",
+                event_kwargs={
+                    "our_state": self.expected,
+                    "new_position": reported,
+                    "effective_threshold": effective_threshold,
+                    "reason": (
+                        # Two numbers for one publish (issue #1227): ``reported``
+                        # is the LOGICAL value ``new_position`` above also
+                        # carries; ``new_value`` is the RAW wire reading that
+                        # actually matched the excursion trajectory (excursion
+                        # matching is wire-space by design — see the class
+                        # docstring). Naming both avoids an unlabelled pair that
+                        # reads as two different publishes on an inverse install.
+                        f"{self.label} value {reported:.0f}% (wire {new_value:.0f}%) "
+                        "lies on an ACP drift-reset excursion trajectory; "
+                        "suppressing both tilt and position checks"
+                    ),
+                },
+            )
+
+        # Issue #1006: with no DISPATCHED anchor there is no commanded value to
+        # police on this axis. The value-based excursion check above has already
+        # run (so #927 suppression is unaffected); skip all delta-based detection
+        # so an in-flight movement whose expected value was recomputed mid-transit
+        # (and never re-dispatched) cannot be misread as a manual move. The
+        # position axis, which carries its own recorded target, still runs.
+        if self.expected is None:
+            return SecondaryAxisResult()
+
+        delta = abs(self.expected - reported)
+
+        # Check suppression BEFORE the on-target short-circuit. When the motor
+        # back-drives the position axis during tilt settling, tilt may arrive
+        # exactly on target while the position axis still shows back-drive drift.
+        # Returning consumed=False here would let the position-axis check run and
+        # falsely trip manual override on that drift.
+        if self.suppression is not None and self.suppression(entity_id, delta):
+            return SecondaryAxisResult(
+                consumed=True,
+                event_name="manual_override_rejected_tilt_suppression",
+                event_kwargs={
+                    "our_state": self.expected,
+                    "new_position": reported,
+                    "effective_threshold": effective_threshold,
+                    "reason": (
+                        f"{self.label} delta {delta:.1f}% within venetian "
+                        "back-rotate window; suppressing both tilt and position checks"
+                    ),
+                },
+            )
+
+        if reported == self.expected:
+            return SecondaryAxisResult()
+
+        # Strictly greater, matching the primary axis (issue #1273). The
+        # threshold is floored at ``POSITION_TOLERANCE_PERCENT``, the same
+        # constant ``CoverCommandService._position_matches`` compares with
+        # ``<=`` to decide the cover ARRIVED — so a delta equal to the threshold
+        # must not simultaneously read as a user touch. This axis used ``>=``,
+        # which made the two axes return opposite verdicts on that one value.
+        if delta > effective_threshold:
+            # Issue #1329: a narrower, non-consuming fallback checked only
+            # right before declaring this axis manual. Unlike ``suppression``
+            # above, a True result here does NOT imply the other axis is
+            # co-drifting (e.g. venetian's tilt-only publish-lag window never
+            # touches the position axis at all) — consumed stays False so the
+            # caller's independent axis check still runs this cycle (#930
+            # finding #2: a genuine move on the OTHER axis must still trip).
+            if (
+                self.single_axis_suppression is not None
+                and self.single_axis_suppression(entity_id, delta)
+            ):
+                return SecondaryAxisResult(
+                    event_name="manual_override_rejected_tilt_suppression",
+                    event_kwargs={
+                        "our_state": self.expected,
+                        "new_position": reported,
+                        "effective_threshold": effective_threshold,
+                        "reason": (
+                            f"{self.label} delta {delta:.1f}% within venetian "
+                            "tilt-only publish-lag window; suppressing tilt check only"
+                        ),
+                    },
+                )
+            return SecondaryAxisResult(
+                consumed=True,
+                is_manual=True,
+                event_name="manual_override_set",
+                event_kwargs={
+                    "our_state": self.expected,
+                    "new_position": reported,
+                    "effective_threshold": effective_threshold,
+                    "reason": (
+                        f"{self.label} delta {delta:.1f}% > threshold {effective_threshold}%"
+                    ),
+                },
+            )
+
+        # Below threshold and not suppressed — preserve the legacy "silent
+        # fall-through" behavior so the position-axis check still runs.
+        return SecondaryAxisResult()

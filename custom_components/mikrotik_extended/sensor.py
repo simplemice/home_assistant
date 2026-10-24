@@ -63,6 +63,7 @@ async def async_setup_entry(
         "MikrotikSensor": MikrotikSensor,
         "MikrotikInterfaceTrafficSensor": MikrotikInterfaceTrafficSensor,
         "MikrotikInterfaceErrorSensor": MikrotikInterfaceErrorSensor,
+        "MikrotikPoeSensor": MikrotikPoeSensor,
         "MikrotikClientTrafficSensor": MikrotikClientTrafficSensor,
         "MikrotikIPAddressSensor": MikrotikIPAddressSensor,
     }
@@ -137,6 +138,26 @@ class MikrotikInterfaceErrorSensor(MikrotikInterfaceTrafficSensor):
     a bad cable or a failing port, which not everybody who wants traffic
     graphs is after, and the other way round.
     """
+
+
+# ---------------------------
+#   MikrotikPoeSensor
+# ---------------------------
+class MikrotikPoeSensor(MikrotikInterfaceTrafficSensor):
+    """What a port measures on its PoE output.
+
+    Its own class because it exists only on a port that measures, whatever the
+    traffic and error options say.
+    """
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the reading, nothing when the port has none.
+
+        A sensor that is kept through a restart exists before its port has
+        been asked, so the field may not be in the store yet.
+        """
+        return self._data.get(self.entity_description.data_attribute)
 
 
 # ---------------------------

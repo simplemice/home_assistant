@@ -1,0 +1,19 @@
+{
+  "domain": "adaptive_cover_pro",
+  "name": "Adaptive Cover Pro",
+  "codeowners": ["@jrhubott"],
+  "config_flow": true,
+  "dependencies": [
+    "sun",
+    "device_tracker",
+    "zone",
+    "climate",
+    "sensor",
+    "weather"
+  ],
+  "documentation": "https://github.com/jrhubott/adaptive-cover-pro",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/jrhubott/adaptive-cover-pro/issues",
+  "requirements": ["astral", "pandas"],
+  "version": "2026.10.0"
+}

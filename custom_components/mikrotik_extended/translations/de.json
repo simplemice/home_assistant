@@ -321,6 +321,9 @@
       "backup": {
         "name": "Configuration backup"
       },
+      "poe_power_cycle": {
+        "name": "PoE-Stromzyklus"
+      },
       "reboot": {
         "name": "Neustart"
       }
@@ -362,6 +365,15 @@
       },
       "system_poe_out_consumption": {
         "name": "PoE-Ausgangsleistung"
+      },
+      "poe_out_power": {
+        "name": "PoE-Ausgangsleistung (Port)"
+      },
+      "poe_out_voltage": {
+        "name": "PoE-Ausgangsspannung"
+      },
+      "poe_out_current": {
+        "name": "PoE-Ausgangsstrom"
       },
       "system_fan1_speed": {
         "name": "Lüfter 1 Drehzahl"

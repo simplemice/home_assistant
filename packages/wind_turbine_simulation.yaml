@@ -61,7 +61,7 @@ template:
     icon: mdi:weather-lightning
     state: >
       {% set cond         = states('weather.pirateweather') | lower %}
-      {% set astro_desc   = states('sensor.astroweather_home_deepsky_forecast_today_description')
+      {% set astro_desc   = states('sensor.astroweather_astroweather_deepsky_forecast_today_description')
       | lower %}
       {% set gust         = states('sensor.pirateweather_wind_gust')               |
       float(0) %}
@@ -74,13 +74,13 @@ template:
       float(0) %}
       {% set li           = states('sensor.astroweather_astroweather_lifted_index')|
       float(99) %}
-      {% set temp         = states('sensor.astroweather_home_2m_temperature')      |
+      {% set temp         = states('sensor.astroweather_astroweather_2m_temperature')      |
       float(30) %}
       {% set dewpoint     = states('sensor.astroweather_astroweather_2m_dewpoint')
       | float(20) %}
-      {% set cloud_low    = states('sensor.astroweather_home_clouds_area_low')     |
+      {% set cloud_low    = states('sensor.astroweather_astroweather_clouds_area_low')     |
       float(0) %}
-      {% set cloud_med    = states('sensor.astroweather_home_clouds_area_medium')  |
+      {% set cloud_med    = states('sensor.astroweather_astroweather_clouds_area_medium')  |
       float(0) %}
       {% set tendency     = states('sensor.pressure_tendency') %}
       {% set hour         = now().hour %}
@@ -138,7 +138,7 @@ template:
     icon: mdi:weather-night
     state: >
       {% set cond         = states('weather.pirateweather') | lower %}
-      {% set astro_desc   = states('sensor.astroweather_home_deepsky_forecast_today_description')
+      {% set astro_desc   = states('sensor.astroweather_astroweather_deepsky_forecast_today_description')
       | lower %}
       {% set gust         = states('sensor.pirateweather_wind_gust')               |
       float(0) %}
@@ -151,13 +151,13 @@ template:
       float(0) %}
       {% set li           = states('sensor.astroweather_astroweather_lifted_index')|
       float(99) %}
-      {% set temp         = states('sensor.astroweather_home_2m_temperature')      |
+      {% set temp         = states('sensor.astroweather_astroweather_2m_temperature')      |
       float(30) %}
       {% set dewpoint     = states('sensor.astroweather_astroweather_2m_dewpoint')
       | float(20) %}
-      {% set cloud_low    = states('sensor.astroweather_home_clouds_area_low')     |
+      {% set cloud_low    = states('sensor.astroweather_astroweather_clouds_area_low')     |
       float(0) %}
-      {% set cloud_med    = states('sensor.astroweather_home_clouds_area_medium')  |
+      {% set cloud_med    = states('sensor.astroweather_astroweather_clouds_area_medium')  |
       float(0) %}
       {% set tendency     = states('sensor.pressure_tendency') %}
       {% set hour         = now().hour %}

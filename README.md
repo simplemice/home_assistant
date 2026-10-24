@@ -136,15 +136,15 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2359 |
-| Number of sensors | 1314 |
-| Current Version | 2026.10.1 |
-| Total Automations | 129 |
+| Number of entities | 2567 |
+| Number of sensors | 1446 |
+| Current Version | 2026.10.2 |
+| Total Automations | 131 |
 | Total Scripts | 44 |
-| Total Lights | 33 |
-| Total Switches | 172 |
+| Total Lights | 36 |
+| Total Switches | 189 |
 | Total Scenes | 6 |
-| Total Players | 15 |
+| Total Players | 22 |
 
 ---
 
@@ -174,24 +174,24 @@ This repository is treated as:
 
 
 ## 🧩 Installed Integrations
+- [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) (v2026.10.0)
 - [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting#readme) (v1.30.1)
-- [AI Memory](https://github.com/Riscue/ha-ai-memory) (v0.3.0)
 - [Alarmo](https://github.com/nielsfaber/alarmo) (v1.10.17)
 - [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.2.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.5.7)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.3.0)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.6.2)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.4.0)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.6)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.1)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.2)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
-- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.12.2)
+- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.14.0)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
 - [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
@@ -202,16 +202,18 @@ This repository is treated as:
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [Simulated Inverter](https://github.com/simplemice/home_assistant) (v1.0.1)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
-- [Spook](https://spook.boo) (v5.10.0)
+- [Spook](https://spook.boo) (v5.11.1)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.2.7)
-- [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v2.2.6)
+- [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v3.1.0)
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
 - [Xiaomi Miot](https://github.com/al-one/hass-xiaomi-miot) (v1.1.4)
 - [Zambretti and Sager](https://github.com/ziffmafiya/zambretti_sager) (v1.9.93)
 
 ## 🔗 Custom integrations
+
+- [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro)
 
 - [Ai Memory](https://github.com/Riscue/ha-ai-memory)
 
@@ -253,6 +255,7 @@ This repository is treated as:
 
 
 ## 🎛️ Lovelace plugins
+- [Adaptive Cover Pro Card](https://github.com/jrhubott/adaptive-cover-pro-card)
 - [Adguard Card](https://github.com/homeassistant-extras/adguard-card)
 - [Advanced Camera Card](https://github.com/dermotduffy/advanced-camera-card)
 - [Advanced Room Card](https://github.com/Lawris/advanced-room-card)

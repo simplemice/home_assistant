@@ -57,11 +57,11 @@ template:
         icon: mdi:speaker
         state: >
           {{
-            states('sensor.livingroom_player_power') | float(0) +
-            states('sensor.bedroom_player_power') | float(0) +
-            states('sensor.kitchen_player_power') | float(0) +
-            states('sensor.tv_box_outlet_power') | float(0) +
-            states('sensor.tv_outlet_power') | float(0)
+            states('sensor.livingroom_speaker_power') | float(0) +
+            states('sensor.bedroom_speaker_power') | float(0) +
+            states('sensor.kitchen_player_power_power') | float(0) +
+            states('sensor.livingroom_tv_box_power_outlet_power') | float(0) +
+            states('sensor.livingroom_tv_power_outlet_power') | float(0)
           }}
 
       - name: "Climate Power"
@@ -117,7 +117,7 @@ template:
             {% set cpu      = states('sensor.micebook_cpu_usage') | float(0) * 0.35 %}
             {% set screen   = 5 if is_state('switch.micebook_screen_onoff', 'on') else
           0 %}
-            {% set charging = 30 if is_state('binary_sensor.micebook_battery_ac', 'on')
+            {% set charging = 30 if state_attr('sensor.micebook_battery_smp_00ur891_1037', 'status') in ['charging', 'pending charge', 'fully charged']
           else 0 %}
             {{ (base + cpu + screen + charging) | round(1) }}
           {% endif %}
@@ -146,8 +146,8 @@ template:
         icon: mdi:lightbulb-group
         state: >
           {{
-            states('sensor.wled_closet_strip_l_power') | float(0) +
-            states('sensor.wled_closet_strip_r_power') | float(0) +
+            states('sensor.wled_closet_l_main_power') | float(0) +
+            states('sensor.wled_closet_r_main_power') | float(0) +
             states('sensor.wled_wall_light_power') | float(0) +
             states('sensor.wled_table_power') | float(0) +
             states('sensor.wled_tv_power') | float(0) +

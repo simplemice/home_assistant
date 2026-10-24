@@ -321,6 +321,9 @@
       "backup": {
         "name": "Configuration backup"
       },
+      "poe_power_cycle": {
+        "name": "إعادة تشغيل طاقة PoE"
+      },
       "reboot": {
         "name": "إعادة التشغيل"
       }
@@ -362,6 +365,15 @@
       },
       "system_poe_out_consumption": {
         "name": "استهلاك PoE الخارج"
+      },
+      "poe_out_power": {
+        "name": "قدرة خرج PoE"
+      },
+      "poe_out_voltage": {
+        "name": "جهد خرج PoE"
+      },
+      "poe_out_current": {
+        "name": "تيار خرج PoE"
       },
       "system_fan1_speed": {
         "name": "سرعة المروحة 1"

@@ -18,3 +18,9 @@ input_boolean:
   kitchen_trash:
     name: "Kitchen Trash"
     icon: mdi:delete-circle
+  house_cover_automation:
+    name: "Cover Automation Mode"
+    icon: mdi:curtains
+  mobile_music_automation:
+    name: "Mobile Music Automation Mode"
+    icon: mdi:music

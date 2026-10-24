@@ -1,0 +1,361 @@
+{
+  "banner": {
+    "dry_run": "⚠️ **Testmodus ist aktiviert** — Positionen werden berechnet und protokolliert, aber es werden keine Befehle gesendet und Beschattungen werden NICHT bewegt."
+  },
+  "headers": {
+    "your_cover": "**Deine Beschattung**",
+    "cover_warnings": "**Beschattungswarnungen**",
+    "how_it_decides": "**So wird entschieden** (erste zutreffende Regel gewinnt)",
+    "position_limits": "**Positionsgrenzen**",
+    "proxy_enabled": "**Proxy-Beschattung**: aktiviert",
+    "proxy_disabled": "**Proxy-Beschattung**: deaktiviert",
+    "decision_priority": "**Entscheidungspriorität** (höchste gewinnt, ✅ aktiv ❌ nicht konfiguriert)"
+  },
+  "cover": {
+    "type_with_entities": "{type_label} steuert {entity_str}",
+    "building_profile": "🏢 Verknüpft mit Gebäudeprofil: {name}"
+  },
+  "words": {
+    "sensor_singular": "Sensor",
+    "sensor_plural": "Sensoren",
+    "source_singular": "Quelle",
+    "source_plural": "Quellen"
+  },
+  "fragments": {
+    "as_minimum": " (als Minimum)",
+    "as_maximum": " (höchstens {max}%)",
+    "safety": " 🔒 Sicherheit: wirkt auch außerhalb des Zeitfensters",
+    "template_value": "[template]"
+  },
+  "rules": {
+    "weather": "🌧️ Wetterschutz: wenn {wx_condition} → Beschattungen fahren auf {weather_pos}%{weather_min}{weather_tilt}{delay}{bypass}",
+    "manual": "✋ Manuelle Übersteuerung: pausiert automatische Steuerung, wenn du die Beschattung bewegst{detail}",
+    "custom_tilt_only": "🎯 {label}: wenn {trigger} aktiv ist → nur Neigung (Lamelle fest bei {slat}%; Position gesteuert durch Sonnenverfolgung)",
+    "custom": "🎯 {label}: wenn {trigger} aktiv ist → {target}{cp_min}{tilt_note} — umgeht Delta-Gatter und automatische Steuerung{safety}",
+    "motion": "🚶 Belegung: Falls keine Belegung für {motion_timeout}s ({sources}) → {action}",
+    "cloud": "☁️ Wolkenunterdrückung: überspringt Sonnenverfolgung{cloud} → {fallback}",
+    "climate": "🌡️ Klimamodus: passt Strategie für Heizung/Kühlung an{detail}",
+    "glare": "🔆 Blendungszonen: senkt Jalousie weiter, um Bodenbereich vor Blendung zu schützen{detail}",
+    "solar": "☀️ Verfolgt die Sonne{sun_desc} und berechnet Position, um direkte Sonneneinstrahlung zu blockieren{today}",
+    "solar_disabled": "☀️ Sonnenverfolgung deaktiviert — Beschattungen halten Position; Klimamodus, manuelle Übersteuerung, benutzerdefinierte Positionen und andere Übersteuerungen bleiben aktiv",
+    "default": "🌙 Standard (keine Regel trifft zu) → {default_pos}%"
+  },
+  "weather": {
+    "wind": "Wind > {thresh}",
+    "wind_dir": " aus Fensterrichtung ±{tol}°",
+    "rain": "Regen > {thresh}",
+    "is_raining": "is-raining",
+    "is_windy": "is-windy",
+    "severe": "{count} Wettersensor(en)",
+    "condition_default": "Wetterbedingung",
+    "condition_join": " oder ",
+    "delay": " (wartet {delay}s nach Klärung)",
+    "bypass": " ⚠️ stoppt alle Automatisierung während aktiviert",
+    "disabled_warning": "🌧️ Wetterschutz: ⚠️ Sensoren konfiguriert, aber die Funktion ist AUSGESCHALTET — Wetter-Overrides werden ignoriert"
+  },
+  "manual": {
+    "pauses_for": "pausiert für {duration}",
+    "until_sunset": "hält bis zum nächsten Sonnenuntergang",
+    "until_sunrise": "hält bis zum nächsten Sonnenaufgang",
+    "until_next_sun_event": "hält bis zum nächsten Sonnenauf- oder -untergang",
+    "until_window_end": "hält bis zum Ende des Zeitfensters",
+    "until_window_end_no_window": "⚠️ Die manuelle Übersteuerung soll bis zum Ende des Zeitfensters halten, es ist aber keine Endzeit konfiguriert — stattdessen wird die eingestellte Dauer verwendet",
+    "threshold": "Schwellwert {threshold}%",
+    "resets_on_move": "setzt bei nächster Bewegung zurück",
+    "ignore_intermediate": "ignoriert Zwischenpositionen",
+    "ignore_external": "Nur ACP (ignoriert externe Bewegungen)",
+    "transit_timeout": "Übergangszeitüberschreitung: {seconds}s",
+    "input_entities": "Eingangssensor-Übersteuerung: {count} Sensor(en)"
+  },
+  "custom": {
+    "tilt_note": ", Neigung {tilt}%",
+    "trigger_sensors": "einer von {n} Sensoren",
+    "trigger_template": "Template",
+    "trigger_join": " oder ",
+    "tilt_bound_min": ", Neigung mindestens {min}%",
+    "tilt_bound_max": ", Neigung höchstens {max}%",
+    "tilt_bound_range": ", Neigung {min}–{max}%",
+    "no_position_claim": "die berechnete Position",
+    "outside_window": "🕗 {label}: Min-/Max-Grenzen bleiben außerhalb des Zeitfensters aktiv (der Slot steuert dort trotzdem nie eine Position an).",
+    "scope_to_window": "🕗 {label}: wirkt nur innerhalb des Zeitfensters — sobald das Fenster schließt, deaktiviert sich der Slot und die Position am Fenster-Ende gilt.",
+    "slot_label_default": "Benutzerdefiniert #{slot}"
+  },
+  "warnings": {
+    "custom_position_bound_conflict": "⚠️ {label}: Das Maximum ({max}%) liegt unter dem Minimum ({min}%) — das Minimum gewinnt und das Maximum wird ignoriert.",
+    "custom_tilt_only_conflict": "⚠️ {label}: Nur Neigung ist aktiviert — Als Minimum verwenden / Meine Position verwenden werden für diesen Slot ignoriert.",
+    "custom_tilt_only_bounds_discarded": "⚠️ {label}: Lamelle auf {slat}% fixiert — die konfigurierten Neigungsgrenzen werden für diesen Slot ignoriert.",
+    "custom_tilt_only_no_effect": "⚠️ {label}: Nur Neigung ist aktiviert, ohne Lamellenwinkel und ohne Neigungsgrenzen — dieser Slot hat keine Auswirkung.",
+    "custom_outside_window_no_bounds": "⚠️ {label}: Grenzen außerhalb des Zeitfensters aktiv halten ist aktiviert, aber dieser Slot konfiguriert kein Minimum und kein Maximum — die Einstellung hat keine Auswirkung. Nur Min-/Max-Ansprüche bleiben dort aktiv; eine exakte Position nie.",
+    "custom_outside_window_redundant": "⚠️ {label}: Grenzen außerhalb des Zeitfensters aktiv halten ist aktiviert, aber Priorität 100 wirkt bereits außerhalb des Zeitfensters (und an der automatischen Steuerung sowie den Delta-Gattern vorbei) — die Einstellung ändert hier nichts.",
+    "custom_scope_to_window_no_fixed_claim": "⚠️ {label}: Nur innerhalb des Zeitfensters anwenden ist aktiviert, aber dieser Slot benennt keine exakte Position und verwendet nicht Meine Position — die Einstellung hat keine Auswirkung. Sie begrenzt nur den Anspruch auf die exakte Position; ob eine Min-/Max-Grenze das Zeitfenster übersteht, entscheidet stattdessen Grenzen außerhalb des Zeitfensters aktiv halten.",
+    "custom_scope_to_window_safety_ignored": "⚠️ {label}: Nur innerhalb des Zeitfensters anwenden ist aktiviert, aber Priorität 100 ist Sicherheit — außerhalb des Zeitfensters zu wirken ist das, was diese Priorität bedeutet, daher wird die Einstellung hier ignoriert.",
+    "custom_scope_to_window_needs_return": "⚠️ {label}: „Beschattungen zur aktuellen Standardposition verschieben, wenn die Endzeit erreicht wird“ ist deaktiviert — der Slot tritt zur Endzeit zurück, aber nichts positioniert die Beschattung um, sodass sie dort bleibt, wo der Slot sie gelassen hat. Aktivieren Sie diesen Schalter.",
+    "motion_hold_no_sensors": "⚠️ Der Modus Position halten ist eingestellt, aber es sind keine Belegungsquellen konfiguriert – die Einstellung hat keine Auswirkungen, bis eine Belegungsquelle hinzugefügt wird",
+    "cloud_settings_ignored": "⚠️ Wolkenunterdrückung ist deaktiviert, daher werden {items} ignoriert.",
+    "sun_track_min_below_floor": "⚠️ Sonnenverfolgung Min {sun_min}% < Min Position {min_pos}% — Immer-aktiver Boden dominiert; Sonnenverfolgungsboden wird auf {min_pos}% erhöht.",
+    "mode2_min_position": "⚠️ Neigung MODE2 + Min Position {min_pos}% — im MODE2 ist der offene (horizontale) Lamellenwinkel 50%, also jede Min Position ≥ 50 kollabiert jede Klimamodus/Blendungszone-Entscheidung zum Boden und die Beschattung stoppt, Wärme zu blockieren.",
+    "somfy_my_unset": "⚠️ Somfy My-Preset ist für ein oder mehrere Ziele aktiviert, aber My Preset Value ist nicht gesetzt — fällt auf konfiguriertes % zurück.",
+    "proxy_no_min": "⚠️ Proxy-Beschattung ist aktiviert, aber kein benutzerdefinierter Positionsslot hat Als Minimum verwenden aktiviert — die verwaltete Beschattung wird nicht begrenzt.",
+    "custom_and_no_sensors": "⚠️ {label}: Kombinationsmodus UND ist gesetzt, aber keine Auslösesensoren konfiguriert — das Template allein aktiviert den Slot.",
+    "group_empty": "⚠️ Diese Gruppe hat keine Mitglieder – sie wird nichts steuern.",
+    "forecast_source_no_weather_entity": "⚠️ Außentemperaturquelle basiert auf Vorhersage, aber es ist keine Wetter-Entität konfiguriert — die Vorhersage wird stillschweigend auf den Live-Messwert zurückfallen. Konfigurieren Sie eine Wetter-Entität unter Wetter, Licht & Wolken.",
+    "travel_time_unmeasurable": "⚠️ {entities} melden einen angenommenen Zustand, daher kann ihre Laufzeit nicht gemessen werden und keine wurde eingegeben — Dashboards zeigen keine Bewegung. Geben Sie eine Zeit unter Kalibrierung → Laufzeit ein.",
+    "weather_window_scoped": "⚠️ Die Wettersicherung wirkt nur innerhalb des Zeitfensters — außerhalb folgt die Beschattung stattdessen der Fensterende-/Sonnenuntergangs-Position, und das Wetter schützt sie nachts nicht.",
+    "weather_tilt_min_mode": "⚠️ Eine Wetter-Übersteuerungsneigung ist gesetzt, aber der Minimale-Positionsmodus ist aktiv — das Wetter setzt in diesem Modus nur eine Mindestposition und stellt die Lamellen nie ein, daher wird die Neigung ignoriert.",
+    "snap_closed_below_conflicts_min_pos": "⚠️ Unter Schwelle schließen {threshold}% + Mindestposition {min_pos}% — die ständig aktive Untergrenze deckt bereits das gesamte Schließband ab und wird Vorrang haben, daher kann diese Einstellung nie wirksam werden. Senken Sie die Mindestposition unter {floor_bound}% oder erhöhen Sie die Schwelle über {threshold_bound}%, damit sie funktioniert.",
+    "snap_closed_below_conflicts_max_pos": "⚠️ Unter Schwelle schließen {threshold}% + Maximalposition {max_pos}% — die ständig aktive Obergrenze deckt bereits das gesamte Schließband ab und wird Vorrang haben, daher kann diese Einstellung nie wirksam werden. Erhöhen Sie die Maximalposition über {ceiling_bound}% oder erhöhen Sie die Schwelle über {threshold_bound}%, damit sie funktioniert.",
+    "snap_closed_below_floor_active": "⚠️ Unter Schwelle schließen {threshold}% + gemischte Beschattungsgruppe (einige unterstützen set_position, einige sind nur Öffnen/Schließen) — die Untergrenze der Sonnenverfolgung bleibt für die ganze Gruppe aktiv (issue #569), daher landen die positionierbaren Beschattung(en) beim Schließen bei {floor_pct}% statt 0%."
+  },
+  "motion": {
+    "action_hold": "Behänge halten aktuelle Position (zurück zum Standard, wenn Sonne den Sonnen-Akzeptanzwinkel verlässt)",
+    "action_return": "Beschattungen zurück auf Standard ({default_pos}%)",
+    "template_source": "Anwesenheits-Vorlage"
+  },
+  "cloud": {
+    "is_sunny": "is_sunny={value}",
+    "lux": "lux < {thresh} lx",
+    "lux_no_thresh": "lux ({entity})",
+    "irradiance": "Strahlung < {thresh} W/m²",
+    "irradiance_no_thresh": "Strahlung ({entity})",
+    "coverage": "Bewölkung > {thresh}%",
+    "coverage_no_thresh": "Bewölkung ({entity})",
+    "weather_in": "Wetter nicht in {{{states}}}",
+    "weather_fallback": " (greift zurück auf {weather})",
+    "when": " wenn {parts}",
+    "fallback_cloudy": "bewölkte Position {pos}%",
+    "fallback_default": "Standard ({default_pos}%)",
+    "hold_time": " · Glättungs-Haltezeit {secs}s",
+    "release": " · Freigabe wenn {parts}",
+    "lux_release": "Lux ≥ {release} lx",
+    "irradiance_release": "Bestrahlungsstärke ≥ {release} W/m²",
+    "coverage_release": "Bewölkung ≤ {release}%",
+    "ignored_tilt": "bewölkter Lamellenwinkel {tilt}%",
+    "escalation": " · öffnet sich vollständig nach {delay}",
+    "ignored_escalation": "Vollöffnungs-Verzögerung {delay}"
+  },
+  "info": {
+    "light_sensors_off": "📊 Lichtsensoren konfiguriert ({names}), aber Wolkenunterdrückung ist aus.",
+    "light_lux": "lux",
+    "light_irradiance": "Strahlung",
+    "light_cloud_coverage": "Bewölkungsgrad"
+  },
+  "climate": {
+    "comfort_range": "Komfortbereich {lo}–{hi}°C",
+    "using": "mit {entity}",
+    "using_area": "mit Bereichs-Temperatursensor",
+    "outside_thresh": "außen: {entity} > {thresh}°C",
+    "outside": "außen: {entity}",
+    "weather": "Wetter: {entity}",
+    "presence": "Anwesenheit: {entity}",
+    "transparent": "durchsichtige Jalousie",
+    "winter_close": "schließt sich vollständig im Winter für Isolation",
+    "summer_full_close": "schließt sich vollständig bei Sommerhitze",
+    "extreme_heat": "hält den ganzen Tag {pos}% bei über {thresh}°C außen",
+    "hold_time": " · Glättungs-Haltezeit {secs}s",
+    "release": " · Freigabe wenn {parts}",
+    "temp_low_release": "winter ≥ {release}°",
+    "temp_high_release": "sommer ≤ {release}°",
+    "outside_release": "außen ≤ {release}°",
+    "extreme_heat_release": "extremhitze ≤ {release}°"
+  },
+  "glare": {
+    "zones": "Zonen: {names}",
+    "window": "{width:.2f}m Fenster",
+    "z_height": "Z-Höhe: {values}",
+    "z_value": "{z:.2f}m"
+  },
+  "solar": {
+    "azimuth": "Azimut {azimuth}°",
+    "fov": "±{fov_l}°/{fov_r}° Sonnen-Akzeptanzwinkel",
+    "elev_above": "über {elev}°",
+    "elev_below": "unter {elev}°",
+    "elevation": "Höhe {parts}",
+    "elev_join": " und ",
+    "today_window": " (heute: Sonne im Fenster {start} → {end})",
+    "today_no_window": " (heute: Sonne betritt Fenster nicht)",
+    "minimize_one_step": "bewegt sich direkt zu voller Abdeckung und hält an (1 Schritt)",
+    "minimize_steps": "erreicht volle Abdeckung in bis zu {steps} Schritten",
+    "minimize": "{indent}🪟 Bewegungen minimieren — {detail}, auf mehr Abdeckung gerundet, um Motorbewegungen zu reduzieren.",
+    "gate_sensors": "{indent}🚦 Sonnenverfolgungs-Gate: {sensors} entscheiden, ob der Sonne gefolgt wird.",
+    "gate_template": "{indent}🚦 Sonnenverfolgungs-Gate: eine Vorlage entscheidet, ob der Sonne gefolgt wird.",
+    "gate_both": "{indent}🚦 Sonnenverfolgungs-Gate: {sensors} und eine Vorlage ({mode}) entscheiden, ob der Sonne gefolgt wird.",
+    "gate_explainer": "{indent}Solange das Gate falsch meldet, wird die Sonnenpositionierung übersprungen und die Abdeckung fällt auf die Standardposition zurück. Klimamodus, Bewegung und manuelle Übersteuerung bleiben unberührt, und das Betriebsfenster bleibt offen — anders als beim Tageslicht-Gate, das das Fenster schließt und alle davon unterdrückt. Blendungszonen laufen weiter, verlieren aber ihre nur-bei-Sonnenverfolgung-Grenzwerte, da diese nur bei aktiver Verfolgung gelten.",
+    "snap_closed_below": "{indent}📎 Unter Schwelle schließen {threshold}% — eine Sonnenverfolgungsanforderung unter {threshold}% (aber über 0%) wird sofort ganz geschlossen, anstatt einen kaum sichtbaren Spalt offen zu lassen."
+  },
+  "timing": {
+    "from_entity": "von {entity}",
+    "from_time": "von {time}",
+    "from_sunrise": "ab Sonnenaufgang",
+    "until_entity": "bis {entity}",
+    "until_time": "bis {time}",
+    "active_daylight": "Aktiv während Tageslicht",
+    "line": "{indent}🕒 {timing}.",
+    "ann_via": "über {entity}",
+    "ann_today": "heute ~{time}",
+    "offset_plus": "+{minutes} Min",
+    "offset_minus": "{minutes} Min",
+    "after_end_to_default": "{indent}🔚 Nach Endzeit → {default_pos}%.",
+    "after_sunset": "{indent}🌅 Nach Sonnenuntergang{ann} → {target}.",
+    "after_label": "{indent}🌅 Nach {label}{ann} → {target}.",
+    "label_end_or_sunset": "Endzeit/Sonnenuntergang",
+    "label_sunset": "Sonnenuntergang",
+    "after_sunrise": "{indent}🌄 Nach Sonnenaufgang{ann} → {default_pos}% (Verfolgung fortgesetzt).",
+    "return_sunset": "{indent}🔚 Zur Standardposition bei Endzeit: aktiviert",
+    "end_of_window": "{indent}🔚 Position bei Fensterende → {target} von der Endzeit bis zum Sonnenuntergang (danach gilt die Sonnenuntergangsposition, falls gesetzt).",
+    "end_of_window_needs_return": "{indent}⚠️ Position bei Fensterende ist gesetzt, aber \"Abdeckungen bei Erreichen der Endzeit bewegen\" ist AUS — sie wird nicht angewendet. Schalte diese Option ein.",
+    "gate_sensors": "{indent}🌗 Tageslicht-Gate: {sensors} entscheiden über Tag vs. Dunkelheit.",
+    "gate_template": "{indent}🌗 Tageslicht-Gate: eine Vorlage entscheidet über Tag vs. Dunkelheit.",
+    "gate_both": "{indent}🌗 Tageslicht-Gate: {sensors} und eine Vorlage ({mode}) entscheiden über Tag vs. Dunkelheit.",
+    "gate_explainer": "{indent}Wenn das Gate Tag anzeigt, lädt ACP die Sonnennachführung; wenn es Dunkelheit anzeigt, wendet ACP die Sonnenuntergangsposition an. Das Gate ersetzt die astronomische Sonnenuntergangs-/Sonnenaufgangsgrenze; Start-/Endzeiten begrenzen das Fenster weiterhin.",
+    "gate_offset_ignored": "{indent}⚠️ Sonnenuntergangs-/Sonnenaufgangsversatz wird ignoriert, während ein Tageslicht-Gate gesetzt ist – das Gate, nicht die Uhr, entscheidet über die Grenze.",
+    "sunrise_gates_start": "{indent}🌄 Wartet auf Sonnenaufgang vor Steuerungsbeginn — das Fenster öffnet sich zur Startzeit oder zum Sonnenaufgang, je nachdem welche Zeit später liegt."
+  },
+  "blind_spot": {
+    "line": "🟥 Blindfleck: ignoriert Sonne bei {bs} (Gamma von der Fensternormale — z.B. Baum oder Dachüberhang).",
+    "range": "{left}°–{right}°",
+    "elevation": "bis {elev}° Höhe",
+    "elevation_above": "ab {elev}° Höhe"
+  },
+  "default": {
+    "tilt": "  ↳ Standard-Neigung: {tilt}% (angewendet, wenn die Beschattung auf ihre Standardposition zurückfällt)",
+    "sunset_tilt": "  ↳ Sonnenuntergangs-Neigung: {tilt}% (angewendet, wenn die Beschattung auf ihre Standardposition zurückfällt, beim Sonnenuntergang)"
+  },
+  "limits": {
+    "range": "Bereich: {lo}–{hi}{qualifier}",
+    "qualifier_both": " (nur während Sonnenverfolgung)",
+    "qualifier_min": " (Min nur während Sonnenverfolgung)",
+    "qualifier_max": " (Max nur während Sonnenverfolgung)",
+    "default": "Standard: {pos}%",
+    "min_change": "Min Änderung: {delta}%",
+    "min_interval": "Min Intervall: {delta} Min",
+    "position_tolerance": "Positionstoleranz: {tol}%",
+    "inverse_state": "Inverser Status",
+    "open_close_threshold": "Offen/Geschlossen-Schwellwert: {thresh}%",
+    "calibration": "Kalibrierung {lo}→{hi}",
+    "calibration_on": "Positionskalibrierung aktiviert",
+    "sun_tracking_min": "Sonnenverfolgung Min: {pos}%",
+    "separator": " · ",
+    "position_matching_off": "📍 Positionsabgleich aus (Befehl wird einmal gesendet; Abweichung wird als manuelle Übersteuerung behandelt)",
+    "position_matching_on": "📍 Positionsabgleich an (Befehle werden wiederholt bis zum Erreichen der Zielposition)",
+    "travel_time": "Laufzeit: {done}/{total} Beschattungen",
+    "travel_time_manual": "Laufzeit: {done}/{total} Beschattungen ({manual} manuell eingegeben)"
+  },
+  "my": {
+    "entities_enabled": "🎛️ My-Preset-Entitäten: aktiviert",
+    "entities_disabled": "🎛️ My-Preset-Entitäten: deaktiviert",
+    "somfy_preset": "🎛️ Somfy My-Preset: {pos}% (verwendet, wo oben aktiviert)",
+    "label_my_set": "My ({pos}%)",
+    "label_my_unset": "My (nicht gesetzt → {pct}%)",
+    "label_plain": "{pct}%"
+  },
+  "cover_types": {
+    "blind": "Vertikales Rollo",
+    "awning": "Horizontale Markise",
+    "tilt": "Jalousie (nur Neigung)",
+    "oscillating_awning": "Fallarmmarkise",
+    "venetian": "Jalousie (zweiachsig)",
+    "roof_window": "Dachfenster",
+    "sliding_curtain": "Schiebevorhang",
+    "louvered_roof": "Lamellendach",
+    "day_night_shade": "Tag/Nacht-Rollo",
+    "dual_panel": "Doppelpaneel-Beschattung"
+  },
+  "geometry": {
+    "window": {
+      "tall": "{h}m hohes Fenster",
+      "blocking_glass": "Sonne {d}m vor dem Glas blockiert",
+      "reveal": "Laibung {depth}m",
+      "sill": "Fensterbank {sill}m",
+      "height": "{v}m Fensterhöhe"
+    },
+    "awning": {
+      "length": "{v}m Markise",
+      "angle": "Winkel {v}°",
+      "blocking_wall": "Sonne {v}m vor der Wand blockiert",
+      "shade_mode_window": "fenster beschatten",
+      "shade_mode_area": "bereich davor beschatten (terrasse)"
+    },
+    "slat": {
+      "depth": "Lamellentiefe {v}cm",
+      "spacing": "Abstand {v}cm",
+      "mode": "Modus: {v}",
+      "angle_0": "0%-Winkel {v}°",
+      "angle_100": "100%-Winkel {v}°",
+      "horizontal_percent": "horizontal bei {v}%",
+      "min_reflected_elevation": "reflektierte Sonne mind. {v}° oben"
+    },
+    "oscillating": {
+      "arm": "{v}m Arm",
+      "sweep": "Schwenkbereich {lo}°–{hi}°",
+      "housing_offset": "{v}m Gehäuseversatz",
+      "pivot_offset": "{v}m Pivotversatz"
+    },
+    "venetian": {
+      "skip_tilt": "Neigung überspringen wenn Position > {skip_above}%",
+      "mode_position_and_tilt": "Position und Neigung",
+      "mode_tilt_only": "Nur Neigung",
+      "inverse_tilt": "Inverse Neigung",
+      "max_tilt": "max. Neigung {max_tilt}%",
+      "min_tilt": "min. Neigung {min_tilt}%",
+      "post_settle_hold": "Nach-Stabilisierungshalte {hold}s",
+      "backrotate_lag": "Rück-Rotationsverzögerung {lag}s",
+      "drift_reset": "Drift-Reset alle {threshold}% akkumulierte Neigung (über {direction})",
+      "drift_reset_scope_solar": "nur Sonnenstands-Befehle",
+      "tilt_only_scope_solar": "nur Sonnenverfolgung gewinnt",
+      "skip_tilt_suppress": "Neigung ab {skip_above}% unterdrücken (kein neutrales Senden)",
+      "tilt_safety_margin": "neigungssicherheitsmarge {pct}%",
+      "tilt_transform": "proportionale Neigungsumsetzung in Min-Max-Band"
+    },
+    "fov": {
+      "computed": "Berechneter Akzeptanzwinkel ≈ {deg}°/{deg}° ({w} m Breite, {d} m Laibungstiefe)"
+    },
+    "roof": {
+      "pitch": "Dachneigung {v}° von Horizontal",
+      "height_above": "{v}m Dach über Fenster (First-Gate)",
+      "max_slat_angle": "max. Lamellenwinkel {v}°"
+    },
+    "sliding": {
+      "slide": "schieben: {v}",
+      "dir_left": "einflügelig (links)",
+      "dir_right": "einflügelig (rechts)",
+      "dir_bi_part": "mittig öffnend",
+      "width": "{v}m Fensterbreite",
+      "shade_area": "Beschattungsbereich ({x1}, {y1})–({x2}, {y2}) m",
+      "binary": "Binär öffnen/schließen (kein Beschattungsbereich)"
+    },
+    "day_night": {
+      "model_position_tilt": "position und neigung (zweiachsig)",
+      "model_split_range": "geteilter bereich (einachsig)",
+      "model_dual_entity": "zwei Schienen-Entitäten (Doppelentität)",
+      "rail_travel": "Schienenbewegung: {v}",
+      "rail_travel_concurrent": "beide Schienen bewegen sich gleichzeitig, sobald die führende Schiene unterwegs ist",
+      "rail_travel_serialized": "Schienen bewegen sich nacheinander — die nachfolgende Schiene wartet auf vollständige Freigabe",
+      "rail_interlock": "Schienenverriegelung: {v}",
+      "rail_interlock_on": "⚠️ ein Befehl, den eine Schiene nicht erreichen kann, wird ausgeführt, indem zuerst die andere Schiene bewegt wird — ACP bewegt möglicherweise die Schiene, die Sie nicht angesteuert haben",
+      "rail_interlock_off": "ein Befehl, den eine Schiene nicht erreichen kann, bleibt unangetastet"
+    },
+    "dual_panel": {
+      "front_entity": "transparentes Frontpaneel: {v}",
+      "triggers": "Verdunkelung schließt bei: {v}",
+      "none": "keine Auslöser"
+    }
+  },
+  "group": {
+    "header": "**Beschattungsgruppe**",
+    "members": "Steuert {acp_count} ACP-Mitglied(er) + {generic_count} allgemeine Beschattung(en)",
+    "member_acp": "- 🪟 {title} (ACP)",
+    "member_generic": "- 🪟 {entity} (generic)",
+    "scene_priority": "Beschattungsgruppen-Szenen gelten mit Priorität {scene_priority} (über manuelle Übersteuerung, unter Wetterschutz)",
+    "lock": "🔒 Gruppensperre mit Priorität {lock_priority} — friert Mitglieder an Ort und Stelle ein; die eigene Sicherheit eines Mitglieds gewinnt immer noch Gleichstände",
+    "stagger": "Mitglieder mit {stagger}s Abstand befohlen",
+    "cover_entity": "Aggregierte Beschattungs-Entität verfügbar — das Ziehen befiehlt jedem Mitglied",
+    "area": "Mitgliedschaft verfolgt Bereich „{area}\" – Beschattungen dort treten automatisch bei"
+  },
+  "axes": {
+    "position": "Position",
+    "tilt": "Neigung"
+  },
+  "movement": {
+    "queue": "🚦 Befehle serialisiert auf Warteschlange \"{queue}\" ({gap}s Abstand)"
+  }
+}

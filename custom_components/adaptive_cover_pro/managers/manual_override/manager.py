@@ -1,0 +1,1136 @@
+"""Manual-override engine for Adaptive Cover Pro.
+
+``AdaptiveCoverManager`` is the stateful host: it owns per-entity override
+state, the diagnostic ring buffer, the Issue-#33 suppression bookkeeping, and
+the command-timing clock. It delegates the *decision* — is this state change a
+manual override? — to a pluggable :class:`.detector.OverrideDetector` and
+applies the returned :class:`.detector.OverrideDecision`. Edge transitions
+(into/out of manual override) fire callbacks so command-side effects
+(``discard_target``) wire once and every current and future detector inherits
+them.
+"""
+
+from __future__ import annotations
+
+import collections
+import datetime as dt
+import logging
+from collections.abc import Callable
+
+from homeassistant.core import HomeAssistant
+
+from ...const import (
+    CONF_VENETIAN_BACKROTATE_PUBLISH_LAG,
+    DEFAULT_DEBUG_EVENT_BUFFER_SIZE,
+)
+from ...diagnostics.event_buffer import EventBuffer
+from ...helpers import check_cover_features
+from ..common import EventRecorder
+from .detector import (
+    DetectionContext,
+    DetectorConfig,
+    OverrideDecision,
+    OverrideDetector,
+    OverrideState,
+    StateChangeInputs,
+    StopToMy,
+    UserContextChange,
+)
+from .expiry import (
+    STARTED_AT_SOURCE_DERIVED,
+    STARTED_AT_SOURCE_ENGAGED,
+    expiry_for_started_at,
+    started_at_for_expiry,
+)
+from .position_delta import PositionDeltaDetector
+
+_LOGGER = logging.getLogger(__name__)
+
+# Issue #33 Phase 5: per-entity counters of primary-axis publish-lag
+# suppressions are pruned to events newer than this. 24 h matches what the
+# diagnostic file surfaces under ``primary_axis_suppression_last_24h``.
+_PRIMARY_AXIS_SUPPRESSION_WINDOW = dt.timedelta(hours=24)
+# WARN throttle: per-entity, fire on the first suppression then at most once
+# per hour to keep the log readable for users with chronically slow actuators.
+_PRIMARY_AXIS_SUPPRESSION_WARN_THROTTLE = dt.timedelta(hours=1)
+
+
+def _prune_suppressions(
+    events: collections.deque[dt.datetime], now: dt.datetime
+) -> collections.deque[dt.datetime]:
+    """Drop suppression events older than the 24 h reporting window.
+
+    Called from BOTH the recorder and the reader (issue #1273). Pruning only on
+    write froze the published count at the last suppression instead of letting
+    it decay, so ``primary_axis_suppression_last_24h`` kept reporting a burst
+    that had stopped days earlier — and kept telling the user to raise
+    ``venetian_backrotate_publish_lag`` for an actuator that had settled.
+    """
+    cutoff = now - _PRIMARY_AXIS_SUPPRESSION_WINDOW
+    while events and events[0] < cutoff:
+        events.popleft()
+    return events
+
+
+class AdaptiveCoverManager:
+    """Track position changes and manage manual override detection.
+
+    Monitors cover position changes to detect user-initiated manual overrides.
+    Maintains per-cover manual control state with configurable duration and
+    reset behavior. The detection decision is delegated to a pluggable
+    :class:`.detector.OverrideDetector` (default
+    :class:`.position_delta.PositionDeltaDetector`); this class owns all state
+    and side effects.
+
+    """
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        reset_duration: dict[str, int],
+        logger,
+        *,
+        event_buffer: EventBuffer | None = None,
+        detector: OverrideDetector | None = None,
+        on_engaged: Callable[[str], None] | None = None,
+        on_cleared: Callable[[list[str]], None] | None = None,
+    ) -> None:
+        """Initialize the AdaptiveCoverManager.
+
+        Args:
+            hass: Home Assistant instance
+            reset_duration: Duration dict (e.g., {"minutes": 15}) for auto-reset
+            logger: Logger instance for debug output
+            event_buffer: Shared ring buffer owned by the coordinator. When None
+                a private buffer is created (useful for unit tests).
+            detector: Active detection strategy. Defaults to
+                ``PositionDeltaDetector`` (the historical behaviour).
+            on_engaged: Callback fired with the entity_id whenever a cover
+                transitions into manual override via a detection channel.
+            on_cleared: Callback fired with a list of entity_ids whenever
+                manual override is cleared (reset or auto-expiry).
+
+        """
+        self.hass = hass
+        self.covers: set[str] = set()
+
+        # The single manual-override store (issue #1274). Key presence IS
+        # "this cover is overridden": start time, optional pinned end and
+        # start-source provenance travel together in one immutable
+        # :class:`.detector.OverrideState`, so they cannot disagree about
+        # which cover is armed. Written only by :meth:`_arm`, cleared only by
+        # :meth:`reset`; read through :meth:`override_for`.
+        self._overrides: dict[str, OverrideState] = {}
+        self.reset_duration = dt.timedelta(**reset_duration)
+        self.logger = logger
+        self._event_buffer: EventBuffer = (
+            event_buffer
+            if event_buffer is not None
+            else EventBuffer(maxlen=DEFAULT_DEBUG_EVENT_BUFFER_SIZE)
+        )
+        self._events = EventRecorder(self._event_buffer)
+        # Issue #33 Phase 5: rolling per-entity log of primary-axis publish-lag
+        # suppressions and a per-entity WARN throttle. Both live on the
+        # manager (per-instance state, side-effect bookkeeping); the
+        # predicate that decides whether to fire lives on the cover-type
+        # policy (cover-type-specific behaviour). Per CODING_GUIDELINES.md §
+        # "Managers Hold State, Policies Hold Behavior".
+        self._primary_axis_suppression_counts: dict[
+            str, collections.deque[dt.datetime]
+        ] = {}
+        self._last_suppression_warn_at: dict[str, dt.datetime] = {}
+
+        self._detector: OverrideDetector = (
+            detector if detector is not None else PositionDeltaDetector()
+        )
+        self._on_engaged = on_engaged
+        self._on_cleared = on_cleared
+        # Last ACP command time per entity (float UTC timestamp), feeding the
+        # ``seconds_since_command`` context field for time-based detectors.
+        self._last_command_at: dict[str, float] = {}
+        # ACP-origin predicate over a context id; the coordinator wires the
+        # real one. Default treats nothing as ACP-originated.
+        self._is_acp_context_fn: Callable[[str | None], bool] = lambda _cid: False
+        # Display-only assumed-position invalidator (issue #888). The coordinator
+        # wires this to ``CoverCommandService.clear_assumed_position`` so the
+        # stashed My/assumed value is dropped the moment the override resets or a
+        # real numeric position read arrives. Default is a no-op.
+        self._invalidate_assumed: Callable[[str], None] = lambda _eid: None
+        # Deadline resolver for the configured duration mode (issue #1044). The
+        # coordinator wires the real one; it performs the HA reads (sun
+        # boundaries, window end) so this manager stays HA-free. Returning
+        # ``None`` means "no resolvable deadline" and selects the fixed
+        # ``reset_duration`` fallback — which is exactly the ``fixed`` default.
+        self._deadline_resolver: Callable[[dt.datetime], dt.datetime | None] = (
+            lambda _anchor: None
+        )
+
+    # --- wiring -----------------------------------------------------------
+
+    def set_transition_callbacks(
+        self,
+        *,
+        on_engaged: Callable[[str], None] | None = None,
+        on_cleared: Callable[[list[str]], None] | None = None,
+    ) -> None:
+        """Register edge-transition callbacks after construction."""
+        self._on_engaged = on_engaged
+        self._on_cleared = on_cleared
+
+    def set_acp_context_predicate(self, fn: Callable[[str | None], bool]) -> None:
+        """Register the predicate that recognises ACP-originated context ids."""
+        self._is_acp_context_fn = fn
+
+    def set_assumed_invalidator(self, fn: Callable[[str], None]) -> None:
+        """Register the callback that drops a cover's assumed display position (#888)."""
+        self._invalidate_assumed = fn
+
+    def set_deadline_resolver(
+        self, fn: Callable[[dt.datetime], dt.datetime | None]
+    ) -> None:
+        """Register the duration-mode deadline resolver (issue #1044).
+
+        *fn* takes the override start as a tz-aware UTC datetime and returns the
+        resolved absolute end (also tz-aware UTC), or ``None`` when the
+        configured mode has no resolvable anchor — ``fixed``, a sun mode before
+        the first coordinator cycle, or ``until_window_end`` with no window
+        configured. ``None`` selects the ``reset_duration`` fallback.
+        """
+        self._deadline_resolver = fn
+
+    def update_config(self, config: DetectorConfig) -> None:
+        """Apply an options change at runtime (no reload).
+
+        Refreshes the auto-reset duration and forwards the config to the active
+        detector. This is what lets the manual-override duration take effect
+        without a config-entry reload.
+        """
+        self.reset_duration = dt.timedelta(**config.duration)
+        self._detector.update_config(config)
+
+    @property
+    def detector(self) -> OverrideDetector:
+        """Return the active detection strategy."""
+        return self._detector
+
+    # --- diagnostics bookkeeping -----------------------------------------
+
+    def _record_primary_axis_suppression(self, entity_id: str, *, delta: float) -> None:
+        """Log a primary-axis publish-lag suppression and throttle the WARN.
+
+        Issue #33 Phase 5 (cross-axis): the position-axis equivalent of
+        ``manual_override_rejected_tilt_suppression``. Keeps a 24 h
+        rolling window of suppressions per entity (surfaced under
+        ``primary_axis_suppression_last_24h`` in diagnostics) and emits a
+        WARN line on the first hit per entity plus at most one per hour.
+
+        Why a counter at all: a user whose actuator publishes its
+        post-move state inside the default 45 s window is silent —
+        suppression does the right thing. A user whose actuator publishes
+        at 60+ s gets repeated rejections, and the counter is the only
+        signal in diagnostics that tells them to bump
+        ``venetian_backrotate_publish_lag``. The throttled WARN log makes
+        the same suggestion visible in the HA log.
+        """
+        now = dt.datetime.now(dt.UTC)
+        deque = self._primary_axis_suppression_counts.setdefault(
+            entity_id, collections.deque()
+        )
+        deque.append(now)
+        _prune_suppressions(deque, now)
+
+        last_warn = self._last_suppression_warn_at.get(entity_id)
+        if (
+            last_warn is None
+            or (now - last_warn) >= _PRIMARY_AXIS_SUPPRESSION_WARN_THROTTLE
+        ):
+            _LOGGER.warning(
+                "Primary-axis manual override suppressed for %s "
+                "(publish-lag, delta=%.1f%%, count_last_24h=%d). "
+                "If this fires repeatedly for the same actuator, "
+                "increase '%s' in options.",
+                entity_id,
+                delta,
+                len(deque),
+                CONF_VENETIAN_BACKROTATE_PUBLISH_LAG,
+            )
+            self._last_suppression_warn_at[entity_id] = now
+
+    def primary_axis_suppression_counts(self) -> dict[str, int]:
+        """Return per-entity counts of primary-axis suppressions in the last 24 h.
+
+        Used by ``DiagnosticsBuilder._build_debug_info`` to surface the
+        cross-axis publish-lag guard's activity. The window is re-pruned HERE,
+        not just on write (issue #1273): an entity whose last suppression has
+        aged out reports nothing rather than a frozen count, so the figure
+        decays to zero on its own once the actuator settles. Entities left with
+        an empty deque are omitted, so the returned dict only carries entities
+        with at least one suppression still inside the window.
+        """
+        now = dt.datetime.now(dt.UTC)
+        return {
+            eid: len(pruned)
+            for eid, deque in self._primary_axis_suppression_counts.items()
+            if (pruned := _prune_suppressions(deque, now))
+        }
+
+    def _record_event(
+        self,
+        entity_id: str,
+        event_name: str,
+        *,
+        our_state,
+        new_position,
+        effective_threshold=None,
+        reason: str = "",
+    ) -> None:
+        """Append a manual-override decision event to the shared ring buffer."""
+        self._events.record(
+            event_name,
+            entity_id=entity_id,
+            our_state=our_state,
+            new_position=new_position,
+            effective_threshold=effective_threshold,
+            reason=reason,
+        )
+
+    def _read_primary_axis_position(
+        self,
+        entity_id: str,
+        policy,
+        state_obj,
+        *,
+        caps: dict[str, bool] | None = None,
+    ) -> int | None:
+        """Resolve the primary-axis value ``state_obj`` reports, via ``policy``.
+
+        Single source of truth for "which axis carries the current value on
+        this entity?" (issue #1358 observation 1) — extracted from the
+        detection path below so a gate rejection can resolve the same
+        position instead of recording a hardcoded ``None``. ``caps`` is
+        accepted rather than always recomputed: the detection path below
+        already has one (it also feeds ``DetectionContext``) and passes it
+        through; a gate rejection has none yet and lets this resolve it.
+        Returns ``None`` when ``policy`` or ``state_obj`` is unavailable —
+        the same "nothing to read" answer the ternary it replaces gave for a
+        missing ``old_state``.
+        """
+        if policy is None or state_obj is None:
+            return None
+        if caps is None:
+            caps = check_cover_features(self.hass, entity_id)
+        return policy.read_axis_value(self.hass, entity_id, caps, state_obj=state_obj)
+
+    def _reject_gated_update(
+        self,
+        entity_id: str,
+        *,
+        event_name: str,
+        reason: str,
+        our_state,
+        secondary_axis_check,
+        new_state,
+        policy,
+    ) -> None:
+        """Reject an update at an early gate, advancing any excursion trajectory.
+
+        The wait_for_target and command-grace gates both short-circuit
+        ``handle_state_change`` before ``secondary_axis_check.evaluate`` runs.
+        On a slow actuator the drift-reset publishes land inside one of these
+        gates — the excursion trajectory must keep advancing here (mark endpoint
+        / consume on target return), otherwise the record lingers the full
+        publish-lag window and later swallows a genuine move to the same value
+        (issue #927; PR #928 fixed the command-grace gate, and the
+        wait_for_target analog is issue #930). The generic ``consume_excursion``
+        call keeps the manager cover-type-agnostic.
+
+        ``new_position`` is resolved via :meth:`_read_primary_axis_position`
+        (issue #1358 observation 1) rather than recorded as a hardcoded
+        ``None`` — a null position on every gated rejection was what sent a
+        reporter down the wrong causal path while triaging a diagnostics dump.
+        """
+        if secondary_axis_check is not None:
+            secondary_axis_check.consume_excursion(entity_id, new_state)
+        self._record_event(
+            entity_id,
+            event_name,
+            our_state=our_state,
+            new_position=self._read_primary_axis_position(entity_id, policy, new_state),
+            reason=reason,
+        )
+
+    def get_event_buffer(self) -> list[dict]:
+        """Return a snapshot of the ring buffer (backward-compat wrapper)."""
+        return self._event_buffer.snapshot()
+
+    def resize_event_buffer(self, size: int) -> None:
+        """Resize the ring buffer, preserving the most-recent events (backward-compat wrapper)."""
+        self._event_buffer.resize(size)
+
+    def add_covers(self, entity):
+        """Add covers to tracking.
+
+        Updates the set of tracked cover entities. Called during coordinator
+        updates to ensure all configured covers are being monitored.
+
+        Args:
+            entity: List or set of cover entity IDs to track
+
+        """
+        self.covers.update(entity)
+        self._detector.on_covers_added(entity)
+
+    # --- command-timing clock --------------------------------------------
+
+    def note_command_sent(self, entity_id: str) -> None:
+        """Record that ACP just issued a command to ``entity_id``.
+
+        Stamps the post-command settle clock (feeding ``seconds_since_command``
+        on the detection context) and notifies the active detector.
+        """
+        now = dt.datetime.now(dt.UTC)
+        self._last_command_at[entity_id] = now.timestamp()
+        self._detector.note_command_sent(entity_id, now)
+
+    def _seconds_since_command(self, entity_id: str, now: dt.datetime) -> float | None:
+        """Seconds since the last ACP command for ``entity_id`` (None if never)."""
+        ts = self._last_command_at.get(entity_id)
+        return (now.timestamp() - ts) if ts is not None else None
+
+    # --- decision application --------------------------------------------
+
+    def _apply_decision(
+        self,
+        entity_id: str,
+        decision: OverrideDecision,
+        *,
+        set_timestamp: Callable[[], None],
+    ) -> None:
+        """Apply a detector decision: record events, suppression, mark, fire edge.
+
+        ``set_timestamp`` is invoked (only when marking) to arm the override
+        through :meth:`_arm` — the single writer, which records the
+        per-channel start time and makes the cover manual in one move
+        (issue #1274). The not-manual→manual edge fires ``on_marked`` + the
+        ``on_engaged`` callback.
+        """
+        if decision.event_name is not None:
+            self._record_event(
+                entity_id, decision.event_name, **(decision.event_kwargs or {})
+            )
+        if decision.record_primary_axis_suppression:
+            self._record_primary_axis_suppression(
+                entity_id, delta=decision.suppression_delta
+            )
+        if decision.mark_manual:
+            was_manual = self.is_cover_manual(entity_id)
+            set_timestamp()
+            if not was_manual:
+                self._detector.on_marked(entity_id)
+                if self._on_engaged is not None:
+                    self._on_engaged(entity_id)
+
+    def handle_state_change(self, states_data, inputs: StateChangeInputs):
+        """Process state change for manual override.
+
+        Runs the upstream gates (tracked / wait-for-target / command-grace /
+        secondary axis), resolves the primary-axis position, then delegates the
+        position decision to the active detector and applies its verdict.
+
+        Args:
+            states_data: StateChangedData with entity_id, old_state, new_state
+            inputs: :class:`.detector.StateChangeInputs` carrying every other
+                signal this evaluation needs — the expected position, the cover
+                policy, the reset flag, the threshold and the gate predicates.
+                One object rather than ten parameters (issue #1274), so a new
+                detection signal is a field with a default rather than a
+                signature change at every call site. Its gate predicates
+                default to :func:`.detector.never`, so an omitted gate is a
+                closed gate and nothing here has to guard for ``None``.
+
+        """
+        event = states_data
+        if event is None:
+            return
+        entity_id = event.entity_id
+        if entity_id not in self.covers:
+            return
+        if inputs.is_waiting(entity_id):
+            self._reject_gated_update(
+                entity_id,
+                event_name="manual_override_rejected_wait_for_target",
+                reason="wait_for_target active",
+                our_state=inputs.our_state,
+                secondary_axis_check=inputs.secondary_axis_check,
+                new_state=event.new_state,
+                policy=inputs.policy,
+            )
+            return
+        if inputs.is_in_command_grace(entity_id):
+            self._reject_gated_update(
+                entity_id,
+                event_name="manual_override_rejected_command_grace",
+                reason="command grace period active",
+                our_state=inputs.our_state,
+                secondary_axis_check=inputs.secondary_axis_check,
+                new_state=event.new_state,
+                policy=inputs.policy,
+            )
+            return
+
+        new_state = event.new_state
+
+        secondary_axis_check = inputs.secondary_axis_check
+        if secondary_axis_check is not None:
+            res = secondary_axis_check.evaluate(
+                entity_id, new_state, inputs.manual_threshold
+            )
+            if res.is_manual:
+                # Issue #1227: ``secondary_axis_check.expected`` is LOGICAL and
+                # the raw attribute read is WIRE — on an inverse install those
+                # differ by ``100 - x``, so pairing them unlabelled reads as a
+                # huge false delta. ``res.event_kwargs["new_position"]`` is the
+                # SAME normalised value ``evaluate`` already computed for the
+                # ``manual_override_set`` event (guaranteed present whenever
+                # ``is_manual`` is True), so this reuses it rather than
+                # re-deriving the flip. Name both frames explicitly, matching
+                # the excursion reason string's ``value X% (wire Y%)`` shape.
+                reported = (
+                    res.event_kwargs.get("new_position") if res.event_kwargs else None
+                )
+                raw_value = new_state.attributes.get(secondary_axis_check.attribute)
+                self.logger.debug(
+                    "Manual %s change for %s: ours=%s, new=%s (wire %s)",
+                    secondary_axis_check.label,
+                    entity_id,
+                    secondary_axis_check.expected,
+                    reported,
+                    raw_value,
+                )
+            self._apply_decision(
+                entity_id,
+                OverrideDecision(
+                    mark_manual=res.is_manual,
+                    event_name=res.event_name,
+                    event_kwargs=res.event_kwargs,
+                ),
+                set_timestamp=lambda: self.set_last_updated(
+                    entity_id, new_state, inputs.allow_reset
+                ),
+            )
+            if res.consumed:
+                return
+
+        # Single source of truth for "which axis carries the current value
+        # on this entity?" — same path used by CoverCommandService and
+        # CoverProvider, so manual-override detection sees the same number
+        # the coordinator commanded against.
+        caps = check_cover_features(self.hass, entity_id)
+        policy = inputs.policy
+        new_position = self._read_primary_axis_position(
+            entity_id, policy, new_state, caps=caps
+        )
+        old_state_obj = getattr(event, "old_state", None)
+        old_position = self._read_primary_axis_position(
+            entity_id, policy, old_state_obj, caps=caps
+        )
+        # Issue #888 follow-up: drop the display-only assumed value only on a
+        # GENUINE position transition. For assumed-state open/close covers (Somfy
+        # RTS) "open"/"closed" is the last-command signal; a same-value re-report
+        # ("open"→"open") must NOT wipe the assumed My value, or the card snaps
+        # back off My. A real move to a different endpoint (or a differing numeric
+        # read) still supersedes it. Both reads above pass no ``assumed`` so they
+        # compare raw open/close values (§3b), never the assumed fallback.
+        if new_position is not None and new_position != old_position:
+            self._invalidate_assumed(entity_id)
+
+        now = dt.datetime.now(dt.UTC)
+        ctx_obj = getattr(new_state, "context", None)
+        context_user_id = getattr(ctx_obj, "user_id", None) if ctx_obj else None
+        context_id = getattr(ctx_obj, "id", None) if ctx_obj else None
+        context = DetectionContext(
+            entity_id=entity_id,
+            our_state=inputs.our_state,
+            new_state=new_state,
+            old_state=old_state_obj,
+            new_position=new_position,
+            old_position=old_position,
+            caps=caps,
+            policy=policy,
+            manual_threshold=inputs.manual_threshold,
+            has_recorded_target=inputs.has_recorded_target,
+            allow_reset=inputs.allow_reset,
+            is_acp_context=self._is_acp_context_fn(context_id),
+            context_user_id=context_user_id,
+            context_id=context_id,
+            seconds_since_command=self._seconds_since_command(entity_id, now),
+            secondary_axis_check=secondary_axis_check,
+            is_waiting=inputs.is_waiting,
+            is_in_command_grace=inputs.is_in_command_grace,
+            is_in_transit=inputs.is_in_transit,
+            now=now,
+        )
+        decision = self._detector.detect(context)
+        resolved_allow_reset = (
+            decision.allow_reset
+            if decision.allow_reset is not None
+            else inputs.allow_reset
+        )
+        self._apply_decision(
+            entity_id,
+            decision,
+            set_timestamp=lambda: self.set_last_updated(
+                entity_id, new_state, resolved_allow_reset
+            ),
+        )
+
+    def handle_user_initiated_state_change(
+        self,
+        entity_id: str,
+        new_state,
+        allow_reset: bool,
+        *,
+        context_user_id: str | None,
+        context_id: str | None,
+    ) -> bool:
+        """Mark manual override for a state change confirmed user-initiated by HA context.
+
+        Called from the coordinator when ``new_state.context`` carries a non-None
+        ``user_id`` and ``context.id`` is **not** in the ACP position-context
+        tracker. Delegates to the active detector's ``on_user_context_change``
+        hook (default: mark manual). This path bypasses the position-math
+        comparison because the math is unreliable for assumed-state and
+        OPEN/CLOSE-only covers.
+
+        Returns True when the override was set, False when the entity is not
+        tracked (or the detector declined).
+        """
+        if entity_id not in self.covers:
+            return False
+        decision = self._detector.on_user_context_change(
+            UserContextChange(
+                entity_id=entity_id,
+                new_state=new_state,
+                allow_reset=allow_reset,
+                context_user_id=context_user_id,
+                context_id=context_id,
+            )
+        )
+        if decision is None:
+            return False
+        self.logger.debug(
+            "Manual override via user-initiated state change for %s "
+            "(context user_id=%s, id=%s)",
+            entity_id,
+            context_user_id,
+            context_id,
+        )
+        resolved_allow_reset = (
+            decision.allow_reset if decision.allow_reset is not None else allow_reset
+        )
+        self._apply_decision(
+            entity_id,
+            decision,
+            set_timestamp=lambda: self.set_last_updated(
+                entity_id, new_state, resolved_allow_reset
+            ),
+        )
+        return True
+
+    def handle_stop_service_call(
+        self,
+        entity_id: str,
+        my_position_value: int,
+        is_waiting,
+        *,
+        context_user_id: str | None = None,
+        context_id: str | None = None,
+        context_parent_id: str | None = None,
+    ) -> bool:
+        """Mark manual override when a user-initiated cover.stop_cover is detected.
+
+        Delegates to the active detector's ``on_stop_to_my`` hook (default: mark
+        unless the cover is still moving toward a commanded target). Covers
+        non-position-capable covers (e.g. Somfy RTS) where pressing STOP moves
+        the cover to the hardware "My" preset but never reports a new position.
+
+        Args:
+            entity_id:        Cover entity_id that received stop_cover.
+            my_position_value: The position (0–100) the My preset represents.
+            is_waiting:       Callable(entity_id) -> bool from
+                              CoverCommandService.
+            context_user_id:  user_id of the stop_cover call's originating HA
+                              Context, if any (issue #875 diagnostic capture).
+            context_id:       id of the stop_cover call's originating HA Context.
+            context_parent_id: parent_id of the originating HA Context, if any.
+
+        Returns:
+            True when the stop engaged the manual override (the cover is taken to
+            be at My), False when it was ignored (untracked, or the #875
+            wait-for-target gate declined). The coordinator uses this to decide
+            whether to record the display-only assumed My position (#888).
+
+        """
+        if entity_id not in self.covers:
+            return False
+        decision = self._detector.on_stop_to_my(
+            StopToMy(
+                entity_id=entity_id,
+                my_position_value=my_position_value,
+                is_waiting=is_waiting,
+                context_user_id=context_user_id,
+                context_id=context_id,
+                context_parent_id=context_parent_id,
+            )
+        )
+        if decision is None:
+            self.logger.debug(
+                "handle_stop_service_call: ignoring stop for %s — wait_for_target active",
+                entity_id,
+            )
+            return False
+        self.logger.debug(
+            "Manual override via user stop_cover for %s (My position = %d%%)",
+            entity_id,
+            my_position_value,
+        )
+        self._apply_decision(
+            entity_id,
+            decision,
+            set_timestamp=lambda: self._arm(
+                entity_id, timestamp=dt.datetime.now(dt.UTC), overwrite=False
+            ),
+        )
+        return True
+
+    def set_last_updated(self, entity_id, new_state, allow_reset):
+        """Set last updated time for manual control.
+
+        Records timestamp of manual override detection for duration tracking.
+        Behavior depends on allow_reset setting: if True, updates timestamp
+        on each manual change; if False, keeps original timestamp to prevent
+        duration extension.
+
+        Args:
+            entity_id: Cover entity ID
+            new_state: New state object containing last_updated timestamp
+            allow_reset: If True, updates timestamp on subsequent changes
+
+        """
+        if entity_id not in self._overrides or allow_reset:
+            last_updated = new_state.last_updated
+            # Re-arm from the touch moment; a fresh physical move must not
+            # inherit a pin left behind by a service call or a restore.
+            self._arm(entity_id, timestamp=last_updated)
+            self.logger.debug(
+                "Updating last updated for manual control to %s for %s. Allow reset:%s",
+                last_updated,
+                entity_id,
+                allow_reset,
+            )
+        else:
+            self.logger.debug(
+                "Already manual control time specified for %s, reset is not allowed by user setting:%s",
+                entity_id,
+                allow_reset,
+            )
+
+    # --- override arming / end-time authority -----------------------------
+
+    def _arm(
+        self,
+        entity_id: str,
+        *,
+        timestamp: dt.datetime,
+        expiry: dt.datetime | None = None,
+        overwrite: bool = True,
+        start_source: str = STARTED_AT_SOURCE_ENGAGED,
+    ) -> None:
+        """Write one cover's override start (and optional pinned end).
+
+        The single seam every arming path goes through, and — since issue
+        #1274 — the only writer of :attr:`_overrides`. Start time, pinned end
+        and start-source provenance are one immutable
+        :class:`.detector.OverrideState`, so they cannot disagree about which
+        cover is armed, and "armed" has no separate flag left to fall out of
+        step with (CODING_GUIDELINES.md § no-duplication).
+
+        Args:
+            entity_id: Cover entity ID.
+            timestamp: The override start — when the user touched the cover.
+            expiry: Optional ABSOLUTE end that outranks the configured duration
+                mode. ``None`` with ``overwrite=True`` **clears** any stale pin,
+                so a re-arm resolves fresh from the mode.
+            overwrite: ``True`` re-arms (extend semantics): the whole state is
+                replaced. ``False`` is the "do not extend the window"
+                behaviour ``allow_reset=False`` and ``mark_user_command`` rely
+                on — an already-armed cover keeps its start and provenance, and
+                a supplied ``expiry`` lands only if nothing is pinned yet.
+            start_source: Provenance of ``timestamp`` (``expiry.STARTED_AT_SOURCE_*``).
+                Defaults to ``engaged`` — every path except the reboot restore
+                knows the real moment. Display-only.
+
+        """
+        existing = self._overrides.get(entity_id)
+        if not overwrite and existing is not None:
+            if expiry is None or existing.expiry is not None:
+                return
+            self._overrides[entity_id] = OverrideState(
+                started_at=existing.started_at,
+                expiry=expiry,
+                start_source=existing.start_source,
+            )
+            return
+        self._overrides[entity_id] = OverrideState(
+            started_at=timestamp, expiry=expiry, start_source=start_source
+        )
+
+    def override_for(self, entity_id: str) -> OverrideState | None:
+        """Return *entity_id*'s live override state, or ``None`` if it isn't held.
+
+        The read accessor for :attr:`_overrides` (issue #1274) — the diagnostics
+        block and tests go through here rather than indexing the store, so a
+        future change of representation stays inside this class.
+        """
+        return self._overrides.get(entity_id)
+
+    def expiry_for(self, entity_id: str) -> dt.datetime | None:
+        """Return when *entity_id*'s manual override ends, or ``None`` if it isn't held.
+
+        The single end-time authority (issue #1044) — the sensor value and
+        attributes, the diagnostics countdown, and the expiry poll all read
+        through here instead of each re-deriving ``start + duration``.
+
+        Precedence:
+
+        1. Not under manual override → ``None``.
+        2. A pinned absolute end (service ``end_time``/``duration``, or an
+           expiry restored after a reboot) → that value.
+        3. The configured duration mode's resolved deadline.
+        4. Fallback: ``start + reset_duration`` — i.e. ``fixed`` behaviour,
+           which is also what every unresolvable mode degrades to.
+
+        Step 1 is a single membership test since issue #1274: there is one
+        store, so being in it IS being held. It used to gate on
+        ``manual_control_time`` and then, after #1273, on that plus a separate
+        armed flag — two stores whose agreement rested on ``reset`` popping
+        them together, which let the end-time sensor (keyed off the start
+        time) and the diagnostics block (keyed off the flag) disagree about
+        which covers are held. :meth:`active_entities` is the accessor both
+        should use.
+
+        The result is always tz-aware UTC.
+        """
+        state = self._overrides.get(entity_id)
+        if state is None:
+            return None
+        if state.expiry is not None:
+            return state.expiry
+        started_at = state.started_at
+        anchor = (
+            started_at
+            if started_at.tzinfo is not None
+            else started_at.replace(tzinfo=dt.UTC)
+        )
+        resolved = self._deadline_resolver(anchor)
+        if resolved is not None:
+            return resolved
+        return expiry_for_started_at(anchor, self.reset_duration)
+
+    def active_entities(self) -> list[str]:
+        """Return the covers holding a live manual override, in insertion order.
+
+        The single liveness accessor (issue #1273): a cover is here exactly when
+        :meth:`expiry_for` returns a deadline for it. Both the
+        ``manual_override_end_time`` sensor and the ``manual_override_state``
+        diagnostics block read through this rather than reaching into the
+        store — which, since issue #1274, is the same list either way.
+        """
+        return list(self._overrides)
+
+    def restore_override(self, entity_id: str, expiry: dt.datetime) -> None:
+        """Rehydrate one cover's override from a persisted absolute expiry (#1019).
+
+        The persisted payload is an absolute end, so it is pinned directly
+        rather than pushed through an inverse that no longer round-trips in the
+        sun modes. The derived start is still written so the diagnostics
+        ``started_at`` field and the restore round-trip keep their shape.
+
+        That derived start is a RECONSTRUCTION, not the moment the user touched
+        the cover: only the expiry was ever persisted (a per-entity ISO string —
+        the payload shape a rolled-back build still parses), so the true start
+        is unrecoverable here. Under a pinned service deadline or a non-``fixed``
+        duration mode it will differ from what the engage path reported for the
+        very same override before the restart. It is therefore tagged
+        ``derived_from_expiry`` so diagnostics can say so rather than silently
+        change meaning; the exact end remains available as ``expires_at``.
+
+        The ``restored`` diagnostic event is recorded HERE (issue #1273). The
+        sensor used to write it by reaching through ``_record_event``, which made
+        the restore the one lifecycle transition whose diagnostics lived outside
+        the manager that owns them.
+        """
+        self._arm(
+            entity_id,
+            timestamp=started_at_for_expiry(expiry, self.reset_duration),
+            expiry=expiry,
+            start_source=STARTED_AT_SOURCE_DERIVED,
+        )
+        self._record_event(
+            entity_id,
+            "restored",
+            our_state=None,
+            new_position=None,
+            reason="restored from RestoreEntity after reboot",
+        )
+
+    def _engage(
+        self,
+        entity_id: str,
+        *,
+        timestamp: dt.datetime,
+        reason: str,
+        expiry: dt.datetime | None = None,
+    ) -> None:
+        """Engage manual override on one cover without commanding movement.
+
+        Shared engine for the wall-switch / input-sensor path
+        (:meth:`engage_manual_override_from_external`) and the
+        ``engage_manual_override`` service (:meth:`engage_override`) — both
+        delegate here rather than re-implementing the mark/event/edge block
+        (no-duplication rule). Routes through :meth:`_apply_decision` with
+        ``mark_manual=True`` and a ``set_timestamp`` that **overwrites** the
+        stored override with ``timestamp`` (extend semantics — the overwrite
+        lands even when the cover was already manual). Sends no cover
+        command; the not-manual→manual edge fires ``on_engaged`` so any latched
+        target is discarded.
+
+        Args:
+            entity_id: Cover entity ID to engage.
+            timestamp: Value written as the override's ``started_at`` — when
+                the user touched the cover.
+            reason: Short label recorded into the diagnostic event buffer.
+            expiry: Optional pinned absolute end. ``None`` (the default) leaves
+                the end to the configured duration mode and clears any stale pin.
+
+        """
+        self._apply_decision(
+            entity_id,
+            OverrideDecision(
+                mark_manual=True,
+                event_name="manual_override_set",
+                event_kwargs={
+                    "our_state": None,
+                    "new_position": None,
+                    "reason": reason,
+                },
+            ),
+            set_timestamp=lambda: self._arm(
+                entity_id, timestamp=timestamp, expiry=expiry
+            ),
+        )
+
+    def engage_manual_override_from_external(self, reason: str) -> None:
+        """Engage manual override on every tracked cover from an external trigger.
+
+        Wall-switch / input-sensor path (issue #688): an off→on edge on a
+        configured input binary sensor means the user physically operated the
+        cover, so ACP pauses auto-control on *every* cover in this instance and
+        drops any latched target. Each cover is engaged via :meth:`_engage`
+        with a fresh ``now`` timestamp, re-arming the full override duration on
+        every press (overwrite, not ``setdefault``) and firing the
+        ``on_engaged`` edge on the fresh transition.
+
+        Args:
+            reason: Short label recorded into the diagnostic event buffer
+                (e.g. ``"input_sensor"``).
+
+        """
+        now = dt.datetime.now(dt.UTC)
+        for entity_id in self.covers:
+            self._engage(entity_id, timestamp=now, reason=reason)
+
+    def engage_override(
+        self,
+        entity_id: str,
+        *,
+        end_time: dt.datetime | None = None,
+        duration: dt.timedelta | None = None,
+        reason: str,
+    ) -> None:
+        """Engage or extend manual override on one cover, without moving it.
+
+        Backs the ``adaptive_cover_pro.engage_manual_override`` service. Sends
+        no cover command — engages purely through the override state machine via
+        :meth:`_engage`. Never raises: an invalid ``end_time`` / ``duration``
+        falls through to the next rule.
+
+        Precedence (first valid wins):
+
+        1. ``end_time`` present and strictly in the future → the override ends
+           at ``end_time``; ``duration`` is ignored (logged at debug). A naive
+           ``end_time`` is treated as UTC.
+        2. else ``duration`` positive → EXTEND-BY: if the cover is already under
+           manual override, add ``duration`` to its **current** end; otherwise
+           engage fresh for ``now + duration``.
+        3. else (both absent/invalid) → no pin at all: the configured duration
+           mode owns the end, anchored on ``now``.
+
+        A resolved target end is PINNED, so an explicit service instruction
+        outranks the configured ``manual_override_duration_mode`` (issue #1044).
+        The override's ``started_at`` records ``now`` either way — the honest
+        moment the override was engaged, not a back-dated fiction.
+
+        Args:
+            entity_id: Cover entity ID to engage.
+            end_time: Optional absolute end (aware or naive-UTC datetime).
+            duration: Optional relative extend-by timedelta.
+            reason: Short label recorded into the diagnostic event buffer.
+
+        """
+        now = dt.datetime.now(dt.UTC)
+        if end_time is not None and end_time.tzinfo is None:
+            end_time = end_time.replace(tzinfo=dt.UTC)
+
+        target_expiry: dt.datetime | None = None
+        if end_time is not None and end_time > now:
+            target_expiry = end_time
+            if duration is not None:
+                self.logger.debug(
+                    "engage_override: both end_time and duration supplied for "
+                    "%s — using end_time, ignoring duration",
+                    entity_id,
+                )
+        elif duration is not None and duration > dt.timedelta(0):
+            current_end = self.expiry_for(entity_id)
+            if self.is_cover_manual(entity_id) and current_end is not None:
+                target_expiry = current_end + duration
+            else:
+                target_expiry = now + duration
+
+        self._engage(entity_id, timestamp=now, reason=reason, expiry=target_expiry)
+
+    def mark_user_command(self, entity_id: str, *, reason: str) -> None:
+        """Engage manual override pre-emptively from an ACP-owned surface.
+
+        Pre-emptive analog of :meth:`handle_user_initiated_state_change` which
+        is post-facto: called from the proxy cover entity and the
+        ``adaptive_cover_pro.set_position`` service before the cover even
+        moves so the next coordinator cycle does not yank the cover off the
+        user's set point.
+
+        Arms with ``overwrite=False`` so successive drags do not extend the
+        override window (matches ``allow_reset=False`` semantics). Does not
+        require the entity to be in ``self.covers`` — the proxy may dispatch
+        before ``add_covers`` runs. Does NOT fire the ``on_engaged`` edge
+        callback: these ACP-routed paths set a command target immediately
+        afterward, so the command-side discard would be counter-productive.
+
+        Args:
+            entity_id: Cover entity ID to mark as manually overridden.
+            reason: Short label recorded into the diagnostic event buffer
+                (e.g. ``"proxy_managed"``, ``"set_position"``).
+
+        """
+        self._arm(entity_id, timestamp=dt.datetime.now(dt.UTC), overwrite=False)
+        self._record_event(
+            entity_id,
+            "manual_override_set",
+            our_state=None,
+            new_position=None,
+            reason=reason,
+        )
+
+    def reset_if_needed(self) -> set[str]:
+        """Reset expired manual overrides.
+
+        Checks all covers with manual control timestamps and resets those whose
+        end time has passed. Called on every coordinator update to ensure timely
+        automatic reset.
+
+        The end time comes from :meth:`expiry_for`, so this honours a pinned
+        service deadline and the configured duration mode alike. The comparison
+        is strictly ``>``: an override is not expired *at* its deadline, only
+        past it.
+
+        Returns:
+            Set of entity IDs whose manual override just expired this call.
+            Empty set when nothing changed. The coordinator uses this to
+            proactively send the current pipeline position to those covers
+            so they don't linger at the user-moved position.
+
+        """
+        expired: set[str] = set()
+        current_time = dt.datetime.now(dt.UTC)
+        for entity_id in list(self._overrides):
+            deadline = self.expiry_for(entity_id)
+            if deadline is not None and current_time > deadline:
+                self.logger.debug(
+                    "Resetting manual override for %s, because it expired at %s",
+                    entity_id,
+                    deadline,
+                )
+                self.reset(entity_id)
+                expired.add(entity_id)
+        return expired
+
+    def reset(self, entity_id):
+        """Reset manual control.
+
+        Clears manual control flag and timestamp for cover. Called when duration
+        expires, user presses reset button, or manual detection is disabled.
+        Re-enables automatic position commands. Notifies the active detector and
+        fires the ``on_cleared`` edge callback.
+
+        Args:
+            entity_id: Cover entity ID to reset
+
+        """
+        self._overrides.pop(entity_id, None)
+        # Issue #888: the assumed My/display position was a stand-in while the
+        # override held the cover; clearing the override retires it too.
+        self._invalidate_assumed(entity_id)
+        self.logger.debug("Reset manual override for %s", entity_id)
+        self._record_event(
+            entity_id,
+            "manual_override_reset",
+            our_state=None,
+            new_position=None,
+            reason="manual override cleared",
+        )
+        self._detector.on_reset(entity_id)
+        if self._on_cleared is not None:
+            self._on_cleared([entity_id])
+
+    def is_cover_manual(self, entity_id):
+        """Check if cover is manual.
+
+        Args:
+            entity_id: Cover entity ID to check
+
+        Returns:
+            True if cover is under manual control, False otherwise
+
+        """
+        return entity_id in self._overrides
+
+    @property
+    def binary_cover_manual(self):
+        """Check if any cover is manual.
+
+        Returns:
+            True if at least one tracked cover is under manual control,
+            False if all covers are under automatic control
+
+        """
+        return bool(self._overrides)
+
+    @property
+    def manual_controlled(self):
+        """Get list of manual covers.
+
+        Returns:
+            List of cover entity IDs currently under manual control
+
+        """
+        return list(self._overrides)

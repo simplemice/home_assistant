@@ -232,7 +232,7 @@ template:
   - sensor:
       - name: rain_day_increment
         state: >
-          {{ 1 if is_state('binary_sensor.rain_detector_rain', 'on') else 0 }}
+          {{ 1 if is_state('binary_sensor.rain_detector', 'on') else 0 }}
 
   - sensor:
       - name: "Rainfall 24h Total (mm)"
@@ -338,7 +338,7 @@ template:
       - name: "Phuket Wind Type"
         unique_id: phuket_wind_type
         state: >
-          {% set bearing = states('sensor.openweathermap_wind_bearing') | float(0) %}
+          {% set bearing = states('sensor.pirateweather_wind_bearing') | float(0) %}
           {% set month = now().month %}
           {% set is_southwest = 200 <= bearing <= 260 %}
           {% set is_northeast = 30 <= bearing <= 80 %}
@@ -459,7 +459,7 @@ template:
           {% set score = 0 %}
           {% set pop = states('sensor.pirateweather_precip_probability')|float(0) %}
           {% set humidity = states('sensor.outside_humidity')|float(0) %}
-          {% set clouds = states('sensor.astroweather_home_cloudless')|float(0) %}
+          {% set clouds = states('sensor.astroweather_astroweather_cloudless')|float(0) %}
           {% if pop > 60 %}{% set score = score + 2 %}
           {% elif pop > 40 %}{% set score = score + 1 %}
           {% endif %}

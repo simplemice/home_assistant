@@ -46,7 +46,7 @@ template:
         state_class: total_increasing
         icon: mdi:water-pump
         state: >
-          {{ (states('sensor.water_usage_total_l') | float(0) * 0.001) | round(5) }}
+          {{ (states('sensor.water_tank_sensor_water_usage_total_l') | float(0) * 0.001) | round(5) }}
 
       # Water flow rate — derived from volume sensor derivative
       # Shows current consumption rate in L/min
@@ -79,7 +79,7 @@ template:
         state_class: total_increasing
         icon: mdi:cash-multiple
         state: >
-          {% set used_l = states('sensor.water_usage_total_l') | float(0) %}
+          {% set used_l = states('sensor.water_tank_sensor_water_usage_total_l') | float(0) %}
           {% set rate   = states('input_number.water_tariff_rate') | float(8.5) %}
           {{ (used_l * 0.001 * rate) | round(2) }}
 

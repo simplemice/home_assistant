@@ -1,0 +1,96 @@
+"""Motion timeout handler — return default when no occupancy detected."""
+
+from __future__ import annotations
+
+from ...const import ControlMethod, ReasonCode
+from ...position_utils import flip_if
+from ...reason_i18n import Reason
+from ..handler import OverrideHandler
+from ..helpers import (
+    compute_default_position,
+    compute_default_tilt,
+    compute_raw_calculated_position,
+)
+from ..types import PipelineResult, PipelineSnapshot
+
+
+class MotionTimeoutHandler(OverrideHandler):
+    """Return the default position when the motion timeout is active.
+
+    Priority 75 — lower than manual override, higher than climate/solar.
+    When all occupancy sensors have reported no motion for the configured
+    timeout duration, automatic sun-tracking is suspended.
+    """
+
+    name = "motion_timeout"
+    priority = 75
+
+    def evaluate(self, snapshot: PipelineSnapshot) -> PipelineResult | None:
+        """Return default position when motion timeout is active."""
+        if not snapshot.motion_control_enabled:
+            return None
+        if not snapshot.motion_timeout_active:
+            return None
+
+        # Hold-position mode: freeze the cover at its current physical position
+        # while the sun is actively in the FOV. When the sun leaves (or the time
+        # window closes), fall through to the return_to_default branch below so
+        # the cover returns to default without requiring motion re-detection.
+        if (
+            snapshot.motion_timeout_mode == "hold_position"
+            and snapshot.in_time_window
+            and snapshot.cover.direct_sun_valid
+            and snapshot.current_cover_position is not None
+        ):
+            held = snapshot.current_cover_position
+            # ``held`` is a RAW cover-frame read, but ``PipelineResult.position``
+            # is a logical-frame field: ``coordinator.state`` maps every winner
+            # through ``_to_cover_frame`` on the way out, so handing the raw
+            # value over would invert it a second time and publish a target that
+            # contradicts where the cover actually is (issue #1028).
+            #
+            # Setting ``bypass_auto_control=True`` would also dodge that
+            # inversion, but that flag additionally means "apply even when
+            # automatic control is OFF" — the wrong semantic for a motion hold.
+            # Convert the frame instead and leave the flag alone.
+            #
+            # Known limitation (#925 territory, not fixed here): under
+            # interpolation ``coordinator.state`` re-interpolates the held motor
+            # read, so the published target still drifts. Pre-existing.
+            return PipelineResult(
+                position=flip_if(held, inverted=snapshot.position_axis_inverted),
+                control_method=ControlMethod.MOTION,
+                # The raw read stays in the reason payload / diagnostics.
+                reason_payload=Reason(ReasonCode.OCCUPANCY_HOLDING, {"held": held}),
+                skip_command=True,
+                raw_calculated_position=compute_raw_calculated_position(snapshot),
+            )
+
+        position = compute_default_position(snapshot)
+        pos_label = Reason(
+            ReasonCode.FRAGMENT_SUNSET_POSITION
+            if snapshot.is_sunset_active
+            else ReasonCode.FRAGMENT_DEFAULT_POSITION
+        )
+        return PipelineResult(
+            position=position,
+            control_method=ControlMethod.MOTION,
+            # This return-to-default branch resolves its position from the
+            # effective default, so it also carries the effective
+            # default/sunset tilt (issue #1214) — the same one DefaultHandler
+            # would have supplied. The hold_position branch above resolves
+            # from the cover's own current position and deliberately stays
+            # untilted (skip_command, #1153 hold semantics).
+            tilt=compute_default_tilt(snapshot),
+            reason_payload=Reason(
+                ReasonCode.OCCUPANCY_LABEL,
+                {"pos_label": pos_label, "position": position},
+            ),
+            raw_calculated_position=compute_raw_calculated_position(snapshot),
+        )
+
+    def describe_skip(self, snapshot: PipelineSnapshot) -> Reason:
+        """Reason when occupancy timeout is not active."""
+        if not snapshot.motion_control_enabled:
+            return Reason(ReasonCode.SKIP_OCCUPANCY_DISABLED)
+        return Reason(ReasonCode.SKIP_OCCUPANCY_NOT_ACTIVE)

@@ -1,9 +1,10 @@
 /**
- * Entity Availability Card v0.5.2
+ * Entity Availability Card
  * Custom Lovelace card for the Home Assistant Entity Availability integration.
+ * Keep CARD_VERSION in sync with manifest.json "version".
  */
 
-const CARD_VERSION = "0.5.3";
+const CARD_VERSION = "0.6.2";
 
 console.info(
   `%c ENTITY-AVAILABILITY-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -495,6 +496,27 @@ const cardStyles = css`
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 260px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .entity-detail-members-header {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--eac-divider);
+  }
+
+  .entity-detail-members-header .entity-tooltip-label {
+    color: var(--secondary-text-color, #727272);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  .entity-detail-member {
+    padding-left: 12px;
   }
 
   .entity-dot {
@@ -1097,7 +1119,7 @@ class EntityAvailabilityCard extends LitElement {
             <div class="entity-item" tabindex="0" role="button" @mouseenter=${(e) => this._positionTooltip(e, item, suppressedUntil)} @mouseleave=${() => this._hideTooltip()} @click=${(e) => this._handleEntityClick(e, item.entityId)} @keydown=${(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (e.key === "Enter") this._handleEntityClick(e, item.entityId); } }} @keyup=${(e) => { if (e.key === " ") { e.preventDefault(); this._handleEntityClick(e, item.entityId); } }}>
               <div class="entity-item-row" style="${gridStyle}">
                 <div class="entity-dot ${item.dotColor}"></div>
-                <span class="entity-name">${item.isNonEssential ? html`<ha-icon icon="mdi:minus-circle-outline" class="non-essential-icon" style="color:var(--eac-${item.dotColor === 'green' ? 'green' : item.dotColor === 'red' ? 'red' : 'yellow'});vertical-align:middle;--mdc-icon-size:14px"></ha-icon> ` : nothing}${item.name}${item.memberCount > 1 ? html`<span class="entity-member-count" title="${item.memberCount} entities collapsed into this row" aria-label="${item.memberCount} entities collapsed">×${item.memberCount}</span>` : nothing}</span>
+                <span class="entity-name">${item.isNonEssential ? html`<ha-icon icon="mdi:minus-circle-outline" class="non-essential-icon" style="color:var(--eac-${item.dotColor === 'green' ? 'green' : item.dotColor === 'red' ? 'red' : 'yellow'});vertical-align:middle;--mdc-icon-size:14px"></ha-icon> ` : nothing}${item.name}${item.memberCount > 1 && this._config.show_collapse_count !== false ? html`<span class="entity-member-count" title="${item.memberCount} entities collapsed into this row" aria-label="${item.memberCount} entities collapsed">×${item.memberCount}</span>` : nothing}</span>
                 <span class="entity-status">${item.status}</span>
                 ${hasBattery
                   ? html`<span class="entity-battery">${item.battery !== null ? `${item.battery}%` : ""}</span>`
@@ -1427,12 +1449,27 @@ class EntityAvailabilityCard extends LitElement {
     return `${_entityWord(offlineCount)} offline for ${item.status}${suffix}`;
   }
 
+  _groupRowFor(item) {
+    if (!this._isCombinedGroup()) return null;
+    const rowGroups = (this._getGroupSummary()?.attributes?.row_groups?.[item.rowKey] || [])
+      .map((g) => String(g ?? "").trim()).filter(Boolean);
+    return rowGroups.length
+      ? { label: rowGroups.length > 1 ? "Groups" : "Group", value: rowGroups.join(", ") }
+      : null;
+  }
+
   _buildDetailRows(item, suppressedUntilMap) {
     const entityState = this.hass.states[item.entityId];
     const lastChanged = this._computeDuration(item.entityId);
 
     const areaId = this.hass.entities?.[item.entityId]?.area_id;
     const areaName = areaId ? (this.hass.areas?.[areaId]?.name || null) : null;
+
+    // Combined-only: which source group(s) this row came from. row_groups is
+    // keyed by the same rowKey the row model uses; for a collapsed device the
+    // backend folds all members' groups onto the representative row_key, so the
+    // union shows here too.
+    const groupRow = this._groupRowFor(item);
 
     const suppressedUntilIso = (item.rowKey != null && item.rowKey in suppressedUntilMap)
       ? suppressedUntilMap[item.rowKey]
@@ -1459,6 +1496,7 @@ class EntityAvailabilityCard extends LitElement {
     return [
       identityRow,
       areaName ? { label: "Area", value: areaName } : null,
+      groupRow,
       !isCollapsed ? { label: "HA State", value: lastChanged ? `${this._formatStateDisplay(entityState)} · ${lastChanged}` : this._formatStateDisplay(entityState) } : null,
       { label: "Condition", value: conditionValue },
       item.battery !== null ? { label: "Battery", value: `${item.battery}%` } : null,
@@ -1472,21 +1510,44 @@ class EntityAvailabilityCard extends LitElement {
     const isCollapsed = item.memberCount > 1;
     let rows;
     if (isCollapsed && compact) {
-      rows = [{ label: "Condition", value: this._collapsedCondition(item, suppressedUntilMap) }];
+      const groupRow = this._groupRowFor(item);
+      rows = (groupRow ? [groupRow] : []).concat([
+        { label: "Condition", value: this._collapsedCondition(item, suppressedUntilMap) },
+      ]);
     } else if (isCollapsed && !compact) {
       if (!item.members) {
         console.warn("[EA] collapsed row missing members", item.entityId);
         rows = [];
       } else {
-        rows = item.members.map((eid) => {
+        // Metadata block (Device/Area/Groups/Condition/Battery/Signal) reused
+        // from the tooltip builder, then a Members sub-section with each
+        // member's state. Member labels drop the device-name prefix when the
+        // friendly name carries it, falling back to the full name otherwise.
+        const deviceName = item.deviceId
+          ? (this.hass.devices?.[item.deviceId]?.name_by_user || this.hass.devices?.[item.deviceId]?.name || null)
+          : null;
+        const memberRows = item.members.map((eid) => {
           const entityState = this.hass.states[eid];
           const lastChanged = this._computeDuration(eid);
-          const label = entityState?.attributes?.friendly_name || eid.split(".").pop();
+          const full = entityState?.attributes?.friendly_name || eid.split(".").pop();
+          let label = full;
+          // Only strip the device name when it's a whole-word prefix (next char
+          // is whitespace), so "Balcony" doesn't mangle "Balcony2 Occupancy".
+          if (deviceName && full.length > deviceName.length
+              && full.startsWith(deviceName) && /\s/.test(full[deviceName.length])) {
+            const trimmed = full.slice(deviceName.length).trim();
+            if (trimmed) label = trimmed;
+          }
           const value = lastChanged
             ? `${this._formatStateDisplay(entityState)} · ${lastChanged}`
             : this._formatStateDisplay(entityState);
-          return { label, value };
+          return { label, value, member: true };
         });
+        rows = [
+          ...this._buildDetailRows(item, suppressedUntilMap),
+          { label: "Members", value: "", header: true },
+          ...memberRows,
+        ];
       }
     } else if (compact) {
       const entityState = this.hass.states[item.entityId];
@@ -1500,8 +1561,10 @@ class EntityAvailabilityCard extends LitElement {
     }
     return html`
       <div class="entity-detail-inline">
-        ${rows.map((r) => html`
-          <div class="entity-tooltip-row">
+        ${rows.map((r) => r.header
+          ? html`<div class="entity-tooltip-row entity-detail-members-header"><span class="entity-tooltip-label">${r.label}</span></div>`
+          : html`
+          <div class="entity-tooltip-row ${r.member ? "entity-detail-member" : ""}">
             <span class="entity-tooltip-label">${r.label}</span>
             <span class="entity-tooltip-value">${r.value}</span>
           </div>
@@ -2066,6 +2129,16 @@ class EntityAvailabilityCardEditor extends LitElement {
           <label>
             <input
               type="checkbox"
+              .checked=${this._config.show_collapse_count !== false}
+              @change=${(e) => this._updateConfig("show_collapse_count", e.target.checked)}
+            />
+            Show Collapse Count (×N badge)
+          </label>
+        </div>
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
               .checked=${this._config.show_non_essential_stats === true}
               @change=${(e) => this._updateConfig("show_non_essential_stats", e.target.checked)}
             />
@@ -2094,7 +2167,6 @@ class EntityAvailabilityCardEditor extends LitElement {
           </label>
         </div>
         ` : nothing}
-        ${!this._isSelectedGroupCombined() ? html`
         <div class="editor-row">
           <label>Filter Entities (requires Show Entity List)</label>
           <select
@@ -2107,8 +2179,18 @@ class EntityAvailabilityCardEditor extends LitElement {
             <option value="online">Healthy only (online)</option>
           </select>
         </div>
-        ` : nothing}
         ${this._isSelectedGroupCombined() ? html`
+        <div class="editor-row checkbox">
+          <label>
+            <input
+              type="checkbox"
+              .checked=${this._config.show_entity_health !== false}
+              @change=${(e) => this._updateConfig("show_entity_health", e.target.checked)}
+              ?disabled=${this._config.show_entities === false}
+            />
+            Show Health Columns in Entity List (Bat. &amp; Signal, when active)
+          </label>
+        </div>
         <div class="editor-row checkbox">
           <label>
             <input
@@ -2153,6 +2235,7 @@ class EntityAvailabilityCardEditor extends LitElement {
             Show Health Columns (Bat. &amp; Signal, when active)
           </label>
         </div>
+        ` : nothing}
         <div class="editor-row checkbox">
           <label>
             <input
@@ -2163,7 +2246,6 @@ class EntityAvailabilityCardEditor extends LitElement {
             Show Per-Entity Suppress Toggle
           </label>
         </div>
-        ` : nothing}
         <div class="editor-row checkbox">
           <label>
             <input
@@ -2207,7 +2289,6 @@ class EntityAvailabilityCardEditor extends LitElement {
           </select>
         </div>
         ` : nothing}
-        ${!this._isSelectedGroupCombined() ? html`
         <div class="editor-row">
           <label>Entity Detail</label>
           <select
@@ -2219,6 +2300,7 @@ class EntityAvailabilityCardEditor extends LitElement {
             <option value="inline">Always visible (inline)</option>
           </select>
         </div>
+        ${!this._isSelectedGroupCombined() ? html`
         <div class="editor-row">
           <label>Sort Entities By</label>
           <select
