@@ -1,0 +1,48 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ติดตามพัสดุ LEX TH",
+        "description": "กรอกหมายเลขติดตามพัสดุของ LEX TH (Lazada Express ประเทศไทย)",
+        "data": {
+          "tracking_number": "หมายเลขติดตามพัสดุ",
+          "language": "ภาษา"
+        }
+      }
+    },
+    "error": {
+      "invalid_tracking_number": "หมายเลขติดตามไม่ถูกต้อง ใช้ตัวอักษรและตัวเลข 8-32 ตัว",
+      "cannot_connect": "ไม่สามารถเชื่อมต่อบริการติดตามพัสดุของ LEX TH ได้"
+    },
+    "abort": {
+      "already_configured": "พัสดุนี้ถูกติดตามอยู่แล้ว"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "สถานะ",
+        "state": {
+          "not_found": "ไม่พบพัสดุ",
+          "picked_up": "รับพัสดุแล้ว",
+          "in_transit": "อยู่ระหว่างขนส่ง",
+          "out_for_delivery": "กำลังนำส่ง",
+          "delivered": "จัดส่งสำเร็จ",
+          "problem": "มีปัญหา",
+          "unknown": "ไม่ทราบสถานะ"
+        }
+      },
+      "details": {
+        "name": "รายละเอียด"
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "en": "English (อังกฤษ)",
+        "th": "ไทย"
+      }
+    }
+  }
+}

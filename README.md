@@ -136,9 +136,9 @@ This repository is treated as:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2567 |
-| Number of sensors | 1446 |
-| Current Version | 2026.10.2 |
+| Number of entities | 2569 |
+| Number of sensors | 1448 |
+| Current Version | 2026.10.4 |
 | Total Automations | 131 |
 | Total Scripts | 44 |
 | Total Lights | 36 |
@@ -176,6 +176,7 @@ This repository is treated as:
 ## 🧩 Installed Integrations
 - [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) (v2026.10.0)
 - [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting#readme) (v1.30.1)
+- [AI Memory](https://github.com/Riscue/ha-ai-memory) (v0.3.1)
 - [Alarmo](https://github.com/nielsfaber/alarmo) (v1.10.17)
 - [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
@@ -187,9 +188,10 @@ This repository is treated as:
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.6)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v2.2.2)
+- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v9.0.0)
 - [HACS](https://hacs.xyz/docs/use/) (v2.0.5)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
+- [LEX TH Parcel Tracking](https://lex.th/tracking) (v0.1.0)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
 - [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.14.0)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)

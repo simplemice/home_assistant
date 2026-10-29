@@ -1,0 +1,48 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Track a LEX TH parcel",
+        "description": "Enter the LEX TH (Lazada Express Thailand) tracking number.",
+        "data": {
+          "tracking_number": "Tracking number",
+          "language": "Language"
+        }
+      }
+    },
+    "error": {
+      "invalid_tracking_number": "Invalid tracking number. Use 8-32 letters and digits.",
+      "cannot_connect": "Cannot reach the LEX TH tracking service."
+    },
+    "abort": {
+      "already_configured": "This parcel is already being tracked."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "not_found": "Not found",
+          "picked_up": "Picked up",
+          "in_transit": "In transit",
+          "out_for_delivery": "Out for delivery",
+          "delivered": "Delivered",
+          "problem": "Problem",
+          "unknown": "Unknown"
+        }
+      },
+      "details": {
+        "name": "Details"
+      }
+    }
+  },
+  "selector": {
+    "language": {
+      "options": {
+        "en": "English",
+        "th": "ไทย (Thai)"
+      }
+    }
+  }
+}
