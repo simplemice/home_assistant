@@ -163,21 +163,18 @@ Installed integrations, versions as reported:
 {%- endfor %}
 
 ## 🔗 Custom integrations
-{%- for s in expand(integration_entities('marketplace')) | sort(attribute='name') if device_attr(s.entity_id, 'model') == 'integration' %}
-{%- set repo = (s.attributes.release_url | default('', true)) | regex_replace('/releases/.*$', '') %}
-- {% if repo %}[{{ s.name }}]({{ repo }}){% else %}{{ s.name }}{% endif %}
+{%- for component in hacs_components | default([]) | selectattr('category', 'equalto', 'integration') | sort(attribute='name') %}
+- {% if component.documentation %}[{{ component.name }}]({{ component.documentation }}){% else %}{{ component.name }}{% endif %}
 {%- endfor %}
 
 ## 🎛️ Lovelace plugins
-{%- for s in expand(integration_entities('marketplace')) | sort(attribute='name') if device_attr(s.entity_id, 'model') == 'plugin' %}
-{%- set repo = (s.attributes.release_url | default('', true)) | regex_replace('/releases/.*$', '') %}
-- {% if repo %}[{{ s.name }}]({{ repo }}){% else %}{{ s.name }}{% endif %}
+{%- for component in hacs_components | default([]) | selectattr('category', 'equalto', 'plugin') | sort(attribute='name') %}
+- {% if component.documentation %}[{{ component.name }}]({{ component.documentation }}){% else %}{{ component.name }}{% endif %}
 {%- endfor %}
 
 ## 🎨 Themes
-{%- for s in expand(integration_entities('marketplace')) | sort(attribute='name') if device_attr(s.entity_id, 'model') == 'theme' %}
-{%- set repo = (s.attributes.release_url | default('', true)) | regex_replace('/releases/.*$', '') %}
-- {% if repo %}[{{ s.name }}]({{ repo }}){% else %}{{ s.name }}{% endif %}
+{%- for component in hacs_components | default([]) | selectattr('category', 'equalto', 'theme') | sort(attribute='name') %}
+- {% if component.documentation %}[{{ component.name }}]({{ component.documentation }}){% else %}{{ component.name }}{% endif %}
 {%- endfor %}
 
 ---

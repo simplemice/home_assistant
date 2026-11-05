@@ -19,6 +19,8 @@ from homeassistant.components import hassio
 from homeassistant import config_entries
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.helpers.template import AllStates
+import re
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.loader import Integration, IntegrationNotFound, async_get_integration
 from homeassistant.setup import async_get_loaded_integrations
 from jinja2 import Template
@@ -175,17 +177,45 @@ async def add_services(hass: HomeAssistant):
 
 
 def get_hacs_components(hass: HomeAssistant):
-    if (hacs := hass.data.get("hacs")) is None:
-        return []
+    """Return downloaded community projects (HACS before 2026.11, Marketplace since)."""
+    if (hacs := hass.data.get("hacs")) is not None:
+        return [
+            {
+                **repo.data.to_json(),
+                "name": get_repository_name(repo),
+                "documentation": f"https://github.com/{repo.data.full_name}",
+            }
+            for repo in hacs.repositories.list_downloaded or []
+        ]
 
-    return [
-        {
-            **repo.data.to_json(),
-            "name": get_repository_name(repo),
-            "documentation": f"https://github.com/{repo.data.full_name}",
-        }
-        for repo in hacs.repositories.list_downloaded or []
-    ]
+    # Home Assistant 2026.11+: HACS is replaced by the built-in Marketplace.
+    # Every installed project is an update entity on a device whose `model`
+    # is the category (integration / plugin / theme / ...).
+    ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(hass)
+    components = []
+    for entry in ent_reg.entities.values():
+        if entry.platform != "marketplace" or not entry.entity_id.startswith("update."):
+            continue
+        device = dev_reg.async_get(entry.device_id) if entry.device_id else None
+        state = hass.states.get(entry.entity_id)
+        name = (
+            (state.name if state else None)
+            or entry.name
+            or entry.original_name
+            or (device.name if device else None)
+            or entry.entity_id
+        )
+        release_url = (state.attributes.get("release_url") if state else None) or ""
+        components.append(
+            {
+                "category": (device.model if device else None) or "",
+                "name": name,
+                "authors": [device.manufacturer] if device and device.manufacturer else [],
+                "documentation": re.sub(r"/releases/.*$", "", release_url),
+            }
+        )
+    return components
 
 
 @callback
