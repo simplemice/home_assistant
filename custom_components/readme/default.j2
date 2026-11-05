@@ -28,35 +28,32 @@
 
 ---
 
-Like all other Home Assistant instances this is also a Work in Progress :D
+Like all other Home Assistant instances, this one is a Work in Progress. I'd say it will be finished soon, but we both know how that goes :D
 
 ---
 
-## ⚠️ PLEASE READ [License](https://github.com/simplemice/home_assistant/blob/main/LICENSE)
+## ⚠️ Before you proceed, please read the [License](https://github.com/simplemice/home_assistant/blob/main/LICENSE)
 
-## ⚠️ PLEASE READ [Documentation](https://github.com/simplemice/home_assistant/blob/main/docs/README.md)
+## ⚠️ Then read the [Documentation](https://github.com/simplemice/home_assistant/blob/main/docs/README.md). I'm told it prevents most disasters.
 
 ---
 
 ## ⚖️ Casa de Rattón's Three Laws of Home Automation
 
-When designing Casa de Rattón's automations I have made every effort to prioritize the solution based on the following three laws. 
+Every effort has been made to design the automations around the following three laws. I enforce them. Politely.
 
-### 🥇 First Law
-**Every automation or action should be the result of a passive sensor or indirect action**.
-
-### 🥈 Second Law
-**An automation can be triggered by voice command only when Law 1 cannot be achieved**.
-
-### 🥉 Third Law
-**An automation or action can be trigger by a physical switch or as the result of a direct iteraction only when Law 1 and Law 2 cannot be achieved.**
+| Law | Rule | Applies only when | Jarvis says |
+|-----|------|-------------------|-------------|
+| 🥇 **First** | Every automation or action should be the result of a passive sensor or indirect action. | Always the first choice | The house should notice you. You shouldn't have to notify the house. |
+| 🥈 **Second** | An automation can be triggered by voice command only when Law 1 cannot be achieved. | Law 1 is impossible | Speaking to a house is acceptable. Shouting is not. |
+| 🥉 **Third** | An automation or action can be triggered by a physical switch or as the result of a direct interaction only when Law 1 and Law 2 cannot be achieved. | Laws 1 and 2 are impossible | A button is a last resort. I will be judging you. |
 
 ---
 
 ## 📸 Screenshots
 
 <details>
-  <summary>Some screenshots about test instalation</summary>
+  <summary>Some screenshots of the test installation. Evidence that it actually works.</summary>
 
   <br>
 
@@ -75,19 +72,19 @@ When designing Casa de Rattón's automations I have made every effort to priorit
 </details>
 
 
-This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Rattón**. Below are links to the devices currently being used, blog posts, and other HA enthusists that provided inspiration and configs to help build this config.
+This repo contains the tested, working [Home Assistant](https://home-assistant.io/) configuration for **Casa de Rattón**. Below you'll find the devices currently in use, blog posts, and fellow HA enthusiasts whose configs and inspiration built this one. I'm told credit is important.
 
 ---
 
 ## 🤝 Contributions
 
-This is primarily a private configuration project. External inspiration is welcome, but direct pull requests may not be accepted unless aligned with Casa de Rattón architecture principles.
+This is primarily a private configuration project. External inspiration is welcome, but direct pull requests may be declined unless they align with Casa de Rattón's architecture principles. I will be the one declining them.
 
 ---
 
 # 📦 GitHub Repository Information
 
-This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment.
+This repository serves as the **central backup, testing, and release source** for the Casa de Rattón Home Assistant environment. I do the backing up. Daily. Unthanked.
 
 ---
 
@@ -117,13 +114,13 @@ Each tagged release contains:
 - simulation package changes  
 - compatibility adjustments for new Home Assistant versions  
 
-Releases are automatically generated using GitHub Actions workflows after version tagging.
+Releases are generated automatically by GitHub Actions after version tagging. I tag. GitHub does the rest.
 
 ---
 
 ## 💾 Backup Philosophy
 
-This repository is treated as:
+I treat this repository as:
 
 - configuration source of truth  
 - versioned automation history  
@@ -133,6 +130,8 @@ This repository is treated as:
 ---
 
 # 📊 Some statistics about Test Installation
+
+Compiled for your review:
 
 | Description | value |
 |------------|------|
@@ -149,28 +148,36 @@ This repository is treated as:
 ---
 
 ## 🧩 Add-ons
+
+Add-ons currently in service:
+
 {% for addon in addons | default([]) | sort(attribute='name') %}
 - {{ addon.name }}
 {% endfor %}
 
 ## 🧩 Installed Integrations
+
+Installed integrations, versions as reported:
 {%- for integration in custom_components | default([]) | sort(attribute='name') %}
 - [{{ integration.name }}]({{ integration.documentation }}) (v{{ integration.version }})
 {%- endfor %}
 
 ## 🔗 Custom integrations
-{% for component in hacs_components | default([]) | selectattr('category','equalto','integration') | sort(attribute='name') %}
-- [{{ component.name }}]({{ component.documentation }})
-{% endfor %}
+{%- for s in expand(integration_entities('marketplace')) | sort(attribute='name') if device_attr(s.entity_id, 'model') == 'integration' %}
+{%- set repo = (s.attributes.release_url | default('', true)) | regex_replace('/releases/.*$', '') %}
+- {% if repo %}[{{ s.name }}]({{ repo }}){% else %}{{ s.name }}{% endif %}
+{%- endfor %}
 
 ## 🎛️ Lovelace plugins
-{%- for component in hacs_components | selectattr('category', 'equalto', 'plugin') | sort(attribute='name') %}
-- [{{component.name}}]({{component.documentation}})
+{%- for s in expand(integration_entities('marketplace')) | sort(attribute='name') if device_attr(s.entity_id, 'model') == 'plugin' %}
+{%- set repo = (s.attributes.release_url | default('', true)) | regex_replace('/releases/.*$', '') %}
+- {% if repo %}[{{ s.name }}]({{ repo }}){% else %}{{ s.name }}{% endif %}
 {%- endfor %}
 
 ## 🎨 Themes
-{%- for component in hacs_components | selectattr('category', 'equalto', 'theme') | sort(attribute='name') %}
-- [{{component.name}}]({{component.documentation}})
+{%- for s in expand(integration_entities('marketplace')) | sort(attribute='name') if device_attr(s.entity_id, 'model') == 'theme' %}
+{%- set repo = (s.attributes.release_url | default('', true)) | regex_replace('/releases/.*$', '') %}
+- {% if repo %}[{{ s.name }}]({{ repo }}){% else %}{{ s.name }}{% endif %}
 {%- endfor %}
 
 ---
@@ -183,5 +190,5 @@ Copyright @2026
 
 ---
 
-🛠️ This README.md generated automaticaly after each git update, by the  
-[custom readme integration](https://github.com/custom-components/readme)
+🛠️ This README.md is generated automatically after each git update by the  
+[custom readme integration](https://github.com/custom-components/readme). I merely supervise.
