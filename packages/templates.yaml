@@ -42,3 +42,42 @@ template:
           {% elif p < 35 %} work
           {% else %} heavy
           {% endif %}
+  - triggers:
+      - trigger: event
+        event_type: flightradar24_area_landed
+        id: landed
+      - trigger: time
+        at: "00:00:00"
+        id: reset
+    variables:
+      d: "{{ trigger.event.data if trigger.id == 'landed' else {} }}"
+      today: "{{ now().date().isoformat() }}"
+      is_ru: >-
+        {{ (d.airport_origin_country_code | default('', true) | upper | trim) == 'RU'
+           or (d.airport_origin_city | default('', true) | lower | trim)
+           in ['moscow', 'yekaterinburg', 'ekaterinburg', 'st. petersburg', 'saint petersburg', 'krasnoyarsk'] }}
+      entry: >-
+        {{ {'id': d.id,
+            'flight': d.flight_number | default(d.callsign, true),
+            'airline': d.airline | default('Unknown', true),
+            'route': (d.airport_origin_city | default('Unknown', true)) ~ ' → ' ~ (d.airport_destination_city | default('Unknown', true))}
+           if (trigger.id == 'landed' and (is_ru | bool(false))) else none }}
+    sensor:
+      - name: FlightRadar24 Russian Landed Today
+        unique_id: flightradar24_russian_landed_today
+        icon: mdi:airplane-landing
+        unit_of_measurement: flights
+        state: >-
+          {% set a = this.attributes if this is not none else {} %}
+          {% set prev = [] if (trigger.id == 'reset' or a.get('day', '') != today) else a.get('flights', []) %}
+          {{ (prev + [entry] if (entry and entry.id not in (prev | map(attribute='id') | list)) else prev) | count }}
+        attributes:
+          day: "{{ today }}"
+          flights: >-
+            {% set a = this.attributes if this is not none else {} %}
+            {% set prev = [] if (trigger.id == 'reset' or a.get('day', '') != today) else a.get('flights', []) %}
+            {{ prev + [entry] if (entry and entry.id not in (prev | map(attribute='id') | list)) else prev }}
+          landings_seen: >-
+            {% set a = this.attributes if this is not none else {} %}
+            {% set base = 0 if (trigger.id == 'reset' or a.get('day', '') != today) else (a.get('landings_seen', 0) | int(0)) %}
+            {{ base + (1 if trigger.id == 'landed' else 0) }}

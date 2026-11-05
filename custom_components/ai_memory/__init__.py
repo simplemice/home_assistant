@@ -126,6 +126,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     try:
         await manager.async_initialize()
     except Exception:
+        manager.async_cancel_tasks()
         await hass.async_add_executor_job(manager.close)
         raise
 
@@ -133,7 +134,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Initialized Single Memory Manager")
 
     # Initialize LLM API
-    await memory_llm_api.async_setup(hass)
+    unregister_api = await memory_llm_api.async_setup(hass)
+    if unregister_api:
+        entry.async_on_unload(unregister_api)
     _LOGGER.debug("Initialized Memory LLM API")
 
     # Forward setup
@@ -142,7 +145,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     # Register services
     _register_services(hass)
 
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    # The options flow reloads the entry itself: an update listener would
+    # double-reload, and is never registered while setup is retrying.
     return True
 
 
@@ -239,11 +243,6 @@ def _register_services(hass: HomeAssistant):
                                  supports_response=SupportsResponse.OPTIONAL)
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Reload config entry."""
-    await hass.config_entries.async_reload(entry.entry_id)
-
-
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload AI Memory config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
@@ -251,6 +250,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     if unload_ok:
         manager = hass.data[DOMAIN].pop("manager", None)
         if manager:
+            manager.async_cancel_tasks()
             await hass.async_add_executor_job(manager.close)
 
         # Remove services

@@ -1,9 +1,10 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import fetch_warnings
 from .const import (
@@ -23,6 +24,8 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+_EPOCH = datetime.min.replace(tzinfo=timezone.utc)
+
 
 class TMDCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -35,6 +38,25 @@ class TMDCoordinator(DataUpdateCoordinator):
         self._entry = entry
         self.uid = entry.data.get(CONF_UID, DEFAULT_UID)
         self.ukey = entry.data.get(CONF_UKEY, DEFAULT_UKEY)
+        self.last_success = None
+
+    @property
+    def active_warnings(self) -> list[dict]:
+        """Unexpired warnings, newest announcement first.
+
+        Warnings with an unparseable end date are kept (fail open).
+        """
+        now = dt_util.now()
+        active = [
+            w for w in self.data or []
+            if not (w.get("effect_end_dt") and w["effect_end_dt"] < now)
+        ]
+        # Stable sort: ties and unparseable dates keep API order.
+        active.sort(
+            key=lambda w: w.get("announce_dt") or w.get("effect_start_dt") or _EPOCH,
+            reverse=True,
+        )
+        return active
 
     @property
     def language(self) -> str:
@@ -50,6 +72,8 @@ class TMDCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> list[dict]:
         try:
-            return await fetch_warnings(self.hass, API_URL, self.uid, self.ukey)
+            warnings = await fetch_warnings(self.hass, API_URL, self.uid, self.ukey)
         except Exception as err:
             raise UpdateFailed(f"Error fetching TMD warnings: {err}") from err
+        self.last_success = dt_util.utcnow()
+        return warnings

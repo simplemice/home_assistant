@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Mapowanie czujnika baterii",
-        "description": "Potwierdź lub zmień czujnik baterii dla każdej monitorowanej encji. Pozostaw puste dla encji bez baterii. Obsługuje stany numeryczne (%) i tekstowe ('low')."
+        "description": "Potwierdź lub zmień czujnik baterii dla każdej monitorowanej encji. Pozostaw puste dla encji bez baterii. Obsługuje stany numeryczne (%) i tekstowe ('low').\n\nNowo dodane w tej sesji (sprawdź ich przypisanie baterii):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Mapowanie siły sygnału",
         "description": "Dla każdej encji opcjonalnie wybierz czujnik sygnału i wybierz typ sieci. Pozostaw czujnik pusty, aby pominąć.\\n\\nProgi (dobry / ok / słaby):\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (im wyżej, tym lepiej)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Mapowanie czujnika baterii",
+        "description": "Potwierdź lub zmień czujnik baterii dla każdej monitorowanej encji. Pozostaw puste dla encji bez baterii. Obsługuje stany numeryczne (%) i tekstowe ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Uwzględniona – użyj ustawień grupy",
         "all_essential": "🔴 Uwzględniona – nadpisanie: Istotna",
         "all_non_essential": "🟡 Uwzględniona – nadpisanie: Nieistotna"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Encja przeszła w tryb offline",
+      "description": "Monitorowana encja stała się niedostępna lub przestała odpowiadać.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Encja odzyskana",
+      "description": "Monitorowana encja wróciła do trybu online po byciu offline.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Niski poziom baterii",
+      "description": "Poziom baterii monitorowanej encji spadł do progu niskiego poziomu baterii lub poniżej niego.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Bateria odzyskana",
+      "description": "Poziom baterii monitorowanej encji wzrósł z powrotem powyżej progu niskiego poziomu baterii.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "stale": {
+      "name": "Encja stała się nieaktywna",
+      "description": "Monitorowana encja przestała aktualizować się w oczekiwanym odstępie czasu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Encja znów aktywna",
+      "description": "Monitorowana encja wznowiła aktualizacje po okresie nieaktywności.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Sygnał stał się słaby",
+      "description": "Jakość sygnału monitorowanej encji spadła do słabego poziomu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Sygnał odzyskany",
+      "description": "Jakość sygnału monitorowanej encji wróciła do akceptowalnego poziomu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupa",
+          "description": "Ogranicz ten wyzwalacz do jednej grupy Entity Availability. Pozostaw puste, aby wyzwalać dla dowolnej grupy."
+        }
       }
     }
   }

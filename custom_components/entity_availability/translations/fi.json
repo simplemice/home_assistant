@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Akkuentiteetin yhdistäminen",
-        "description": "Vahvista tai muuta akkuanturi kullekin seurattavalle entiteetille. Jätä tyhjäksi entiteeteille, joissa ei ole akkua. Tukee numeerisia (%) ja tekstimuotoisia tiloja ('matala')."
+        "description": "Vahvista tai muuta akkuanturi kullekin seurattavalle entiteetille. Jätä tyhjäksi entiteeteille, joissa ei ole akkua. Tukee numeerisia (%) ja tekstimuotoisia tiloja ('matala').\n\nTässä istunnossa juuri lisätyt (tarkista niiden akkumääritys):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Signaalivoimakkuuden kartoitus",
         "description": "Valitse kullekin entiteetille halutessasi signaalisensori ja verkon tyyppi. Jätä sensori tyhjäksi ohittaaksesi.\\n\\nKynnysarvot (hyvä / ok / huono):\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (suurempi on parempi)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Akkuentiteetin yhdistäminen",
+        "description": "Vahvista tai muuta akkuanturi kullekin seurattavalle entiteetille. Jätä tyhjäksi entiteeteille, joissa ei ole akkua. Tukee numeerisia (%) ja tekstimuotoisia tiloja ('matala')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Sisällytetty - käytä ryhmän asetuksia",
         "all_essential": "🔴 Sisällytetty - pakota: Oleellinen",
         "all_non_essential": "🟡 Sisällytetty - pakota: Ei-oleellinen"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entiteetti siirtyi offline-tilaan",
+      "description": "Seurattava entiteetti muuttui tilaan ei saatavilla tai lakkasi vastaamasta.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entiteetti palautui",
+      "description": "Seurattava entiteetti palasi verkkoon oltuaan offline-tilassa.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Akku laski matalaksi",
+      "description": "Seurattavan entiteetin akku laski matalan akun kynnykseen tai sen alle.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Akku palautui",
+      "description": "Seurattavan entiteetin akku nousi takaisin matalan akun kynnyksen yläpuolelle.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entiteetti vanhentui",
+      "description": "Seurattava entiteetti lakkasi päivittymästä odotetun aikavälin sisällä.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entiteetti ei ole enää vanhentunut",
+      "description": "Seurattava entiteetti alkoi jälleen päivittyä oltuaan vanhentunut.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Signaali heikkeni",
+      "description": "Seurattavan entiteetin signaalin laatu laski heikolle tasolle.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Signaali palautui",
+      "description": "Seurattavan entiteetin signaalin laatu palasi hyväksyttävälle tasolle.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Ryhmä",
+          "description": "Rajaa tämä liipaisin yhteen Entity Availability -ryhmään. Jätä tyhjäksi, jotta se laukeaa mille tahansa ryhmälle."
+        }
       }
     }
   }

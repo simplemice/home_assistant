@@ -92,49 +92,43 @@ binary_sensor:
     entities:
       - binary_sensor.kitchen_water_leak_detector
       - binary_sensor.bathroom_water_leak_detector
+      - binary_sensor.aircon_leak_detector
 
 template:
   - binary_sensor:
       - name: "Home Problem Detector"
         unique_id: home_problem_detector
         device_class: problem
-        availability: >
-          {{
-            has_value('binary_sensor.kitchen_water_leak_detector') and
-            has_value('binary_sensor.bathroom_water_leak_detector') and
-            has_value('binary_sensor.kitchen_smoke_detector') and
-            has_value('binary_sensor.kitchen_gas_detector') and
-            has_value('binary_sensor.aircon_leak_detector')
-          }}
+        delay_off: "00:00:30"
         state: >
-          {{
-            is_state('binary_sensor.kitchen_water_leak_detector', 'on') or
-            is_state('binary_sensor.bathroom_water_leak_detector', 'on') or
-            is_state('binary_sensor.kitchen_smoke_detector', 'on') or
-            is_state('binary_sensor.kitchen_gas_detector', 'on') or
-            is_state('binary_sensor.aircon_leak_detector', 'on')
-          }}
+          {% set ids = [
+            'binary_sensor.kitchen_smoke_detector',
+            'binary_sensor.kitchen_gas_detector',
+            'binary_sensor.kitchen_water_leak_detector',
+            'binary_sensor.bathroom_water_leak_detector',
+            'binary_sensor.aircon_leak_detector'] %}
+          {{ expand(ids) | selectattr('state', 'eq', 'on') | list | count > 0 }}
         attributes:
           active_sensors: >
-            {% set problems = [] %}
-            {% if is_state('binary_sensor.kitchen_smoke_detector', 'on') %}
-              {% set problems = problems + ['Smoke Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.kitchen_water_leak_detector', 'on')
-            %}
-              {% set problems = problems + ['Kitchen Leak Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.bathroom_water_leak_detector', 'on')
-            %}
-              {% set problems = problems + ['Bathroom Leak Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.aircon_leak_detector', 'on') %}
-              {% set problems = problems + ['Aircon Leak Detected'] %}
-            {% endif %}
-            {% if is_state('binary_sensor.kitchen_gas_detector', 'on') %}
-              {% set problems = problems + ['Gas Leak Detected'] %}
-            {% endif %}
-            {{ problems | join(', ') if problems else 'None' }}
+            {% set labels = {
+              'binary_sensor.kitchen_smoke_detector': 'Smoke Detected',
+              'binary_sensor.kitchen_gas_detector': 'Gas Leak Detected',
+              'binary_sensor.kitchen_water_leak_detector': 'Kitchen Leak Detected',
+              'binary_sensor.bathroom_water_leak_detector': 'Bathroom Leak Detected',
+              'binary_sensor.aircon_leak_detector': 'Aircon Leak Detected'} %}
+            {% set ns = namespace(p=[]) %}
+            {% for e, label in labels.items() if is_state(e, 'on') %}
+              {% set ns.p = ns.p + [label] %}
+            {% endfor %}
+            {{ ns.p }}
+          offline_sensors: >
+            {% set ids = [
+              'binary_sensor.kitchen_smoke_detector',
+              'binary_sensor.kitchen_gas_detector',
+              'binary_sensor.kitchen_water_leak_detector',
+              'binary_sensor.bathroom_water_leak_detector',
+              'binary_sensor.aircon_leak_detector'] %}
+            {{ ids | reject('has_value') | list }}
 
 command_line:
   - sensor:
@@ -146,4 +140,3 @@ command_line:
       json_attributes:
         - events
         - count
-

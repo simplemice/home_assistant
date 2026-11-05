@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Mapovanie senzora batérie",
-        "description": "Potvrďte alebo zmeňte senzor batérie pre každú sledovanú entitu. Ponechajte prázdne pre entity bez batérie. Podporuje číselné (%) aj textové stavy ('low')."
+        "description": "Potvrďte alebo zmeňte senzor batérie pre každú sledovanú entitu. Ponechajte prázdne pre entity bez batérie. Podporuje číselné (%) aj textové stavy ('low').\n\nNovo pridané v tejto relácii (skontrolujte ich priradenie batérie):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Mapovanie sily signálu",
         "description": "Pre každú entitu voliteľne vyberte snímač signálu a zvoľte typ siete. Nechajte snímač prázdny pre preskočenie.\n\nPrahové hodnoty (dobré / prijateľné / slabé):\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (vyššie je lepšie)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Mapovanie senzora batérie",
+        "description": "Potvrďte alebo zmeňte senzor batérie pre každú sledovanú entitu. Ponechajte prázdne pre entity bez batérie. Podporuje číselné (%) aj textové stavy ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Zahrnutá — použiť nastavenia skupiny",
         "all_essential": "🔴 Zahrnutá — prepísať: Dôležitá",
         "all_non_essential": "🟡 Zahrnutá — prepísať: Nedôležitá"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entita prešla do offline",
+      "description": "Sledovaná entita sa stala nedostupnou alebo prestala reagovať.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entita obnovená",
+      "description": "Sledovaná entita sa po výpadku vrátila online.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Batéria klesla na nízku úroveň",
+      "description": "Batéria sledovanej entity klesla na prah nízkej úrovne batérie alebo pod neho.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Batéria obnovená",
+      "description": "Batéria sledovanej entity sa vrátila nad prah nízkej úrovne batérie.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entita sa stala zastaranou",
+      "description": "Sledovaná entita prestala aktualizovať stav v rámci očakávaného intervalu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entita už nie je zastaraná",
+      "description": "Sledovaná entita po zastaraní obnovila aktualizovanie stavu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Signál sa zhoršil",
+      "description": "Kvalita signálu sledovanej entity klesla na slabú úroveň.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Signál obnovený",
+      "description": "Kvalita signálu sledovanej entity sa vrátila na prijateľnú úroveň.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Skupina",
+          "description": "Obmedzí tento spúšťač na jednu skupinu Entity Availability. Ponechajte prázdne, aby sa spustil pre ktorúkoľvek skupinu."
+        }
       }
     }
   }

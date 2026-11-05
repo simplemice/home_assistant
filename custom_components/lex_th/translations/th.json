@@ -24,9 +24,11 @@
         "name": "สถานะ",
         "state": {
           "not_found": "ไม่พบพัสดุ",
+          "ready_to_ship": "เตรียมจัดส่ง",
           "picked_up": "รับพัสดุแล้ว",
           "in_transit": "อยู่ระหว่างขนส่ง",
           "out_for_delivery": "กำลังนำส่ง",
+          "awaiting_collection": "รอรับที่จุดรับพัสดุ",
           "delivered": "จัดส่งสำเร็จ",
           "problem": "มีปัญหา",
           "unknown": "ไม่ทราบสถานะ"

@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Mapatge d'entitats de bateria",
-        "description": "Confirmeu o canvieu el sensor de bateria per a cada entitat supervisada. Deixeu-lo buit per a entitats sense bateria. Admet estats numèrics (%) i de text ('baix')."
+        "description": "Confirmeu o canvieu el sensor de bateria per a cada entitat supervisada. Deixeu-lo buit per a entitats sense bateria. Admet estats numèrics (%) i de text ('baix').\n\nAfegits recentment en aquesta sessió (reviseu-ne l'assignació de bateria):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Assignació de la intensitat del senyal",
         "description": "Per a cada entitat, seleccioneu opcionalment un sensor de senyal i trieu el tipus de xarxa. Deixeu el sensor buit per ometre.\\n\\nLlindars (bo / acceptable / dolent):\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (com més alt, millor)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Mapatge d'entitats de bateria",
+        "description": "Confirmeu o canvieu el sensor de bateria per a cada entitat supervisada. Deixeu-lo buit per a entitats sense bateria. Admet estats numèrics (%) i de text ('baix')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Inclòs - usa la configuració del grup",
         "all_essential": "🔴 Inclòs - substitueix: Essencial",
         "all_non_essential": "🟡 Inclòs - substitueix: No essencial"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "L'entitat s'ha posat fora de línia",
+      "description": "Una entitat supervisada ha deixat d'estar disponible o ha deixat de respondre.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "recovered": {
+      "name": "L'entitat s'ha recuperat",
+      "description": "Una entitat supervisada ha tornat a estar en línia després d'estar fora de línia.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "La bateria s'ha quedat baixa",
+      "description": "La bateria d'una entitat supervisada ha baixat fins al llindar de bateria baixa o per sota.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "La bateria s'ha recuperat",
+      "description": "La bateria d'una entitat supervisada ha tornat a pujar per sobre del llindar de bateria baixa.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "stale": {
+      "name": "L'entitat ha deixat d'actualitzar-se",
+      "description": "Una entitat supervisada ha deixat d'actualitzar-se dins de l'interval previst.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "L'entitat torna a actualitzar-se",
+      "description": "Una entitat supervisada ha reprès les actualitzacions després d'haver deixat d'actualitzar-se.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "El senyal s'ha tornat feble",
+      "description": "La qualitat del senyal d'una entitat supervisada ha baixat a un nivell feble.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "El senyal s'ha recuperat",
+      "description": "La qualitat del senyal d'una entitat supervisada ha tornat a un nivell acceptable.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limita aquest activador a un sol grup d'Entity Availability. Deixeu-ho en blanc perquè s'activi per a qualsevol grup."
+        }
       }
     }
   }

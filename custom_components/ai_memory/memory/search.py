@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 
 import numpy as np
 
-from ..constants import SIMILARITY_THRESHOLD, MEMORY_LIMIT, EMBEDDINGS_VECTOR_DIM
+from ..constants import SIMILARITY_THRESHOLD, MEMORY_LIMIT
 from .store import MemoryStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,20 +24,6 @@ class MemorySearch:
         self._store = store
         self._embedding_engine = embedding_engine
 
-    def _generate_embedding_sync(self, text: str) -> List[float]:
-        """Generate embedding synchronously (called via executor)."""
-        return self._embedding_engine._generate_embedding_sync(text)
-
-    async def async_generate_embedding(self, text: str) -> List[float]:
-        """Generate embedding for text using the embedding engine."""
-        if not text:
-            dim = self._store.get_embedding_dim()
-            return [0.0] * dim
-
-        from homeassistant.core import HomeAssistant
-        # Delegate to the embedding engine's async method
-        return await self._embedding_engine.async_generate_embedding(text)
-
     def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """Calculate cosine similarity using NumPy."""
         if vec1.shape != vec2.shape:
@@ -50,6 +36,45 @@ class MemorySearch:
             return 0.0
 
         return float(np.dot(vec1, vec2) / (norm_v1 * norm_v2))
+
+    def _score_rows(
+        self, rows: list, query_vec: np.ndarray, min_score: float
+    ) -> List[Dict]:
+        """Parse embeddings and score memory rows (called via executor)."""
+        scored_memories = []
+
+        for row in rows:
+            memory_id, content, emb_json, scope, row_agent_id, created_at, \
+                summary, mem_wing, mem_room, layer, access_count = row
+
+            try:
+                mem_embedding_list = json.loads(emb_json) if emb_json else None
+                if not mem_embedding_list:
+                    continue
+
+                mem_vec = np.array(mem_embedding_list, dtype=np.float32)
+                score = self._cosine_similarity(query_vec, mem_vec)
+
+                if score > min_score:
+                    _LOGGER.debug("[%.3f] %s", score, content)
+                    scored_memories.append({
+                        "id": memory_id,
+                        "content": content,
+                        "score": float(score),
+                        "scope": scope,
+                        "agent_id": row_agent_id,
+                        "created_at": created_at,
+                        "summary": summary,
+                        "wing": mem_wing,
+                        "room": mem_room,
+                        "layer": layer,
+                    })
+            except Exception as e:
+                _LOGGER.warning("Error processing memory row: %s", e)
+                continue
+
+        scored_memories.sort(key=lambda x: x["score"], reverse=True)
+        return scored_memories
 
     async def async_search(
         self,
@@ -109,7 +134,7 @@ class MemorySearch:
 
         # Generate query embedding
         try:
-            query_embedding = await self.async_generate_embedding(query)
+            query_embedding = await self._embedding_engine.async_generate_embedding(query)
         except Exception as e:
             _LOGGER.error("Failed to generate query embedding: %s", e)
             return []
@@ -119,43 +144,11 @@ class MemorySearch:
 
         query_vec = np.array(query_embedding, dtype=np.float32)
 
-        # Score memories using cosine similarity
-        scored_memories = []
-        result_ids = []
-
-        for row in rows:
-            memory_id, content, emb_json, scope, row_agent_id, created_at, \
-                summary, mem_wing, mem_room, layer, access_count = row
-
-            try:
-                mem_embedding_list = json.loads(emb_json) if emb_json else None
-                if not mem_embedding_list:
-                    continue
-
-                mem_vec = np.array(mem_embedding_list, dtype=np.float32)
-                score = self._cosine_similarity(query_vec, mem_vec)
-
-                if score > min_score:
-                    _LOGGER.debug("[%.3f] %s", score, content)
-                    result_ids.append(memory_id)
-                    scored_memories.append({
-                        "id": memory_id,
-                        "content": content,
-                        "score": float(score),
-                        "scope": scope,
-                        "agent_id": row_agent_id,
-                        "created_at": created_at,
-                        "summary": summary,
-                        "wing": mem_wing,
-                        "room": mem_room,
-                        "layer": layer,
-                    })
-            except Exception as e:
-                _LOGGER.warning("Error processing memory row: %s", e)
-                continue
-
-        # Sort by score descending
-        scored_memories.sort(key=lambda x: x["score"], reverse=True)
+        # Parse embeddings and score memories off the event loop
+        scored_memories = await hass.async_add_executor_job(
+            self._score_rows, rows, query_vec, min_score
+        )
+        result_ids = [m["id"] for m in scored_memories]
         result = scored_memories[:limit]
 
         # Text fallback when semantic search returns nothing

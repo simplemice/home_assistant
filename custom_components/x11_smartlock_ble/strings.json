@@ -1,0 +1,166 @@
+{
+  "title": "X11 Smartlock Local BLE",
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Choose a BLE device",
+        "description": "Nearby Tuya BLE devices are shown. Discovery alone does not prove compatibility: select your X11 lock. If it is not listed, wake it and retry, or use manual entry.",
+        "data": {
+          "address": "Device"
+        }
+      },
+      "credentials": {
+        "title": "Your lock credentials",
+        "description": "Enter your own lock credentials from Tuya Developer Platform; see INSTALL.md. The installed Tuya integration does not import keys automatically. Connection verification does not operate the motor.",
+        "data": {
+          "uuid": "UUID",
+          "local_key": "Local key",
+          "device_id": "Device ID",
+          "ble_unlock_check": "BLE unlock check (Base64, optional - leave empty to read it from the lock)"
+        }
+      },
+      "model": {
+        "title": "Lock model",
+        "data": {
+          "product_id": "Model"
+        }
+      }
+    },
+    "error": {
+      "invalid_unlock_check": "Not a valid Base64 unlock check (needs at least 19 bytes).",
+      "not_visible": "Home Assistant cannot see that address. Wake the lock, disconnect other phones/apps, check Bluetooth proxies and retry.",
+      "invalid_credentials": "Check the credential fields and the Base64 BLE unlock check.",
+      "cannot_connect": "Cannot verify the connection. Check credentials, Bluetooth range and disconnect the phone from the lock."
+    },
+    "abort": {
+      "already_configured": "Device is already configured.",
+      "no_unconfigured_devices": "No new FD50 devices found. Wake the lock, check HA Bluetooth and retry."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Bluetooth connection",
+        "description": "Choose a mode. Its settings appear on the next step.",
+        "data": {
+          "keep_connected": "Keep connected",
+          "ble_unlock_check": "BLE unlock check (Base64, leave empty to keep current)"
+        }
+      },
+      "persistent": {
+        "title": "Persistent connection",
+        "description": "Wait for reconnection before locking or unlocking. Submitted commands are never replayed.",
+        "data": {
+          "wait_for_reconnect": "Wait up to 10 seconds for reconnection"
+        }
+      },
+      "on_demand": {
+        "title": "Connect on demand",
+        "description": "Disconnect after polling. After a command, hold the connection for the selected duration. Failed connection attempts do not queue commands for later replay.",
+        "data": {
+          "poll_interval": "Status polling interval",
+          "hold_time": "Connection hold after a command"
+        }
+      }
+    },
+    "error": {
+      "wait_requires_connection": "Enable Keep connected to wait for commands.",
+      "invalid_unlock_check": "Not a valid Base64 unlock check (needs at least 19 bytes)."
+    }
+  },
+  "entity": {
+    "select": {
+      "beep_volume": {
+        "name": "Sound volume",
+        "state": {
+          "mute": "Mute",
+          "normal": "Normal"
+        }
+      }
+    },
+    "switch": {
+      "change_direction": {
+        "name": "Reverse direction"
+      }
+    },
+    "button": {
+      "open_lock": {
+        "name": "Open"
+      }
+    },
+    "sensor": {
+      "battery_state": {
+        "name": "Battery",
+        "state": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "poweroff": "Empty"
+        }
+      },
+      "signal_strength": {
+        "name": "BLE signal"
+      },
+      "reported_lock_state": {
+        "name": "Lock status",
+        "state": {
+          "locked": "Locked",
+          "unlocked": "Unlocked"
+        }
+      },
+      "last_unlock_method": {
+        "name": "Last unlock method",
+        "state": {
+          "fingerprint": "Fingerprint",
+          "password": "PIN code",
+          "dynamic_password": "One-time code",
+          "card": "Card",
+          "bluetooth": "Bluetooth / app",
+          "temporary_password": "Temporary PIN"
+        }
+      }
+    },
+    "event": {
+      "unlock_event": {
+        "name": "Unlock",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "fingerprint": "Fingerprint",
+              "password": "PIN code",
+              "dynamic_password": "One-time code",
+              "card": "Card",
+              "bluetooth": "Bluetooth / app",
+              "temporary_password": "Temporary PIN"
+            }
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "command_busy": {
+      "message": "A previous command is still waiting or executing."
+    },
+    "command_failed": {
+      "message": "Command not confirmed: connection/response timed out or the integration stopped. It will not be replayed."
+    },
+    "command_state_unknown": {
+      "message": "Toggle direction is unknown. Choose lock or unlock first, or wait for a device report."
+    }
+  },
+  "selector": {
+    "connection_duration": {
+      "options": {
+        "0": "Off",
+        "10": "10 seconds",
+        "20": "20 seconds",
+        "30": "30 seconds",
+        "40": "40 seconds",
+        "50": "50 seconds",
+        "60": "60 seconds"
+      }
+    }
+  }
+}

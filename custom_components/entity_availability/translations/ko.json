@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "배터리 엔티티 매핑",
-        "description": "모니터링 중인 각 엔티티의 배터리 센서를 확인하거나 변경합니다. 배터리가 없는 엔티티는 비워 두세요. 숫자(%)와 텍스트 상태('low')를 지원합니다."
+        "description": "모니터링 중인 각 엔티티의 배터리 센서를 확인하거나 변경합니다. 배터리가 없는 엔티티는 비워 두세요. 숫자(%)와 텍스트 상태('low')를 지원합니다.\n\n이 세션에서 새로 추가됨 (배터리 매핑을 확인하세요):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "신호 강도 매핑",
         "description": "각 엔티티에 대해 선택적으로 신호 센서를 선택하고 네트워크 유형을 선택하세요. 센서를 비워 두면 건너뜁니다.\n\n임계값 (좋음 / 보통 / 나쁨):\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (높을수록 좋음)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "배터리 엔티티 매핑",
+        "description": "모니터링 중인 각 엔티티의 배터리 센서를 확인하거나 변경합니다. 배터리가 없는 엔티티는 비워 두세요. 숫자(%)와 텍스트 상태('low')를 지원합니다."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ 포함 - 그룹 설정 사용",
         "all_essential": "🔴 포함 - 재지정: 필수",
         "all_non_essential": "🟡 포함 - 재지정: 비필수"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "엔티티 오프라인 전환",
+      "description": "모니터링 중인 엔티티가 사용 불가 상태가 되거나 응답을 멈췄습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "recovered": {
+      "name": "엔티티 복구",
+      "description": "모니터링 중인 엔티티가 오프라인 상태였다가 다시 온라인으로 돌아왔습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "배터리 부족 전환",
+      "description": "모니터링 중인 엔티티의 배터리가 낮은 배터리 임계값 이하로 떨어졌습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "배터리 회복",
+      "description": "모니터링 중인 엔티티의 배터리가 낮은 배터리 임계값 이상으로 다시 올라갔습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "stale": {
+      "name": "데이터 중단 전환",
+      "description": "모니터링 중인 엔티티가 예상 주기 내에 업데이트를 멈췄습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "데이터 중단 해제",
+      "description": "모니터링 중인 엔티티가 데이터 중단 상태였다가 업데이트를 재개했습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "신호 불량 전환",
+      "description": "모니터링 중인 엔티티의 신호 품질이 불량 수준으로 떨어졌습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "신호 복구",
+      "description": "모니터링 중인 엔티티의 신호 품질이 허용 가능한 수준으로 돌아왔습니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "그룹",
+          "description": "이 트리거를 단일 엔티티 가용성 그룹으로 제한합니다. 비워 두면 모든 그룹에 대해 실행됩니다."
+        }
       }
     }
   }

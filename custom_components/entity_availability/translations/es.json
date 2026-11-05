@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Asignación de entidades de batería",
-        "description": "Confirme o cambie el sensor de batería para cada entidad supervisada. Deje vacío para entidades sin batería. Admite estados numéricos (%) y de texto ('bajo')."
+        "description": "Confirme o cambie el sensor de batería para cada entidad supervisada. Deje vacío para entidades sin batería. Admite estados numéricos (%) y de texto ('bajo').\n\nAñadidos recientemente en esta sesión (revisa su asignación de batería):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Mapeo de Intensidad de Señal",
         "description": "Para cada entidad, selecciona opcionalmente un sensor de señal y elige el tipo de red. Deja el sensor vacío para omitir.\n\nUmbrales (bueno / regular / deficiente):\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (mayor es mejor)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Asignación de entidades de batería",
+        "description": "Confirme o cambie el sensor de batería para cada entidad supervisada. Deje vacío para entidades sin batería. Admite estados numéricos (%) y de texto ('bajo')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Incluido - usar configuración del grupo",
         "all_essential": "🔴 Incluido - forzar: Esencial",
         "all_non_essential": "🟡 Incluido - forzar: No esencial"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entidad sin conexión",
+      "description": "Una entidad supervisada pasó a no disponible o dejó de responder.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entidad recuperada",
+      "description": "Una entidad supervisada volvió a estar en línea tras haber estado sin conexión.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Batería baja",
+      "description": "La batería de una entidad supervisada bajó hasta el umbral de batería baja o por debajo de él.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Batería recuperada",
+      "description": "La batería de una entidad supervisada volvió a subir por encima del umbral de batería baja.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entidad obsoleta",
+      "description": "Una entidad supervisada dejó de actualizarse dentro del intervalo esperado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entidad ya no obsoleta",
+      "description": "Una entidad supervisada volvió a actualizarse tras haber estado obsoleta.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Señal deficiente",
+      "description": "La calidad de señal de una entidad supervisada bajó a un nivel deficiente.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Señal recuperada",
+      "description": "La calidad de señal de una entidad supervisada volvió a un nivel aceptable.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este disparador a un único grupo de Entity Availability. Déjalo vacío para que se active con cualquier grupo."
+        }
       }
     }
   }

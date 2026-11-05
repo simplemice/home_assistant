@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Association des entités de batterie",
-        "description": "Confirmez ou modifiez le capteur de batterie pour chaque entité surveillée. Laissez vide pour les entités sans batterie. Prend en charge les états numériques (%) et textuels ('faible')."
+        "description": "Confirmez ou modifiez le capteur de batterie pour chaque entité surveillée. Laissez vide pour les entités sans batterie. Prend en charge les états numériques (%) et textuels ('faible').\n\nAjoutés récemment lors de cette session (vérifiez leur association de batterie) :\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Mappage de la force du signal",
         "description": "Pour chaque entité, sélectionnez éventuellement un capteur de signal et choisissez le type de réseau. Laissez le capteur vide pour ignorer.\\n\\nSeuils (bon / acceptable / mauvais) :\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (plus élevé = meilleur)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Association des entités de batterie",
+        "description": "Confirmez ou modifiez le capteur de batterie pour chaque entité surveillée. Laissez vide pour les entités sans batterie. Prend en charge les états numériques (%) et textuels ('faible')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Inclus - utiliser les paramètres du groupe",
         "all_essential": "🔴 Inclus - forcer : Essentiel",
         "all_non_essential": "🟡 Inclus - forcer : Non essentiel"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entité passée hors ligne",
+      "description": "Une entité surveillée est devenue indisponible ou a cessé de répondre.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entité rétablie",
+      "description": "Une entité surveillée est revenue en ligne après avoir été hors ligne.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Batterie devenue faible",
+      "description": "La batterie d'une entité surveillée est tombée au niveau du seuil de batterie faible ou en dessous.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Batterie rétablie",
+      "description": "La batterie d'une entité surveillée est repassée au-dessus du seuil de batterie faible.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entité devenue dégradée",
+      "description": "Une entité surveillée a cessé de se mettre à jour dans l'intervalle attendu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entité plus dégradée",
+      "description": "Une entité surveillée a recommencé à se mettre à jour après avoir été dégradée.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Signal devenu faible",
+      "description": "La qualité du signal d'une entité surveillée est tombée à un niveau faible.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Signal rétabli",
+      "description": "La qualité du signal d'une entité surveillée est revenue à un niveau acceptable.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groupe",
+          "description": "Limiter ce déclencheur à un seul groupe Entity Availability. Laissez vide pour se déclencher pour n'importe quel groupe."
+        }
       }
     }
   }

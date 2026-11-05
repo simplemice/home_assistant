@@ -8,6 +8,7 @@ SignalQuality = Literal["good", "ok", "poor"]
 
 # Config flow
 CONF_GROUP_NAME = "group_name"
+CONF_CONFIG_ENTRY_ID = "config_entry_id"
 CONF_ENTITIES = "entities"
 CONF_BAD_STATES = "bad_states"
 CONF_COOLDOWN = "cooldown"
@@ -54,6 +55,7 @@ DEFAULT_COLLAPSE_DEVICES = False
 BATTERY_HYSTERESIS = 3  # percent above threshold to clear a low-battery flag
 STALENESS_HYSTERESIS = 1  # minutes below threshold to clear a stale flag
 SIGNAL_HYSTERESIS = 3  # units toward "ok" to clear a poor-signal flag
+SIGNAL_DEBOUNCE_SECONDS = 60  # wall-clock seconds a poor-boundary crossing must persist before signal_quality commits. Wall-clock (not poll count) so it is immune to sensor push rate: a chatty Zigbee/MQTT sensor pushing _linkquality every few seconds and a 30s-polled Z-Wave sensor both need the SAME real duration before an edge fires. Kills RSSI-flap event spam from push-driven sensors (a poll-count debounce clears in seconds for them).
 
 # Signal strength thresholds per network type.
 # Each entry: {"label": str, "unit": str, "good": int, "ok": int, "higher_is_better": bool}

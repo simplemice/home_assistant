@@ -1,0 +1,153 @@
+{
+  "config_hash": "bbc6d15b586cc47c",
+  "config": {
+    "id": "1751104486097",
+    "alias": "Security Check On Alarm",
+    "triggers": [
+      {
+        "entity_id": "binary_sensor.home_problem_detector",
+        "for": "00:00:30",
+        "from": "off",
+        "id": "problem_detector",
+        "to": "on",
+        "trigger": "state"
+      },
+      {
+        "entity_id": "alarm_control_panel.home",
+        "from": [
+          "armed_away",
+          "armed_night",
+          "armed_home"
+        ],
+        "id": "alarm_panel",
+        "to": "triggered",
+        "trigger": "state"
+      }
+    ],
+    "conditions": [
+      {
+        "condition": "state",
+        "entity_id": "input_boolean.alarm_pause_mode",
+        "state": "off"
+      }
+    ],
+    "actions": [
+      {
+        "action": "script.tts_jarvis_security_check",
+        "note": "Always runs now — camera AI check + photo evidence happen regardless of who's home."
+      },
+      {
+        "choose": [
+          {
+            "conditions": [
+              {
+                "after": "07:00:00",
+                "before": "22:00:00",
+                "condition": "time"
+              },
+              {
+                "condition": "state",
+                "entity_id": "binary_sensor.family_presence",
+                "state": [
+                  "on"
+                ]
+              }
+            ],
+            "sequence": [
+              {
+                "action": "xiaomi_aqara.play_ringtone",
+                "continue_on_error": true,
+                "data": {
+                  "gw_mac": "04:CF:8C:A9:DA:39",
+                  "ringtone_id": "1",
+                  "ringtone_vol": 15
+                }
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "after": "22:00:00",
+                "before": "07:00:00",
+                "condition": "time"
+              },
+              {
+                "condition": "state",
+                "entity_id": "binary_sensor.family_presence",
+                "state": [
+                  "on"
+                ]
+              }
+            ],
+            "sequence": [
+              {
+                "action": "input_boolean.turn_on",
+                "target": {
+                  "entity_id": "input_boolean.audible_notifications"
+                }
+              },
+              {
+                "delay": "00:06:00"
+              },
+              {
+                "action": "input_boolean.turn_off",
+                "target": {
+                  "entity_id": "input_boolean.audible_notifications"
+                }
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "condition": "state",
+                "entity_id": "binary_sensor.family_presence",
+                "state": "off"
+              },
+              {
+                "condition": "state",
+                "entity_id": "alarm_control_panel.home",
+                "state": "triggered"
+              }
+            ],
+            "sequence": [
+              {
+                "action": "light.turn_on",
+                "data": {
+                  "flash": "long"
+                },
+                "note": "Nobody home and a real intrusion is confirmed — go loud.",
+                "target": {
+                  "entity_id": [
+                    "light.porch_bulb",
+                    "light.backyard_light"
+                  ]
+                }
+              },
+              {
+                "action": "xiaomi_aqara.play_ringtone",
+                "continue_on_error": true,
+                "data": {
+                  "gw_mac": "04:CF:8C:A9:DA:39",
+                  "ringtone_id": "1",
+                  "ringtone_vol": 100
+                }
+              }
+            ]
+          }
+        ],
+        "default": [
+          {
+            "action": "script.tts_jarvis_telegram_notify",
+            "data": {
+              "message": "⚠️ Security alert triggered!\nTrigger: {{ trigger.id | replace('_', ' ') | title }}\n{% if trigger.id == 'problem_detector' %}\nProblem: {{ state_attr('binary_sensor.home_problem_detector', 'active_sensors') | default('Unknown') }}\n{% endif %}"
+            }
+          }
+        ]
+      }
+    ],
+    "max": 3,
+    "mode": "queued"
+  }
+}

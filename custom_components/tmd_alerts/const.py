@@ -2,7 +2,7 @@ DOMAIN = "tmd_alerts"
 
 DEFAULT_SCAN_INTERVAL = 600
 
-API_URL = "http://data.tmd.go.th/api/WeatherWarningNews/v2/"
+API_URL = "https://data.tmd.go.th/api/WeatherWarningNews/v2/"
 
 DEFAULT_UID = "demo"
 DEFAULT_UKEY = "demokey"
@@ -15,3 +15,5 @@ LANG_EN = "en"
 LANG_TH = "th"
 LANG_AUTO = "auto"
 DEFAULT_LANGUAGE = LANG_AUTO
+
+NEW_WARNING_PULSE_SECONDS = 600

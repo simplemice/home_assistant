@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Mapare entități baterie",
-        "description": "Confirmați sau modificați senzorul de baterie pentru fiecare entitate monitorizată. Lăsați gol pentru entitățile fără baterie. Acceptă stări numerice (%) și text ('low')."
+        "description": "Confirmați sau modificați senzorul de baterie pentru fiecare entitate monitorizată. Lăsați gol pentru entitățile fără baterie. Acceptă stări numerice (%) și text ('low').\n\nAdăugate recent în această sesiune (verificați asocierea bateriei lor):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "„Mapare putere semnal\"",
         "description": "Pentru fiecare entitate, selectați opțional un senzor de semnal și alegeți tipul de rețea. Lăsați senzorul gol pentru a omite.\\n\\nPraguri (bun / acceptabil / slab):\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (mai mare e mai bun)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Mapare entități baterie",
+        "description": "Confirmați sau modificați senzorul de baterie pentru fiecare entitate monitorizată. Lăsați gol pentru entitățile fără baterie. Acceptă stări numerice (%) și text ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Inclus - utilizați setările grupului",
         "all_essential": "🔴 Inclus - suprascriere: Esențial",
         "all_non_essential": "🟡 Inclus - suprascriere: Neesențial"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entitate trecută offline",
+      "description": "O entitate monitorizată a devenit indisponibilă sau a încetat să mai răspundă.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entitate recuperată",
+      "description": "O entitate monitorizată a revenit online după ce a fost offline.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Baterie descărcată",
+      "description": "Bateria unei entități monitorizate a scăzut la sau sub pragul de baterie descărcată.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Baterie recuperată",
+      "description": "Bateria unei entități monitorizate a urcat din nou peste pragul de baterie descărcată.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entitate expirată",
+      "description": "O entitate monitorizată a încetat să se mai actualizeze în intervalul așteptat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entitate nemaiexpirată",
+      "description": "O entitate monitorizată a reluat actualizările după ce a fost expirată.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Semnal slab",
+      "description": "Calitatea semnalului unei entități monitorizate a scăzut la un nivel slab.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Semnal recuperat",
+      "description": "Calitatea semnalului unei entități monitorizate a revenit la un nivel acceptabil.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grup",
+          "description": "Limitați acest declanșator la un singur grup Entity Availability. Lăsați gol pentru a se declanșa pentru orice grup."
+        }
       }
     }
   }

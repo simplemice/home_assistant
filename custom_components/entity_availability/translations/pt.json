@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Mapeamento de Entidades de Bateria",
-        "description": "Confirme ou altere o sensor de bateria para cada entidade monitorizada. Deixe vazio para entidades sem bateria. Suporta estados numéricos (%) e de texto ('low')."
+        "description": "Confirme ou altere o sensor de bateria para cada entidade monitorizada. Deixe vazio para entidades sem bateria. Suporta estados numéricos (%) e de texto ('low').\n\nAdicionados recentemente nesta sessão (reveja o mapeamento da bateria):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Mapeamento de Intensidade do Sinal",
         "description": "Para cada entidade, selecione opcionalmente um sensor de sinal e escolha o tipo de rede. Deixe o sensor vazio para ignorar.\n\nLimites (bom / ok / ruim):\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (quanto maior melhor)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Mapeamento de Entidades de Bateria",
+        "description": "Confirme ou altere o sensor de bateria para cada entidade monitorizada. Deixe vazio para entidades sem bateria. Suporta estados numéricos (%) e de texto ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Incluído – usar definições do grupo",
         "all_essential": "🔴 Incluído – substituição: Essencial",
         "all_non_essential": "🟡 Incluído – substituição: Não Essencial"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entidade ficou offline",
+      "description": "Uma entidade monitorizada ficou indisponível ou deixou de responder.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entidade recuperada",
+      "description": "Uma entidade monitorizada voltou a ficar online depois de estar offline.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Bateria ficou fraca",
+      "description": "A bateria de uma entidade monitorizada desceu até ao limiar de bateria fraca ou abaixo dele.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Bateria recuperada",
+      "description": "A bateria de uma entidade monitorizada voltou a subir acima do limiar de bateria fraca.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entidade ficou inativa",
+      "description": "Uma entidade monitorizada deixou de atualizar dentro do intervalo esperado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entidade já não está inativa",
+      "description": "Uma entidade monitorizada voltou a atualizar depois de estar inativa.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Sinal ficou fraco",
+      "description": "A qualidade do sinal de uma entidade monitorizada desceu para um nível fraco.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Sinal recuperado",
+      "description": "A qualidade do sinal de uma entidade monitorizada voltou a um nível aceitável.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupo",
+          "description": "Limita este acionador a um único grupo do Entity Availability. Deixe vazio para disparar para qualquer grupo."
+        }
       }
     }
   }

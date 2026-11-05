@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import json
 import logging
 from typing import Any
 
@@ -106,8 +107,22 @@ async def async_fetch_parcel(hass: HomeAssistant, number: str) -> dict[str, Any]
                     number,
                 )
                 raise UpdateFailed(f"LEX TH API returned HTTP {resp.status}")
-            payload = await resp.json(content_type=None)
-    except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+            body = await resp.text()
+            try:
+                payload = json.loads(body)
+            except ValueError:
+                blocked = resp.headers.get("bxpunish") or "x5secdata" in body
+                _LOGGER.warning(
+                    "LEX TH API returned non-JSON for %s (%s); keeping last data",
+                    number,
+                    "bot-protection challenge" if blocked else "unexpected content",
+                )
+                raise UpdateFailed(
+                    "LEX TH blocked the request with a bot-protection challenge"
+                    if blocked
+                    else "LEX TH returned a non-JSON response"
+                ) from None
+    except (aiohttp.ClientError, TimeoutError) as err:
         _LOGGER.error("Error talking to LEX TH API for %s: %s", number, err)
         raise UpdateFailed(f"Error communicating with LEX TH: {err}") from err
     return parse_response(number, payload)

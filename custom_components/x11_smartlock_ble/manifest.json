@@ -1,0 +1,33 @@
+{
+  "domain": "x11_smartlock_ble",
+  "name": "X11 Smartlock Local BLE",
+  "bluetooth": [
+    {
+      "connectable": true,
+      "service_data_uuid": "0000fd50-0000-1000-8000-00805f9b34fb"
+    },
+    {
+      "connectable": true,
+      "service_uuid": "0000a201-0000-1000-8000-00805f9b34fb"
+    },
+    {
+      "connectable": true,
+      "service_data_uuid": "0000a201-0000-1000-8000-00805f9b34fb"
+    }
+  ],
+  "codeowners": [
+    "@simplemice"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "bluetooth_adapters"
+  ],
+  "documentation": "https://github.com/asemenov566/tuya_smartlock_local_ble",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/asemenov566/tuya_smartlock_local_ble/issues",
+  "requirements": [
+    "pycryptodome==3.20.0"
+  ],
+  "version": "0.1.0"
+}

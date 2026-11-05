@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "バッテリーエンティティのマッピング",
-        "description": "監視中の各エンティティのバッテリーセンサーを確認または変更します。バッテリーのないエンティティは空欄のままにしてください。数値（%）とテキスト状態（「low」）をサポートします。"
+        "description": "監視中の各エンティティのバッテリーセンサーを確認または変更します。バッテリーのないエンティティは空欄のままにしてください。数値（%）とテキスト状態（「low」）をサポートします。\n\nこのセッションで新しく追加 (バッテリーの割り当てを確認してください):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "シグナル強度マッピング",
         "description": "各エンティティについて、任意でシグナルセンサーを選択し、ネットワークタイプを選んでください。センサーを空のままにするとスキップされます。\n\n閾値（良好 / 普通 / 不良）：\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (値が高いほど良好)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "バッテリーエンティティのマッピング",
+        "description": "監視中の各エンティティのバッテリーセンサーを確認または変更します。バッテリーのないエンティティは空欄のままにしてください。数値（%）とテキスト状態（「low」）をサポートします。"
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ 含める - グループ設定を使用",
         "all_essential": "🔴 含める - 上書き：必須",
         "all_non_essential": "🟡 含める - 上書き：非必須"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "エンティティがオフラインになった",
+      "description": "監視中のエンティティが利用不可になるか、応答しなくなったとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "recovered": {
+      "name": "エンティティが回復した",
+      "description": "監視中のエンティティがオフライン状態からオンラインに復帰したとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "low_battery": {
+      "name": "バッテリーが低下した",
+      "description": "監視中のエンティティのバッテリーが低バッテリーしきい値以下に低下したとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "バッテリーが回復した",
+      "description": "監視中のエンティティのバッテリーが低バッテリーしきい値を上回って回復したとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "stale": {
+      "name": "エンティティのデータが停止した",
+      "description": "監視中のエンティティが想定された間隔内に更新されなくなったとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "エンティティのデータ停止が解消した",
+      "description": "監視中のエンティティがデータ停止状態から更新を再開したとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "シグナルが不良になった",
+      "description": "監視中のエンティティのシグナル品質が不良レベルまで低下したとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "シグナルが回復した",
+      "description": "監視中のエンティティのシグナル品質が許容レベルに回復したとき。",
+      "fields": {
+        "config_entry_id": {
+          "name": "グループ",
+          "description": "このトリガーを単一の Entity Availability グループに限定します。空欄のままにすると、すべてのグループで発動します。"
+        }
       }
     }
   }

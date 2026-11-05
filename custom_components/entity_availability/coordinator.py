@@ -52,6 +52,7 @@ from .const import (
     EVENT_STALE,
     EVENT_STALE_RECOVERED,
     SCAN_INTERVAL,
+    SIGNAL_DEBOUNCE_SECONDS,
     SIGNAL_HYSTERESIS,
     SIGNAL_NETWORK_TYPES,
     STALENESS_HYSTERESIS,
@@ -742,13 +743,17 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
                 device.signal_level = fresh_signal
                 # signal_unit already set above (before the suppressed continue) so it
                 # stays consistent with signal_source for the collapse decision.
-                device.signal_quality = (
-                    self._classify_signal(
+                if fresh_signal is not None:
+                    candidate = self._classify_signal(
                         entity_id, fresh_signal, device.signal_quality
                     )
-                    if fresh_signal is not None
-                    else None
-                )
+                    device.signal_quality = self._commit_signal(device, candidate, now)
+                else:
+                    # Sensor unavailable: no quality shown, and any in-flight debounce
+                    # is abandoned (a cross can't persist across a None gap).
+                    device.signal_pending_poor = None
+                    device.signal_pending_since = None
+                    device.signal_quality = None
 
             # Seed on first encounter; real updates come from _handle_state_change.
             if device.last_changed is None and state:
@@ -1223,21 +1228,10 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
 
     def _get_battery_level(self, entity_id: str) -> int | None:
         """Get battery level for an entity using configured mapping or auto-detection."""
-        state = self.hass.states.get(entity_id)
-        if (
-            state
-            and state.attributes.get("device_class") == "battery"
-            and state.state not in ("unavailable", "unknown", None)
-        ):
-            level = self._parse_battery_state(state.state)
-            _LOGGER.debug(
-                "[%s] Battery for %s via own state (device_class=battery): %s%%",
-                self.group_name,
-                entity_id,
-                level,
-            )
-            return level
-
+        # Explicit mapping wins over own-state: the user owns this field, so a
+        # configured mapping (even an entity mapped to itself) is authoritative.
+        # An unmapped entity falls through to the own-state device_class=battery
+        # branch below.
         battery_map = self.entry.data.get(CONF_BATTERY_ENTITY_MAP)
         if battery_map is not None and entity_id in battery_map:
             mapped = battery_map[entity_id]
@@ -1260,8 +1254,22 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
                 return level
             return None
 
-        # Auto-detection fallback: no map or entity not in map
         state = self.hass.states.get(entity_id)
+        if (
+            state
+            and state.attributes.get("device_class") == "battery"
+            and state.state not in ("unavailable", "unknown", None)
+        ):
+            level = self._parse_battery_state(state.state)
+            _LOGGER.debug(
+                "[%s] Battery for %s via own state (device_class=battery): %s%%",
+                self.group_name,
+                entity_id,
+                level,
+            )
+            return level
+
+        # Auto-detection fallback: no map or entity not in map
         if state and state.attributes:
             # `is not None`, not `or`: a real 0% reading (dead battery) is falsy and
             # must NOT fall through to a sibling/guessed sensor (that would silently
@@ -1384,8 +1392,8 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
 
         Mirrors _get_battery_level's precedence branch-for-branch so the source always
         matches the value's origin (drift between the two would resurface the wrong-merge
-        bug this prevents): own device_class=battery state → own id; explicit map → the
-        mapped sensor; own battery_level/battery attribute → own id; a sibling
+        bug this prevents): explicit map → the mapped sensor; own device_class=battery
+        state → own id; own battery_level/battery attribute → own id; a sibling
         device_class=battery entity on the same device → that sibling; the guessed
         ``sensor.<slug>_battery`` entity → that guess. None means "no known source" and
         acts as a wildcard in the collapse meet — so two DISTINCT batteries on one device
@@ -1404,11 +1412,11 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
         row identity stays stable and never flaps.
         """
         state = self.hass.states.get(entity_id)
-        if state and state.attributes.get("device_class") == "battery":
-            return entity_id
         battery_map = self.entry.data.get(CONF_BATTERY_ENTITY_MAP)
         if battery_map is not None and entity_id in battery_map:
             return battery_map[entity_id] or None
+        if state and state.attributes.get("device_class") == "battery":
+            return entity_id
         if (
             state
             and state.attributes
@@ -1462,6 +1470,10 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
         count) every poll. The shift is toward 'ok' on the >= scale for both directions.
         The good/ok boundary is intentionally NOT de-jittered — it feeds no recorded
         count, so a good/ok wobble is display-only, not write amplification.
+
+        This returns the RAW candidate quality (classify + hysteresis). The caller gates
+        it through _commit_signal, which debounces the poor<->non-poor boundary before
+        the result commits to device.signal_quality.
         """
         mapping = self._signal_map.get(entity_id, {})
         nt = mapping.get("network_type", "generic")
@@ -1474,6 +1486,60 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
         if level >= ok_threshold:
             return "ok"
         return "poor"
+
+    def _commit_signal(
+        self, device: DeviceState, candidate: SignalQuality, now: datetime
+    ) -> SignalQuality:
+        """Debounce the poor<->non-poor boundary (wall-clock); return the quality to commit.
+
+        candidate is the raw _classify_signal output (classify + hysteresis already
+        applied). A crossing of the poor<->non-poor boundary must persist for
+        SIGNAL_DEBOUNCE_SECONDS of REAL TIME before it commits — a flapping RSSI
+        never holds that long and is kept at the committed value, killing the
+        poor-signal count/event spam. Wall-clock, not a refresh count: refreshes are
+        state-change driven (_handle_state_change coalesces every push), so a chatty
+        push sensor fires many refreshes per second and a poll-count debounce would
+        clear in moments. Measuring elapsed time is immune to push rate — a 30s-polled
+        sensor and a push-every-2s sensor both need the same real duration.
+
+        good<->ok moves and the None seed commit instantly (good/ok feeds no recorded
+        count). Debounce stacks AFTER hysteresis: while a cross is held,
+        device.signal_quality stays at prev, so the next refresh's hysteresis still
+        applies — both mechanisms resist leaving 'poor'.
+        """
+        prev = device.signal_quality
+        # Seed: first classify after None commits instantly, no pending.
+        if prev is None:
+            device.signal_pending_poor = None
+            device.signal_pending_since = None
+            return candidate
+        candidate_poor = candidate == "poor"
+        committed_poor = prev == "poor"
+        # No poor-boundary cross (incl. good<->ok): commit instantly, reset pending.
+        if candidate_poor == committed_poor:
+            device.signal_pending_poor = None
+            device.signal_pending_since = None
+            return candidate
+        # Poor-boundary cross. New direction (first disagreeing refresh, or a reversal
+        # of an in-flight pending) stamps the start time and holds the committed value.
+        if device.signal_pending_poor != candidate_poor:
+            device.signal_pending_poor = candidate_poor
+            device.signal_pending_since = now
+            return prev
+        # Same pending direction persists — commit once it has held long enough.
+        elapsed = (now - device.signal_pending_since).total_seconds()
+        # Clock moved backward (NTP correction, restart) since the crossing was
+        # stamped → elapsed is negative. Re-stamp and keep holding rather than let a
+        # bad clock either strand the pending forever or (if it later jumps forward)
+        # shortcut the wait. The crossing simply restarts its window from here.
+        if elapsed < 0:
+            device.signal_pending_since = now
+            return prev
+        if elapsed >= SIGNAL_DEBOUNCE_SECONDS:
+            device.signal_pending_poor = None
+            device.signal_pending_since = None
+            return candidate
+        return prev
 
     def _poor_signal_entity_ids(self) -> list[str]:
         """Return poor-signal, non-suppressed, essential entity_ids (device-collapsed when active)."""

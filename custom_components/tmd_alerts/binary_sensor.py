@@ -1,11 +1,13 @@
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .classify import matches
+from .const import DOMAIN, NEW_WARNING_PULSE_SECONDS
 from .coordinator import TMDCoordinator
 
 
@@ -18,6 +20,9 @@ async def async_setup_entry(
         TMDStormWarningSensor(coordinator, entry),
         TMDHeavyRainSensor(coordinator, entry),
         TMDWaveWarningSensor(coordinator, entry),
+        TMDThunderstormWarningSensor(coordinator, entry),
+        TMDMonsoonWarningSensor(coordinator, entry),
+        TMDNewWarningSensor(coordinator, entry),
     ])
 
 
@@ -36,16 +41,8 @@ class TMDBinarySensorBase(CoordinatorEntity, BinarySensorEntity):
         super().__init__(coordinator)
         self._attr_device_info = _device_info(entry.entry_id)
 
-    def _matches_keywords(self, *keywords: str) -> bool:
-        if not self.coordinator.data:
-            return False
-        for warning in self.coordinator.data:
-            text = (
-                warning.get("title_en", "") + " " + warning.get("headline_en", "")
-            ).lower()
-            if any(kw in text for kw in keywords):
-                return True
-        return False
+    def _matches(self, category: str) -> bool:
+        return matches(self.coordinator.active_warnings, category)
 
 
 class TMDWarningActiveSensor(TMDBinarySensorBase):
@@ -59,7 +56,7 @@ class TMDWarningActiveSensor(TMDBinarySensorBase):
 
     @property
     def is_on(self) -> bool:
-        return bool(self.coordinator.data)
+        return bool(self.coordinator.active_warnings)
 
 
 class TMDStormWarningSensor(TMDBinarySensorBase):
@@ -73,7 +70,7 @@ class TMDStormWarningSensor(TMDBinarySensorBase):
 
     @property
     def is_on(self) -> bool:
-        return self._matches_keywords("storm", "tropical", "typhoon", "cyclone", "depression")
+        return self._matches("storm")
 
 
 class TMDHeavyRainSensor(TMDBinarySensorBase):
@@ -87,7 +84,7 @@ class TMDHeavyRainSensor(TMDBinarySensorBase):
 
     @property
     def is_on(self) -> bool:
-        return self._matches_keywords("heavy rain", "very heavy rain", "flash flood", "flood", "heavy to very heavy")
+        return self._matches("heavy_rain")
 
 
 class TMDWaveWarningSensor(TMDBinarySensorBase):
@@ -101,4 +98,88 @@ class TMDWaveWarningSensor(TMDBinarySensorBase):
 
     @property
     def is_on(self) -> bool:
-        return self._matches_keywords("wave", "wind-wave", "strong wind", "andaman", "gulf")
+        return self._matches("wave")
+
+
+class TMDThunderstormWarningSensor(TMDBinarySensorBase):
+    _attr_device_class = BinarySensorDeviceClass.SAFETY
+    _attr_icon = "mdi:weather-lightning"
+
+    def __init__(self, coordinator: TMDCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_name = "TMD Thunderstorm Warning"
+        self._attr_unique_id = f"{entry.entry_id}_thunderstorm_warning"
+
+    @property
+    def is_on(self) -> bool:
+        return self._matches("thunderstorm")
+
+
+class TMDMonsoonWarningSensor(TMDBinarySensorBase):
+    _attr_device_class = BinarySensorDeviceClass.SAFETY
+    _attr_icon = "mdi:weather-windy"
+
+    def __init__(self, coordinator: TMDCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_name = "TMD Monsoon Cold Warning"
+        self._attr_unique_id = f"{entry.entry_id}_monsoon_cold_warning"
+
+    @property
+    def is_on(self) -> bool:
+        return self._matches("monsoon")
+
+
+class TMDNewWarningSensor(TMDBinarySensorBase):
+    """Pulses ON for a few minutes when a previously unseen warning appears.
+
+    Warnings present at startup are not "new", and a re-issued update to a known
+    issue does not re-trigger.
+    """
+
+    _attr_icon = "mdi:bell-ring"
+
+    def __init__(self, coordinator: TMDCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_name = "TMD New Warning"
+        self._attr_unique_id = f"{entry.entry_id}_new_warning"
+        self._seen = self._keys()
+        self._pulse_on = False
+        self._cancel_pulse: CALLBACK_TYPE | None = None
+
+    def _keys(self) -> set[tuple[str, str]]:
+        return {
+            (w.get("issue_no", ""), w.get("title_en") or w.get("title_th", ""))
+            for w in self.coordinator.data or []
+        }
+
+    @property
+    def is_on(self) -> bool:
+        return self._pulse_on
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        keys = self._keys()
+        if keys - self._seen:
+            self._start_pulse()
+        self._seen |= keys
+        super()._handle_coordinator_update()
+
+    def _start_pulse(self) -> None:
+        if self._cancel_pulse:
+            self._cancel_pulse()
+        self._pulse_on = True
+        self._cancel_pulse = async_call_later(
+            self.hass, NEW_WARNING_PULSE_SECONDS, self._end_pulse
+        )
+
+    @callback
+    def _end_pulse(self, _now) -> None:
+        self._cancel_pulse = None
+        self._pulse_on = False
+        self.async_write_ha_state()
+
+    async def async_will_remove_from_hass(self) -> None:
+        if self._cancel_pulse:
+            self._cancel_pulse()
+            self._cancel_pulse = None
+        await super().async_will_remove_from_hass()

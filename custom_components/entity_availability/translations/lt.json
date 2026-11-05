@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Baterijos objektų susiejimas",
-        "description": "Patvirtinkite arba pakeiskite baterijos jutiklį kiekvienam stebimam objektui. Palikite tuščią objektams be baterijos. Palaiko skaitines (%) ir tekstines būsenas ('low')."
+        "description": "Patvirtinkite arba pakeiskite baterijos jutiklį kiekvienam stebimam objektui. Palikite tuščią objektams be baterijos. Palaiko skaitines (%) ir tekstines būsenas ('low').\n\nNaujai pridėta šioje sesijoje (peržiūrėkite jų baterijų priskyrimą):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Signalo stiprumo žemėlapis",
         "description": "Kiekvienam objektui pasirinkite signalo jutiklį ir tinklo tipą. Palikite jutiklį tuščią, jei norite praleisti.\n\nRibinės vertės (gera / tinkama / prasta):\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (didesnis — geriau)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Baterijos objektų susiejimas",
+        "description": "Patvirtinkite arba pakeiskite baterijos jutiklį kiekvienam stebimam objektui. Palikite tuščią objektams be baterijos. Palaiko skaitines (%) ir tekstines būsenas ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Įtraukta - naudoti grupės nustatymus",
         "all_essential": "🔴 Įtraukta - perrašyti: Esminė",
         "all_non_essential": "🟡 Įtraukta - perrašyti: Neesminė"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Objektas atsijungė",
+      "description": "Stebimas objektas tapo nepasiekiamas arba nustojo atsakyti.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Objektas atsikūrė",
+      "description": "Stebimas objektas vėl prisijungė po atsijungimo.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Baterija nukrito žemai",
+      "description": "Stebimo objekto baterija nukrito iki žemo baterijos lygio ribos arba žemiau jos.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Baterija atsistatė",
+      "description": "Stebimo objekto baterija vėl pakilo virš žemo baterijos lygio ribos.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "stale": {
+      "name": "Objektas pasenо",
+      "description": "Stebimas objektas nustojo atsinaujinti per numatytą intervalą.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Objektas nebepasenęs",
+      "description": "Stebimas objektas vėl pradėjo atsinaujinti po pasenimo.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Signalas tapo prastas",
+      "description": "Stebimo objekto signalo kokybė nukrito iki prasto lygio.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Signalas atsistatė",
+      "description": "Stebimo objekto signalo kokybė grįžo į priimtiną lygį.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Grupė",
+          "description": "Apriboti šį trigerį viena „Entity Availability“ grupe. Palikite tuščią, kad suveiktų bet kuriai grupei."
+        }
       }
     }
   }

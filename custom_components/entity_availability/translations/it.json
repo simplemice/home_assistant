@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Mappatura sensore batteria",
-        "description": "Conferma o modifica il sensore batteria per ogni entità monitorata. Lascia vuoto per entità senza batteria. Supporta stati numerici (%) e testuali ('low')."
+        "description": "Conferma o modifica il sensore batteria per ogni entità monitorata. Lascia vuoto per entità senza batteria. Supporta stati numerici (%) e testuali ('low').\n\nAggiunti di recente in questa sessione (controlla la loro associazione batteria):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Mappatura della potenza del segnale",
         "description": "Per ogni entità, seleziona facoltativamente un sensore del segnale e scegli il tipo di rete. Lascia il sensore vuoto per saltare.\\n\\nSoglie (buono / discreto / scarso):\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (più alto è meglio)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Mappatura sensore batteria",
+        "description": "Conferma o modifica il sensore batteria per ogni entità monitorata. Lascia vuoto per entità senza batteria. Supporta stati numerici (%) e testuali ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Incluso - usa impostazioni del gruppo",
         "all_essential": "🔴 Incluso - sovrascrittura: Essenziale",
         "all_non_essential": "🟡 Incluso - sovrascrittura: Non essenziale"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entità andata offline",
+      "description": "Un'entità monitorata è diventata non disponibile o ha smesso di rispondere.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entità recuperata",
+      "description": "Un'entità monitorata è tornata online dopo essere stata offline.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Batteria scarica",
+      "description": "La batteria di un'entità monitorata è scesa alla soglia di batteria scarica o al di sotto.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Batteria recuperata",
+      "description": "La batteria di un'entità monitorata è risalita al di sopra della soglia di batteria scarica.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entità diventata inattiva",
+      "description": "Un'entità monitorata ha smesso di aggiornarsi entro l'intervallo previsto.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entità non più inattiva",
+      "description": "Un'entità monitorata ha ripreso ad aggiornarsi dopo essere stata inattiva.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Segnale diventato scarso",
+      "description": "La qualità del segnale di un'entità monitorata è scesa a un livello scarso.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Segnale recuperato",
+      "description": "La qualità del segnale di un'entità monitorata è tornata a un livello accettabile.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Gruppo",
+          "description": "Limita questo trigger a un singolo gruppo di Entity Availability. Lascia vuoto per attivarlo per qualsiasi gruppo."
+        }
       }
     }
   }

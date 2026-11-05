@@ -24,10 +24,10 @@ light:
     name: "Livingroom Ambient"
     unique_id: livingroom_ambient
     entities:
-      - light.wled_closet_l_main
-      - light.wled_closet_r_main
+      - light.wled_closet_l
+      - light.wled_closet_r
       - light.wled_table
-      - light.wled_tv
+      - light.livingroom_wled_undertv
       - light.wled_wall_light
       - light.closet_lamp
 
@@ -72,10 +72,10 @@ light:
     unique_id: wled_ambient
     name: "WLED Ambient"
     entities:
-      - light.wled_closet_l_main
-      - light.wled_closet_r_main
+      - light.wled_closet_l
+      - light.wled_closet_r
       - light.wled_table
-      - light.wled_tv
+      - light.livingroom_wled_undertv
       - light.wled_wall_light
 
 switch:

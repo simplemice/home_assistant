@@ -24,9 +24,11 @@
         "name": "Status",
         "state": {
           "not_found": "Not found",
+          "ready_to_ship": "Ready to ship",
           "picked_up": "Picked up",
           "in_transit": "In transit",
           "out_for_delivery": "Out for delivery",
+          "awaiting_collection": "Ready for collection",
           "delivered": "Delivered",
           "problem": "Problem",
           "unknown": "Unknown"

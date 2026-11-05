@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "Batterijsensor-toewijzing",
-        "description": "Bevestig of wijzig de batterijsensor voor elke bewaakte entiteit. Laat leeg voor entiteiten zonder batterij. Ondersteunt numerieke (%) en tekststatussen ('low')."
+        "description": "Bevestig of wijzig de batterijsensor voor elke bewaakte entiteit. Laat leeg voor entiteiten zonder batterij. Ondersteunt numerieke (%) en tekststatussen ('low').\n\nNieuw toegevoegd in deze sessie (controleer hun batterijtoewijzing):\n{new_entities}"
       },
       "signal_mapping": {
         "title": "Signaalsterkte-toewijzing",
         "description": "Voor elke entiteit, selecteer optioneel een signaalsensor en kies het netwerktype. Laat de sensor leeg om over te slaan.\n\nDrempelwaarden (goed / ok / slecht):\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\n• Percentage: ≥ 70% / ≥ 40% / < 40%\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (hoger is beter)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "Batterijsensor-toewijzing",
+        "description": "Bevestig of wijzig de batterijsensor voor elke bewaakte entiteit. Laat leeg voor entiteiten zonder batterij. Ondersteunt numerieke (%) en tekststatussen ('low')."
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ Opgenomen – gebruik groepsinstellingen",
         "all_essential": "🔴 Opgenomen – overschrijving: Essentieel",
         "all_non_essential": "🟡 Opgenomen – overschrijving: Niet-essentieel"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "Entiteit is offline gegaan",
+      "description": "Een bewaakte entiteit werd onbeschikbaar of reageerde niet meer.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "recovered": {
+      "name": "Entiteit hersteld",
+      "description": "Een bewaakte entiteit is weer online gekomen nadat deze offline was.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "low_battery": {
+      "name": "Batterij werd laag",
+      "description": "De batterij van een bewaakte entiteit is gedaald tot op of onder de drempel voor lage batterij.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "Batterij hersteld",
+      "description": "De batterij van een bewaakte entiteit is weer boven de drempel voor lage batterij gestegen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "stale": {
+      "name": "Entiteit werd inactief",
+      "description": "Een bewaakte entiteit is binnen het verwachte interval niet meer bijgewerkt.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "Entiteit niet langer inactief",
+      "description": "Een bewaakte entiteit wordt weer bijgewerkt nadat deze inactief was.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "Signaal werd slecht",
+      "description": "De signaalkwaliteit van een bewaakte entiteit is gedaald naar een slecht niveau.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "Signaal hersteld",
+      "description": "De signaalkwaliteit van een bewaakte entiteit is teruggekeerd naar een aanvaardbaar niveau.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Groep",
+          "description": "Beperk deze trigger tot één enkele Entity Availability-groep. Laat leeg om voor elke groep te activeren."
+        }
       }
     }
   }

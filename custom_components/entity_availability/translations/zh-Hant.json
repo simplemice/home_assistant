@@ -129,11 +129,15 @@
       },
       "battery_mapping": {
         "title": "電池實體對應",
-        "description": "確認或變更每個受監控實體的電池感測器。沒有電池的實體請留空。支援數字（%）和文字狀態（「low」）。"
+        "description": "確認或變更每個受監控實體的電池感測器。沒有電池的實體請留空。支援數字（%）和文字狀態（「low」）。\n\n本次工作階段中新增（請檢查其電池對應）：\n{new_entities}"
       },
       "signal_mapping": {
         "title": "訊號強度對應",
         "description": "對於每個實體，可選擇性地選取一個訊號感測器並選擇網路類型。將感測器留空以略過。\\n\\n門檻值（良好 / 尚可 / 差）：\\n• 5G: ≥ −80 dBm / ≥ −100 dBm / < −100 dBm\\n• Bluetooth: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Generic/RSSI: ≥ −60 dBm / ≥ −80 dBm / < −80 dBm\\n• LoRaWAN: ≥ −100 dBm / ≥ −115 dBm / < −115 dBm\\n• LTE/4G: ≥ −80 dBm / ≥ −90 dBm / < −90 dBm\\n• Percentage: ≥ 70% / ≥ 40% / < 40%\\n• Thread: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Wi-Fi: ≥ −67 dBm / ≥ −80 dBm / < −80 dBm\\n• Z-Wave: ≥ −70 dBm / ≥ −85 dBm / < −85 dBm\\n• Zigbee (LQI): ≥ 201 / ≥ 51 / < 51 (越高越好)\n• Zigbee (RSSI/dBm): ≥ −70 dBm / ≥ −85 dBm / < −85 dBm"
+      },
+      "battery_mapping_no_new": {
+        "title": "電池實體對應",
+        "description": "確認或變更每個受監控實體的電池感測器。沒有電池的實體請留空。支援數字（%）和文字狀態（「low」）。"
       }
     },
     "error": {
@@ -286,6 +290,88 @@
         "keep": "✅ 包含 - 使用組設定",
         "all_essential": "🔴 包含 - 覆寫：必要",
         "all_non_essential": "🟡 包含 - 覆寫：非必要"
+      }
+    }
+  },
+  "triggers": {
+    "offline": {
+      "name": "實體離線",
+      "description": "受監控的實體變為無法使用或停止回應。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "recovered": {
+      "name": "實體已恢復",
+      "description": "受監控的實體在離線後重新上線。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "low_battery": {
+      "name": "電量變低",
+      "description": "受監控實體的電量降至低電量閾值或以下。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "battery_ok": {
+      "name": "電量已恢復",
+      "description": "受監控實體的電量回升至低電量閾值以上。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "stale": {
+      "name": "實體資料逾時",
+      "description": "受監控的實體未在預期間隔內更新。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "stale_recovered": {
+      "name": "實體資料不再逾時",
+      "description": "受監控的實體在資料逾時後恢復更新。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "poor_signal": {
+      "name": "訊號變差",
+      "description": "受監控實體的訊號品質降至不佳的水平。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
+      }
+    },
+    "signal_ok": {
+      "name": "訊號已恢復",
+      "description": "受監控實體的訊號品質回復至可接受的水平。",
+      "fields": {
+        "config_entry_id": {
+          "name": "組",
+          "description": "將此觸發器限定為單一 Entity Availability 組。留空則對任何組觸發。"
+        }
       }
     }
   }
