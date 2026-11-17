@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import gc
+import inspect
 import logging
+import math
+import time
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -18,9 +22,12 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .const import (
     BATTERY_HYSTERESIS,
+    BUCKET_INTERVAL,
+    CONF_AVAILABILITY_WINDOWS,
     CONF_BAD_STATES,
     CONF_BATTERY_ENTITY_MAP,
     CONF_BATTERY_THRESHOLD,
@@ -34,6 +41,7 @@ from .const import (
     CONF_STALENESS_THRESHOLD,
     CONF_STALENESS_USE_LAST_UPDATED,
     CONF_USE_DEVICE_NAMES,
+    DEFAULT_AVAILABILITY_WINDOWS,
     DEFAULT_BAD_STATES,
     DEFAULT_BATTERY_THRESHOLD,
     DEFAULT_COLLAPSE_DEVICES,
@@ -51,6 +59,8 @@ from .const import (
     EVENT_SIGNAL_OK,
     EVENT_STALE,
     EVENT_STALE_RECOVERED,
+    SAVE_SLOW_WARN_CPU_MS,
+    SAVE_STALL_DEBUG_MS,
     SCAN_INTERVAL,
     SIGNAL_DEBOUNCE_SECONDS,
     SIGNAL_HYSTERESIS,
@@ -73,8 +83,26 @@ _LOGGER = logging.getLogger(__name__)
 # by the cooldown setting, so debounce only needs to batch burst events.
 _STATE_CHANGE_DEBOUNCE = 0.5  # seconds
 
-# Save storage every N updates (5 min = 10 updates at 30s interval)
-_SAVE_INTERVAL_UPDATES = 10
+# Persist availability data at most once per this interval (wall-clock). The
+# coordinator ticks on every 30s poll AND on every debounced state-change
+# refresh, so gating on a tick COUNT made a busy group save every ~40s. Gating
+# on elapsed time makes the save rate a pure ceiling, independent of activity.
+SAVE_MIN_INTERVAL = 300  # seconds (5 min)
+
+# HA 2025.12.0 added a keyword-only ``serialize_in_event_loop`` param to Store
+# (absent at 2025.11.0, our manifest floor; present 2025.12.0 + dev). It defaults
+# True, which runs the JSON encode ON the event loop in the save path — a
+# multi-second stall for large groups (our snapshot can be tens of MB). Passing
+# False moves the encode into the executor (the file write already was). We detect
+# the param by signature so we never pass an unknown kwarg to a 2025.11 Store
+# (that raises TypeError). On <=2025.11 the encode is already off-loop (the old
+# monolithic _write_data ran entirely in the executor), so omitting the kwarg is a
+# correct no-op there.
+# ponytail: signature guard, drop it and pass serialize_in_event_loop=False
+# unconditionally once the manifest/hacs floor reaches 2025.12.0.
+_STORE_HAS_SERIALIZE_FLAG = (
+    "serialize_in_event_loop" in inspect.signature(Store.__init__).parameters
+)
 
 
 class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData]):
@@ -114,8 +142,14 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
             CONF_SIGNAL_ENTITY_MAP, {}
         )
         self._availability_storage = AvailabilityStorage()
+        store_kwargs = (
+            {"serialize_in_event_loop": False} if _STORE_HAS_SERIALIZE_FLAG else {}
+        )
         self._store = Store(
-            hass, STORAGE_VERSION, f"{STORAGE_KEY_PREFIX}_{entry.entry_id}"
+            hass,
+            STORAGE_VERSION,
+            f"{STORAGE_KEY_PREFIX}_{entry.entry_id}",
+            **store_kwargs,
         )
         self._last_update: datetime | None = None
         self._startup_time: datetime | None = None
@@ -132,8 +166,29 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
         self._refresh_again: bool = False
         self._device_states: dict[str, DeviceState] = {}
         self._suppressed: dict[str, datetime | None] = {}
-        self._update_count: int = 0
+        self._last_save: datetime | None = None
         self._dirty: bool = False
+        # Save/refresh timing for Diagnostics (perf_counter ms). The slow-save warn
+        # is peak-gated on _slow_save_warned_peak_cpu_ms: only a new worst CPU cost
+        # above SAVE_SLOW_WARN_CPU_MS re-warns, so it cannot spam.
+        self._last_save_onloop_cpu_ms: float | None = None  # thread_time: our cost
+        self._last_save_onloop_wall_ms: float | None = None  # perf_counter: incl stall
+        self._last_save_total_ms: float | None = None
+        self._last_save_bucket_count: int | None = None
+        self._last_refresh_ms: float | None = None
+        self._slow_save_warned_peak_cpu_ms: float = 0.0
+        # Count of saves whose wall span far exceeded their CPU cost — i.e. the host
+        # froze the event loop during the save (not integration work). Diagnostics-only.
+        self._save_stall_count: int = 0
+        self._last_stall_wall_ms: float | None = None  # rolling max wall of a stall
+        self._last_stall_at: str | None = None  # iso ts of the most recent stall
+        # Count of saves whose measured CPU was inflated by a Python gen-1/gen-2
+        # garbage collection completing in the timing window (not integration work;
+        # see _async_save_storage). Such a save is silenced — it warrants no WARN —
+        # but a GENUINELY slow save (very large group) that also coincides with a GC
+        # would be silenced too, so this counter keeps that otherwise-invisible case
+        # visible in diagnostics. Diagnostics-only, like the stall counters.
+        self._gc_contaminated_save_count: int = 0
         # Memoized entity_id -> representative entity_id map for device-collapse.
         # Rebuilt once per _async_update_data tick (registry + battery/signal churn
         # can change keys), then read by every count/list site so er lookups run
@@ -337,6 +392,12 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
                 self._availability_storage = AvailabilityStorage.from_dict(
                     stored["availability"]
                 )
+                # Prune immediately so an oversized pre-fix file does not sit in RAM
+                # (and is not re-serialized at full size on the first save) — the
+                # restart-freeze. Same retention/entity filter as the save path.
+                self._availability_storage.prune(
+                    dt_util.utcnow(), self._retention_seconds(), self._entities
+                )
             if "suppressed" in stored:
                 for entity_id, until_str in stored["suppressed"].items():
                     if entity_id not in self._entities:
@@ -439,9 +500,60 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
                     device.is_low_battery = ds.get("is_low_battery", False)
                     if entity_id in self._entities:
                         self._device_states[entity_id] = device
+            # Restore persisted host-stall telemetry so a diagnostics download after a
+            # restart (which a host freeze usually prompts) still reflects the stall
+            # history instead of reading a fresh 0/null. Accumulates across restarts
+            # (seed, not reset). Guarded so a missing key (upgrade) or a corrupt block
+            # (hand-edited/bit-rot) degrades to defaults and can never crash load or a
+            # later stall's += / max().
+            stall = stored.get("stall")
+            if isinstance(stall, dict):
+                raw_count = stall.get("count")
+                if (
+                    isinstance(raw_count, int)
+                    and not isinstance(raw_count, bool)
+                    and raw_count >= 0
+                ):
+                    self._save_stall_count = raw_count
+                raw_wall = stall.get("last_wall_ms")
+                if (
+                    isinstance(raw_wall, (int, float))
+                    and math.isfinite(raw_wall)
+                    and raw_wall >= 0
+                ):
+                    self._last_stall_wall_ms = float(raw_wall)
+                raw_at = stall.get("last_at")
+                if isinstance(raw_at, str):
+                    self._last_stall_at = raw_at
+                raw_gc = stall.get("gc_contaminated_count")
+                if (
+                    isinstance(raw_gc, int)
+                    and not isinstance(raw_gc, bool)
+                    and raw_gc >= 0
+                ):
+                    self._gc_contaminated_save_count = raw_gc
+
+    def _retention_seconds(self) -> float:
+        """Seconds of availability buckets to retain = longest SELECTED window.
+
+        Bounds RAM, on-disk file, and per-save serialize cost to what the selected
+        windows can actually read. 0 when no window is selected (persist nothing).
+        The same value feeds the save snapshot and prune (save + load), so RAM is
+        never trimmed tighter than the file — a widen-after-narrow (which reloads from
+        the file) can only ever recover what the file retained, never less.
+        """
+        windows = self.entry.data.get(
+            CONF_AVAILABILITY_WINDOWS, DEFAULT_AVAILABILITY_WINDOWS
+        )
+        max_hours = max(
+            (AvailabilityStorage._retention_hours(w) for w in windows), default=0
+        )
+        # +15 min margin (3 buckets) so a boundary eviction never races a read.
+        return (max_hours * 3600 + BUCKET_INTERVAL * 3) if max_hours else 0
 
     async def _async_save_storage(self) -> None:
         """Persist availability data."""
+        t_total0 = time.perf_counter()
         device_states_data: dict[str, dict] = {}
         for entity_id, device in self._device_states.items():
             if entity_id not in self._entities:
@@ -449,7 +561,7 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
             # last_changed is non-None for all active entities after any real
             # state-change event, so this guard includes most monitored devices
             # (broader than pre-PR which only saved offline/low-battery devices).
-            # Saves are periodic (_SAVE_INTERVAL_UPDATES) — not per-event.
+            # Saves are periodic (SAVE_MIN_INTERVAL, wall-clock) — not per-event.
             if (
                 device.is_offline
                 or device.cooldown_start is not None
@@ -481,14 +593,153 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
                     if device.last_changed
                     else None,
                 }
+        # Bound RAM + disk to the longest selected window, drop orphan entities.
+        # Same now + retention for prune (RAM) and the snapshot (disk) so they never
+        # diverge. prune() MUTATES _buckets so it must stay on the loop; snapshot()
+        # then freezes the pruned buckets BY VALUE into a detached structure, and the
+        # expensive isoformat/dict build (encode_snapshot) runs in the EXECUTOR so it
+        # does not block the loop. HA's async_save → _write_data (the JSON byte-encode
+        # AND the atomic disk write) is also off-loop on every supported HA (>=2025.11,
+        # async_add_executor_job; no serialize_in_event_loop flag exists to disable).
+        #
+        # The residual ON-LOOP cost of a save is prune() + snapshot() themselves.
+        # Measured, this is CPU-cheap — a few ms even at the per-entity bucket ceiling
+        # (a pure __slots__ tuple-copy + one tz-aware datetime compare per bucket). It
+        # is NOT what makes a save look slow: issue #145 logged 3051ms for a step whose
+        # actual CPU cost was ~0.4ms, because the host froze the event loop mid-span.
+        # So the span is timed on BOTH clocks below. (The compact storage format shrinks
+        # the on-disk file and the on-loop decode at RESTART, not this span.)
+        now = dt_util.utcnow()
+        retention_seconds = self._retention_seconds()
+        # ON-LOOP span: prune() + snapshot() are the residual event-loop cost of a
+        # save (encode + disk write are off-loop). The step is CPU-cheap — a few ms
+        # even at the per-entity bucket ceiling (a __slots__ tuple-copy + one tz-aware
+        # datetime compare per bucket). It is NOT what makes a save look slow.
+        #
+        # Two confounders inflate the measured span, and NEITHER is our code:
+        #   * A host freeze (OS deschedule, swap) — inflates WALL but not CPU, because
+        #     the loop thread was off-CPU. wall >> cpu ⇒ host stalled the loop (branch ii).
+        #   * A Python garbage collection firing in-span — inflates BOTH cpu AND wall
+        #     roughly equally, because gc runs ON this thread and burns real CPU that
+        #     thread_time() counts as ours. A gen-2 sweep of HA's whole-process heap
+        #     costs 1-3s on a loaded install (issue #145), dwarfing our ~1ms of work and
+        #     landing in whichever save span it coincides with — unrelated to bucket
+        #     count. So thread_time() ALONE cannot tell our slow code from an in-span GC.
+        # We therefore read gc collection counts across the span: a gen-1/gen-2 collection
+        # during the span means the CPU figure is GC-contaminated, not our work, so it must
+        # not WARN in our name. (gen-0 is cheap + constant and would over-suppress, so it
+        # is ignored.) wall is still timed for the host-stall branch.
+        gc_stats_before = [s["collections"] for s in gc.get_stats()]
+        t_onloop_wall0 = time.perf_counter()
+        t_onloop_cpu0 = time.thread_time()
+        self._availability_storage.prune(now, retention_seconds, self._entities)
+        frozen = self._availability_storage.snapshot(
+            now, retention_seconds, self._entities
+        )
+        onloop_cpu_ms = (time.thread_time() - t_onloop_cpu0) * 1000
+        onloop_wall_ms = (time.perf_counter() - t_onloop_wall0) * 1000
+        gc_delta = [
+            a - b
+            for a, b in zip((s["collections"] for s in gc.get_stats()), gc_stats_before)
+        ]
+        # gen-1 or gen-2 collected in-span ⇒ CPU is GC-contaminated, not our work.
+        gc_ran = len(gc_delta) >= 3 and (gc_delta[1] > 0 or gc_delta[2] > 0)
+        bucket_count = sum(len(v) for v in frozen.values())
+        # Classify this save's on-loop cost BEFORE building the payload, so the stall
+        # counters we persist reflect THIS save (otherwise the save would serialize the
+        # pre-increment value and the stall history would lag one save behind).
+        # (i) The integration's own code is genuinely slow (high CPU, NO in-span GC) ->
+        # WARN with actionable advice. Peak-gated so it cannot spam. For typical groups
+        # this ~never fires (the step is sub-millisecond), but it is NOT bounded: prune +
+        # snapshot cost scales ~linearly with the total bucket count (entities ×
+        # BUCKETS_MAX), so a very large combined group (the entity selector is uncapped)
+        # can legitimately reach hundreds of ms to over a second of real CPU — and there
+        # the WARN's advice (shorter windows / fewer entities) is genuinely correct. The
+        # `not gc_ran` gate is what fixes issue #145: a high-CPU reading caused by a GC
+        # completing in the timing window is NOT our code, so it is routed to branch
+        # (iii) rather than a false WARN.
+        if (
+            onloop_cpu_ms > SAVE_SLOW_WARN_CPU_MS
+            and not gc_ran
+            and onloop_cpu_ms > self._slow_save_warned_peak_cpu_ms
+        ):
+            self._slow_save_warned_peak_cpu_ms = onloop_cpu_ms
+            _LOGGER.warning(
+                "[%s] Slow storage save: %.0fms CPU (prune+snapshot), %d buckets. "
+                "If this persists, shorter availability windows or fewer monitored "
+                "entities will reduce it.",
+                self.group_name,
+                onloop_cpu_ms,
+                bucket_count,
+            )
+        # (ii) The host froze the loop during the span (high wall, low CPU) — NOT our
+        # bug and not actionable on our side, so count it + DEBUG only, never a WARN in
+        # our name. Gated on a CPU CEILING (cpu <= the warn threshold) so a genuinely
+        # high-CPU save that merely failed the (i) peak-gate is NOT miscounted as a host
+        # stall. A pure wall>threshold with low CPU is unambiguously a host stall. This
+        # is a ceiling, not a cpu-ratio: it does NOT reintroduce the gap a ratio left
+        # (e.g. 600ms CPU / 2100ms wall: 600<=1000 and 2100>2000 → still counted).
+        # The counters are persisted (see data["stall"]) so they survive the restart a
+        # host freeze usually prompts — the diagnostics download still shows the stall.
+        elif (
+            onloop_cpu_ms <= SAVE_SLOW_WARN_CPU_MS
+            and onloop_wall_ms > SAVE_STALL_DEBUG_MS
+        ):
+            self._save_stall_count += 1
+            self._last_stall_wall_ms = max(
+                self._last_stall_wall_ms or 0.0, onloop_wall_ms
+            )
+            self._last_stall_at = now.isoformat()
+            _LOGGER.debug(
+                "[%s] Event loop stalled %.0fms wall / %.0fms CPU during a storage "
+                "save (host scheduling/GC/swap, not integration work); %d buckets.",
+                self.group_name,
+                onloop_wall_ms,
+                onloop_cpu_ms,
+                bucket_count,
+            )
+        # (iii) High CPU, and a gen-1/gen-2 collection COMPLETED in the observation
+        # window (gc_ran). `gc_ran` is process-global: the counter advances for a
+        # collection that finished on ANY thread. In the common case the collection ran
+        # ON the loop thread (an in-span allocation tripped it; HA's work and the GIL
+        # keep most allocation on the loop thread), and its CPU WAS charged to
+        # thread_time() as ours — a true false reading. In the rarer case it ran on
+        # another thread, thread_time() was NOT inflated by it, so a genuinely slow
+        # OUR-code save could be suppressed here by an unrelated collection — a false
+        # NEGATIVE. We accept that: the window is narrow, the fail direction is a missing
+        # WARN (never a false alarm, never a crash), and it self-heals — the next slow
+        # save without a coincident collection WARNs (the peak var is untouched here). We
+        # count it (diagnostics-only) rather than log, so a genuinely slow save (a very
+        # large group, branch (i) territory) coinciding with a GC is not fully invisible —
+        # the counter is the only trace that an otherwise-WARN-worthy save was suppressed.
+        # (A genuine-slow save BELOW the recorded peak with no GC also stays silent, but
+        # that is the pre-existing peak-gate dedup, not introduced here; _last_save_onloop_
+        # cpu_ms still records its cost for diagnostics.)
+        elif onloop_cpu_ms > SAVE_SLOW_WARN_CPU_MS and gc_ran:
+            self._gc_contaminated_save_count += 1
+        # Capture `suppressed` BEFORE the executor await too, so all three persisted
+        # fields (availability / device_states / suppressed) reflect the SAME instant
+        # — a suppress/unsuppress firing during the encode must not skew the save.
+        suppressed_data = {
+            entity_id: until.isoformat() if until else None
+            for entity_id, until in self._suppressed.items()
+            if entity_id in self._entities
+        }
+        availability = await self.hass.async_add_executor_job(
+            AvailabilityStorage.encode_snapshot, frozen
+        )
         data = {
-            "availability": self._availability_storage.to_dict(),
-            "suppressed": {
-                entity_id: until.isoformat() if until else None
-                for entity_id, until in self._suppressed.items()
-                if entity_id in self._entities
-            },
+            "availability": availability,
+            "suppressed": suppressed_data,
             "device_states": device_states_data,
+            # Host-stall telemetry, persisted so a diagnostics download after the
+            # restart a freeze usually triggers still reflects the stall history.
+            "stall": {
+                "count": self._save_stall_count,
+                "last_wall_ms": self._last_stall_wall_ms,
+                "last_at": self._last_stall_at,
+                "gc_contaminated_count": self._gc_contaminated_save_count,
+            },
         }
         _LOGGER.debug(
             "[%s] Saving storage: %d availability entries, %d suppressed, %d offline device states",
@@ -499,6 +750,13 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
         )
         await self._store.async_save(data)
         self._dirty = False
+        # Timing for Diagnostics.
+        total_ms = (time.perf_counter() - t_total0) * 1000
+        self._last_save_onloop_cpu_ms = onloop_cpu_ms
+        self._last_save_onloop_wall_ms = onloop_wall_ms
+        self._last_save_total_ms = total_ms
+        self._last_save_bucket_count = bucket_count
+        self._last_save = now
 
     @callback
     def _setup_state_listeners(self) -> None:
@@ -601,6 +859,7 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
 
     async def _async_update_data(self) -> EntityAvailabilityData:
         """Update device states and availability."""
+        t_refresh0 = time.perf_counter()
         now = datetime.now(timezone.utc)
         elapsed = (
             (now - self._last_update).total_seconds()
@@ -1038,19 +1297,26 @@ class EntityAvailabilityCoordinator(DataUpdateCoordinator[EntityAvailabilityData
                     )
                 device.prev_signal_poor = signal_poor
 
-        # Mark as dirty; save periodically (every ~5 min)
+        # Mark dirty; persist at most once per SAVE_MIN_INTERVAL (wall-clock).
+        # Gating on elapsed time, not a tick count, keeps the save rate a pure
+        # ceiling regardless of how many state-change refreshes a busy group
+        # fires. First dirty tick (_last_save is None) saves immediately to seed.
+        # Refresh timing (Diagnostics only — the O(N) sweep cost, excluding the
+        # save below which is timed on its own). No warn path here; the save warn
+        # is the single load-bearing one.
+        self._last_refresh_ms = (time.perf_counter() - t_refresh0) * 1000
         self._dirty = True
-        self._update_count += 1
-        if self._update_count >= _SAVE_INTERVAL_UPDATES:
+        if (
+            self._last_save is None
+            or (now - self._last_save).total_seconds() >= SAVE_MIN_INTERVAL
+        ):
             try:
                 await self._async_save_storage()
             except Exception:  # noqa: BLE001
                 _LOGGER.warning(
-                    "[%s] Failed to save storage — will retry next interval",
+                    "[%s] Failed to save storage — will retry next tick",
                     self.group_name,
                 )
-            finally:
-                self._update_count = 0
 
         # Stamp per-category count/entities once per touched category, then fire.
         # Each list reflects FINAL device_states (all transitions in this sweep

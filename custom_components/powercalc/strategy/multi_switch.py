@@ -1,16 +1,14 @@
-from __future__ import annotations
-
 from decimal import Decimal
 import logging
 
-from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
+from homeassistant.components.switch.const import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import CONF_ENTITIES, STATE_CLOSING, STATE_ON, STATE_OPENING, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant, State
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.event import TrackTemplate
-import voluptuous as vol
 
 from custom_components.powercalc.const import CONF_POWER, CONF_POWER_OFF, DUMMY_ENTITY_ID
+from custom_components.powercalc.validation import vol
 
 from .strategy_interface import PowerCalculationStrategyInterface
 
@@ -43,9 +41,12 @@ class MultiSwitchStrategy(PowerCalculationStrategyInterface):
 
     async def calculate(self, entity_state: State) -> Decimal | None:
         if self.known_states is None:
-            self.known_states = {
-                entity_id: (state.state if (state := self.hass.states.get(entity_id)) else STATE_UNAVAILABLE) for entity_id in self.switch_entities
-            }
+            self.known_states = dict.fromkeys(self.switch_entities, STATE_UNAVAILABLE)
+
+        for entity_id in self.switch_entities:
+            state = self.hass.states.get(entity_id)
+            if state is not None:
+                self.known_states[entity_id] = state.state
 
         if entity_state.entity_id != DUMMY_ENTITY_ID and entity_state.entity_id in self.switch_entities:
             self.known_states[entity_state.entity_id] = entity_state.state
@@ -60,7 +61,7 @@ class MultiSwitchStrategy(PowerCalculationStrategyInterface):
         return Decimal(sum(_get_power(state) for state in self.known_states.values()))
 
     def get_entities_to_track(self) -> list[str | TrackTemplate]:
-        return self.switch_entities  # type: ignore
+        return [*self.switch_entities]
 
     def can_calculate_standby(self) -> bool:
         return self.off_power is not None

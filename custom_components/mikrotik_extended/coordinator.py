@@ -228,21 +228,23 @@ def _split_queue_fields(entry: dict, vals: dict) -> None:
 
 
 def _parse_duration_seconds(s: str) -> int:
-    """Parse a MikroTik duration string like '3m45s' into total seconds."""
+    """Parse a MikroTik duration string like '3m45s' into total seconds.
+
+    Milliseconds are read as their own unit, so "500ms" is not taken for 500
+    minutes, and rounded up to a whole second: a handshake 800 ms ago is a
+    handshake, and 0 stays reserved for never.
+    """
     if not s or s.lower() in ("never", ""):
         return 0
+    multipliers = {"w": 604800, "d": 86400, "h": 3600, "m": 60, "s": 1}
     total = 0
-    for pattern, multiplier in [
-        (r"(\d+)w", 604800),
-        (r"(\d+)d", 86400),
-        (r"(\d+)h", 3600),
-        (r"(\d+)m", 60),
-        (r"(\d+)s", 1),
-    ]:
-        m = re.search(pattern, s)
-        if m:
-            total += int(m.group(1)) * multiplier
-    return total
+    millis = 0
+    for number, unit in re.findall(r"(\d+)(ms|w|d|h|m|s)", s):
+        if unit == "ms":
+            millis += int(number)
+        else:
+            total += int(number) * multipliers[unit]
+    return total + -(-millis // 1000)
 
 
 def is_valid_ip(address):
@@ -436,6 +438,81 @@ def _lte_number(value):
         return None
     number = float(match.group(1))
     return int(number) if number.is_integer() else number
+
+
+# How far along a lease is. Anything else, busy and testing among them, says
+# no more about the device holding the address than waiting does.
+_LEASE_STATUS_ORDER = {"bound": 2, "offered": 1}
+
+
+def _lease_rank(row: dict, bound_by_age: bool = False) -> tuple:
+    """How sure a lease row is to be the address its device holds now.
+
+    In order: an enabled lease, a bound one, one with an active address, one
+    further along than waiting, and the one seen most recently. RouterOS
+    gives last-seen as the time since, so a smaller value is more recent; a
+    lease never seen ranks below every other. The disabled flag comes as a
+    bool from the API library and as text elsewhere, both are read.
+
+    Bound leases are told apart by last-seen only with bound_by_age, which
+    _one_lease_per_mac uses across servers: there the more recent lease is
+    the network the device is on now. On one server several bound leases
+    under one MAC are different devices behind a repeater, and following
+    their renewals would make the address jump.
+    """
+    enabled = str(row.get("disabled", "false")).lower() not in ("true", "yes")
+    status = row.get("status")
+    bound = status == "bound"
+    last_seen = str(row.get("last-seen", "") or "")
+    if bound and not bound_by_age:
+        age = 0.0
+    else:
+        age = float("inf") if last_seen in ("", "never") else _parse_duration_seconds(last_seen)
+    return (enabled, bound, bool(row.get("active-address")), _LEASE_STATUS_ORDER.get(status, 0), -age)
+
+
+def _best_row(rows: list, bound_by_age: bool) -> dict:
+    """The best ranked row; on a full tie the later one, as the router lists them."""
+    best = rows[0]
+    for row in rows[1:]:
+        if _lease_rank(row, bound_by_age) >= _lease_rank(best, bound_by_age):
+            best = row
+    return best
+
+
+def _one_lease_per_mac(rows: list | None) -> list | None:
+    """Keep one lease row per MAC address, the one the device holds now.
+
+    The DHCP store is keyed by MAC, so with leases for the same device on
+    two servers the later row used to overwrite the earlier one, and an old
+    lease waiting on another network could hide the one the device holds
+    now. The best lease is picked on each server first, where bound leases
+    keep the router's order, then across servers, where the more recently
+    seen one wins. A failed query stays a failed query.
+
+    The cost of the last step: a host that really holds a bound lease on two
+    VLANs under one MAC shows the address it renewed last, so it alternates
+    between its two addresses. Both are its own. Holding on to the previous
+    choice instead would keep a device that moved back to a network on the
+    other network's address until that lease expires, which is #40 again.
+    """
+    if rows is None:
+        return None
+    by_mac: dict = {}
+    for row in rows:
+        by_mac.setdefault(row.get("mac-address"), {}).setdefault(row.get("server"), []).append(row)
+    kept = []
+    for servers in by_mac.values():
+        best, best_rank = None, None
+        for leases in servers.values():
+            row = _best_row(leases, bound_by_age=False)
+            # A server is as fresh as its freshest lease of the same standing,
+            # not only the row that won there by the router's order.
+            rank = max(_lease_rank(lease, bound_by_age=True) for lease in leases if _lease_rank(lease)[:4] == _lease_rank(row)[:4])
+            if best_rank is None or rank >= best_rank:
+                best, best_rank = row, rank
+        kept.append(best)
+    return kept
 
 
 POE_READINGS = ("poe-out-voltage", "poe-out-current", "poe-out-power")
@@ -718,6 +795,9 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
             self.debug = True
 
         self._stale_counters: dict[str, dict] = {}
+        # Leases of a MAC that already has one in the DHCP store, kept only for
+        # the lease count: the store holds one lease per device.
+        self._dhcp_other_leases: list[dict] = []
 
         self.nat_removed = {}
         self.mangle_removed = {}
@@ -2433,12 +2513,14 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 {"name": "layer7-protocol", "default": "any"},
                 {"name": "connection-state", "default": "any"},
                 {"name": "tcp-flags", "default": "any"},
+                # RouterOS may leave "disabled" out of the reply for a rule
+                # that is enabled, so a missing value means not disabled.
                 {
                     "name": "enabled",
                     "source": "disabled",
                     "type": "bool",
                     "reverse": True,
-                    "default": True,
+                    "default": False,
                 },
             ],
             val_proc=[
@@ -2534,8 +2616,7 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                 {"name": "dst-port", "default": "any"},
                 {"name": "tcp-flags", "default": "any"},
                 # The raw menu leaves "disabled" out of the reply for a rule
-                # that is enabled, unlike the filter menu, which always sends
-                # it. A missing value therefore means not disabled.
+                # that is enabled. A missing value therefore means not disabled.
                 {
                     "name": "enabled",
                     "source": "disabled",
@@ -3399,9 +3480,14 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
     # ---------------------------
     def get_dhcp(self) -> None:
         """Get DHCP data from Mikrotik"""
+        rows = self.api.query("/ip/dhcp-server/lease")
+        kept = _one_lease_per_mac(rows)
+        if rows is not None:
+            kept_ids = {id(row) for row in kept}
+            self._dhcp_other_leases = [row for row in rows if id(row) not in kept_ids and row.get("mac-address")]
         self.ds["dhcp"] = parse_api(
             data=self.ds["dhcp"],
-            source=self.api.query("/ip/dhcp-server/lease"),
+            source=kept,
             key="mac-address",
             vals=[
                 {"name": "mac-address"},
@@ -3429,6 +3515,20 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
         dhcpserver_query = False
         for uid in self.ds["dhcp"]:
             dhcpserver_query = self._process_dhcp_entry(uid, dhcpserver_query)
+
+        # The other leases of a device name their own server, which may not
+        # have been read yet, and may carry the comment the user gave it.
+        # A lease for all servers names none, so it does not ask for a read.
+        if not dhcpserver_query and any(row.get("server") and row["server"] not in self.ds["dhcp-server"] for row in self._dhcp_other_leases):
+            self.get_dhcp_server()
+        for row in self._dhcp_other_leases:
+            entry = self.ds["dhcp"].get(row["mac-address"])
+            comment = str(row.get("comment", "") or "")
+            # Only a lease on another server is the same device on another
+            # network. Leases on the same server under one MAC are different
+            # devices behind a repeater, and one of their names would be wrong.
+            if entry is not None and not entry["comment"] and comment and _lease_rank(row)[0] and row.get("server") and entry["server"] != "unknown" and row["server"] != entry["server"]:
+                entry["comment"] = comment
 
         self._build_dhcp_lease_summary()
 
@@ -3485,6 +3585,25 @@ class MikrotikCoordinator(DataUpdateCoordinator[None]):
                     "status": entry.get("status", "unknown"),
                     "server": entry.get("server", "unknown"),
                     "interface": entry.get("interface", "unknown"),
+                }
+            )
+        # A device with leases on more than one server is one entry in the
+        # store, but every lease counts and is listed.
+        for row in self._dhcp_other_leases:
+            total += 1
+            status = str(row.get("status", "unknown") or "unknown")
+            if status == "bound":
+                bound += 1
+            address = row.get("active-address") or row.get("address") or "unknown"
+            server = str(row.get("server", "unknown") or "unknown")
+            leases.append(
+                {
+                    "mac": row["mac-address"],
+                    "address": address if is_valid_ip(address) else "unknown",
+                    "host_name": str(row.get("host-name", "unknown") or "unknown"),
+                    "status": status,
+                    "server": server,
+                    "interface": self.ds["dhcp-server"].get(server, {}).get("interface", "unknown"),
                 }
             )
         self.ds["dhcp_leases"] = {

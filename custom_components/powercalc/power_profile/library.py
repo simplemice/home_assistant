@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+from copy import deepcopy
 import json
 import os
 import re
@@ -9,7 +8,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.singleton import singleton
 
 from custom_components.powercalc.common import SourceEntity
-from custom_components.powercalc.const import CONF_DISABLE_LIBRARY_DOWNLOAD, DOMAIN, DOMAIN_CONFIG
+from custom_components.powercalc.const import (
+    CONF_DISABLE_LIBRARY_DOWNLOAD,
+    DOMAIN,
+    DOMAIN_CONFIG,
+    PLACEHOLDER_OPTIONAL_PREFIX,
+)
 from custom_components.powercalc.helpers import (
     build_related_entity_placeholder_not_found_message,
     collect_placeholders,
@@ -21,7 +25,8 @@ from custom_components.powercalc.helpers import (
 from .error import LibraryError
 from .loader.composite import CompositeLoader
 from .loader.local import LocalLoader
-from .loader.protocol import Loader
+from .loader.profile_cache import CACHE_DIRECTORY
+from .loader.protocol import Loader, ModelMetadata
 from .loader.remote import RemoteLoader
 from .power_profile import DeviceType, DiscoveryBy, PowerProfile
 
@@ -34,6 +39,8 @@ def load_sub_profile_data(base_dir: str) -> list[tuple[str, dict[str, Any]]]:
     sub_dirs = next(os.walk(base_dir))[1]
     result = []
     for sub_dir in sub_dirs:
+        if sub_dir == CACHE_DIRECTORY:
+            continue
         json_path = os.path.join(base_dir, sub_dir, "model.json")
         if os.path.isfile(json_path):
             with open(json_path, encoding="utf-8") as f:
@@ -50,10 +57,23 @@ class ProfileLibrary:
         self._loader = loader
         self._profiles: dict[str, list[PowerProfile]] = {}
         self._manufacturer_models: dict[str, set[tuple[str, str]]] = {}
-        self._manufacturer_device_types: dict[str, list] = {}
+        self._sub_profile_data: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+        self._found_models: dict[ModelInfo, list[ModelInfo]] = {}
 
-    async def initialize(self) -> None:
-        await self._loader.initialize()
+    async def initialize(self, prefer_cached: bool = False) -> None:
+        """Initialize the underlying loaders, see `Loader.initialize` for `prefer_cached`."""
+        self._sub_profile_data.clear()
+        self._found_models.clear()
+        await self._loader.initialize(prefer_cached)
+
+    @property
+    def discovery_low_priority_domains(self) -> set[str]:
+        """Get integration domains that are the least preferred source for discovery.
+
+        Devices behind these integrations are only discovered when no other integration
+        represents them, and their entities are never discovered by entity discovery.
+        """
+        return self._loader.get_discovery_low_priority_domains()
 
     @staticmethod
     @singleton("powercalc_library")
@@ -63,7 +83,8 @@ class ProfileLibrary:
         Make sure we have a single instance throughout the application.
         """
         library = ProfileLibrary(hass, ProfileLibrary.create_loader(hass))
-        await library.initialize()
+        # Startup must not block on the download API. The periodic library update refreshes it.
+        await library.initialize(prefer_cached=True)
         return library
 
     @staticmethod
@@ -127,21 +148,32 @@ class ProfileLibrary:
         custom_directory: str | None = None,
         variables: dict[str, str] | None = None,
         process_variables: bool = True,
+        model_resolved: bool = False,
     ) -> PowerProfile:
-        """Get a power profile for a given manufacturer and model."""
+        """Get a power profile for a given manufacturer and model.
+
+        Pass `model_resolved` when `model_info` already comes out of `find_models`, to skip
+        looking the model up in the library a second time.
+        """
         # Support multiple LUT in subdirectories
         sub_profile = None
         if "/" in model_info.model:
             (model, sub_profile) = model_info.model.split("/", 1)
             model_info = ModelInfo(model_info.manufacturer, model, model_info.model_id)
 
-        if not custom_directory:
+        if not custom_directory and not model_resolved:
             models = await self.find_models(model_info)
             if not models:
                 raise LibraryError(f"Model {model_info.manufacturer} {model_info.model} not found")
             model_info = next(iter(models))
 
-        profile = await self.create_power_profile(model_info, source_entity, custom_directory, variables, process_variables)
+        profile = await self.create_power_profile(
+            model_info,
+            source_entity,
+            custom_directory,
+            variables,
+            process_variables,
+        )
 
         if sub_profile:
             await profile.select_sub_profile(sub_profile)
@@ -163,10 +195,18 @@ class ProfileLibrary:
 
         if linked_profile := json_data.get("linked_profile", json_data.get("linked_lut")):
             linked_manufacturer, linked_model = linked_profile.split("/")
-            linked_json_data, directory = await self._load_model_data(linked_manufacturer, linked_model, custom_directory)
+            linked_json_data, directory = await self._load_model_data(
+                linked_manufacturer,
+                linked_model,
+                custom_directory,
+            )
             json_data.update(linked_json_data)
 
-        raw_sub_profiles = await self._hass.async_add_executor_job(load_sub_profile_data, directory)
+        raw_sub_profiles = self._sub_profile_data.get(directory)
+        if raw_sub_profiles is None:
+            raw_sub_profiles = await self._hass.async_add_executor_job(load_sub_profile_data, directory)
+            self._sub_profile_data[directory] = raw_sub_profiles
+
         sub_profiles = [
             (
                 sub_dir,
@@ -190,10 +230,14 @@ class ProfileLibrary:
         source_entity: SourceEntity | None,
         process_variables: bool,
     ) -> dict[str, Any]:
-        # json_data is potentially retrieved from cache, so we need to copy it to avoid modifying the cache
-        json_data = json_data.copy()
         if not process_variables:
-            return json_data
+            # json_data is retrieved from cache, so we need to copy it to avoid modifying the cache
+            return json_data.copy()
+
+        # replace_placeholders rewrites nested dicts and lists in place, so a shallow copy is not
+        # enough here. Without a deep copy the substituted values leak into the cached profile data
+        # and the next profile built from the same model would reuse them.
+        json_data = deepcopy(json_data)
 
         if json_data.get("fields"):  # When custom fields in profile are defined, make sure all variables are passed
             self.validate_variables(json_data, variables)
@@ -202,7 +246,12 @@ class ProfileLibrary:
         replacements = self.compute_replacement_variables(placeholders, variables.copy(), source_entity)
         return cast(dict[str, Any], replace_placeholders(json_data, replacements))
 
-    def compute_replacement_variables(self, placeholders: set[str], variables: dict[str, str], source_entity: SourceEntity | None) -> dict[str, str]:
+    def compute_replacement_variables(
+        self,
+        placeholders: set[str],
+        variables: dict[str, str],
+        source_entity: SourceEntity | None,
+    ) -> dict[str, str]:
         variables = variables or {}
 
         if source_entity:
@@ -215,9 +264,11 @@ class ProfileLibrary:
                     placeholder,
                     source_entity=source_entity,
                 )
-                if not related_entity:
-                    raise LibraryError(build_related_entity_placeholder_not_found_message(placeholder, source_entity.entity_id))
-                variables[placeholder] = related_entity
+                if not related_entity and not placeholder.startswith(PLACEHOLDER_OPTIONAL_PREFIX):
+                    raise LibraryError(
+                        build_related_entity_placeholder_not_found_message(placeholder, source_entity.entity_id),
+                    )
+                variables[placeholder] = related_entity or ""
 
         return variables
 
@@ -239,8 +290,25 @@ class ProfileLibrary:
         """Resolve the manufacturer, either from the model info or by loading it."""
         return await self._loader.find_manufacturers(manufacturer)
 
+    async def get_model_metadata(self, model_info: ModelInfo) -> ModelMetadata | None:
+        """Return discovery metadata for an already resolved model, without building the profile."""
+        return await self._loader.get_model_metadata(model_info.manufacturer, model_info.model)
+
     async def find_models(self, model_info: ModelInfo) -> list[ModelInfo]:
-        """Resolve the model identifier, searching for it if no custom directory is provided."""
+        """Resolve the model identifier, searching for it if no custom directory is provided.
+
+        Discovery resolves the same handful of models for every entity of a device, so the
+        result is memoized until the library is reloaded.
+        """
+        if model_info in self._found_models:
+            return self._found_models[model_info]
+
+        found = await self._find_models(model_info)
+        self._found_models[model_info] = found
+        return found
+
+    async def _find_models(self, model_info: ModelInfo) -> list[ModelInfo]:
+        """Search the loaders for all models matching the given model info."""
         search: set[str] = set()
         for model_identifier in (model_info.model_id, model_info.model):
             if model_identifier:
@@ -284,9 +352,16 @@ class ProfileLibrary:
 
         return next(iter(matches))
 
-    async def _load_model_data(self, manufacturer: str, model: str, custom_directory: str | None) -> tuple[dict, str]:
+    async def _load_model_data(
+        self,
+        manufacturer: str,
+        model: str,
+        custom_directory: str | None,
+    ) -> tuple[dict[str, Any], str]:
         """Load the model data from the appropriate directory."""
-        loader = LocalLoader(self._hass, custom_directory, is_custom_directory=True) if custom_directory else self._loader
+        loader = (
+            LocalLoader(self._hass, custom_directory, is_custom_directory=True) if custom_directory else self._loader
+        )
         result = await loader.load_model(manufacturer, model)
         if not result:
             raise LibraryError(f"Model {manufacturer} {model} not found")
@@ -298,8 +373,8 @@ class ProfileLibrary:
         manufacturer: str,
         model: str,
         directory: str,
-        json_data: dict,
-        sub_profiles: list[tuple[str, dict]] | None = None,
+        json_data: dict[str, Any],
+        sub_profiles: list[tuple[str, dict[str, Any]]] | None = None,
     ) -> PowerProfile:
         """Create and initialize the PowerProfile object."""
         profile = PowerProfile(

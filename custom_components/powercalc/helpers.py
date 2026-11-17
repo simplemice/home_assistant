@@ -1,57 +1,38 @@
 from collections.abc import Callable, Coroutine, Iterable, Iterator
-import decimal
-from decimal import Decimal
 from functools import wraps
 import logging
 import os.path
 import re
-from typing import Any, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, cast
 import uuid
 
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import CONF_UNIQUE_ID
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_registry import RegistryEntry
-from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import ConfigType
+
+# Older supported HA releases do not have a binary_sensor.const module.
+if TYPE_CHECKING:
+    from homeassistant.components.binary_sensor.const import BinarySensorDeviceClass
+else:
+    from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
 from custom_components.powercalc.common import SourceEntity
 from custom_components.powercalc.const import (
-    DUMMY_ENTITY_ID,
     PLACEHOLDER_ENTITY_BY_DEVICE_CLASS,
     PLACEHOLDER_ENTITY_BY_TRANSLATION_KEY,
+    PLACEHOLDER_ENTITY_BY_UNIQUE_ID_SUFFIX,
+    PLACEHOLDER_OPTIONAL_PREFIX,
     CalculationStrategy,
 )
+from custom_components.powercalc.device_binding import get_profile_related_devices
 from custom_components.powercalc.power_profile.power_profile import PowerProfile
 
 _LOGGER = logging.getLogger(__name__)
 
 PLACEHOLDER_REGEX = re.compile(r"\[\[\s*([A-Za-z_]\w*(?::[A-Za-z_]\w*)*)\s*\]\]")
-
-
-async def evaluate_power(power: Template | Decimal | float) -> Decimal | None:
-    """When power is a template render it."""
-
-    if isinstance(power, Decimal):
-        return power
-
-    try:
-        if isinstance(power, Template):
-            try:
-                power = power.async_render()
-            except TemplateError as ex:
-                _LOGGER.error("Could not render power template %s: %s", power, ex)
-                return None
-            if power == "unknown":
-                return None
-
-        return Decimal(power)  # type: ignore[arg-type]
-    except (decimal.DecimalException, ValueError):
-        _LOGGER.error("Could not convert power value %s to decimal", power)
-        return None
 
 
 def get_library_path(sub_path: str = "") -> str:
@@ -78,13 +59,13 @@ def get_or_create_unique_id(
     # For multi-switch and wled strategy we need to use the device id as unique id
     # As we don't want to start a discovery for each switch entity
     if (
-        source_entity.device_entry
+        source_entity.device_id
         and power_profile
         and power_profile.calculation_strategy in [CalculationStrategy.WLED, CalculationStrategy.MULTI_SWITCH]
     ):
-        return f"pc_{source_entity.device_entry.id}"
+        return f"pc_{source_entity.device_id}"
 
-    if source_entity and source_entity.entity_id != DUMMY_ENTITY_ID:
+    if source_entity and not source_entity.is_dummy:
         source_unique_id = source_entity.unique_id or source_entity.entity_id
         # Prefix with pc_ to avoid conflicts with other integrations
         return f"pc_{source_unique_id}"
@@ -123,7 +104,7 @@ def async_cache[R](func: Callable[..., Coroutine[Any, Any, R]]) -> Callable[...,
     Returns:
         A decorated asynchronous function with caching.
     """
-    cache: dict[tuple[tuple[Any, ...], frozenset], R] = {}
+    cache: dict[tuple[tuple[Any, ...], frozenset[Any]], R] = {}
 
     @wraps(func)
     async def wrapper(*args: Any, **kwargs: Any) -> R:  # noqa: ANN401
@@ -138,10 +119,19 @@ def async_cache[R](func: Callable[..., Coroutine[Any, Any, R]]) -> Callable[...,
         cache[cache_key] = result
         return result
 
+    cast(Any, wrapper).cache_clear = cache.clear
     return wrapper
 
 
-def collect_placeholders(data: list | str | dict[str, Any]) -> set[str]:
+def clear_async_cache(func: Callable[..., Coroutine[Any, Any, Any]]) -> None:
+    """Clear a function wrapped with async_cache."""
+    target = getattr(func, "__func__", func)
+    cache_clear = getattr(target, "cache_clear", None)
+    if callable(cache_clear):
+        cache_clear()
+
+
+def collect_placeholders(data: list[Any] | str | dict[str, Any]) -> set[str]:
     found: set[str] = set()
     if isinstance(data, dict):
         for v in data.values():
@@ -154,7 +144,10 @@ def collect_placeholders(data: list | str | dict[str, Any]) -> set[str]:
     return found
 
 
-def replace_placeholders(data: list | str | dict[str, Any], replacements: dict[str, str]) -> list | str | dict[str, Any]:
+def replace_placeholders(
+    data: list[Any] | str | dict[str, Any],
+    replacements: dict[str, str],
+) -> list[Any] | str | dict[str, Any]:
     """Replace placeholders in a dictionary with values from a replacement dictionary."""
     if isinstance(data, dict):
         for key, value in data.items():
@@ -172,9 +165,11 @@ def replace_placeholders(data: list | str | dict[str, Any], replacements: dict[s
     return data
 
 
-def iter_related_entity_placeholders(placeholders: Iterable[str]) -> Iterator[str]:
-    """Yield placeholders that need lookup against entities on the same device."""
+def iter_related_entity_placeholders(placeholders: Iterable[str], *, include_optional: bool = True) -> Iterator[str]:
+    """Yield placeholders that need lookup against related entities."""
     for placeholder in placeholders:
+        if not include_optional and placeholder.startswith(PLACEHOLDER_OPTIONAL_PREFIX):
+            continue
         if parse_related_entity_placeholder(placeholder):
             yield placeholder
 
@@ -206,6 +201,7 @@ def build_related_entity_placeholder_not_found_message(placeholder: str, source_
 
 
 def parse_related_entity_placeholder(placeholder: str) -> tuple[RelatedEntityPlaceholderDefinition, str] | None:
+    placeholder = placeholder.removeprefix(PLACEHOLDER_OPTIONAL_PREFIX)
     for definition in RELATED_ENTITY_PLACEHOLDER_DEFINITIONS:
         if placeholder.startswith(definition.prefix):
             return definition, placeholder.removeprefix(definition.prefix)
@@ -223,14 +219,6 @@ def _resolve_related_entity_by_device_class(
     return get_related_entity_by_device_class(hass, source_entity, device_class)
 
 
-def _resolve_related_entity_by_translation_key(
-    hass: HomeAssistant,
-    source_entity: SourceEntity,
-    translation_key: str,
-) -> str | None:
-    return get_related_entity_by_translation_key(hass, source_entity, translation_key)
-
-
 RELATED_ENTITY_PLACEHOLDER_DEFINITIONS = (
     RelatedEntityPlaceholderDefinition(
         PLACEHOLDER_ENTITY_BY_DEVICE_CLASS,
@@ -240,7 +228,16 @@ RELATED_ENTITY_PLACEHOLDER_DEFINITIONS = (
     RelatedEntityPlaceholderDefinition(
         PLACEHOLDER_ENTITY_BY_TRANSLATION_KEY,
         "translation key",
-        _resolve_related_entity_by_translation_key,
+        lambda hass, source_entity, translation_key: get_related_entity_by_translation_key(
+            hass,
+            source_entity,
+            translation_key,
+        ),
+    ),
+    RelatedEntityPlaceholderDefinition(
+        PLACEHOLDER_ENTITY_BY_UNIQUE_ID_SUFFIX,
+        "unique ID suffix",
+        lambda hass, source_entity, suffix: get_related_entity_by_unique_id_suffix(hass, source_entity, suffix),
     ),
 )
 
@@ -260,7 +257,7 @@ def get_related_entity_by_device_class(
     source_entity: SourceEntity,
     device_class: SensorDeviceClass | BinarySensorDeviceClass,
 ) -> str | None:
-    """Get related entity from same device by device class."""
+    """Find an entity by device class, preferring the source device."""
     return _get_related_entity_for_device(
         hass,
         source_entity=source_entity,
@@ -275,7 +272,7 @@ def get_related_entity_by_translation_key(
     source_entity: SourceEntity,
     translation_key: str,
 ) -> str | None:
-    """Get related entity from same device by translation key."""
+    """Find an entity by translation key, preferring the source device."""
     return _get_related_entity_for_device(
         hass,
         source_entity=source_entity,
@@ -285,6 +282,28 @@ def get_related_entity_by_translation_key(
     )
 
 
+def get_related_entity_by_unique_id_suffix(
+    hass: HomeAssistant,
+    source_entity: SourceEntity,
+    suffix: str,
+) -> str | None:
+    """Require one suffix match on the source device and integration."""
+    entity_reg = entity_registry.async_get(hass)
+    source_entry = entity_reg.async_get(source_entity.entity_id)
+    if not re.fullmatch(r"[A-Za-z_]\w*", suffix) or not source_entity.device_id or source_entry is None:
+        return None
+    matches = [
+        entry
+        for entry in entity_registry.async_entries_for_device(
+            entity_reg, source_entity.device_id, include_disabled_entities=True
+        )
+        if entry.platform == source_entry.platform and entry.unique_id.endswith(suffix)
+    ]
+    if len(matches) != 1 or matches[0].disabled_by is not None:
+        return None
+    return matches[0].entity_id
+
+
 def _get_related_entity_for_device(
     hass: HomeAssistant,
     source_entity: SourceEntity,
@@ -292,19 +311,40 @@ def _get_related_entity_for_device(
     match_value: SensorDeviceClass | BinarySensorDeviceClass | str,
     matcher: Callable[[RegistryEntry], bool],
 ) -> str | None:
-    """Get the first related entity on the same device matching the given predicate."""
+    """Prefer a source-device match, otherwise require one unambiguous linked-device match."""
     entity_reg = entity_registry.async_get(hass)
-    if not source_entity.device_entry:
+    device_id = source_entity.device_id
+    if not device_id:
         _LOGGER.debug("No device_id available, cannot find related entity")
         return None
 
-    related_entities = [
-        entity_entry.entity_id
-        for entity_entry in entity_registry.async_entries_for_device(entity_reg, source_entity.device_entry.id)
-        if matcher(entity_entry)
-    ]
+    for entity_entry in entity_registry.async_entries_for_device(entity_reg, device_id):
+        if matcher(entity_entry):
+            return entity_entry.entity_id
+
+    related_entities: set[str] = set()
+    for device in get_profile_related_devices(hass, device_id):
+        for entity_entry in entity_registry.async_entries_for_device(entity_reg, device.id):
+            if matcher(entity_entry):
+                related_entities.add(entity_entry.entity_id)
+
     if not related_entities:
-        _LOGGER.debug("No related entities found for device %s with %s %s", source_entity.device_entry.id, match_label, match_value)
+        _LOGGER.debug(
+            "No related entities found for device %s with %s %s",
+            device_id,
+            match_label,
+            match_value,
+        )
         return None
 
-    return related_entities[0]
+    if len(related_entities) > 1:
+        _LOGGER.warning(
+            "Ambiguous related entities for %s with %s %s: %s",
+            source_entity.entity_id,
+            match_label,
+            match_value,
+            ", ".join(sorted(related_entities)),
+        )
+        return None
+
+    return next(iter(related_entities))

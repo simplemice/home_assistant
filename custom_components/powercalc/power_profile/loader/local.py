@@ -1,13 +1,13 @@
+from functools import partial
 import json
 import logging
 import os
-import re
 from typing import Any, cast
 
 from homeassistant.core import HomeAssistant
 
 from custom_components.powercalc.power_profile.error import LibraryLoadingError
-from custom_components.powercalc.power_profile.loader.protocol import Loader
+from custom_components.powercalc.power_profile.loader.protocol import Loader, ModelMetadata
 from custom_components.powercalc.power_profile.power_profile import DeviceType, DiscoveryBy, PowerProfile
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,10 +20,14 @@ class LocalLoader(Loader):
         self._hass = hass
         self._manufacturer_model_listing: dict[str, dict[str, PowerProfile]] = {}
 
-    async def initialize(self) -> None:
-        """Initialize the loader."""
+    async def initialize(self, prefer_cached: bool = False) -> None:
+        """Initialize the loader. Local profiles are read from disk, so nothing is ever cached remotely."""
         if not self._is_custom_directory:
             await self._hass.async_add_executor_job(self._load_custom_library)
+
+    def get_discovery_low_priority_domains(self) -> set[str]:
+        """Local profile directories do not provide global library metadata."""
+        return set()
 
     async def get_manufacturer_listing(
         self,
@@ -88,7 +92,7 @@ class LocalLoader(Loader):
 
         return found_models
 
-    async def load_model(self, manufacturer: str, model: str) -> tuple[dict, str] | None:
+    async def load_model(self, manufacturer: str, model: str) -> tuple[dict[str, Any], str] | None:
         """Load a model.json file from disk for a given manufacturer.lower() and model.lower()
         by querying the custom library.
         If self._is_custom_directory == true model.json will be loaded directly from there.
@@ -101,12 +105,9 @@ class LocalLoader(Loader):
         _model = model.lower()
 
         if self._is_custom_directory:
-            model_path = os.path.join(self._data_directory)
-            model_json_path = os.path.join(model_path, "model.json")
-            if not os.path.exists(model_json_path):
-                raise LibraryLoadingError(f"model.json not found for manufacturer {_manufacturer} " + f"and model {_model} in path {model_json_path}")
-
-            model_json = await self._hass.async_add_executor_job(self._load_json, model_json_path)
+            model_path, model_json = await self._hass.async_add_executor_job(
+                partial(self._load_custom_model, _manufacturer, _model),
+            )
             return model_json, model_path
 
         lib_models = self._manufacturer_model_listing.get(_manufacturer)
@@ -138,6 +139,15 @@ class LocalLoader(Loader):
         """Local custom libraries do not support metadata-driven legacy profile migrations."""
         return None
 
+    async def get_model_metadata(self, manufacturer: str, model: str) -> ModelMetadata | None:
+        """Return discovery metadata from the already parsed local profile."""
+        models = self._manufacturer_model_listing.get(manufacturer.lower())
+        profile = models.get(model.lower()) if models else None
+        if profile is None or profile.device_type is None:
+            return None
+
+        return ModelMetadata(device_type=profile.device_type, discovery_by=profile.discovery_by)
+
     def _load_custom_library(self) -> None:
         """Loading custom models and aliases from file system.
         Manufacturer directories without model directories and model.json files within
@@ -156,8 +166,7 @@ class LocalLoader(Loader):
 
             manufacturer = manufacturer_dir.lower()
             for model_dir in next(os.walk(manufacturer_path))[1]:
-                pattern = re.compile(r"^\..*")
-                if pattern.match(model_dir):
+                if model_dir.startswith("."):
                     continue
 
                 model_path = os.path.join(manufacturer_path, model_dir)
@@ -204,6 +213,17 @@ class LocalLoader(Loader):
             return
 
         self._manufacturer_model_listing[manufacturer].update({search_key: profile})
+
+    def _load_custom_model(self, manufacturer: str, model: str) -> tuple[str, dict[str, Any]]:
+        """Load model.json from a directly configured custom model directory."""
+        model_path = os.path.join(self._data_directory)
+        model_json_path = os.path.join(model_path, "model.json")
+        if not os.path.exists(model_json_path):
+            raise LibraryLoadingError(
+                f"model.json not found for manufacturer {manufacturer} and model {model} in path {model_json_path}",
+            )
+
+        return model_path, self._load_json(model_json_path)
 
     def _load_json(self, model_json_path: str) -> dict[str, Any]:
         """Load model.json file for a given model."""

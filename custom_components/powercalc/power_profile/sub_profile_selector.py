@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 from enum import StrEnum
 import re
 from typing import Any, NamedTuple, Protocol
 
 from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers.device_registry import DeviceEntry
 
 from custom_components.powercalc.common import SourceEntity
 from custom_components.powercalc.errors import PowercalcSetupError
@@ -50,43 +49,47 @@ class SubProfileSelector:
         """Get additional list of entities to track for state changes."""
         return [entity_id for matcher in self._matchers for entity_id in matcher.get_tracking_entities()]
 
-    def _create_matcher(self, matcher_config: dict) -> SubProfileMatcher:
+    def _create_matcher(self, matcher_config: dict[str, Any]) -> SubProfileMatcher:
         """Create a matcher from json config. Can be extended for more matchers in the future."""
         matcher_type: SubProfileMatcherType = matcher_config["type"]
-
-        matcher_classes: dict[SubProfileMatcherType, type[SubProfileMatcher]] = {
-            SubProfileMatcherType.ATTRIBUTE: AttributeMatcher,
-            SubProfileMatcherType.ENTITY_STATE: EntityStateMatcher,
-            SubProfileMatcherType.ENTITY_ID: EntityIdMatcher,
-            SubProfileMatcherType.ENTITY_REGISTRY: EntityRegistryMatcher,
-            SubProfileMatcherType.INTEGRATION: IntegrationMatcher,
-            SubProfileMatcherType.MODEL_ID: ModelIdMatcher,
-        }
-        if matcher_type not in matcher_classes:
-            raise PowercalcSetupError(f"Unknown sub profile matcher type: {matcher_type}")
-
-        return matcher_classes[matcher_type].from_config(
-            matcher_config,
-            hass=self._hass,
-            source_entity=self._source_entity,
-        )
+        match matcher_type:
+            case SubProfileMatcherType.ATTRIBUTE:
+                return AttributeMatcher(matcher_config["attribute"], matcher_config["map"])
+            case SubProfileMatcherType.ENTITY_STATE:
+                return EntityStateMatcher(
+                    self._hass,
+                    self._source_entity,
+                    matcher_config["entity_id"],
+                    matcher_config["map"],
+                )
+            case SubProfileMatcherType.ENTITY_ID:
+                return EntityIdMatcher(matcher_config["pattern"], matcher_config["profile"])
+            case SubProfileMatcherType.ENTITY_REGISTRY:
+                return EntityRegistryMatcher(
+                    matcher_config["property"],
+                    matcher_config["value"],
+                    matcher_config["profile"],
+                )
+            case SubProfileMatcherType.INTEGRATION:
+                return IntegrationMatcher(matcher_config["integration"], matcher_config["profile"])
+            case SubProfileMatcherType.MODEL_ID:
+                return ModelIdMatcher(matcher_config["model_id"], matcher_config["profile"])
+            case _:
+                raise PowercalcSetupError(f"Unknown sub profile matcher type: {matcher_type}")
 
 
 class SubProfileSelectConfig(NamedTuple):
     default: str
-    matchers: list[dict] | None = None
+    matchers: list[dict[str, Any]] | None = None
 
 
 class SubProfileMatcher(Protocol):
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> SubProfileMatcher:  # noqa: ANN401
-        """Create a matcher from a config dict."""
-
     def match(self, entity_state: State, source_entity: SourceEntity) -> str | None:
         """Returns a sub profile."""
 
     def get_tracking_entities(self) -> list[str]:
         """Get extra entities to track for state changes."""
+        return []
 
 
 class EntityStateMatcher(SubProfileMatcher):
@@ -113,10 +116,6 @@ class EntityStateMatcher(SubProfileMatcher):
 
         return self._mapping.get(state.state)
 
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> EntityStateMatcher:  # noqa: ANN401
-        return cls(kwargs["hass"], kwargs["source_entity"], config["entity_id"], config["map"])
-
     def get_tracking_entities(self) -> list[str]:
         return [self._entity_id]
 
@@ -133,13 +132,6 @@ class AttributeMatcher(SubProfileMatcher):
 
         return self._mapping.get(val)
 
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> AttributeMatcher:  # noqa: ANN401
-        return cls(config["attribute"], config["map"])
-
-    def get_tracking_entities(self) -> list[str]:
-        return []
-
 
 class EntityIdMatcher(SubProfileMatcher):
     def __init__(self, pattern: str, profile: str) -> None:
@@ -151,13 +143,6 @@ class EntityIdMatcher(SubProfileMatcher):
             return self._profile
 
         return None
-
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> EntityIdMatcher:  # noqa: ANN401
-        return cls(config["pattern"], config["profile"])
-
-    def get_tracking_entities(self) -> list[str]:
-        return []
 
 
 class IntegrationMatcher(SubProfileMatcher):
@@ -174,13 +159,6 @@ class IntegrationMatcher(SubProfileMatcher):
             return self._profile
 
         return None
-
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> IntegrationMatcher:  # noqa: ANN401
-        return cls(config["integration"], config["profile"])
-
-    def get_tracking_entities(self) -> list[str]:
-        return []
 
 
 class EntityRegistryMatcher(SubProfileMatcher):
@@ -203,13 +181,6 @@ class EntityRegistryMatcher(SubProfileMatcher):
 
         return None
 
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> EntityRegistryMatcher:  # noqa: ANN401
-        return cls(config["property"], config["value"], config["profile"])
-
-    def get_tracking_entities(self) -> list[str]:
-        return []
-
     def _matches_registry_value(self, registry_value: object) -> bool:
         if registry_value == self._value:
             return True
@@ -227,17 +198,10 @@ class ModelIdMatcher(SubProfileMatcher):
 
     def match(self, entity_state: State, source_entity: SourceEntity) -> str | None:
         device_entry = source_entity.device_entry
-        if not device_entry:
+        if not isinstance(device_entry, DeviceEntry):
             return None
 
         if device_entry.model_id == self._model_id:
             return self._profile
 
         return None
-
-    @classmethod
-    def from_config(cls, config: dict, **kwargs: Any) -> ModelIdMatcher:  # noqa: ANN401
-        return cls(config["model_id"], config["profile"])
-
-    def get_tracking_entities(self) -> list[str]:
-        return []

@@ -266,15 +266,7 @@ powercalc:
       name: "Bedroom Aircon Power"
       fixed:
         power: >
-          {% set ac_entity = 'climate.aircon' %}
-          {# Check if the AC is in a high-power mode (cool, dry, heat) #}
-          {% if is_state(ac_entity, 'cool') or is_state(ac_entity, 'dry') %}
-            965.00
-            {# High power when compressor is running #}
-          {% else %}
-            350.0
-            {# Low power when unit is on (fan only) or in another low-power mode #}
-          {% endif %}
+          {{ states('sensor.services_refoss_smart_energy_monitor_climate_power') | float(0) }}
       standby_power: 0.5
 
     - entity_id: media_player.kitchen_speaker

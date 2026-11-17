@@ -9,8 +9,11 @@ from homeassistant.generated.config_flows import FLOWS
 from .. import (
     automation_config,
     card_definitions,
+    config_references,
     core_contract,
     entity_restore,
+    flow_outline,
+    flow_record,
     helper_collections,
     todo_items,
 )
@@ -124,6 +127,10 @@ CAPABILITIES: list[str] = [
     # A flag on search: gates its additive result_fields request and generic
     # is_group/member_entity_ids response fields.
     "search_entity_membership",
+    # A flag on search and overview: an entity row carries the name Core
+    # composes (``name`` on a search record, ``full_name`` on an overview
+    # registry row) and search matches on it.
+    "entity_composed_name",
     "overview",
     "helpers_list",
     "states",
@@ -133,6 +140,10 @@ CAPABILITIES: list[str] = [
     # advertised, so an older build simply serves the parsed body and the server
     # looks for the text elsewhere.
     "blueprint_text",
+    # A flag on the read_file service: gates its ``keep_line_endings`` field,
+    # which returns CRLF as stored. The server's file auto-backup asks for it
+    # only when this is advertised; an older build rejects the unknown field.
+    "read_file_line_endings",
     "device_get",
     "device_list",
     # A semantic flag shared by every device-registry-backed read. Components
@@ -147,6 +158,9 @@ CAPABILITIES: list[str] = [
     # A flag on config_entries: gates its opt-in ``include_subentry_data``, the
     # scrubbed subentry ``data`` the server's config_subentry backups capture.
     "config_entries_subentry_data",
+    # A flag on config_entries: gates its ``type_filter``, Core's own match for
+    # the REST list's ``?type=``, so the server lists by type in one read.
+    "config_entries_type_filter",
     "registry_lookup",
     "system_snapshot",
     "entity_lookup",
@@ -166,7 +180,8 @@ CAPABILITIES: list[str] = [
     "services_list",
     "reference_data",
     # A flag on reference_data: gates its opt-in ``include_targets`` (device,
-    # area, floor and label registry ids for the reference validator).
+    # area, floor and label registry ids for the reference validator of
+    # servers released before ``config_references``).
     "reference_data_targets",
     # Core's own logbook processor run in-process (REST flags: ISO ``when``,
     # entity names) with the entity/device/context filter set; the server's
@@ -209,8 +224,12 @@ CAPABILITIES: list[str] = [
     *helper_collections.CAPABILITIES,
     *entity_restore.CAPABILITIES,
     core_contract.CAPABILITY,
+    core_contract.INTEGRATION_CAPABILITY,
     todo_items.CAPABILITY,
+    flow_record.CAPABILITY,
+    flow_outline.CAPABILITY,
     automation_config.CAPABILITY,
+    config_references.CAPABILITY,
     *card_definitions.CAPABILITIES,
 ]
 

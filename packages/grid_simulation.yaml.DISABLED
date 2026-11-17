@@ -1,6 +1,24 @@
+# ENERGY ARCHITECTURE (2026-11-17)
+#   REAL      : Refoss Main clamp -> sensor.grid_power_import_simulated (W, import only),
+#               sensor.total_grid_energy_import / grid_energy_imported (kWh, integrated).
+#               Refoss channels (climate/waterpump/lights) + smart-plug/powercalc devices.
+#   SIMULATED : solar_simulation.yaml, battery_simulation.yaml, grid export
+#               (sensor.grid_power_export_simulated, total_grid_energy_export*).
+#   REMOVED   : wind (packages/wind_turbine_simulation.yaml.DISABLED).
+#   LIMITS    : Refoss exposes only today/week/month counters (no lifetime total), so
+#               cumulative import is integrated from Main power. No real export or solar
+#               measurement exists; sim_home_power is a partial sum of known devices.
+# 2026-11-17: wind removed from export balance; duplicate
+#   "Total Grid Energy Import Safe" removed (unused); data_source attributes
+#   added so real vs simulated is explicit (import = REAL Refoss Main,
+#   export = SIMULATED).
 # ============================================================================
 # Grid Package — Casa De Ratton (Simulated)
 # ----------------------------------------------------------------------------
+# 2026-11-14: "Grid Power Import" now reads the real Refoss EM06P Main clamp
+#   (sensor.services_refoss_smart_energy_monitor_main_power) instead of the
+#   simulated residual. Export is still the simulated residual (pending).
+#
 # CHANGES (2026-08-08 review):
 #   1. "Grid Power Import" rewritten as a pure residual/balance sensor
 #      (home - solar_to_home - wind_to_home - battery_discharge), replacing
@@ -48,10 +66,12 @@ template:
         icon: mdi:transmission-tower-export
         state: >
           {% set solar    = states('sensor.solar_live_power_simulated') | float(0) %}
-          {% set wind     = states('sensor.wind_turbine_power_simulated') | float(0) %}
           {% set home     = states('sensor.sim_home_power') | float(0) %}
           {% set batt_chg = states('sensor.battery_charge_power_total') | float(0) %}
-          {{ [(solar + wind) - home - batt_chg, 0] | max | round(1) }}
+          {{ [solar - home - batt_chg, 0] | max | round(1) }}
+        attributes:
+          data_source: simulated
+          note: residual of simulated solar minus simulated home load and battery charge
 
       - name: "Net Grid Power to Home"
         unique_id: net_grid_power_to_home
@@ -63,6 +83,9 @@ template:
           {% set imp = states('sensor.grid_power_import_simulated') | float(0) %}
           {% set exp = states('sensor.grid_power_export_simulated') | float(0) %}
           {{ (imp - exp) | round(1) }}
+        attributes:
+          data_source: mixed
+          note: import is real (Refoss Main clamp), export is simulated
 
       - name: "Grid Status"
         unique_id: grid_status
@@ -85,15 +108,8 @@ template:
         device_class: energy
         state_class: total_increasing
         icon: mdi:transmission-tower
-        state: >
-          {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
-
-      - name: "Total Grid Energy Import Safe"
-        unique_id: total_grid_energy_import_safe
-        unit_of_measurement: "kWh"
-        device_class: energy
-        state_class: total_increasing
-        icon: mdi:transmission-tower
+        availability: >
+          {{ has_value('sensor.total_grid_energy_import') }}
         state: >
           {{ states('sensor.total_grid_energy_import') | float(0) | round(3) }}
 
@@ -103,6 +119,8 @@ template:
         device_class: energy
         state_class: total_increasing
         icon: mdi:transmission-tower-export
+        availability: >
+          {{ has_value('sensor.total_grid_energy_export') }}
         state: >
           {{ states('sensor.total_grid_energy_export') | float(0) | round(3) }}
 
@@ -117,14 +135,11 @@ template:
         state_class: measurement
         icon: mdi:transmission-tower
         availability: >
-          {{ has_value('sensor.sim_home_power') and has_value('sensor.solar_power_to_home')
-             and has_value('sensor.wind_power_to_home') and has_value('sensor.battery_discharge_power_home') }}
+          {{ has_value('sensor.services_refoss_smart_energy_monitor_main_power') }}
         state: >-
-          {% set solar_home = states('sensor.solar_power_to_home') | float(0) %}
-          {% set wind_home  = states('sensor.wind_power_to_home') | float(0) %}
-          {% set batt_dis   = states('sensor.battery_discharge_power_home') | float(0) %}
-          {% set home       = states('sensor.sim_home_power') | float(0) %}
-          {{ [home - solar_home - wind_home - batt_dis, 0] | max | round(1) }}
+          {{ [states('sensor.services_refoss_smart_energy_monitor_main_power') | float(0), 0] | max | round(1) }}
+        attributes:
+          data_source: refoss_main_clamp (real)
 sensor:
   - platform: integration
     source: sensor.grid_power_import_simulated

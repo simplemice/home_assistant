@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from enum import StrEnum
 import logging
-from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
@@ -34,10 +31,10 @@ from custom_components.powercalc.sensors.abstract import (
     generate_power_sensor_name,
 )
 from custom_components.powercalc.sensors.energy import VirtualEnergySensor
+from custom_components.powercalc.sensors.energy_related import create_energy_related_sensors
 from custom_components.powercalc.sensors.group.custom import GroupedPowerSensor, GroupedSensor
 from custom_components.powercalc.sensors.group.subtract import SubtractGroupSensor
 from custom_components.powercalc.sensors.power import PowerSensor
-from custom_components.powercalc.sensors.utility_meter import create_utility_meters
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +43,11 @@ class SensorType(StrEnum):
     TRACKED = "tracked"
     UNTRACKED = "untracked"
 
+    @property
+    def label(self) -> str:
+        """Capitalized variant, used in the friendly names of the created sensors."""
+        return self.value.capitalize()
+
 
 async def find_auto_tracked_power_entities(hass: HomeAssistant, exclude_entities: set[str] | None = None) -> set[str]:
     """Find tracked power entities."""
@@ -53,7 +55,11 @@ async def find_auto_tracked_power_entities(hass: HomeAssistant, exclude_entities
     if exclude_entities:
         entity_filter = LambdaFilter(lambda entity: entity.entity_id not in exclude_entities)
     result = await find_entities(hass, entity_filter)
-    return {entity.entity_id for entity in result.resolved if isinstance(entity, PowerSensor) and not isinstance(entity, GroupedSensor)}
+    return {
+        entity.entity_id
+        for entity in result.resolved
+        if isinstance(entity, PowerSensor) and not isinstance(entity, GroupedSensor)
+    }
 
 
 class TrackedPowerSensorFactory:
@@ -67,7 +73,9 @@ class TrackedPowerSensorFactory:
         """Create tracked/untracked group sensors."""
 
         unique_id = str(self.config.get(CONF_UNIQUE_ID))
-        main_power_sensor = str(self.config.get(CONF_MAIN_POWER_SENSOR)) if self.config.get(CONF_MAIN_POWER_SENSOR) else None
+        main_power_sensor = (
+            str(self.config.get(CONF_MAIN_POWER_SENSOR)) if self.config.get(CONF_MAIN_POWER_SENSOR) else None
+        )
         self.config[CONF_DISABLE_EXTENDED_ATTRIBUTES] = True  # prevent adding all entities in the state attributes
 
         self.tracked_entities = await self.get_tracked_power_entities()
@@ -78,17 +86,12 @@ class TrackedPowerSensorFactory:
 
         entities: list[Entity] = []
         tracked_sensor = await self.create_tracked_power_sensor(SensorType.TRACKED, unique_id, self.tracked_entities)
-        entities.append(tracked_sensor)
-        if should_create_energy_sensor:
-            energy_sensor = await self.create_energy_sensor(SensorType.TRACKED, tracked_sensor)
-            entities.append(energy_sensor)
-            entities.extend(
-                await create_utility_meters(
-                    self.hass,
-                    energy_sensor,
-                    {CONF_UTILITY_METER_NET_CONSUMPTION: True, **self.config},
-                ),
-            )
+        await self._add_power_sensor_with_energy(
+            entities,
+            SensorType.TRACKED,
+            tracked_sensor,
+            should_create_energy_sensor,
+        )
 
         if main_power_sensor:
             untracked_sensor = await self.create_untracked_power_sensor(
@@ -97,31 +100,53 @@ class TrackedPowerSensorFactory:
                 main_power_sensor,
                 tracked_sensor.entity_id,
             )
-            entities.append(untracked_sensor)
-            if should_create_energy_sensor:
-                energy_sensor = await self.create_energy_sensor(SensorType.UNTRACKED, untracked_sensor)
-                entities.append(energy_sensor)
-                entities.extend(
-                    await create_utility_meters(
-                        self.hass,
-                        energy_sensor,
-                        {CONF_UTILITY_METER_NET_CONSUMPTION: True, **self.config},
-                    ),
-                )
+            await self._add_power_sensor_with_energy(
+                entities,
+                SensorType.UNTRACKED,
+                untracked_sensor,
+                should_create_energy_sensor,
+            )
 
         return entities
+
+    async def _add_power_sensor_with_energy(
+        self,
+        entities: list[Entity],
+        sensor_type: SensorType,
+        power_sensor: GroupedPowerSensor,
+        should_create_energy_sensor: bool,
+    ) -> None:
+        """Append the power sensor and, when enabled, its energy and energy-related sensors."""
+        entities.append(power_sensor)
+        if not should_create_energy_sensor:
+            return
+
+        energy_sensor = await self.create_energy_sensor(sensor_type, power_sensor)
+        entities.append(energy_sensor)
+        entities.extend(
+            create_energy_related_sensors(
+                self.hass,
+                self.config,
+                energy_sensor,
+                utility_meter_config={CONF_UTILITY_METER_NET_CONSUMPTION: True, **self.config},
+                cost_name=sensor_type.label,
+            ),
+        )
 
     async def get_tracked_power_entities(self) -> set[str]:
         """
         Get all power entities which are part of the tracked sensor group
         """
         if not bool(self.config.get(CONF_GROUP_TRACKED_AUTO, False)):
-            return set(self.config.get(CONF_GROUP_TRACKED_POWER_ENTITIES))  # type: ignore
+            tracked_entities: list[str] | None = self.config.get(CONF_GROUP_TRACKED_POWER_ENTITIES)
+            if not isinstance(tracked_entities, list):
+                return set()
+            return set(tracked_entities)
 
         # For auto mode, we also want to listen for any changes in the entity registry
         # Dynamically add/remove power sensors from the tracked group
         @callback
-        def _start_entity_registry_listener(_: Any) -> None:  # noqa ANN401
+        def _start_entity_registry_listener(_: Event) -> None:
             self.hass.bus.async_listen(EVENT_ENTITY_REGISTRY_UPDATED, self._handle_entity_registry_updated)
 
         self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _start_entity_registry_listener)
@@ -137,8 +162,9 @@ class TrackedPowerSensorFactory:
         entity_id = event.data["entity_id"]
         action = event.data["action"]
 
-        if action == "update" and "old_entity_id" in event.data:
-            if event.data["old_entity_id"] in self.tracked_entities:  # type: ignore
+        old_entity_id = event.data.get("old_entity_id")
+        if action == "update" and old_entity_id is not None:
+            if old_entity_id in self.tracked_entities:
                 return await self.reload()
             return None  # pragma: no cover
 
@@ -165,7 +191,7 @@ class TrackedPowerSensorFactory:
         _LOGGER.debug("Creating tracked grouped power sensor, entities: %s", tracked_entities)
         unique_id = f"{unique_id}_{sensor_type}_power"
         entity_id = generate_power_sensor_entity_id(self.hass, self.config, name=sensor_type, unique_id=unique_id)
-        name = generate_power_sensor_name(self.config, name=sensor_type)
+        name = generate_power_sensor_name(self.config, name=sensor_type.label)
         return GroupedPowerSensor(
             self.hass,
             sensor_config=self.config,
@@ -186,7 +212,7 @@ class TrackedPowerSensorFactory:
         _LOGGER.debug("Creating untracked grouped power sensor")
         unique_id = f"{unique_id}_{sensor_type}_power"
         entity_id = generate_power_sensor_entity_id(self.hass, self.config, name=sensor_type, unique_id=unique_id)
-        name = generate_power_sensor_name(self.config, name=sensor_type)
+        name = generate_power_sensor_name(self.config, name=sensor_type.label)
         return SubtractGroupSensor(
             self.hass,
             entity_id=entity_id,
@@ -205,7 +231,7 @@ class TrackedPowerSensorFactory:
         """Create an energy sensor for a power sensor."""
         _LOGGER.debug("Creating %s grouped energy sensor", sensor_type)
         unique_id = f"{power_sensor.unique_id}_{sensor_type}_energy"
-        name = generate_energy_sensor_name(self.config, sensor_type)
+        name = generate_energy_sensor_name(self.config, sensor_type.label)
         entity_id = generate_energy_sensor_entity_id(self.hass, self.config, name=sensor_type, unique_id=unique_id)
         return VirtualEnergySensor(
             hass=self.hass,

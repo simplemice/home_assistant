@@ -1,8 +1,17 @@
 ###############################################################################
 #   @author         :   Simplemice
-#   @date           :   19/08/2025 (updated 22/08/2025, revised 31/08/2025)
+#   @date           :   19/08/2025 (updated 22/08/2025, revised 31/08/2025, reviewed 18/11/2026)
 #   @package        :   Energy
-#   @description    :   Realistic Tariff Simulation
+#   @description    :   Grid tariff (PEA/ERC residential TOU, Phuket). Base rates exclude Ft + VAT;
+#                       Ft (Sep-Dec 2026 = 0.1623 THB/kWh) and VAT 7% are applied in the rate/cost
+#                       sensors. Peak = Mon-Fri 09:00-22:00, off-peak = all other times.
+#                       Off-peak also covers official Thai public holidays (from
+#                       calendar.holidays_in_thailand). Substitute days ("observed" / "Day off for ...")
+#                       and Royal Ploughing Day stay PEAK, per PEA rules. Calendar "Observance"
+#                       entries (Christmas, Valentine, Chinese NY) are NOT holidays.
+#                       Monthly service fee (TOU meter, 24.62 THB) is not included.
+#   @next_review    :   Ft changes every 4 months (Jan, May, Sep). Update input_number.electricity_ft
+#                       (see 'Electricity Ft Update Reminder' automation).
 ###############################################################################
 
 ###############################################################################
@@ -26,6 +35,23 @@ input_number:
     unit_of_measurement: THB/kWh
     initial: 2.6369
 
+  electricity_ft:
+    name: Electricity Ft Charge
+    min: -1
+    max: 2
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 0.1623 # Sep-Dec 2026
+    icon: mdi:flash-triangle
+
+  electricity_vat:
+    name: Electricity VAT
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: "%"
+    initial: 7
+
   cost_export:
     name: "Solar Export Rate"
     initial: 2.20
@@ -48,45 +74,125 @@ input_select:
 ###############################################################################
 
 template:
-  # SINGLE SOURCE OF TRUTH (triggered)
+  # 1) HOLIDAY FLAG (trigger-based). Asks the calendar for today's events and
+  #    keeps only real public holidays that PEA treats as off-peak.
+  #    Runs: HA start, template reload, calendar becoming available, 00:00:10, every 3 h (self-heal).
+  #    Holiday only matters 09:00-22:00, so a short delay at midnight is harmless.
   - trigger:
-      - platform: time
-        at: "09:00:00"
-      - platform: time
-        at: "22:00:00"
-      - platform: time
-        at: "00:00:00"
-    sensor:
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+      - trigger: state
+        entity_id: calendar.holidays_in_thailand
+        from:
+          - unavailable
+          - unknown
+      - trigger: time
+        at: "00:00:10"
+      - trigger: time_pattern
+        hours: "/3"
+    action:
+      - action: calendar.get_events
+        target:
+          entity_id: calendar.holidays_in_thailand
+        data:
+          start_date_time: "{{ today_at() }}"
+          end_date_time: "{{ today_at() + timedelta(days=1) }}"
+        response_variable: holiday_events
+        continue_on_error: true
+    binary_sensor:
+      - name: Thai TOU Holiday Today
+        unique_id: thai_tou_holiday_today
+        icon: mdi:calendar-star
+        state: >
+          {% set today = now().date().isoformat() %}
+          {% set events = (holiday_events | default({}, true))
+               .get('calendar.holidays_in_thailand', {}).get('events', []) %}
+          {% set ns = namespace(hit=false) %}
+          {% for e in events %}
+            {% set s = e.summary | lower %}
+            {% if e.start[:10] <= today and e.end[:10] > today
+               and (e.description | default('') | lower).startswith('public holiday')
+               and 'observed' not in s and not s.startswith('day off for')
+               and 'ploughing' not in s %}
+              {% set ns.hit = true %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.hit }}
+        attributes:
+          holiday_name: >
+            {% set today = now().date().isoformat() %}
+            {% set events = (holiday_events | default({}, true))
+                 .get('calendar.holidays_in_thailand', {}).get('events', []) %}
+            {% set ns = namespace(names=[]) %}
+            {% for e in events %}
+              {% set s = e.summary | lower %}
+              {% if e.start[:10] <= today and e.end[:10] > today
+                 and (e.description | default('') | lower).startswith('public holiday')
+                 and 'observed' not in s and not s.startswith('day off for')
+                 and 'ploughing' not in s %}
+                {% set ns.names = ns.names + [e.summary] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.names | join(', ') }}
+
+  # 2) TARIFF PERIOD (state-based, re-evaluated every minute and on restart).
+  #    Same unique_id as before, so sensor.electricity_tariff keeps its entity_id/history.
+  - sensor:
       - name: Electricity Tariff
         unique_id: electricity_tariff_status
+        icon: mdi:flash-triangle
         state: >
-          {% set now = now() %}
-          {% set weekday = now.isoweekday() %}
-          {% if weekday in [1,2,3,4,5] and (9 <= now.hour < 22) %}
+          {% set t = now() %}
+          {% if t.isoweekday() < 6 and 9 <= t.hour < 22
+                and not is_state('binary_sensor.thai_tou_holiday_today', 'on') %}
             peak
           {% else %}
             offpeak
           {% endif %}
+        attributes:
+          reason: >
+            {% set t = now() %}
+            {% if t.isoweekday() >= 6 %}weekend
+            {% elif is_state('binary_sensor.thai_tou_holiday_today', 'on') and 9 <= t.hour < 22 %}public holiday
+            {% elif 9 <= t.hour < 22 %}weekday daytime
+            {% else %}night{% endif %}
 
-  # RATE (depends on tariff sensor)
+  # 3) RATE + COSTS
   - sensor:
       - name: Electricity Tariff Rate
         unique_id: electricity_tariff_rate
         unit_of_measurement: THB/kWh
+        icon: mdi:currency-thb
+        availability: >
+          {{ has_value('sensor.electricity_tariff')
+             and has_value('input_number.electricity_rate_peak')
+             and has_value('input_number.electricity_rate_offpeak')
+             and has_value('input_number.electricity_ft')
+             and has_value('input_number.electricity_vat') }}
         state: >
-          {% if is_state('sensor.electricity_tariff','peak') %}
-            {{ states('input_number.electricity_rate_peak') }}
-          {% else %}
-            {{ states('input_number.electricity_rate_offpeak') }}
-          {% endif %}
+          {% set base = states('input_number.electricity_rate_peak') | float(0)
+             if is_state('sensor.electricity_tariff','peak')
+             else states('input_number.electricity_rate_offpeak') | float(0) %}
+          {% set ft  = states('input_number.electricity_ft') | float(0) %}
+          {% set vat = states('input_number.electricity_vat') | float(0) %}
+          {{ ((base + ft) * (1 + vat / 100)) | round(4) }}
+        attributes:
+          tariff: "{{ states('sensor.electricity_tariff') }}"
+          ft: "{{ states('input_number.electricity_ft') }}"
+          vat_percent: "{{ states('input_number.electricity_vat') }}"
 
       - name: "Solar Export Revenue Today"
         unique_id: solar_export_revenue_today
         unit_of_measurement: "THB"
         icon: mdi:cash-plus
         state_class: measurement
+        availability: >
+          {{ has_value('sensor.services_refoss_smart_energy_monitor_main_today_return_energy')
+             and has_value('input_number.cost_export') }}
         state: >
-          {% set exported = states('sensor.solar_export_daily') | float(0) %}
+          {% set exported = states('sensor.services_refoss_smart_energy_monitor_main_today_return_energy') | float(0) %}
           {% set rate     = states('input_number.cost_export') | float(0) %}
           {{ (exported * rate) | round(2) }}
 
@@ -95,8 +201,10 @@ template:
         unit_of_measurement: "THB"
         icon: mdi:cash-plus
         state_class: measurement
+        availability: >
+          {{ has_value('sensor.grid_export_monthly') and has_value('input_number.cost_export') }}
         state: >
-          {% set exported = states('sensor.solar_export_monthly') | float(0) %}
+          {% set exported = states('sensor.grid_export_monthly') | float(0) %}
           {% set rate     = states('input_number.cost_export') | float(0) %}
           {{ (exported * rate) | round(2) }}
 
@@ -105,12 +213,15 @@ template:
         unit_of_measurement: "THB"
         icon: mdi:cash-minus
         state_class: measurement
+        availability: >
+          {{ has_value('sensor.grid_import_daily_peak') and has_value('sensor.grid_import_daily_offpeak') }}
         state: >
           {% set peak_kwh  = states('sensor.grid_import_daily_peak') | float(0) %}
           {% set off_kwh   = states('sensor.grid_import_daily_offpeak') | float(0) %}
-          {% set peak_rate = states('input_number.electricity_rate_peak') | float(0) %}
-          {% set off_rate  = states('input_number.electricity_rate_offpeak') | float(0)
-          %}
+          {% set k = 1 + states('input_number.electricity_vat') | float(0) / 100 %}
+          {% set ft = states('input_number.electricity_ft') | float(0) %}
+          {% set peak_rate = (states('input_number.electricity_rate_peak') | float(0) + ft) * k %}
+          {% set off_rate  = (states('input_number.electricity_rate_offpeak') | float(0) + ft) * k %}
           {{ ((peak_kwh * peak_rate) + (off_kwh * off_rate)) | round(2) }}
 
       - name: "Net Energy Cost Today"
@@ -118,27 +229,37 @@ template:
         unit_of_measurement: "THB"
         icon: mdi:scale-balance
         state_class: measurement
+        availability: >
+          {{ has_value('sensor.grid_import_cost_today') and has_value('sensor.solar_export_revenue_today') }}
         state: >
           {% set import_cost = states('sensor.grid_import_cost_today') | float(0) %}
-          {% set export_rev  = states('sensor.solar_export_revenue_today') | float(0)
-          %}
+          {% set export_rev  = states('sensor.solar_export_revenue_today') | float(0) %}
           {{ (import_cost - export_rev) | round(2) }}
 
 ###############################################################################
-# AUTOMATION
+# UTILITY METERS (source: Refoss main clamp, the only real grid data)
+# The active tariff is pushed into select.grid_import_daily/monthly/yearly by the
+# 'Sync Utility Meter Tariff' automation in automations.yaml.
+# NOTE: Refoss "today" counters roll over at 07:00 local (UTC midnight), not at
+# local midnight. Utility meters handle that as a reset, so nothing to change.
 ###############################################################################
 
-automation:
-  - alias: Sync Utility Meter Tariff
-    id: sync_utility_meter_tariff
-
-    trigger:
-      - platform: state
-        entity_id: sensor.electricity_tariff
-
-    action:
-      - service: input_select.select_option
-        target:
-          entity_id: input_select.grid_energy_tariff
-        data:
-          option: "{{ trigger.to_state.state }}"
+utility_meter:
+  grid_import_daily:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+    cycle: daily
+    tariffs: [peak, offpeak]
+  grid_import_monthly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+    cycle: monthly
+    tariffs: [peak, offpeak]
+  grid_import_yearly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+    cycle: yearly
+    tariffs: [peak, offpeak]
+  grid_export_monthly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_return_energy
+    cycle: monthly
+  grid_export_yearly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_return_energy
+    cycle: yearly

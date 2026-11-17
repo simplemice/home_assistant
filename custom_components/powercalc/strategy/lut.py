@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from bisect import bisect_left
 from collections.abc import Mapping
 from csv import reader
@@ -7,19 +5,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from functools import partial
-import gzip
 import logging
 import os
-from typing import Any, TextIO, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TextIO, cast
 
-from homeassistant.components import light
-from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    ATTR_COLOR_MODE,
-    ATTR_COLOR_TEMP_KELVIN,
-    ATTR_EFFECT,
-    ATTR_HS_COLOR,
+from homeassistant.components.light.const import (
     COLOR_MODES_COLOR,
+    DOMAIN as LIGHT_DOMAIN,
     ColorMode,
 )
 from homeassistant.core import HomeAssistant, State
@@ -32,7 +24,26 @@ from custom_components.powercalc.errors import (
 )
 from custom_components.powercalc.power_profile.power_profile import PowerProfile
 
+from .profile_data import open_profile_csv
 from .strategy_interface import PowerCalculationStrategyInterface
+
+# These attributes were defined in the light component before moving to light.const.
+if TYPE_CHECKING:
+    from homeassistant.components.light.const import (
+        ATTR_BRIGHTNESS,
+        ATTR_COLOR_MODE,
+        ATTR_COLOR_TEMP_KELVIN,
+        ATTR_EFFECT,
+        ATTR_HS_COLOR,
+    )
+else:
+    from homeassistant.components.light import (
+        ATTR_BRIGHTNESS,
+        ATTR_COLOR_MODE,
+        ATTR_COLOR_TEMP_KELVIN,
+        ATTR_EFFECT,
+        ATTR_HS_COLOR,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,12 +82,16 @@ class _EffectEntry:
     table: EffectTableType
 
 
+# manufacturer, model, lookup mode, sub profile
+_CacheKey = tuple[str, str, LookupMode, str | None]
+
+
 class LutRegistry:
     def __init__(self, hass: HomeAssistant) -> None:
         self._hass = hass
-        self._lut_entries: dict[tuple, _LutEntry] = {}
-        self._effect_entries: dict[tuple, _EffectEntry] = {}
-        self._supported_modes: dict[tuple, set[LookupMode]] = {}
+        self._lut_entries: dict[_CacheKey, _LutEntry] = {}
+        self._effect_entries: dict[_CacheKey, _EffectEntry] = {}
+        self._supported_modes: dict[tuple[str, str, str | None, str], set[LookupMode]] = {}
 
     async def get_lookup_entry(
         self,
@@ -105,11 +120,15 @@ class LutRegistry:
 
     async def get_supported_modes(self, power_profile: PowerProfile) -> set[LookupMode]:
         """Return the LUT modes supported by the profile."""
-        cache_key = (power_profile.manufacturer, power_profile.model, "supported_modes")
+        cache_key = (power_profile.manufacturer, power_profile.model, power_profile.sub_profile, "supported_modes")
         supported_modes = self._supported_modes.get(cache_key)
         if supported_modes is None:
             supported_modes = set()
-            for filename in await self._hass.async_add_executor_job(os.listdir, power_profile.get_model_directory()):
+            filenames = cast(
+                list[str],
+                await self._hass.async_add_executor_job(os.listdir, power_profile.get_model_directory()),
+            )
+            for filename in filenames:
                 if filename.endswith((".csv.gz", ".csv")):
                     base_name = filename.split(".", 1)[0]
                     supported_modes.add(LookupMode(base_name))
@@ -117,7 +136,7 @@ class LutRegistry:
         return supported_modes
 
     @staticmethod
-    def _cache_key(power_profile: PowerProfile, lookup_mode: LookupMode) -> tuple:
+    def _cache_key(power_profile: PowerProfile, lookup_mode: LookupMode) -> _CacheKey:
         return power_profile.manufacturer, power_profile.model, lookup_mode, power_profile.sub_profile
 
     @classmethod
@@ -178,13 +197,13 @@ class LutRegistry:
         gzip_path = f"{path}.gz"
         if os.path.exists(gzip_path):
             _LOGGER.debug("Loading LUT data file: %s", gzip_path)
-            return gzip.open(gzip_path, "rt")
+            return open_profile_csv(gzip_path)
 
         if os.path.exists(path):
             _LOGGER.debug("Loading LUT data file: %s", path)
-            return open(path)
+            return open_profile_csv(path)
 
-        raise LutFileNotFoundError("Data file not found: %s")
+        raise LutFileNotFoundError(f"Data file not found: {path}")
 
 
 class LutStrategy(PowerCalculationStrategyInterface):
@@ -209,7 +228,7 @@ class LutStrategy(PowerCalculationStrategyInterface):
 
         brightness = attrs.get(ATTR_BRIGHTNESS)
         if brightness is None:
-            _LOGGER.error(
+            _LOGGER.warning(
                 "%s: Could not calculate power. no brightness set",
                 entity_state.entity_id,
             )
@@ -226,7 +245,7 @@ class LutStrategy(PowerCalculationStrategyInterface):
             return None
 
         effect = attrs.get(ATTR_EFFECT)
-        if effect and str(effect).lower() not in ("off", "none", "white"):
+        if effect and str(effect).lower() not in ("off", "none", "white", "default", "mode color"):
             return await self._calculate_effect_power(entity_state, str(effect), brightness)
 
         lut_mode = LookupMode.from_color_mode(color_mode)
@@ -290,7 +309,8 @@ class LutStrategy(PowerCalculationStrategyInterface):
             color_temp = attrs.get(ATTR_COLOR_TEMP_KELVIN)
             if color_temp is None:
                 _LOGGER.error(
-                    "%s: Could not calculate power. no color temp set. Please check the attributes of your light in the developer tools.",
+                    "%s: Could not calculate power. no color temp set. "
+                    "Please check the attributes of your light in the developer tools.",
                     entity_state.entity_id,
                 )
                 return None
@@ -300,12 +320,17 @@ class LutStrategy(PowerCalculationStrategyInterface):
         if color_mode == ColorMode.HS:
             try:
                 original_color_mode = attrs.get(ATTR_COLOR_MODE)
-                hs = color_temperature_to_hs(attrs[ATTR_COLOR_TEMP_KELVIN]) if original_color_mode == ColorMode.COLOR_TEMP else attrs[ATTR_HS_COLOR]
+                hs = (
+                    color_temperature_to_hs(attrs[ATTR_COLOR_TEMP_KELVIN])
+                    if original_color_mode == ColorMode.COLOR_TEMP
+                    else attrs[ATTR_HS_COLOR]
+                )
                 light_setting.hue = int(hs[0] / 360 * 65535)
                 light_setting.saturation = int(hs[1] / 100 * 255)
-            except Exception:  # noqa: BLE001
+            except KeyError, TypeError, ValueError:
                 _LOGGER.error(
-                    "%s: Could not calculate power. no hue/sat set. Please check the attributes of your light in the developer tools.",
+                    "%s: Could not calculate power. no hue/sat set. "
+                    "Please check the attributes of your light in the developer tools.",
                     entity_state.entity_id,
                 )
                 return None
@@ -402,10 +427,11 @@ class LutStrategy(PowerCalculationStrategyInterface):
         sat_values = self.get_nearest(hs_table, light_setting.hue or 0)
         return self.get_nearest(sat_values, light_setting.saturation or 0)
 
-    # Generic nearest lookup for both float values and nested saturation dicts
-    _NearestT = TypeVar("_NearestT", float, dict[int, float])
-
-    def get_nearest(self, lookup_dict: dict[int, _NearestT], search_key: int) -> _NearestT:
+    def get_nearest[NearestT: (float, dict[int, float])](
+        self,
+        lookup_dict: dict[int, NearestT],
+        search_key: int,
+    ) -> NearestT:
         """Return the value mapped at search_key or the nearest neighbour key."""
         value = lookup_dict.get(search_key)
         if value is not None:
@@ -414,7 +440,7 @@ class LutStrategy(PowerCalculationStrategyInterface):
         return lookup_dict[nearest]
 
     async def validate_config(self) -> None:
-        if self._source_entity.domain != light.DOMAIN:
+        if self._source_entity.domain != LIGHT_DOMAIN:
             raise StrategyConfigurationError(
                 "Only light entities can use the LUT mode",
                 "lut_unsupported_color_mode",

@@ -1,19 +1,20 @@
 {
   "common": {
-    "source_entity": "Source entity",
-    "source_device": "Source device",
+    "source_entity": "Zdrojová entita",
+    "source_device": "Zdrojové zariadenie",
     "remarks_smart_switch": "Tento profil poskytuje iba hodnoty spotreby energie v pohotovostnom režime. \n Keď máte spotrebič, ktorý po zapnutí spotrebúva pevné množstvo energie, môžete túto hodnotu zadať v ďalšom kroku konfiguračného postupu",
-    "remarks_smart_dimmer": "Tento profil poskytuje iba hodnoty spotreby energie v pohotovostnom režime. \n V ďalšom kroku môžete voliteľne zadať hodnoty pripojeného svetla"
+    "remarks_smart_dimmer": "Tento profil poskytuje iba hodnoty spotreby energie v pohotovostnom režime. \n V ďalšom kroku môžete voliteľne zadať hodnoty pripojeného svetla",
+    "view_measurement_details": "Zobraziť podrobnosti merania"
   },
   "config": {
     "abort": {
       "already_configured": "Senzor je už nakonfigurovaný, zadajte jedinečné_id"
     },
     "error": {
+      "cost_price_mandatory": "Musíte dodať buď cenu energie, alebo snímač ceny energie",
       "daily_energy_mandatory": "Musíte dodať aspoň jednu šablónu hodnoty alebo hodnoty",
       "entity_mandatory": "Výber subjektu je potrebný pre akúkoľvek inú stratégiu, než je stratégia playbook",
-      "fixed_mandatory": "Musíte dodať aspoň jednu z možností Power, Power template alebo States power",
-      "fixed_states_power_only": "Táto entita môže pracovať iba s 'states_power', nie 'power'",
+      "fixed_mandatory": "Musíte zadať aspoň jednu z možností: fixnú hodnotu, šablónu alebo mapovanie stavov",
       "group_mandatory": "Musíte definovať aspoň podskupiny alebo silové a energetické entity",
       "linear_mandatory": "Musíte dodať aspoň jeden z max_power alebo calibrate",
       "linear_min_higher_as_max": "Maximálny výkon nemôže byť nižší ako minimálny výkon",
@@ -48,6 +49,7 @@
       "daily_energy": {
         "data": {
           "create_utility_meters": "Vytvorenie meracích prístrojov",
+          "daily_energy_value": "Denná hodnota energie",
           "name": "Názov",
           "on_time": "V čase",
           "start_time": "Štart čas",
@@ -79,6 +81,7 @@
         "data": {
           "name": "Názov",
           "create_energy_sensor": "Vytvorte energetický snímač",
+          "create_cost_sensor": "Vytvorte cenový senzor",
           "create_utility_meters": "Vytvorte merače spotreby",
           "domain": "Entity doména",
           "exclude_entities": "Vynechať entity"
@@ -87,43 +90,105 @@
       },
       "fixed": {
         "data": {
-          "power": "Výkon",
-          "power_template": "Šablóna výkonu",
-          "states_power": "Stavy výkonu"
+          "fixed_value": "Hodnota výkonu"
         },
         "data_description": {
-          "power": "Pevná hodnota výkonu vo wattoch, keď je entita ZAPNUTÁ",
-          "power_template": "Šablóna sa vyhodnotí, aby sa získala hodnota výkonu vo W",
-          "states_power": "Jeden pár „stav: výkon“ v každom riadku, pozri príklad vyššie"
+          "fixed_value": "Hodnota výkonu vo wattoch, keď je entita ZAPNUTÁ"
         },
-        "description": "Definujte pevnú hodnotu výkonu pre vašu entitu. Prípadne môžete definovať hodnotu výkonu pre každý stav. Napríklad:\n\n`prehrávanie: 8.3`\n`pozastavené: 2.25`",
+        "description": "Definujte pevnú hodnotu výkonu pre vašu entitu. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}). Prípadne môžete definovať hodnotu výkonu pre každý stav. Napríklad:\n\n`prehrávanie: 8.3`\n`pozastavené: 2.25`",
         "title": "Opravená konfigurácia"
       },
       "global_configuration": {
         "title": "Globálna konfigurácia",
         "description": "Nastavte globálnu konfiguráciu pre Powercalc. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}). Ďalšie možnosti pre snímače energie a elektromery môžu byť poskytnuté v ďalších krokoch.",
+        "sections": {
+          "power_options": {
+            "name": "Senzor výkonu",
+            "data": {
+              "power_sensor_naming": "Vzor názvu snímača výkonu",
+              "power_sensor_friendly_naming": "Vzor názvu priateľského snímača výkonu",
+              "power_sensor_category": "Kategória snímača výkonu",
+              "power_sensor_precision": "Presnosť senzora výkonu",
+              "follow_device_name": "Používať názov zariadenia"
+            },
+            "data_description": {
+              "follow_device_name": "Použiť názov priradeného zariadenia pre generované entity podporovaných virtuálnych snímačov výkonu nakonfigurovaných v používateľskom rozhraní. ID entít a vlastné názvy entít sa nezmenia. Vypnutím sa obnovia nakonfigurované názvy. Vlastné vzory zobrazovaných názvov vrátane globálnych vzorov majú prednosť: dotknuté položky si ponechajú nakonfigurované názvy."
+            }
+          },
+          "features": {
+            "name": "Vytvoriť senzory",
+            "data": {
+              "create_energy_sensors": "Vytvorte energetické senzory",
+              "create_cost_sensors": "Vytvorte cenové senzory",
+              "create_standby_group": "Vytvorte pohotovostnú skupinu",
+              "create_utility_meters": "Vytvorte merače spotreby"
+            },
+            "data_description": {
+              "create_energy_sensors": "Či potrebuje powercalc na vytvorenie kWh senzorov",
+              "create_cost_sensors": "Či potrebuje powercalc vytvoriť snímače nákladov. Vyžaduje, aby bola v ďalších krokoch nakonfigurovaná cena energie",
+              "create_standby_group": "Vytvorte skupinu, ktorá sčíta všetku spotrebu energie v pohotovostnom režime a vlastnú spotrebu zariadení IOT",
+              "create_utility_meters": "Nechajte powercalc vytvoriť merače spotreby, ktoré cyklujú denne, každú hodinu atď."
+            }
+          },
+          "advanced": {
+            "name": "Pokročilé",
+            "data": {
+              "enable_analytics": "Povoliť anonymnú analýzu",
+              "ignore_unavailable_state": "Ignorovať nedostupný stav",
+              "include_non_powercalc_sensors": "Zahŕňa senzory bez powercalc",
+              "disable_extended_attributes": "Zakázať rozšírené atribúty",
+              "disable_library_download": "Zakázať sťahovanie vzdialenej knižnice"
+            },
+            "data_description": {
+              "enable_analytics": "Povoľte Powercalc odosielať anonymné agregované štatistiky používania, ktoré pomôžu zlepšiť integráciu",
+              "ignore_unavailable_state": "Udržujte senzory Powercalc dostupné, aj keď zdrojová entita nie je k dispozícii",
+              "include_non_powercalc_sensors": "Ovládajte, či chcete do skupín zahrnúť senzory bez powercalc",
+              "disable_extended_attributes": "Vypnite všetky extra atribúty, ktoré powercalc pridáva k stavu energie, energie a skupiny. To pomôže udržať veľkosť databázy malú",
+              "disable_library_download": "Vypnite funkciu sťahovania knižnice Powercalc"
+            }
+          }
+        }
+      },
+      "global_configuration_cost": {
+        "title": "Možnosti nákladov",
+        "description": "Nakonfigurujte cenu energie používanú na výpočet snímačov nákladov. Zadajte pevnú cenu alebo snímač, ktorý poskytuje aktuálnu cenu za kWh. Ďalšie informácie nájdete v [dokumentácii]({docs_uri})",
+        "sections": {
+          "cost_pricing": {
+            "name": "Stanovenie cien",
+            "data": {
+              "energy_price": "Pevná cena energie",
+              "energy_price_multiplier": "Násobiteľ ceny energie",
+              "energy_price_sensor": "Senzor ceny energie",
+              "energy_price_surcharge": "Doplatok ceny energií"
+            },
+            "data_description": {
+              "energy_price": "Pevná cena za kWh vo vašej miestnej mene",
+              "energy_price_multiplier": "Násobiteľ sa použije po doplatku. Použite to pre dane alebo poplatky založené na percentách, napríklad 1,21 pre 21%",
+              "energy_price_sensor": "Senzor, ktorý poskytuje aktuálnu cenu energie za kWh (napr. z dynamickej tarifnej integrácie). Ak chcete použiť tento senzor, ponechajte pevnú cenu prázdnu",
+              "energy_price_surcharge": "Dodatočná pevná suma za kWh pridaná k pevnej cene alebo hodnote senzora ceny"
+            }
+          },
+          "cost_naming": {
+            "name": "Pomenovanie",
+            "data": {
+              "cost_sensor_friendly_naming": "Vzor názvu priateľského k cenovému senzoru",
+              "cost_sensor_naming": "Vzor názvu snímača nákladov"
+            },
+            "data_description": {
+              "cost_sensor_friendly_naming": "Vzor pre priateľský názov snímača nákladov. Názov zdroja sa vloží na miesto zástupného symbolu",
+              "cost_sensor_naming": "Vzor použitý na vytvorenie názvu senzora nákladov a ID entity. Názov zdroja sa vloží na miesto zástupného symbolu"
+            }
+          }
+        }
+      },
+      "global_configuration_cost_apply": {
+        "title": "Použite senzory nákladov",
+        "description": "Zmenili ste nastavenie snímačov globálnych nákladov. Chcete použiť túto zmenu na všetky existujúce snímače powercalc, ktoré boli vytvorené prostredníctvom GUI?",
         "data": {
-          "create_energy_sensors": "Vytvorte energetické senzory",
-          "create_standby_group": "Create standby group",
-          "create_utility_meters": "Vytvorte merače spotreby",
-          "disable_extended_attributes": "Zakázať rozšírené atribúty",
-          "disable_library_download": "Zakázať sťahovanie vzdialenej knižnice",
-          "enable_analytics": "Enable anonymous analytics",
-          "ignore_unavailable_state": "Ignorovať nedostupný stav",
-          "include_non_powercalc_sensors": "Zahŕňa senzory bez powercalc",
-          "power_sensor_category": "Kategória snímača výkonu",
-          "power_sensor_friendly_naming": "Vzor názvu priateľského snímača výkonu",
-          "power_sensor_naming": "Vzor názvu snímača výkonu"
+          "apply_to_all": "Aplikujte na existujúce senzory"
         },
         "data_description": {
-          "create_energy_sensors": "Či potrebuje powercalc na vytvorenie kWh senzorov",
-          "create_standby_group": "Create group which sums all standby power consumption and self-usage of IOT devices",
-          "create_utility_meters": "Nechajte powercalc vytvoriť merače spotreby, ktoré cyklujú denne, každú hodinu atď.",
-          "disable_extended_attributes": "Vypnite všetky extra atribúty, ktoré powercalc pridáva k stavu energie, energie a skupiny. To pomôže udržať veľkosť databázy malú",
-          "disable_library_download": "Vypnite funkciu sťahovania knižnice Powercalc",
-          "enable_analytics": "Allow Powercalc to send anonymous, aggregated usage statistics to help improve the integration",
-          "ignore_unavailable_state": "Udržujte senzory Powercalc dostupné, aj keď zdrojová entita nie je k dispozícii",
-          "include_non_powercalc_sensors": "Ovládajte, či chcete do skupín zahrnúť senzory bez powercalc"
+          "apply_to_all": "Aktualizujte každý existujúci snímač výkonu GUI tak, aby zodpovedal novému nastaveniu snímačov nákladov"
         }
       },
       "global_configuration_discovery": {
@@ -157,13 +222,13 @@
           "group_energy_update_interval": "Interval aktualizácie skupinovej energie",
           "group_power_update_interval": "Interval aktualizácie skupinového výkonu",
           "energy_update_interval": "Interval aktualizácie energie",
-          "power_update_interval": "Power update interval"
+          "power_update_interval": "Interval aktualizácie výkonu"
         },
         "data_description": {
           "group_energy_update_interval": "Interval, v ktorom sa aktualizujú snímače skupinovej energie. V sekundách. Nastavte na 0 pre vypnutie",
           "group_power_update_interval": "Interval, v ktorom sa aktualizujú snímače skupinového výkonu. V sekundách. Nastavte na 0 pre vypnutie",
           "energy_update_interval": "Interval, v ktorom sa aktualizujú snímače energie. V sekundách. Nastavte na 0 pre vypnutie",
-          "power_update_interval": "Interval at which energy sensors are force updated. In seconds. Set to 0 to disable"
+          "power_update_interval": "Interval, v ktorom sú energetické snímače silou aktualizované. V sekundách. Pre deaktiváciu nastavte na 0"
         }
       },
       "global_configuration_utility_meter": {
@@ -176,41 +241,56 @@
       },
       "group_custom": {
         "data": {
-          "area": "Oblasť",
-          "floor": "Floor",
-          "create_energy_sensor": "Vytvoriť snímač energie",
-          "create_utility_meters": "Vytvorte merače spotreby",
-          "device": "Zariadenie",
-          "force_calculate_group_energy": "Sila vypočítať energiu",
-          "group_energy_entities": "Ďlšie energetické entity",
-          "group_energy_start_at_zero": "Začať v nule",
-          "group_member_devices": "Member devices",
-          "group_member_sensors": "Členské snímače powercalc",
-          "group_power_entities": "Ďalšie výkonové entity",
-          "hide_members": "Skrytý členovania",
-          "include_non_powercalc_sensors": "Zahrnúť nie powercalc snímače",
-          "name": "Názov",
-          "sub_groups": "Podskupiny"
+          "name": "Názov"
         },
-        "data_description": {
-          "area": "Pridá všetky senzory powercalc zo špecifikovanej oblasti",
-          "floor": "Adds all power sensors from the specified floor",
-          "create_energy_sensor": "Či potrebuje powercalc vytvoriť kWh snímač",
-          "device": "Pridajte entity skupiny, ktoré powercalc vytvorí, do existujúceho zariadenia",
-          "force_calculate_group_energy": "V predvolenom nastavení powercalc sčítava energetické senzory z členských senzorov. Prepnutím tejto možnosti vynútite vytvorenie snímača Riemann Sum",
-          "group_energy_entities": "Dodatočné snímače energie (kWh) z vašej inštalácie HA zahrnuté",
-          "group_energy_start_at_zero": "Keď je aktivovaný, senzor energie sa po vytvorení senzora spustí na nule. V opačnom prípade spočíta všetky aktuálne stavy snímača energie člena",
-          "group_member_devices": "Add power and energy entities from the selected devices to the group",
-          "group_member_sensors": "Snímače Powercalc zaradiť do skupiny",
-          "group_power_entities": "Vrátane prídavných výkonových snímačov (W) z vašej inštalácie HA",
-          "include_non_powercalc_sensors": "Ovládajte, či sa majú pri použití možnosti oblasti zahrnúť snímače bez powercalc",
-          "sub_groups": "Všetky obsahujúce snímače z vybraných podskupín budú tiež pridané do tejto skupiny"
+        "sections": {
+          "members": {
+            "name": "Členovia",
+            "data": {
+              "group_member_sensors": "Členské snímače powercalc",
+              "group_member_devices": "Zariadenia užívateľa",
+              "group_power_entities": "Ďalšie výkonové entity",
+              "group_energy_entities": "Ďlšie energetické entity",
+              "sub_groups": "Podskupiny",
+              "area": "Oblasť",
+              "floor": "Poschodie"
+            },
+            "data_description": {
+              "group_member_sensors": "Snímače Powercalc zaradiť do skupiny",
+              "group_member_devices": "Pridajte do skupiny entity výkonu a energie z vybraných zariadení",
+              "group_power_entities": "Vrátane prídavných výkonových snímačov (W) z vašej inštalácie HA",
+              "group_energy_entities": "Dodatočné snímače energie (kWh) z vašej inštalácie HA zahrnuté",
+              "sub_groups": "Všetky obsahujúce snímače z vybraných podskupín budú tiež pridané do tejto skupiny",
+              "area": "Pridá všetky senzory powercalc zo špecifikovanej oblasti",
+              "floor": "Pridá všetky snímače výkonu zo zadanej podlahy"
+            }
+          },
+          "options": {
+            "name": "Možnosti",
+            "data": {
+              "device": "Zariadenie",
+              "hide_members": "Skrytý členovania",
+              "include_non_powercalc_sensors": "Zahrnúť nie powercalc snímače",
+              "force_calculate_group_energy": "Sila vypočítať energiu",
+              "group_energy_start_at_zero": "Začať v nule",
+              "create_energy_sensor": "Vytvoriť snímač energie",
+              "create_utility_meters": "Vytvorte merače spotreby"
+            },
+            "data_description": {
+              "device": "Pridajte entity skupiny, ktoré powercalc vytvorí, do existujúceho zariadenia",
+              "include_non_powercalc_sensors": "Ovládajte, či sa majú pri použití možnosti oblasti zahrnúť snímače bez powercalc",
+              "force_calculate_group_energy": "V predvolenom nastavení powercalc sčítava energetické senzory z členských senzorov. Prepnutím tejto možnosti vynútite vytvorenie snímača Riemann Sum",
+              "group_energy_start_at_zero": "Keď je aktivovaný, senzor energie sa po vytvorení senzora spustí na nule. V opačnom prípade spočíta všetky aktuálne stavy snímača energie člena",
+              "create_energy_sensor": "Či potrebuje powercalc vytvoriť kWh snímač"
+            }
+          }
         },
         "title": "Vytvoriť skupinu snímača"
       },
       "group_subtract": {
         "data": {
           "create_energy_sensor": "Vytvorte energetický senzor",
+          "create_cost_sensor": "Vytvorte cenový senzor",
           "create_utility_meters": "Vytvorte merače spotreby",
           "entity_id": "Základná entita",
           "name": "Názov",
@@ -227,6 +307,7 @@
           "main_power_sensor": "Senzor sieťového napájania",
           "group_tracked_auto": "Automaticky pridané entity",
           "create_energy_sensor": "Vytvorte energetický senzor",
+          "create_cost_sensor": "Vytvorte cenový senzor",
           "create_utility_meters": "Vytvorte merače spotreby"
         },
         "data_description": {
@@ -247,10 +328,10 @@
       },
       "group_tracked_untracked_auto": {
         "data": {
-          "exclude_entities": "Exclude entities"
+          "exclude_entities": "Vylúčiť entity"
         },
-        "description": "Exclude specific entities from the auto tracked group",
-        "title": "Auto tracked configuration"
+        "description": "Vylúčte konkrétne entity z automaticky sledovanej skupiny",
+        "title": "Automaticky sledovaná konfigurácia"
       },
       "library": {
         "data": {
@@ -259,16 +340,16 @@
         "data_description": {
           "confirm_autodisovered_model": "Ak sa rozhodnete nepotvrdiť, môžete zadať výrobcu a model sami"
         },
-        "description": "{source}\n\nVýrobca \"{manufacturer}\" a model \"{model}\" boli automaticky detekované pre vaše zariadenie.{remarks}",
+        "description": "{source}\n\nVýrobca \"{manufacturer}\" a model \"{model}\" boli automaticky detekované pre vaše zariadenie.{remarks}{profile_details}",
         "title": "Knižnica"
       },
       "library_custom_fields": {
-        "title": "Profile configuration",
+        "title": "Konfigurácia profilu",
         "data": {
-          "power_factor": "Power Factor"
+          "power_factor": "Účinník"
         },
         "data_description": {
-          "power_factor": "Ratio of real power to apparent power. Use 0.6 for computers/electronics, 0.7 for mixed loads, 1.0 for resistive loads like heaters."
+          "power_factor": "Pomer skutočného výkonu k zdanlivému výkonu. Použite 0,6 pre počítače/elektroniku, 0,7 pre zmiešané záťaže, 1,0 pre odporové záťaže, ako sú ohrievače."
         }
       },
       "library_multi_profile": {
@@ -290,6 +371,7 @@
           "attribute": "Zadajte atribút. Keď zostane prázdne, bude jas pre svetlá a percento pre ventilátory",
           "calibrate": "Na každý riadok uveďte kalibračnú hodnotu. Príklad\n\n1: 20"
         },
+        "description": "Definujte možnosti výpočtu lineárneho výkonu. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}). Použite buď minimálny/maximálny výkon alebo kalibračné hodnoty, ktoré umožňujú viac bodov kontroly.",
         "title": "Lineárna konfigurácia"
       },
       "manufacturer": {
@@ -305,6 +387,16 @@
         },
         "description": "Vyberte model zariadenia. Pozrite si [list]({supported_models_link}) podporovaných modelov, kde nájdete ďalšie informácie",
         "title": "Konfigurácia modelu"
+      },
+      "select_device": {
+        "data": {
+          "device": "Zariadenie"
+        },
+        "data_description": {
+          "device": "Zariadenie, ku ktorému majú byť priradené entity Powercalc"
+        },
+        "description": "Vyberte zariadenie, ku ktorému má byť priradený senzor Powercalc.",
+        "title": "Vyberte zariadenie"
       },
       "menu_group": {
         "menu_options": {
@@ -327,6 +419,7 @@
           "power": "Napájanie jedným vypínačom pri zapnutí",
           "power_off": "Napájanie na jeden vypínač pri vypnutí"
         },
+        "description": "Definujte možnosti výpočtu výkonu viacerých prepínačov. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}).",
         "title": "Konfigurácia viacerých prepínačov"
       },
       "playbook": {
@@ -341,6 +434,7 @@
           "repeat": "Prepínač, keď chcete pokračovať v opakovaní príručky po jej dokončení",
           "states_trigger": "Spustite playbook na základe zmeny stavu. Príklad\n\nprehrávanie: program1"
         },
+        "description": "Definujte možnosti playbooku. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}).",
         "title": "Playbook konfigurácia"
       },
       "power_advanced": {
@@ -348,8 +442,8 @@
           "calculation_enabled_condition": "Podmienka aktivácie výpočtu",
           "energy_integration_method": "Metóda energetickej integrácie",
           "energy_sensor_unit_prefix": "Predpona jednotky snímača energie",
-          "energy_filter_outlier_enabled": "Energy filter outliers",
-          "energy_filter_outlier_max_step": "Outlier filter max step",
+          "energy_filter_outlier_enabled": "Odľahlé hodnoty energetického filtra",
+          "energy_filter_outlier_max_step": "Maximálny krok filtra odľahlých hodnôt",
           "ignore_unavailable_state": "Ignorovať nedostupný stav",
           "multiply_factor": "Násobný faktor",
           "multiply_factor_standby": "Pohotovostný režim s násobným faktorom",
@@ -357,8 +451,8 @@
         },
         "data_description": {
           "calculation_enabled_condition": "Konfigurovaná stratégia výpočtu výkonu sa vykoná len vtedy, keď sa táto šablóna vyhodnotí ako pravda alebo 1, inak snímač výkonu zobrazí 0",
-          "energy_filter_outlier_enabled": "Enable filtering of outlier values in the energy sensor",
-          "energy_filter_outlier_max_step": "Maximum expected step in power values (in watts) for the outlier filter",
+          "energy_filter_outlier_enabled": "Povoliť filtrovanie odľahlých hodnôt v senzore energie",
+          "energy_filter_outlier_max_step": "Maximálny očakávaný krok v hodnotách výkonu (vo wattoch) pre odľahlý filter",
           "ignore_unavailable_state": "Toto nastavenie prepnite, ak chcete, aby snímač výkonu zostal dostupný, aj keď zdrojová entita nie je k dispozícii",
           "multiply_factor": "Vynásobí vypočítaný výkon týmto pomerom. Môže byť užitočné pre ľahké skupiny",
           "multiply_factor_standby": "Či sa má použiť multiplikačný faktor aj na výkon v pohotovostnom režime",
@@ -382,6 +476,35 @@
         "description": "V súčasnosti možno špecifické nastavenia konfigurovať len globálne",
         "title": "Vytvorenie snímača energie pre existujúci snímač energie"
       },
+      "cost": {
+        "data": {
+          "energy_sensor_id": "Energetický senzor",
+          "name": "Názov"
+        },
+        "data_description": {
+          "energy_sensor_id": "Existujúci energetický senzor (kWh), pre ktorý sa majú vypočítať náklady. Môže to byť senzor z ľubovoľnej integrácie, nielen z Powercalc",
+          "name": "Základný názov senzora nákladov. Úplný názov entity sa nastaví podľa nastavenia cost_sensor_naming"
+        },
+        "description": "Vytvoriť senzor nákladov pre existujúci energetický senzor. Cena energie sa berie z globálnej konfigurácie Powercalc.",
+        "sections": {
+          "cost_pricing": {
+            "name": "Prepísanie ceny",
+            "data": {
+              "energy_price": "Pevná cena energie",
+              "energy_price_multiplier": "Násobiteľ ceny energie",
+              "energy_price_sensor": "Senzor ceny energie",
+              "energy_price_surcharge": "Doplatok ceny energií"
+            },
+            "data_description": {
+              "energy_price": "Pevná cena za kWh vo vašej miestnej mene. Ak chcete použiť globálnu cenu energie, nechajte prázdne",
+              "energy_price_multiplier": "Násobiteľ sa použije po doplatku. Použite to pre dane alebo poplatky založené na percentách, napríklad 1,21 pre 21%. Ak chcete použiť globálny multiplikátor, nechajte prázdne",
+              "energy_price_sensor": "Senzor, ktorý poskytuje aktuálnu cenu energie za kWh (napr. z dynamickej tarifnej integrácie). Ak chcete použiť tento senzor, ponechajte pevnú cenu prázdnu",
+              "energy_price_surcharge": "Dodatočná pevná suma za kWh pridaná k pevnej cene alebo hodnote senzora ceny. Ak chcete použiť globálny príplatok, nechajte prázdne"
+            }
+          }
+        },
+        "title": "Vytvoriť senzor nákladov"
+      },
       "sub_profile": {
         "data": {
           "sub_profile": "Podprofil"
@@ -391,10 +514,10 @@
       },
       "sub_profile_per_device": {
         "data": {
-          "sub_profile": "Sub profile"
+          "sub_profile": "Podprofil"
         },
-        "description": "This device has a model with multiple sub profiles. {remarks}",
-        "title": "Sub profile config"
+        "description": "Toto zariadenie má model s viacerými podprofilmi. {remarks}",
+        "title": "Konfigurácia podprofilu"
       },
       "smart_switch": {
         "data": {
@@ -413,6 +536,7 @@
           "sensor_type": "Typ snímača"
         },
         "menu_options": {
+          "cost": "Senzor nákladov (z existujúceho energetického senzora)",
           "daily_energy": "Denná energia",
           "group": "Skupiny",
           "global_configuration": "Globálna konfigurácia",
@@ -440,6 +564,8 @@
       "virtual_power": {
         "data": {
           "create_energy_sensor": "Vytvoriť snímač energie",
+          "create_standby_energy_sensor": "Vytvoriť snímač energie v pohotovostnom režime",
+          "create_cost_sensor": "Vytvorte cenový senzor",
           "create_utility_meters": "Vytvorte merače spotreby",
           "entity_id": "Zdrojová entita",
           "mode": "Stratégia výpočtu",
@@ -448,6 +574,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Či potrebuje powercalc vytvoriť kWh snímač",
+          "create_standby_energy_sensor": "Či má Powercalc vytvoriť snímač kWh, ktorý sleduje iba spotrebu v pohotovostnom režime",
           "create_utility_meters": "Nechajte powercalc vytvoriť merače spotreby, ktoré cyklujú denne, každú hodinu atď.",
           "entity_id": "entita, na ktorej je založená virtuálna sila, bude snímač výkonu počúvať zmeny stavu tejto entity, aby sa aktualizoval",
           "name": "Ak ponecháte prázdne, názov sa prevezme zo zdrojovej entity",
@@ -458,15 +585,104 @@
       },
       "wled": {
         "data": {
+          "current_entity": "Entita prúdu",
           "power_factor": "Účinník",
           "voltage": "Napätie"
         },
         "description": "Uistite sa, že ste povolili obmedzovač jasu v softvéri WLED. Pozri tiež {docs_uri}",
-        "title": "WLED konfigurácia"
+        "title": "WLED konfigurácia",
+        "data_description": {
+          "current_entity": "Voliteľne vyberte snímač poskytujúci odhadovaný prúd v mA. Potrebné len vtedy, keď Powercalc nedokáže automaticky nájsť snímač odhadovaného prúdu WLED, napríklad keď je obmedzovač jasu nastavený pre jednotlivé výstupy."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "invalid_integration_method": {
+      "message": "Neplatná metóda integrácie \"{method}\". Musí byť jedna z: {allowed_methods}."
+    },
+    "no_sub_profile_support": {
+      "message": "{entity_id} nepodporuje prepínanie podprofilov. Táto akcia je dostupná len pre senzory, ktoré majú podprofily a nemajú automatický výber podprofilu."
+    },
+    "not_a_playbook_sensor": {
+      "message": "{entity_id} nie je senzor s podporou playbooku. Táto akcia je dostupná len pre senzory používajúce stratégiu playbook."
+    },
+    "unknown_sub_profile": {
+      "message": "\"{profile}\" nie je známy podprofil. Dostupné podprofily: {known_profiles}."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "measure_session_status": {
+        "name": "Measure session status",
+        "state": {
+          "idle": "Idle",
+          "validating": "Validating",
+          "ready": "Ready",
+          "awaiting_confirmation": "Awaiting confirmation",
+          "running": "Running",
+          "cancelling": "Cancelling",
+          "cancelled": "Cancelled",
+          "completed": "Completed",
+          "failed": "Failed",
+          "resumable": "Resumable"
+        }
+      },
+      "power": {
+        "name": "Výkon"
+      },
+      "energy": {
+        "name": "Energia"
+      },
+      "standby_energy": {
+        "name": "Energia v pohotovostnom režime"
+      },
+      "cost": {
+        "name": "Náklady"
+      },
+      "utility_meter_cycle": {
+        "name": "Energia {period}"
+      },
+      "utility_meter_tariff": {
+        "name": "Energia {period} {tariff}"
+      },
+      "utility_meter_cycle_cost": {
+        "name": "Energia {period} náklady"
+      },
+      "utility_meter_tariff_cost": {
+        "name": "Energia {period} {tariff} náklady"
+      }
+    },
+    "select": {
+      "utility_meter_cycle": {
+        "name": "Energia {period}"
       }
     }
   },
   "issues": {
+    "composite_device_id": {
+      "fix_flow": {
+        "abort": {
+          "entry_removed": "Konfiguračný záznam Powercalc bol odstránený"
+        },
+        "error": {
+          "invalid_device": "Vyberte existujúce zariadenie alebo nechajte pole prázdne"
+        },
+        "step": {
+          "select_device": {
+            "data": {
+              "device": "Zariadenie"
+            },
+            "data_description": {
+              "device": "Zariadenie, ku ktorému majú byť priradené entity vytvorené touto konfiguráciou Powercalc"
+            },
+            "description": "Konfigurácia Powercalc {name} bola priradená k zariadeniu, ktoré Home Assistant rozdelil na viacero zariadení. Jej entity nemožno priradiť k starému ID zariadenia.\n\nVyberte zariadenie, ku ktorému majú byť tieto entity priradené, alebo nechajte pole prázdne, aby zostali bez zariadenia.",
+            "title": "Vyberte zariadenie pre {name}"
+          }
+        }
+      },
+      "title": "Zariadenie pre konfiguráciu Powercalc {name} je potrebné vybrať znova"
+    },
     "deprecated_platform_yaml": {
       "description": "Konfigurácia senzorov pomocou `sensor->platform` bola zastaraná. Musíte zmeniť konfiguráciu na `powercalc->sensors`. Kliknite na 'Viac informácií' pre ďalšie pokyny.",
       "title": "Konfigurácia Powercalc YAML bola presunutá"
@@ -479,15 +695,15 @@
       "fix_flow": {
         "step": {
           "sub_profile": {
-            "description": "This device has a model with multiple sub profiles. Select one that corresponds to the following entity of this device:\n\n\"{entity_id}\"\n\nManufacturer: {manufacturer}\nModel: {model}{remarks}",
-            "title": "Select correct sub profile",
+            "description": "Toto zariadenie má model s viacerými podprofilmi. Vyberte ten, ktorý zodpovedá nasledujúcej entite tohto zariadenia:\n\n\"{entity_id}\"\n\nVýrobca: {manufacturer}\nModel: {model}{remarks}",
+            "title": "Vyberte správny podprofil",
             "data": {
-              "sub_profile": "Sub profile"
+              "sub_profile": "Podprofil"
             }
           }
         }
       },
-      "title": "Sub profile selection required for {entry}"
+      "title": "Pre {entry} je potrebný výber podprofilu"
     }
   },
   "options": {
@@ -495,8 +711,8 @@
       "model_not_support": "Model nie je podporovaný"
     },
     "error": {
-      "fixed_mandatory": "Musíte dodať aspoň jednu z možností Power, Power template alebo States power",
-      "fixed_states_power_only": "Táto entita môže pracovať iba s 'states_power', nie 'power'",
+      "cost_price_mandatory": "Musíte dodať buď cenu energie, alebo snímač ceny energie",
+      "fixed_mandatory": "Musíte zadať aspoň jednu z možností: fixnú hodnotu, šablónu alebo mapovanie stavov",
       "group_mandatory": "Musíte definovať aspoň podskupiny alebo výkonové a energetické entity",
       "linear_mandatory": "Musíte dodať aspoň jeden z max_power alebo calibrate",
       "linear_min_higher_as_max": "Maximálny výkon nemôže byť nižší ako minimálny výkon",
@@ -526,6 +742,8 @@
         "title": "Základné možnosti",
         "data": {
           "create_energy_sensor": "Vytvoriť snímač energie",
+          "create_standby_energy_sensor": "Vytvoriť snímač energie v pohotovostnom režime",
+          "create_cost_sensor": "Vytvorte cenový senzor",
           "create_utility_meters": "Vytvorte merače spotreby",
           "entity_id": "Zdrojová entita",
           "name": "Názov",
@@ -533,6 +751,7 @@
         },
         "data_description": {
           "create_energy_sensor": "Či potrebuje powercalc vytvoriť kWh senzor",
+          "create_standby_energy_sensor": "Či má Powercalc vytvoriť snímač kWh, ktorý sleduje iba spotrebu v pohotovostnom režime",
           "create_utility_meters": "Nechajte powercalc vytvoriť merače spotreby, ktoré cyklujú denne, každú hodinu atď.",
           "entity_id": "entita, na ktorej je založená virtuálna sila, bude snímač výkonu počúvať zmeny stavu tejto entity, aby sa aktualizoval",
           "name": "Ak ponecháte prázdne, názov sa prevezme zo zdrojovej entity",
@@ -542,6 +761,7 @@
       "daily_energy": {
         "title": "Denné energetické možnosti",
         "data": {
+          "daily_energy_value": "Denná hodnota energie",
           "name": "Názov",
           "on_time": "V čase",
           "start_time": "Čas začiatku",
@@ -556,57 +776,118 @@
         }
       },
       "energy_options": {
-        "title": "Energy options",
+        "title": "Vlastnosti energie",
         "data": {
-          "energy_integration_method": "Integration method",
-          "energy_sensor_unit_prefix": "Unit prefix",
-          "energy_filter_outlier_enabled": "Filter outliers",
-          "energy_filter_outlier_max_step": "Outlier filter max step"
+          "energy_integration_method": "Integračná metóda",
+          "energy_sensor_unit_prefix": "Predpona jednotky",
+          "energy_filter_outlier_enabled": "Filtrujte odľahlé hodnoty",
+          "energy_filter_outlier_max_step": "Maximálny krok filtra odľahlých hodnôt"
         },
         "data_description": {
-          "energy_filter_outlier_enabled": "Enable filtering of outlier values in the energy sensor",
-          "energy_filter_outlier_max_step": "Maximum expected step in power values (in watts) for the outlier filter"
+          "energy_filter_outlier_enabled": "Povoliť filtrovanie odľahlých hodnôt v senzore energie",
+          "energy_filter_outlier_max_step": "Maximálny očakávaný krok v hodnotách výkonu (vo wattoch) pre odľahlý filter"
         }
       },
       "fixed": {
         "title": "Pevné možnosti",
         "data": {
-          "power": "Výkon",
-          "power_template": "Výkon šablóna",
-          "self_usage_included": "Samostatné použitie v cene",
-          "states_power": "Výkonové stavy"
+          "fixed_value": "Fixná hodnota",
+          "self_usage_included": "Samostatné použitie v cene"
         },
         "data_description": {
-          "power": "Pevná hodnota výkonu vo wattoch, keď je entita ZAPNUTÁ",
-          "power_template": "Šablóna sa vyhodnotí, aby sa získala hodnota výkonu vo W",
-          "self_usage_included": "Či hodnota výkonu zahŕňa výkon spotrebovaný samotným inteligentným prepínačom.",
-          "states_power": "Jeden pár „stav: výkon“ v každom riadku, pozri príklad vyššie"
+          "self_usage_included": "Či hodnota výkonu zahŕňa výkon spotrebovaný samotným inteligentným prepínačom."
         }
       },
       "global_configuration": {
         "title": "Základné možnosti",
+        "sections": {
+          "power_options": {
+            "name": "Senzor výkonu",
+            "data": {
+              "power_sensor_naming": "Vzor názvu snímača výkonu",
+              "power_sensor_friendly_naming": "Vzor názvu priateľského snímača výkonu",
+              "power_sensor_category": "Kategória snímača výkonu",
+              "power_sensor_precision": "Presnosť senzora výkonu",
+              "follow_device_name": "Používať názov zariadenia"
+            },
+            "data_description": {
+              "follow_device_name": "Použiť názov priradeného zariadenia pre generované entity podporovaných virtuálnych snímačov výkonu nakonfigurovaných v používateľskom rozhraní. ID entít a vlastné názvy entít sa nezmenia. Vypnutím sa obnovia nakonfigurované názvy. Vlastné vzory zobrazovaných názvov vrátane globálnych vzorov majú prednosť: dotknuté položky si ponechajú nakonfigurované názvy."
+            }
+          },
+          "features": {
+            "name": "Vytvoriť senzory",
+            "data": {
+              "create_energy_sensors": "Vytvorte energetické senzory",
+              "create_cost_sensors": "Vytvorte cenové senzory",
+              "create_standby_group": "Vytvorte pohotovostnú skupinu",
+              "create_utility_meters": "Vytvorte merače spotreby"
+            },
+            "data_description": {
+              "create_energy_sensors": "Či potrebuje powercalc na vytvorenie kWh senzorov",
+              "create_cost_sensors": "Či potrebuje powercalc vytvoriť snímače nákladov. Vyžaduje, aby bola v ďalších krokoch nakonfigurovaná cena energie",
+              "create_standby_group": "Vytvorte skupinu, ktorá sčíta všetku spotrebu energie v pohotovostnom režime a vlastnú spotrebu zariadení IOT",
+              "create_utility_meters": "Nechajte powercalc vytvoriť merače spotreby, ktoré cyklujú denne, každú hodinu atď."
+            }
+          },
+          "advanced": {
+            "name": "Pokročilé",
+            "data": {
+              "enable_analytics": "Povoliť anonymnú analýzu",
+              "ignore_unavailable_state": "Ignorovať nedostupný stav",
+              "include_non_powercalc_sensors": "Zahŕňa senzory bez powercalc",
+              "disable_extended_attributes": "Zakázať rozšírené atribúty",
+              "disable_library_download": "Zakázať sťahovanie vzdialenej knižnice"
+            },
+            "data_description": {
+              "enable_analytics": "Povoľte Powercalc odosielať anonymné agregované štatistiky používania, ktoré pomôžu zlepšiť integráciu",
+              "ignore_unavailable_state": "Udržujte senzory Powercalc dostupné, aj keď zdrojová entita nie je k dispozícii",
+              "include_non_powercalc_sensors": "Ovládajte, či chcete do skupín zahrnúť senzory bez powercalc",
+              "disable_extended_attributes": "Zakážte všetky extra atribúty, ktoré powercalc pridáva k výkonu, energii a stavom entity skupiny. Pomôže to udržať veľkosť databázy malú",
+              "disable_library_download": "Vypnite funkciu sťahovania knižnice Powercalc"
+            }
+          }
+        }
+      },
+      "global_configuration_cost": {
+        "title": "Možnosti nákladov",
+        "description": "Nakonfigurujte cenu energie používanú na výpočet snímačov nákladov. Zadajte pevnú cenu alebo snímač, ktorý poskytuje aktuálnu cenu za kWh. Ďalšie informácie nájdete v [dokumentácii]({docs_uri})",
+        "sections": {
+          "cost_pricing": {
+            "name": "Stanovenie cien",
+            "data": {
+              "energy_price": "Pevná cena energie",
+              "energy_price_multiplier": "Násobiteľ ceny energie",
+              "energy_price_sensor": "Senzor ceny energie",
+              "energy_price_surcharge": "Doplatok ceny energií"
+            },
+            "data_description": {
+              "energy_price": "Pevná cena za kWh vo vašej miestnej mene",
+              "energy_price_multiplier": "Násobiteľ sa použije po doplatku. Použite to pre dane alebo poplatky založené na percentách, napríklad 1,21 pre 21%",
+              "energy_price_sensor": "Senzor, ktorý poskytuje aktuálnu cenu energie za kWh (napr. z dynamickej tarifnej integrácie). Ak chcete použiť tento senzor, ponechajte pevnú cenu prázdnu",
+              "energy_price_surcharge": "Dodatočná pevná suma za kWh pridaná k pevnej cene alebo hodnote senzora ceny"
+            }
+          },
+          "cost_naming": {
+            "name": "Pomenovanie",
+            "data": {
+              "cost_sensor_friendly_naming": "Vzor názvu priateľského k cenovému senzoru",
+              "cost_sensor_naming": "Vzor názvu snímača nákladov"
+            },
+            "data_description": {
+              "cost_sensor_friendly_naming": "Vzor pre priateľský názov snímača nákladov. Názov zdroja sa vloží na miesto zástupného symbolu",
+              "cost_sensor_naming": "Vzor použitý na vytvorenie názvu senzora nákladov a ID entity. Názov zdroja sa vloží na miesto zástupného symbolu"
+            }
+          }
+        }
+      },
+      "global_configuration_cost_apply": {
+        "title": "Použite senzory nákladov",
+        "description": "Zmenili ste nastavenie snímačov globálnych nákladov. Chcete použiť túto zmenu na všetky existujúce snímače powercalc, ktoré boli vytvorené prostredníctvom GUI?",
         "data": {
-          "create_energy_sensors": "Vytvorte energetické senzory",
-          "create_standby_group": "Create standby group",
-          "create_utility_meters": "Vytvorte merače spotreby",
-          "disable_extended_attributes": "Zakázať rozšírené atribúty",
-          "disable_library_download": "Zakázať sťahovanie vzdialenej knižnice",
-          "enable_analytics": "Enable anonymous analytics",
-          "ignore_unavailable_state": "Ignorovať nedostupný stav",
-          "include_non_powercalc_sensors": "Zahŕňa senzory bez powercalc",
-          "power_sensor_category": "Kategória snímača výkonu",
-          "power_sensor_friendly_naming": "Vzor názvu priateľského snímača výkonu",
-          "power_sensor_naming": "Vzor názvu snímača výkonu"
+          "apply_to_all": "Aplikujte na existujúce senzory"
         },
         "data_description": {
-          "create_energy_sensors": "Či potrebuje powercalc na vytvorenie kWh senzorov",
-          "create_standby_group": "Create group which sums all standby power consumption and self-usage of IOT devices",
-          "create_utility_meters": "Nechajte powercalc vytvoriť merače spotreby, ktoré cyklujú denne, každú hodinu atď.",
-          "disable_extended_attributes": "Zakážte všetky extra atribúty, ktoré powercalc pridáva k výkonu, energii a stavom entity skupiny. Pomôže to udržať veľkosť databázy malú",
-          "disable_library_download": "Vypnite funkciu sťahovania knižnice Powercalc",
-          "enable_analytics": "Allow Powercalc to send anonymous, aggregated usage statistics to help improve the integration",
-          "ignore_unavailable_state": "Udržujte senzory Powercalc dostupné, aj keď zdrojová entita nie je k dispozícii",
-          "include_non_powercalc_sensors": "Ovládajte, či chcete do skupín zahrnúť senzory bez powercalc"
+          "apply_to_all": "Aktualizujte každý existujúci snímač výkonu GUI tak, aby zodpovedal novému nastaveniu snímačov nákladov"
         }
       },
       "global_configuration_discovery": {
@@ -624,7 +905,7 @@
       },
       "global_configuration_energy": {
         "title": "Energetické možnosti",
-        "description": "Tu definujte predvolené nastavenia pre snímače energie. Pozri [documentation]({docs_uri}) pre viac informácií",
+        "description": "Tu definujte predvolené nastavenia pre snímače energie. Viac informácií nájdete v [dokumentácii]({docs_uri})",
         "data": {
           "energy_integration_method": "Metóda energetickej integrácie",
           "energy_sensor_category": "Kategória snímača energie",
@@ -635,24 +916,24 @@
         }
       },
       "global_configuration_throttling": {
-        "title": "Throttling options",
-        "description": "Set update intervals for the different sensor types. See [documentation]({docs_uri}) for more info",
+        "title": "Možnosti škrtenia",
+        "description": "Nastavte intervaly aktualizácie pre rôzne typy snímačov. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}).",
         "data": {
-          "group_energy_update_interval": "Group energy update interval",
-          "group_power_update_interval": "Group power update interval",
-          "energy_update_interval": "Energy update interval",
-          "power_update_interval": "Power update interval"
+          "group_energy_update_interval": "Energetická skupina interval obnovy",
+          "group_power_update_interval": "Výkonová skupina interval obnovy",
+          "energy_update_interval": "Interval aktualizácie energie",
+          "power_update_interval": "Interval aktualizácie výkonu"
         },
         "data_description": {
-          "group_energy_update_interval": "Interval at which group energy sensors are updated. In seconds. Set to 0 to disable",
-          "group_power_update_interval": "Interval at which group power sensors are updated. In seconds. Set to 0 to disable",
-          "energy_update_interval": "Interval at which energy sensors are updated. In seconds. Set to 0 to disable",
-          "power_update_interval": "Interval at which power sensors are force updated. In seconds. Set to 0 to disable"
+          "group_energy_update_interval": "Interval, v ktorom sa aktualizujú skupinové energetické senzory. V sekundách. Pre deaktiváciu nastavte na 0",
+          "group_power_update_interval": "Interval, v ktorom sa aktualizujú skupinové výkonové snímače. V sekundách. Pre deaktiváciu nastavte na 0",
+          "energy_update_interval": "Interval, v ktorom sa aktualizujú energetické senzory. V sekundách. Pre deaktiváciu nastavte na 0",
+          "power_update_interval": "Interval, v ktorom sú výkonové snímače silou aktualizované. V sekundách. Pre deaktiváciu nastavte na 0"
         }
       },
       "global_configuration_utility_meter": {
         "title": "Možnosti elektromera",
-        "description": "Tu definujte predvolené nastavenia pre elektromery. Pozri [documentation]({docs_uri}) pre viac informácií",
+        "description": "Tu definujte predvolené nastavenia pre elektromery. Viac informácií nájdete v [dokumentácii]({docs_uri})",
         "data": {
           "utility_meter_net_consumption": "Čistá spotreba inžinierskych sietí",
           "utility_meter_tariffs": "Tarify za elektromery",
@@ -661,30 +942,42 @@
       },
       "group_custom": {
         "title": "Možnosti skupiny",
-        "data": {
-          "area": "Oblasť",
-          "floor": "Floor",
-          "device": "Zariadenie",
-          "force_calculate_group_energy": "Sila vypočítať energiu",
-          "group_energy_entities": "Ďalšie energetické entity",
-          "group_member_devices": "Member devices",
-          "group_member_sensors": "Členské snímače powercalc",
-          "group_power_entities": "Ďalšie výkonové entity",
-          "hide_members": "Skrytí členovia",
-          "include_non_powercalc_sensors": "Zahrnúť nie powercalc snímače",
-          "sub_groups": "Podskupiny"
-        },
-        "data_description": {
-          "area": "Pridá všetky senzory powercalc zo špecifikovanej oblasti",
-          "floor": "Adds all power sensors from the specified floor",
-          "device": "Pridajte entity skupiny, ktoré powercalc vytvorí, do existujúceho zariadenia",
-          "force_calculate_group_energy": "V predvolenom nastavení powercalc sčítava energetické senzory z členských senzorov. Prepnutím tejto možnosti vynútite vytvorenie snímača Riemann Sum",
-          "group_energy_entities": "Dodatočné snímače energie (kWh) z vašej inštalácie HA zahŕňajú",
-          "group_member_devices": "Add power and energy entities from the selected devices to the group",
-          "group_member_sensors": "Snímače Powercalc zaradiť do skupiny",
-          "group_power_entities": "Vrátane prídavných výkonových snímačov (W) z vašej inštalácie HA",
-          "include_non_powercalc_sensors": "Ovládajte, či sa majú pri použití možnosti oblasti zahrnúť snímače bez powercalc",
-          "sub_groups": "Všetky obsahujúce snímače z vybraných podskupín budú tiež pridané do tejto skupiny"
+        "sections": {
+          "members": {
+            "name": "Členovia",
+            "data": {
+              "group_member_sensors": "Členské snímače powercalc",
+              "group_member_devices": "Zariadenia užívateľa",
+              "group_power_entities": "Ďalšie výkonové entity",
+              "group_energy_entities": "Ďalšie energetické entity",
+              "sub_groups": "Podskupiny",
+              "area": "Oblasť",
+              "floor": "Poschodie"
+            },
+            "data_description": {
+              "group_member_sensors": "Snímače Powercalc zaradiť do skupiny",
+              "group_member_devices": "Pridajte do skupiny entity výkonu a energie z vybraných zariadení",
+              "group_power_entities": "Vrátane prídavných výkonových snímačov (W) z vašej inštalácie HA",
+              "group_energy_entities": "Dodatočné snímače energie (kWh) z vašej inštalácie HA zahŕňajú",
+              "sub_groups": "Všetky obsahujúce snímače z vybraných podskupín budú tiež pridané do tejto skupiny",
+              "area": "Pridá všetky senzory powercalc zo špecifikovanej oblasti",
+              "floor": "Pridá všetky snímače výkonu zo zadanej podlahy"
+            }
+          },
+          "options": {
+            "name": "Možnosti",
+            "data": {
+              "device": "Zariadenie",
+              "hide_members": "Skrytí členovia",
+              "include_non_powercalc_sensors": "Zahrnúť nie powercalc snímače",
+              "force_calculate_group_energy": "Sila vypočítať energiu"
+            },
+            "data_description": {
+              "device": "Pridajte entity skupiny, ktoré powercalc vytvorí, do existujúceho zariadenia",
+              "include_non_powercalc_sensors": "Ovládajte, či sa majú pri použití možnosti oblasti zahrnúť snímače bez powercalc",
+              "force_calculate_group_energy": "V predvolenom nastavení powercalc sčítava energetické senzory z členských senzorov. Prepnutím tejto možnosti vynútite vytvorenie snímača Riemann Sum"
+            }
+          }
         }
       },
       "group_subtract": {
@@ -703,6 +996,7 @@
           "main_power_sensor": "Senzor sieťového napájania",
           "group_tracked_auto": "Automaticky pridané entity",
           "create_energy_sensor": "Vytvorte energetický senzor",
+          "create_cost_sensor": "Vytvorte cenový senzor",
           "create_utility_meters": "Vytvorte merače spotreby"
         },
         "data_description": {
@@ -723,10 +1017,12 @@
         "menu_options": {
           "advanced_options": "Pokročilé možnosti",
           "basic_options": "Základné možnosti",
+          "cost": "Možnosti nákladov",
           "daily_energy": "Denné energetické možnosti",
-          "energy_options": "Energy options",
+          "energy_options": "Vlastnosti energie",
           "fixed": "Pevné možnosti",
           "group_custom": "Možnosti skupiny",
+          "group_domain": "Možnosti skupiny",
           "group_subtract": "Možnosti skupiny",
           "group_tracked_untracked": "Možnosti skupiny",
           "group_tracked_untracked_manual": "Sleované entity",
@@ -735,13 +1031,25 @@
           "playbook": "Možnosti playbooku",
           "multi_switch": "Možnosti viacerých prepínačov",
           "real_power": "Skutočné možnosti napájania",
+          "select_device": "Zariadenie",
           "utility_meter_options": "Možnosti elektromera",
-          "wled": "WLED možnosti"
+          "wled": "WLED možnosti",
+          "cost_options": "Možnosti nákladov"
         }
       },
       "library_options": {
         "title": "Možnosti knižnice",
-        "description": "Momentálne je vybratý nasledujúci profil knižnice: \n výrobca: {manufacturer}\n model: {model}\n\nAk chcete profil zmeniť, kliknite na tlačidlo Ďalej."
+        "description": "Momentálne je vybratý nasledujúci profil knižnice: \n výrobca: {manufacturer}\n model: {model}\n\nAk chcete profil zmeniť, kliknite na tlačidlo Ďalej.{profile_details}"
+      },
+      "select_device": {
+        "data": {
+          "device": "Zariadenie"
+        },
+        "data_description": {
+          "device": "Zariadenie, ku ktorému majú byť priradené entity Powercalc"
+        },
+        "description": "Vyberte zariadenie, ku ktorému má byť priradený senzor Powercalc.",
+        "title": "Vyberte zariadenie"
       },
       "linear": {
         "title": "lineárne možnosti",
@@ -793,6 +1101,32 @@
           "device": "Pridajte vytvorený energetický senzor do konkrétneho zariadenia"
         }
       },
+      "cost": {
+        "data": {
+          "energy_sensor_id": "Energetický senzor"
+        },
+        "data_description": {
+          "energy_sensor_id": "Existujúci energetický senzor (kWh), pre ktorý sa majú vypočítať náklady"
+        },
+        "sections": {
+          "cost_pricing": {
+            "name": "Prepísanie ceny",
+            "data": {
+              "energy_price": "Pevná cena energie",
+              "energy_price_multiplier": "Násobiteľ ceny energie",
+              "energy_price_sensor": "Senzor ceny energie",
+              "energy_price_surcharge": "Doplatok ceny energií"
+            },
+            "data_description": {
+              "energy_price": "Pevná cena za kWh vo vašej miestnej mene. Ak chcete použiť globálnu cenu energie, nechajte prázdne",
+              "energy_price_multiplier": "Násobiteľ sa použije po doplatku. Použite to pre dane alebo poplatky založené na percentách, napríklad 1,21 pre 21%. Ak chcete použiť globálny multiplikátor, nechajte prázdne",
+              "energy_price_sensor": "Senzor, ktorý poskytuje aktuálnu cenu energie za kWh (napr. z dynamickej tarifnej integrácie). Ak chcete použiť tento senzor, ponechajte pevnú cenu prázdnu",
+              "energy_price_surcharge": "Dodatočná pevná suma za kWh pridaná k pevnej cene alebo hodnote senzora ceny. Ak chcete použiť globálny príplatok, nechajte prázdne"
+            }
+          }
+        },
+        "title": "Možnosti nákladov"
+      },
       "utility_meter_options": {
         "title": "Možnosti elektromera",
         "data": {
@@ -809,9 +1143,44 @@
       "wled": {
         "title": "WLED možnosti",
         "data": {
+          "current_entity": "Entita prúdu",
           "power_factor": "Účiník",
           "voltage": "Napätie"
+        },
+        "data_description": {
+          "current_entity": "Voliteľne vyberte snímač poskytujúci odhadovaný prúd v mA. Potrebné len vtedy, keď Powercalc nedokáže automaticky nájsť snímač odhadovaného prúdu WLED, napríklad keď je obmedzovač jasu nastavený pre jednotlivé výstupy."
         }
+      },
+      "cost_options": {
+        "data": {
+          "energy_price": "Pevná cena energie",
+          "energy_price_multiplier": "Násobiteľ ceny energie",
+          "energy_price_sensor": "Senzor ceny energie",
+          "energy_price_surcharge": "Doplatok ceny energií"
+        },
+        "data_description": {
+          "energy_price": "Pevná cena za kWh vo vašej miestnej mene. Ak chcete použiť globálnu cenu energie, nechajte prázdne",
+          "energy_price_multiplier": "Násobiteľ sa použije po doplatku. Použite to pre dane alebo poplatky založené na percentách, napríklad 1,21 pre 21%. Ak chcete použiť globálny multiplikátor, nechajte prázdne",
+          "energy_price_sensor": "Senzor, ktorý poskytuje aktuálnu cenu energie za kWh (napr. z dynamickej tarifnej integrácie). Ak chcete použiť tento senzor, ponechajte pevnú cenu prázdnu",
+          "energy_price_surcharge": "Dodatočná pevná suma za kWh pridaná k pevnej cene alebo hodnote senzora ceny. Ak chcete použiť globálny príplatok, nechajte prázdne"
+        },
+        "description": "Prepísať globálne nakonfigurovanú cenu energie len pre tento senzor. Ak chcete naďalej používať globálnu cenu, nechajte všetky polia prázdne. Ďalšie informácie nájdete v [dokumentácii]({docs_uri}).",
+        "title": "Možnosti nákladov"
+      }
+    }
+  },
+  "selector": {
+    "daily_energy_value": {
+      "choices": {
+        "value": "Fixná hodnota",
+        "value_template": "Šablóna"
+      }
+    },
+    "fixed_value": {
+      "choices": {
+        "power": "Fixná hodnota",
+        "power_template": "Šablóna",
+        "states_power": "Mapovanie stavov"
       }
     }
   },
@@ -835,6 +1204,16 @@
         }
       },
       "name": "Kalibrácia snímača energie"
+    },
+    "calibrate_cost": {
+      "description": "Nastaví snímač nákladov na danú peňažnú hodnotu.",
+      "fields": {
+        "value": {
+          "description": "Hodnota, ktorá sa má nastaviť.",
+          "name": "Hodnota"
+        }
+      },
+      "name": "Kalibrujte snímač nákladov"
     },
     "calibrate_utility_meter": {
       "description": "Kalibruje snímač merača spotreby.",
@@ -860,6 +1239,10 @@
       },
       "name": "Zmeniť GUI nastavenie"
     },
+    "debug_group": {
+      "description": "Získajte prehľad ladenia skupinového snímača výkonu alebo energie vrátane aktuálnych hodnôt členov.",
+      "name": "Ladiť skupinu"
+    },
     "get_active_playbook": {
       "description": "Získajte aktuálny playbook",
       "name": "Získať aktuálny playbook"
@@ -879,12 +1262,16 @@
       "name": "Zvýšenie denného energetického snímača"
     },
     "reload": {
-      "description": "Reload Powercalc configuration and entities",
-      "name": "Reload"
+      "description": "Znovu načítajte konfiguráciu a entity Powercalc",
+      "name": "Znovu načítať"
     },
     "reset_energy": {
       "description": "Resetovanie snímača energie na nulovú hodnotu kWh.",
       "name": "Resetovanie snímača energie"
+    },
+    "reset_cost": {
+      "description": "Resetujte snímač nákladov na nulu.",
+      "name": "Resetovať snímač nákladov"
     },
     "stop_playbook": {
       "description": "Zastavenie aktuálne aktívneho playbooku",

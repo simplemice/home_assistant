@@ -3,6 +3,10 @@
         "integration",
         "utility_meter"
     ],
+    "categories": [
+        "helpers.calculate_value",
+        "energy.meters_monitoring"
+    ],
     "codeowners": [
         "@bramstroker"
     ],
@@ -22,5 +26,5 @@
     "requirements": [
         "numpy>=1.21.1"
     ],
-    "version": "v1.20.14"
+    "version": "v1.27.0"
 }

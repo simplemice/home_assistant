@@ -1,0 +1,173 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   19/08/2025 (updated 22/08/2025, revised 31/08/2025)
+#   @package        :   Energy
+#   @description    :   Grid tariff (PEA/ERC residential TOU, Phuket). Base rates exclude Ft + VAT;
+#                       Ft (Sep-Dec 2026 = 0.1623 THB/kWh) and VAT 7% are applied in the rate/cost
+#                       sensors. Peak = Mon-Fri 09:00-22:00, off-peak = all other times.
+#                       Monthly service fee (TOU meter 38.22 THB) is not included.
+###############################################################################
+
+###############################################################################
+# ENERGY (Refactored 2026)
+###############################################################################
+
+input_number:
+  electricity_rate_peak:
+    name: Electricity Peak Rate
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 5.7982
+
+  electricity_rate_offpeak:
+    name: Electricity Offpeak Rate
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 2.6369
+
+  electricity_ft:
+    name: Electricity Ft Charge
+    min: -1
+    max: 2
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 0.1623
+    icon: mdi:flash-triangle
+
+  electricity_vat:
+    name: Electricity VAT
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: "%"
+    initial: 7
+
+  cost_export:
+    name: "Solar Export Rate"
+    initial: 2.20
+    min: 0
+    max: 10
+    step: 0.01
+    unit_of_measurement: "THB/kWh"
+    icon: mdi:solar-power-variant
+
+input_select:
+  grid_energy_tariff:
+    name: Grid Energy Tariff
+    options:
+      - peak
+      - offpeak
+    icon: mdi:flash
+
+###############################################################################
+# TEMPLATE
+###############################################################################
+
+template:
+  # SINGLE SOURCE OF TRUTH (triggered)
+  - trigger:
+      - platform: time
+        at: "09:00:00"
+      - platform: time
+        at: "22:00:00"
+      - platform: time
+        at: "00:00:00"
+    sensor:
+      - name: Electricity Tariff
+        unique_id: electricity_tariff_status
+        state: >
+          {% set now = now() %}
+          {% set weekday = now.isoweekday() %}
+          {% if weekday in [1,2,3,4,5] and (9 <= now.hour < 22) %}
+            peak
+          {% else %}
+            offpeak
+          {% endif %}
+
+  # RATE (depends on tariff sensor)
+  - sensor:
+      - name: Electricity Tariff Rate
+        unique_id: electricity_tariff_rate
+        unit_of_measurement: THB/kWh
+        state: >
+          {% set base = states('input_number.electricity_rate_peak') | float(0)
+             if is_state('sensor.electricity_tariff','peak')
+             else states('input_number.electricity_rate_offpeak') | float(0) %}
+          {% set ft  = states('input_number.electricity_ft') | float(0) %}
+          {% set vat = states('input_number.electricity_vat') | float(0) %}
+          {{ ((base + ft) * (1 + vat / 100)) | round(4) }}
+
+      - name: "Solar Export Revenue Today"
+        unique_id: solar_export_revenue_today
+        unit_of_measurement: "THB"
+        icon: mdi:cash-plus
+        state_class: measurement
+        state: >
+          {% set exported = states('sensor.services_refoss_smart_energy_monitor_main_today_return_energy') | float(0) %}
+          {% set rate     = states('input_number.cost_export') | float(0) %}
+          {{ (exported * rate) | round(2) }}
+
+      - name: "Solar Export Revenue Month"
+        unique_id: solar_export_revenue_month
+        unit_of_measurement: "THB"
+        icon: mdi:cash-plus
+        state_class: measurement
+        state: >
+          {% set exported = states('sensor.grid_export_monthly') | float(0) %}
+          {% set rate     = states('input_number.cost_export') | float(0) %}
+          {{ (exported * rate) | round(2) }}
+
+      - name: "Grid Import Cost Today"
+        unique_id: grid_import_cost_today
+        unit_of_measurement: "THB"
+        icon: mdi:cash-minus
+        state_class: measurement
+        state: >
+          {% set peak_kwh  = states('sensor.grid_import_daily_peak') | float(0) %}
+          {% set off_kwh   = states('sensor.grid_import_daily_offpeak') | float(0) %}
+          {% set k = 1 + states('input_number.electricity_vat') | float(0) / 100 %}
+          {% set ft = states('input_number.electricity_ft') | float(0) %}
+          {% set peak_rate = (states('input_number.electricity_rate_peak') | float(0) + ft) * k %}
+          {% set off_rate  = (states('input_number.electricity_rate_offpeak') | float(0) + ft) * k %}
+          {{ ((peak_kwh * peak_rate) + (off_kwh * off_rate)) | round(2) }}
+
+      - name: "Net Energy Cost Today"
+        unique_id: net_energy_cost_today
+        unit_of_measurement: "THB"
+        icon: mdi:scale-balance
+        state_class: measurement
+        state: >
+          {% set import_cost = states('sensor.grid_import_cost_today') | float(0) %}
+          {% set export_rev  = states('sensor.solar_export_revenue_today') | float(0)
+          %}
+          {{ (import_cost - export_rev) | round(2) }}
+
+###############################################################################
+# UTILITY METERS (source: Refoss main clamp, the only real grid data)
+# The active tariff is pushed into select.grid_import_daily/monthly/yearly by the
+# 'Sync Utility Meter Tariff' automation in automations.yaml.
+###############################################################################
+
+utility_meter:
+  grid_import_daily:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+    cycle: daily
+    tariffs: [peak, offpeak]
+  grid_import_monthly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+    cycle: monthly
+    tariffs: [peak, offpeak]
+  grid_import_yearly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+    cycle: yearly
+    tariffs: [peak, offpeak]
+  grid_export_monthly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_return_energy
+    cycle: monthly
+  grid_export_yearly:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_return_energy
+    cycle: yearly

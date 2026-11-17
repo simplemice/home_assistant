@@ -198,7 +198,7 @@ script:
               "Event prominence detected. A key appointment awaits on today’s timeline.",
               "Strategic marker identified. Your calendar reflects a noteworthy engagement."
             ] | random }}
-          {% set cal = states.calendar.main_calendar %}
+          {% set cal = states.calendar.main %}
           {% if cal and cal.state == 'on' %}
             {{ cal.attributes.message }}
           {% else %}

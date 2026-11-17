@@ -110,7 +110,7 @@ This repository serves as the **central backup, testing, and release source** fo
 Each tagged release contains:
 
 - validated configuration state  
-- automation and script updates  
+- private automation and script updates not posted  
 - simulation package changes  
 - compatibility adjustments for new Home Assistant versions  
 
@@ -135,13 +135,13 @@ Compiled for your review:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2612 |
-| Number of sensors | 1458 |
-| Current Version | 2026.11.0 |
-| Total Automations | 133 |
+| Number of entities | 2594 |
+| Number of sensors | 1426 |
+| Current Version | 2026.11.2 |
+| Total Automations | 134 |
 | Total Scripts | 45 |
 | Total Lights | 36 |
-| Total Switches | 197 |
+| Total Switches | 198 |
 | Total Scenes | 6 |
 | Total Players | 26 |
 
@@ -180,32 +180,31 @@ Add-ons currently in service:
 Installed integrations, versions as reported:
 - [Adaptive Cover Pro](https://github.com/jrhubott/adaptive-cover-pro) (v2026.10.0)
 - [Adaptive Lighting](https://github.com/basnijholt/adaptive-lighting#readme) (v1.30.1)
-- [AI Memory](https://github.com/Riscue/ha-ai-memory) (v0.4.0)
+- [AI Memory](https://github.com/Riscue/ha-ai-memory) (v0.4.1)
 - [Alarmo](https://github.com/nielsfaber/alarmo) (v1.10.17)
 - [AstroWeather](https://github.com/mawinkler/astroweather) (v0.75.0)
 - [Bermuda BLE Trilateration](https://github.com/agittins/bermuda) (v0.8.5)
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.2.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.7.0)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.4.1)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.7.4)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.5.0)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
-- [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.6)
+- [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.7)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp) (v9.1.0)
+- [HA-MCP — Manage Home Assistant with AI](https://github.com/homeassistant-ai/ha-mcp) (v9.2.0)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
-- [LEX TH Parcel Tracking](https://lex.th/tracking) (v0.3.1)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
-- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.14.0)
+- [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended) (v0.14.1)
 - [Multiscrape](https://github.com/danieldotnl/ha-multiscrape) (v8.0.2)
 - [Music Assistant Jukebox](https://github.com/DJS91/HAMusicAssistantJukebox) (v0.1.0)
 - [NOAA Space Weather](https://github.com/tcarwash/home-assistant_noaa-space-weather) (v2.0.5)
 - [Passive BLE monitor](https://github.com/custom-components/ble_monitor) (v13.12.0)
 - [Pirate Weather](https://github.com/alexander0042/pirate-weather-ha) (v1.8.9)
-- [Powercalc](https://docs.powercalc.nl) (vv1.20.14)
+- [Powercalc](https://docs.powercalc.nl) (vv1.27.0)
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
+- [Refoss RPC (Official Maintenance)](https://github.com/Refoss/refoss_rpc/blob/main/README.md) (v1.1.3)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
-- [Simulated Inverter](https://github.com/simplemice/home_assistant) (v1.0.1)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
 - [Spook](https://spook.boo) (v5.11.1)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
@@ -224,11 +223,13 @@ Installed integrations, versions as reported:
 - [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability)
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 - [Frigate](https://github.com/blakeblackshear/frigate-hass-integration)
-- [HA-MCP Custom Component](https://github.com/homeassistant-ai/ha-mcp-integration)
+- [HA-MCP — Manage Home Assistant with AI](https://github.com/homeassistant-ai/ha-mcp-integration)
 - [LEX TH Parcel Tracking](https://github.com/simplemice/lex_th_parcel_tracking)
 - [LLM Vision](https://github.com/valentinfrlch/ha-llmvision)
 - [MikroTik Extended](https://github.com/Csontikka/ha-mikrotik-extended)
 - [Mikrotik Router](https://github.com/tomaae/homeassistant-mikrotik_router)
+- [Powercalc](https://github.com/bramstroker/homeassistant-powercalc)
+- [Refoss RPC](https://github.com/Refoss/refoss_rpc)
 - [Remote Home-Assistant](https://github.com/custom-components/remote_homeassistant)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs)
 - [Spook 👻 Your homie](https://github.com/frenck/spook)
@@ -252,10 +253,13 @@ Installed integrations, versions as reported:
 - [Digital Clock](https://github.com/wassy92x/lovelace-digital-clock)
 - [Flexible Horseshoe Card](https://github.com/AmoebeLabs/flex-horseshoe-card)
 - [Flightradar Flight Card](https://github.com/plckr/flightradar-flight-card)
+- [Frigate Events Card](https://github.com/saihgupr/frigate-events-card)
 - [Helios](https://github.com/ReikanYsora/Helios)
+- [layout-card](https://github.com/thomasloven/lovelace-layout-card)
 - [LLM Vision Card](https://github.com/valentinfrlch/llmvision-card)
 - [Mini Media Player](https://github.com/kalkih/mini-media-player)
 - [mini-graph-card](https://github.com/kalkih/mini-graph-card)
+- [Multiple Entity Row](https://github.com/benct/lovelace-multiple-entity-row)
 - [Mushroom](https://github.com/piitaya/lovelace-mushroom)
 - [Room Card](https://github.com/lop1505/RoomCard)
 - [Room Card Minimalist](https://github.com/unbekannt3/room-card-minimalist)

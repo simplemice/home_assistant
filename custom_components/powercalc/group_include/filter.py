@@ -1,21 +1,19 @@
-from __future__ import annotations
-
 from collections.abc import Callable, Iterable, Sequence
 from enum import StrEnum
 import re
 from typing import Protocol, cast
 
-from homeassistant.components.group import DOMAIN as GROUP_DOMAIN
-from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
+from homeassistant.components.group.const import DOMAIN as GROUP_DOMAIN
+from homeassistant.components.light.const import DOMAIN as LIGHT_DOMAIN
 from homeassistant.const import ATTR_ENTITY_ID, CONF_DOMAIN, EntityCategory
 from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.helpers import area_registry, device_registry, entity_registry, floor_registry, label_registry
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.entity_registry import RegistryEntry
 from homeassistant.helpers.template import Template
 from homeassistant.helpers.typing import ConfigType
-import voluptuous as vol
 
 from custom_components.powercalc.const import (
     CONF_ALL,
@@ -32,6 +30,7 @@ from custom_components.powercalc.const import (
     CONF_WILDCARD,
 )
 from custom_components.powercalc.errors import SensorConfigurationError
+from custom_components.powercalc.validation import vol
 
 
 class FilterOperator(StrEnum):
@@ -83,7 +82,7 @@ def create_composite_filter(
 
 def create_filter(
     filter_type: str,
-    filter_config: ConfigType | str | list | Template,
+    filter_config: ConfigType | str | list[str] | Template,
     hass: HomeAssistant,
 ) -> EntityFilter:
     filter_mapping: dict[str, Callable[[], EntityFilter]] = {
@@ -94,7 +93,7 @@ def create_filter(
         CONF_LABEL: lambda: LabelFilter(hass, filter_config),  # type: ignore
         CONF_WILDCARD: lambda: WildcardFilter(filter_config),  # type: ignore
         CONF_GROUP: lambda: GroupFilter(hass, filter_config),  # type: ignore
-        CONF_TEMPLATE: lambda: TemplateFilter(hass, filter_config),  # type: ignore
+        CONF_TEMPLATE: lambda: TemplateFilter(filter_config),  # type: ignore
         CONF_ALL: lambda: NullFilter(),
         CONF_OR: lambda: create_composite_filter(filter_config, hass, FilterOperator.OR),  # type: ignore
         CONF_AND: lambda: create_composite_filter(filter_config, hass, FilterOperator.AND),  # type: ignore
@@ -104,7 +103,7 @@ def create_filter(
     return filter_mapping.get(filter_type, lambda: NullFilter())()
 
 
-async def get_filtered_entity_list(
+def get_filtered_entity_list(
     hass: HomeAssistant,
     entity_filter: EntityFilter,
 ) -> list[entity_registry.RegistryEntry]:
@@ -133,7 +132,11 @@ class GroupFilter(EntityFilter):
         filters = []
         for single_group_id in group_ids:
             domain = split_entity_id(single_group_id)[0]
-            filter_instance = LightGroupFilter(hass, single_group_id) if domain == LIGHT_DOMAIN else StandardGroupFilter(hass, single_group_id)
+            filter_instance = (
+                LightGroupFilter(hass, single_group_id)
+                if domain == LIGHT_DOMAIN
+                else StandardGroupFilter(hass, single_group_id)
+            )
             filters.append(filter_instance)
 
         self.filter = CompositeFilter(filters, FilterOperator.OR) if len(filters) > 1 else filters[0]
@@ -144,8 +147,6 @@ class GroupFilter(EntityFilter):
 
 class StandardGroupFilter(EntityFilter):
     def __init__(self, hass: HomeAssistant, group_id: str) -> None:
-        entity_reg = entity_registry.async_get(hass)
-        entity_reg.async_get(group_id)
         group_state = hass.states.get(group_id)
         if group_state is None:
             raise SensorConfigurationError(f"Group state {group_id} not found")
@@ -157,14 +158,7 @@ class StandardGroupFilter(EntityFilter):
 
 class LightGroupFilter(EntityFilter):
     def __init__(self, hass: HomeAssistant, group_id: str) -> None:
-        light_component = cast(EntityComponent, hass.data.get(LIGHT_DOMAIN))
-        light_group = next(
-            filter(
-                lambda entity: entity.entity_id == group_id,
-                light_component.entities,
-            ),
-            None,
-        )
+        light_group = self._find_light_group(hass, group_id)
         if light_group is None or light_group.platform.platform_name != GROUP_DOMAIN:
             raise SensorConfigurationError(f"Light group {group_id} not found")
 
@@ -173,6 +167,11 @@ class LightGroupFilter(EntityFilter):
     def is_valid(self, entity: RegistryEntry) -> bool:
         return entity.entity_id in self.entity_ids
 
+    @staticmethod
+    def _find_light_group(hass: HomeAssistant, group_entity_id: str) -> Entity | None:
+        light_component = cast(EntityComponent, hass.data.get(LIGHT_DOMAIN))
+        return light_component.get_entity(group_entity_id)
+
     def find_all_entity_ids_recursively(
         self,
         hass: HomeAssistant,
@@ -180,14 +179,7 @@ class LightGroupFilter(EntityFilter):
         all_entity_ids: list[str],
     ) -> list[str]:
         entity_reg = entity_registry.async_get(hass)
-        light_component = cast(EntityComponent, hass.data.get(LIGHT_DOMAIN))
-        light_group = next(
-            filter(
-                lambda entity: entity.entity_id == group_entity_id,
-                light_component.entities,
-            ),
-            None,
-        )
+        light_group = self._find_light_group(hass, group_entity_id)
 
         entity_ids: list[str] = light_group.extra_state_attributes.get(ATTR_ENTITY_ID)  # type: ignore
         for entity_id in entity_ids:
@@ -227,8 +219,7 @@ class WildcardFilter(EntityFilter):
 
 
 class TemplateFilter(EntityFilter):
-    def __init__(self, hass: HomeAssistant, template: Template) -> None:
-        template.hass = hass
+    def __init__(self, template: Template) -> None:
         self.entity_ids = template.async_render()
 
     def is_valid(self, entity: RegistryEntry) -> bool:
@@ -311,7 +302,9 @@ class AreaFilter(EntityFilter):
                 )
 
             self.area_ids.append(area.id)
-            self.area_devices.update([device.id for device in device_registry.async_entries_for_area(device_reg, area.id)])
+            self.area_devices.update(
+                [device.id for device in device_registry.async_entries_for_area(device_reg, area.id)],
+            )
 
     def is_valid(self, entity: RegistryEntry) -> bool:
         return entity.area_id in self.area_ids or entity.device_id in self.area_devices
@@ -350,7 +343,9 @@ class FloorFilter(EntityFilter):
             self.area_ids.extend([area.id for area in areas if area.id is not None])
 
             for area in areas:
-                self.devices.extend([device.id for device in device_registry.async_entries_for_area(device_reg, area.id)])
+                self.devices.extend(
+                    [device.id for device in device_registry.async_entries_for_area(device_reg, area.id)],
+                )
 
     def is_valid(self, entity: RegistryEntry) -> bool:
         return entity.area_id in self.area_ids or entity.device_id in self.devices
@@ -366,7 +361,7 @@ class CompositeFilter(EntityFilter):
         self.operator = operator
 
     def is_valid(self, entity: RegistryEntry) -> bool:
-        evaluations = [entity_filter.is_valid(entity) for entity_filter in self.filters]
+        evaluations = (entity_filter.is_valid(entity) for entity_filter in self.filters)
         if self.operator == FilterOperator.OR:
             return any(evaluations)
 

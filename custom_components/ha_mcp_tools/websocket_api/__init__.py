@@ -108,18 +108,32 @@ the info handshake carries no capability entry:
   the server's concatenation-based filter cannot be built cheaply, and no consumer
   forwards ``query``).
 * ``ha_mcp_tools/reference_data`` — the service index + entity-id universe the
-  config-reference validator consumes: ``{services: [{domain, services:{name:{}}}],
+  config-reference validator of servers released before ``config_references``
+  consumes (kept for them): ``{services: [{domain, services:{name:{}}}],
   entity_ids: [...]}``. The ``services`` shape is the REST ``/api/services`` list
-  ``build_service_index`` reads (bodies are empty dicts — the index only reads
-  keys); ``entity_ids`` is every ``hass.states.async_all()`` id. With
+  (bodies are empty dicts — those validators index only the names);
+  ``entity_ids`` is every ``hass.states.async_all()`` id. With
   ``include_targets`` (flag ``reference_data_targets``) it adds the device,
-  area, floor and label registry ids, for the validator's target checks. Pure,
-  no prep.
+  area, floor and label registry ids, for their target checks. Pure, no prep.
 * ``ha_mcp_tools/automation_config`` — Core's automation validator run on a
   proposed config (``validate``: Core's ``validation_status`` and humanized
   error), Core's trigger/condition descriptions (``describe``), and an
   automation's registry row, validation repair issue and references
   (``lookup``). See ``automation_config.py``.
+* ``ha_mcp_tools/config_references`` — a proposed automation, script or scene
+  validated by Core, its references collected by Core's own helpers and
+  checked against Core's registries, and each entity target put to Core's
+  target lookups (the editor's target pickers). See ``config_references.py``.
+* ``ha_mcp_tools/flow_outline`` — the steps Core declares for a schema-based
+  config or options flow (most helper flows): each form's fields as Core
+  serializes a form it shows, and the step that follows it, read from the
+  loaded flow handler on every call. A form or next step Core computes from
+  earlier answers is marked, not evaluated. See ``flow_outline.py``.
+* ``ha_mcp_tools/flow_record`` — what a config, options or subentry flow in
+  progress was started for (its handler, source and entry anchors), read from
+  the flow manager that holds it. Core's flow endpoints do not report it, and
+  the server binds a ``flow_id`` it did not open itself (it restarted) to a
+  call's target with it. See ``flow_record.py``.
 * ``ha_mcp_tools/logbook_events`` — Core's own logbook query run in-process:
   ``EventProcessor`` with the REST flags (``timestamp=False`` ISO ``when``,
   ``include_entity_name=True``) and the ``logbook/get_events`` filter set
@@ -217,14 +231,10 @@ the info handshake carries no capability entry:
   the loop; see
   :mod:`.template_diagnose`.
 
-* ``ha_mcp_tools/config_entries`` — config entries as the ``config_entries/get``
-  WS shape (``created_at`` / ``modified_at`` / ``entry_id`` / ``domain`` /
-  ``title`` / ``state`` / ``source`` / ``supports_*`` / ``supported_subentry_types``
-  / ``pref_disable_*`` / ``disabled_by`` / ``reason`` / ``options`` /
-  ``subentries`` — the full ``as_json_fragment`` field set), filtered by ``domain``
-  or fetched by
-  ``entry_id``. ``state`` is serialized as ``ConfigEntryState.value`` (mirroring
-  core's ``as_json_fragment``). ``entry.data`` (integration credentials) is
+* ``ha_mcp_tools/config_entries`` — config entries as Core's
+  ``config_entries/get`` rows (``ConfigEntry.as_json_fragment``) plus
+  ``unique_id``, ``options`` and ``subentries``, filtered by ``domain`` and
+  ``type_filter`` (Core's own integration-type match) or fetched by ``entry_id``. ``entry.data`` (integration credentials) is
   NEVER read; ``options`` is passed through a resolved-``!secret`` scrub (an
   options leaf equal to a ``secrets.yaml`` value becomes ``"**redacted**"``,
   loaded off the loop by :func:`_config_entries_prep`) — data minimization
@@ -329,9 +339,12 @@ from homeassistant.helpers import entity_registry as er
 
 from .. import (
     automation_config,
+    config_references,
     core_contract,
     dashboard_cards_ws,
     entity_restore,
+    flow_outline,
+    flow_record,
     helper_collections,
     todo_items,
 )
@@ -511,7 +524,10 @@ def _command_specs() -> list[tuple[dict[Any, Any], Any, Any]]:
         *entity_restore.command_specs(vol, er),
         *core_contract.command_specs(vol),
         *todo_items.command_specs(vol),
+        *flow_record.command_specs(vol),
+        *flow_outline.command_specs(vol),
         *automation_config.command_specs(vol),
+        *config_references.command_specs(vol),
         *dashboard_cards_ws.command_specs(vol),
         *_oauth_callback_specs(),
     ]

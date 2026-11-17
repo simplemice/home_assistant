@@ -1,0 +1,162 @@
+###############################################################################
+#   @package        :   Thunder probability sensors
+#   @description    :   Restored 2026-11-17 from solar_simulation.yaml.DISABLED (definitions
+#                       and unique_ids unchanged). Used by weather alerts / announcements.
+###############################################################################
+
+template:
+  - sensor:
+      # Moved from wind_turbine_simulation.yaml (2026-11-17); unique_ids unchanged.
+      - name: "Phuket Day Thunder Probability"
+        unique_id: phuket_day_probability_thunder
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:weather-lightning
+        state: >
+          {% set cond         = states('weather.pirateweather') | lower %}
+          {% set astro_desc   = states('sensor.astroweather_astroweather_deepsky_forecast_today_description')
+          | lower %}
+          {% set gust         = states('sensor.pirateweather_wind_gust')               |
+          float(0) %}
+          {% set storm_km_raw = states('sensor.pirateweather_nearest_storm_distance')  |
+          float(0) %}
+          {% set storm_km     = 999 if storm_km_raw == 0 else storm_km_raw %}
+          {% set precip_pw    = states('sensor.pirateweather_precip_probability')      |
+          float(0) %}
+          {% set precip_mm    = states('sensor.astroweather_home_precipitation_amount')|
+          float(0) %}
+          {% set li           = states('sensor.astroweather_astroweather_lifted_index')|
+          float(99) %}
+          {% set temp         = states('sensor.astroweather_astroweather_2m_temperature')      |
+          float(30) %}
+          {% set dewpoint     = states('sensor.astroweather_astroweather_2m_dewpoint')
+          | float(20) %}
+          {% set cloud_low    = states('sensor.astroweather_astroweather_clouds_area_low')     |
+          float(0) %}
+          {% set cloud_med    = states('sensor.astroweather_astroweather_clouds_area_medium')  |
+          float(0) %}
+          {% set tendency     = states('sensor.pressure_tendency') %}
+          {% set hour         = now().hour %}
+          {% set dp_dep       = temp - dewpoint %}
+          {% set conv_clouds  = cloud_low + cloud_med %}
+          {% if 'thunder' in cond or 'lightning' in cond or 'storm' in astro_desc %}
+            90
+          {% elif li > 6 %}
+            {% set s = namespace(score=0) %}
+            {% if   storm_km < 10  %}{% set s.score = s.score + 15 %}
+            {% elif storm_km < 25  %}{% set s.score = s.score + 8  %}{% endif %}
+            {% if precip_pw > 0.80 or precip_mm > 5 %}{% set s.score = s.score + 5 %}{%
+          endif %}
+            {{ [s.score, 15] | min }}
+          {% else %}
+            {% set s = namespace(score=0) %}
+            {% if   storm_km < 10  %}{% set s.score = s.score + 45 %}
+            {% elif storm_km < 25  %}{% set s.score = s.score + 30 %}
+            {% elif storm_km < 50  %}{% set s.score = s.score + 18 %}
+            {% elif storm_km < 100 %}{% set s.score = s.score + 8  %}{% endif %}
+            {% if   li < -4 %}{% set s.score = s.score + 30 %}
+            {% elif li < -2 %}{% set s.score = s.score + 22 %}
+            {% elif li <  0 %}{% set s.score = s.score + 15 %}
+            {% elif li <  2 %}{% set s.score = s.score + 8  %}
+            {% elif li <  6 %}{% set s.score = s.score + 2  %}{% endif %}
+            {% if   precip_pw > 0.80 and precip_mm > 5   %}{% set s.score = s.score +
+          20 %}
+            {% elif precip_pw > 0.80 or  precip_mm > 5   %}{% set s.score = s.score +
+          14 %}
+            {% elif precip_pw > 0.50 or  precip_mm > 2   %}{% set s.score = s.score +
+          8  %}
+            {% elif precip_pw > 0.25 or  precip_mm > 0.5 %}{% set s.score = s.score +
+          4  %}{% endif %}
+            {% if   conv_clouds > 70 %}{% set s.score = s.score + 12 %}
+            {% elif conv_clouds > 50 %}{% set s.score = s.score + 8  %}
+            {% elif conv_clouds > 30 %}{% set s.score = s.score + 4  %}{% endif %}
+            {% if   dp_dep < 2 %}{% set s.score = s.score + 10 %}
+            {% elif dp_dep < 4 %}{% set s.score = s.score + 6  %}
+            {% elif dp_dep < 6 %}{% set s.score = s.score + 3  %}{% endif %}
+            {% if   gust > 20 %}{% set s.score = s.score + 8 %}
+            {% elif gust > 12 %}{% set s.score = s.score + 5 %}
+            {% elif gust > 7  %}{% set s.score = s.score + 2 %}{% endif %}
+            {% if tendency == 'falling' %}{% set s.score = s.score + 8 %}{% endif %}
+            {% if   hour >= 12 and hour < 18 %}{% set s.score = s.score + 8  %}
+            {% elif hour >= 6  and hour < 12 %}{% set s.score = s.score + 3  %}
+            {% elif hour >= 22 or  hour < 6  %}{% set s.score = [s.score - 10, 0] | max
+          %}{% endif %}
+            {{ [s.score, 90] | min }}
+          {% endif %}
+
+      - name: "Phuket Night Thunder"
+        unique_id: phuket_night_thunder
+        unit_of_measurement: "%"
+        state_class: measurement
+        icon: mdi:weather-night
+        state: >
+          {% set cond         = states('weather.pirateweather') | lower %}
+          {% set astro_desc   = states('sensor.astroweather_astroweather_deepsky_forecast_today_description')
+          | lower %}
+          {% set gust         = states('sensor.pirateweather_wind_gust')               |
+          float(0) %}
+          {% set storm_km_raw = states('sensor.pirateweather_nearest_storm_distance')  |
+          float(0) %}
+          {% set storm_km     = 999 if storm_km_raw == 0 else storm_km_raw %}
+          {% set precip_pw    = states('sensor.pirateweather_precip_probability')      |
+          float(0) %}
+          {% set precip_mm    = states('sensor.astroweather_home_precipitation_amount')|
+          float(0) %}
+          {% set li           = states('sensor.astroweather_astroweather_lifted_index')|
+          float(99) %}
+          {% set temp         = states('sensor.astroweather_astroweather_2m_temperature')      |
+          float(30) %}
+          {% set dewpoint     = states('sensor.astroweather_astroweather_2m_dewpoint')
+          | float(20) %}
+          {% set cloud_low    = states('sensor.astroweather_astroweather_clouds_area_low')     |
+          float(0) %}
+          {% set cloud_med    = states('sensor.astroweather_astroweather_clouds_area_medium')  |
+          float(0) %}
+          {% set tendency     = states('sensor.pressure_tendency') %}
+          {% set hour         = now().hour %}
+          {% set dp_dep       = temp - dewpoint %}
+          {% set conv_clouds  = cloud_low + cloud_med %}
+          {% if 'thunder' in cond or 'lightning' in cond or 'storm' in astro_desc %}
+            90
+          {% elif li > 6 %}
+            {% set s = namespace(score=0) %}
+            {% if   storm_km < 10  %}{% set s.score = s.score + 15 %}
+            {% elif storm_km < 25  %}{% set s.score = s.score + 8  %}{% endif %}
+            {% if precip_pw > 0.80 or precip_mm > 5 %}{% set s.score = s.score + 5 %}{%
+          endif %}
+            {{ [s.score, 15] | min }}
+          {% else %}
+            {% set s = namespace(score=0) %}
+            {% if   storm_km < 10  %}{% set s.score = s.score + 45 %}
+            {% elif storm_km < 25  %}{% set s.score = s.score + 30 %}
+            {% elif storm_km < 50  %}{% set s.score = s.score + 18 %}
+            {% elif storm_km < 100 %}{% set s.score = s.score + 8  %}{% endif %}
+            {% if   li < -4 %}{% set s.score = s.score + 30 %}
+            {% elif li < -2 %}{% set s.score = s.score + 22 %}
+            {% elif li <  0 %}{% set s.score = s.score + 15 %}
+            {% elif li <  2 %}{% set s.score = s.score + 8  %}
+            {% elif li <  6 %}{% set s.score = s.score + 2  %}{% endif %}
+            {% if   precip_pw > 0.80 and precip_mm > 5   %}{% set s.score = s.score +
+          20 %}
+            {% elif precip_pw > 0.80 or  precip_mm > 5   %}{% set s.score = s.score +
+          14 %}
+            {% elif precip_pw > 0.50 or  precip_mm > 2   %}{% set s.score = s.score +
+          8  %}
+            {% elif precip_pw > 0.25 or  precip_mm > 0.5 %}{% set s.score = s.score +
+          4  %}{% endif %}
+            {% if   conv_clouds > 70 %}{% set s.score = s.score + 12 %}
+            {% elif conv_clouds > 50 %}{% set s.score = s.score + 8  %}
+            {% elif conv_clouds > 30 %}{% set s.score = s.score + 4  %}{% endif %}
+            {% if   dp_dep < 2 %}{% set s.score = s.score + 10 %}
+            {% elif dp_dep < 4 %}{% set s.score = s.score + 6  %}
+            {% elif dp_dep < 6 %}{% set s.score = s.score + 3  %}{% endif %}
+            {% if   gust > 20 %}{% set s.score = s.score + 8 %}
+            {% elif gust > 12 %}{% set s.score = s.score + 5 %}
+            {% elif gust > 7  %}{% set s.score = s.score + 2 %}{% endif %}
+            {% if tendency == 'falling' %}{% set s.score = s.score + 8 %}{% endif %}
+            {% if   hour >= 18 and hour < 22 %}{% set s.score = s.score + 5  %}
+            {% elif hour >= 22 or  hour < 4  %}{% set s.score = s.score + 2  %}
+            {% elif hour >= 6  and hour < 18 %}{% set s.score = [s.score - 8, 0] | max
+          %}{% endif %}
+            {{ [s.score, 90] | min }}
+          {% endif %}

@@ -1,14 +1,21 @@
-from __future__ import annotations
-
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import CONF_ATTRIBUTE, CONF_ENTITIES, CONF_ENTITY_ID, CONF_ID, CONF_NAME, CONF_PATH, Platform
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.const import (
+    CONF_ATTRIBUTE,
+    CONF_ENTITIES,
+    CONF_ENTITY_ID,
+    CONF_ID,
+    CONF_NAME,
+    CONF_PATH,
+    Platform,
+    UnitOfElectricCurrent,
+)
 from homeassistant.helpers import selector
 from homeassistant.helpers.schema_config_entry_flow import SchemaFlowError
-import voluptuous as vol
 
 from custom_components.powercalc.common import create_source_entity
 from custom_components.powercalc.const import (
@@ -16,7 +23,11 @@ from custom_components.powercalc.const import (
     CONF_CALCULATION_ENABLED_CONDITION,
     CONF_CALIBRATE,
     CONF_CREATE_ENERGY_SENSOR,
+    CONF_CREATE_STANDBY_ENERGY_SENSOR,
     CONF_CREATE_UTILITY_METERS,
+    CONF_CURRENT_ENTITY,
+    CONF_FIXED,
+    CONF_FIXED_VALUE,
     CONF_GAMMA_CURVE,
     CONF_IGNORE_UNAVAILABLE_STATE,
     CONF_MAX_POWER,
@@ -24,6 +35,7 @@ from custom_components.powercalc.const import (
     CONF_MODE,
     CONF_MULTIPLY_FACTOR,
     CONF_MULTIPLY_FACTOR_STANDBY,
+    CONF_PLAYBOOK_ID,
     CONF_PLAYBOOKS,
     CONF_POWER,
     CONF_POWER_OFF,
@@ -34,20 +46,39 @@ from custom_components.powercalc.const import (
     CONF_STATE_TRIGGER,
     CONF_STATES_POWER,
     CONF_UNAVAILABLE_POWER,
+    CONF_VALUE,
     DUMMY_ENTITY_ID,
     CalculationStrategy,
     SensorType,
 )
-from custom_components.powercalc.flow_helper.common import FlowType, PowercalcFormStep, Step, fill_schema_defaults
+from custom_components.powercalc.flow_helper.common import (
+    FlowType,
+    PowercalcFormStep,
+    Step,
+    fill_schema_defaults,
+)
 from custom_components.powercalc.flow_helper.flows.global_configuration import get_global_powercalc_config
-from custom_components.powercalc.flow_helper.flows.library import SCHEMA_POWER_OPTIONS_LIBRARY, SCHEMA_POWER_SMART_SWITCH
+from custom_components.powercalc.flow_helper.flows.library import (
+    SCHEMA_POWER_OPTIONS_LIBRARY,
+    SCHEMA_POWER_SMART_SWITCH,
+)
+from custom_components.powercalc.flow_helper.profile_preview import PREVIEW_NAME
 from custom_components.powercalc.flow_helper.schema import (
     SCHEMA_ENERGY_SENSOR_TOGGLE,
     SCHEMA_SENSOR_ENERGY_OPTIONS,
+    SCHEMA_STANDBY_ENERGY_SENSOR_TOGGLE,
     SCHEMA_UTILITY_METER_TOGGLE,
 )
+from custom_components.powercalc.flow_helper.strategy_form import (
+    FIXED_CHOICES,
+    find_present_choice,
+    order_choices_for_default,
+    unwrap_strategy_user_input,
+    wrap_strategy_form_data,
+)
 from custom_components.powercalc.power_profile.power_profile import DeviceType
-from custom_components.powercalc.strategy.wled import CONFIG_SCHEMA as SCHEMA_POWER_WLED
+from custom_components.powercalc.strategy.wled import CONFIG_SCHEMA as CONFIG_SCHEMA_WLED
+from custom_components.powercalc.validation import vol
 
 if TYPE_CHECKING:
     from custom_components.powercalc.config_flow import PowercalcCommonFlow, PowercalcConfigFlow, PowercalcOptionsFlow
@@ -72,24 +103,78 @@ SCHEMA_POWER_OPTIONS = vol.Schema(
     {
         vol.Optional(CONF_STANDBY_POWER): vol.Coerce(float),
         **SCHEMA_ENERGY_SENSOR_TOGGLE.schema,
+        **SCHEMA_STANDBY_ENERGY_SENSOR_TOGGLE.schema,
         **SCHEMA_UTILITY_METER_TOGGLE.schema,
     },
 )
 
+STATES_POWER_SELECTOR = selector.ObjectSelector(
+    selector.ObjectSelectorConfig(
+        fields={
+            CONF_STATE: {"required": True, "selector": {"text": None}},
+            CONF_POWER: {"required": True, "selector": {"number": {"mode": "box", "step": "any"}}},
+        },
+        multiple=True,
+        label_field=CONF_STATE,
+        description_field=CONF_POWER,
+    ),
+)
+
+FIXED_CHOICE_SELECTORS: dict[str, selector.ChooseSelectorChoiceConfig] = {
+    CONF_POWER: {"selector": {"number": {"mode": "box", "step": "any"}}},
+    CONF_POWER_TEMPLATE: {"selector": {"template": {}}},
+    CONF_STATES_POWER: {"selector": STATES_POWER_SELECTOR.serialize()["selector"]},
+}
+
+
 SCHEMA_POWER_FIXED = vol.Schema(
     {
-        vol.Optional(CONF_POWER): vol.Coerce(float),
-        vol.Optional(CONF_POWER_TEMPLATE): selector.TemplateSelector(),
-        vol.Optional(CONF_STATES_POWER): selector.ObjectSelector(),
+        vol.Required(CONF_FIXED_VALUE): selector.ChooseSelector(
+            selector.ChooseSelectorConfig(
+                choices=FIXED_CHOICE_SELECTORS,
+                translation_key=CONF_FIXED_VALUE,
+            ),
+        ),
     },
 )
 
 SCHEMA_POWER_LINEAR = vol.Schema(
     {
-        vol.Optional(CONF_MIN_POWER): vol.Coerce(float),
-        vol.Optional(CONF_MAX_POWER): vol.Coerce(float),
-        vol.Optional(CONF_GAMMA_CURVE): vol.Coerce(float),
-        vol.Optional(CONF_CALIBRATE): selector.ObjectSelector(),
+        vol.Optional(CONF_MIN_POWER): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step="any"),
+        ),
+        vol.Optional(CONF_MAX_POWER): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step="any"),
+        ),
+        vol.Optional(CONF_GAMMA_CURVE): selector.NumberSelector(
+            selector.NumberSelectorConfig(mode=selector.NumberSelectorMode.BOX, step="any"),
+        ),
+        vol.Optional(CONF_CALIBRATE): selector.ObjectSelector(
+            selector.ObjectSelectorConfig(
+                fields={
+                    CONF_VALUE: {"required": True, "selector": {"number": {"mode": "box", "step": 1}}},
+                    CONF_POWER: {"required": True, "selector": {"number": {"mode": "box", "step": "any"}}},
+                },
+                multiple=True,
+                label_field=CONF_VALUE,
+                description_field=CONF_POWER,
+            ),
+        ),
+    },
+)
+
+# The WLED strategy config schema, with the current entity rendered as an entity picker in the GUI.
+SCHEMA_POWER_WLED = CONFIG_SCHEMA_WLED.extend(
+    {
+        vol.Optional(CONF_CURRENT_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                filter={
+                    "domain": "sensor",
+                    "device_class": SensorDeviceClass.CURRENT,
+                    "unit_of_measurement": UnitOfElectricCurrent.MILLIAMPERE,
+                },
+            ),
+        ),
     },
 )
 
@@ -127,6 +212,8 @@ STRATEGY_STEP_MAPPING: dict[CalculationStrategy, Step] = {
     CalculationStrategy.WLED: Step.WLED,
 }
 
+STRATEGIES_WITHOUT_PREVIEW = {CalculationStrategy.PLAYBOOK, CalculationStrategy.MULTI_SWITCH}
+
 
 class VirtualPowerFlow:
     def __init__(self, flow: PowercalcCommonFlow) -> None:
@@ -139,18 +226,33 @@ class VirtualPowerFlow:
 
         create_schema_func = f"create_schema_{self.flow.strategy.lower()}"
         if hasattr(self, create_schema_func):
-            return await getattr(self, create_schema_func)()  # type: ignore
+            return await getattr(self, create_schema_func)()  # type: ignore[no-any-return]
 
         return STRATEGY_SCHEMAS[self.flow.strategy]
 
     async def create_schema_linear(self) -> vol.Schema:
         """Create the config schema for linear strategy."""
-        return SCHEMA_POWER_LINEAR.extend(  # type: ignore
+        return SCHEMA_POWER_LINEAR.extend(
             {
                 vol.Optional(CONF_ATTRIBUTE): selector.AttributeSelector(
                     selector.AttributeSelectorConfig(
                         entity_id=self.flow.source_entity_id,  # type: ignore
                         hide_attributes=[],
+                    ),
+                ),
+            },
+        )
+
+    async def create_schema_fixed(self) -> vol.Schema:
+        """Create the config schema for fixed strategy."""
+        fixed_config = self.flow.sensor_config.get(CONF_FIXED, {})
+        default_choice = find_present_choice(fixed_config, FIXED_CHOICES) if isinstance(fixed_config, dict) else None
+        return vol.Schema(
+            {
+                vol.Required(CONF_FIXED_VALUE): selector.ChooseSelector(
+                    selector.ChooseSelectorConfig(
+                        choices=order_choices_for_default(FIXED_CHOICE_SELECTORS, default_choice),
+                        translation_key=CONF_FIXED_VALUE,
                     ),
                 ),
             },
@@ -180,31 +282,57 @@ class VirtualPowerFlow:
 
     async def create_schema_playbook(self) -> vol.Schema:
         """Create the config schema for playbook strategy."""
-        base_path = Path(self.flow.hass.config.path("powercalc/playbooks"))
-        playbook_files = [str(p.relative_to(base_path)) for p in base_path.rglob("*") if p.is_file()]
+
+        def _find_playbook_files() -> list[str]:
+            base_path = Path(self.flow.hass.config.path("powercalc/playbooks"))
+            return [str(p.relative_to(base_path)) for p in base_path.rglob("*") if p.is_file()]
+
+        playbook_files = await self.flow.hass.async_add_executor_job(_find_playbook_files)
+
+        state_trigger_state_selector: dict[str, Any] = {"text": None}
+        if self.flow.source_entity_id and self.flow.source_entity_id != DUMMY_ENTITY_ID:
+            state_trigger_state_selector = {"state": {"entity_id": self.flow.source_entity_id}}
 
         return vol.Schema(
             {
                 vol.Optional(CONF_PLAYBOOKS): selector.ObjectSelector(
-                    {
-                        "multiple": True,
-                        "description_field": CONF_PATH,
-                        "label_field": CONF_ID,
-                        "fields": {
+                    selector.ObjectSelectorConfig(
+                        fields={
                             CONF_ID: {
                                 "required": True,
                                 "selector": {"text": None},
                             },
                             CONF_PATH: {
                                 "required": True,
-                                "selector": {"select": {"options": playbook_files, "mode": "dropdown", "custom_value": True}},
+                                "selector": {
+                                    "select": {"options": playbook_files, "mode": "dropdown", "custom_value": True},
+                                },
                             },
                         },
-                    },
+                        multiple=True,
+                        description_field=CONF_PATH,
+                        label_field=CONF_ID,
+                    ),
                 ),
                 vol.Optional(CONF_REPEAT): selector.BooleanSelector(),
                 vol.Optional(CONF_AUTOSTART): selector.TextSelector(),
-                vol.Optional(CONF_STATE_TRIGGER): selector.ObjectSelector(),
+                vol.Optional(CONF_STATE_TRIGGER): selector.ObjectSelector(
+                    selector.ObjectSelectorConfig(
+                        fields={
+                            CONF_STATE: {
+                                "required": True,
+                                "selector": state_trigger_state_selector,
+                            },
+                            CONF_PLAYBOOK_ID: {
+                                "required": True,
+                                "selector": {"text": None},
+                            },
+                        },
+                        multiple=True,
+                        description_field=CONF_PLAYBOOK_ID,
+                        label_field=CONF_STATE,
+                    ),
+                ),
             },
         )
 
@@ -213,25 +341,25 @@ class VirtualPowerFlow:
         strategy: CalculationStrategy,
         user_input: dict[str, Any] | None = None,
         validate: Callable[[dict[str, Any]], None] | None = None,
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         self.flow.strategy = strategy
 
         async def _validate(user_input: dict[str, Any]) -> dict[str, Any]:
+            user_input = unwrap_strategy_user_input(strategy, user_input)
             if validate:
                 validate(user_input)
-            # Convert states_power from dict to list to preserve order
-            if CONF_STATES_POWER in user_input and isinstance(user_input[CONF_STATES_POWER], dict):
-                user_input[CONF_STATES_POWER] = [{CONF_STATE: state, CONF_POWER: power} for state, power in user_input[CONF_STATES_POWER].items()]
             await self.flow.validate_strategy_config({strategy: user_input})
             return {strategy: user_input}
 
         schema = await self.create_strategy_schema()
 
-        description_placeholders = {}
-        if strategy == CalculationStrategy.WLED:
-            description_placeholders = {
-                "docs_uri": "https://docs.powercalc.nl/strategies/wled/",
-            }
+        description_placeholders = {
+            "docs_uri": f"https://docs.powercalc.nl/strategies/{strategy.value.replace('_', '-')}/",
+        }
+
+        form_kwarg: dict[str, Any] = {"description_placeholders": description_placeholders}
+        if strategy not in STRATEGIES_WITHOUT_PREVIEW:
+            form_kwarg["preview"] = PREVIEW_NAME
 
         return await self.flow.handle_form_step(
             PowercalcFormStep(
@@ -239,12 +367,12 @@ class VirtualPowerFlow:
                 schema=schema,
                 next_step=Step.ASSIGN_GROUPS,
                 validate_user_input=_validate,
-                form_kwarg={"description_placeholders": description_placeholders},
+                form_kwarg=form_kwarg,
             ),
             user_input,
         )
 
-    async def async_step_power_advanced(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_power_advanced(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for advanced options."""
 
         if self.flow.is_options_flow:
@@ -257,7 +385,9 @@ class VirtualPowerFlow:
             return self.flow.persist_config_entry()
 
         schema = SCHEMA_POWER_ADVANCED
-        if self.flow.sensor_config.get(CONF_CREATE_ENERGY_SENSOR):
+        if self.flow.sensor_config.get(CONF_CREATE_ENERGY_SENSOR) or self.flow.sensor_config.get(
+            CONF_CREATE_STANDBY_ENERGY_SENSOR,
+        ):
             schema = schema.extend(SCHEMA_SENSOR_ENERGY_OPTIONS.schema)
 
         return await self.flow.handle_form_step(
@@ -302,9 +432,9 @@ class VirtualPowerConfigFlow(VirtualPowerFlow):
             options_schema,
             get_global_powercalc_config(self.flow),
         )
-        return schema.extend(power_options.schema)  # type: ignore
+        return schema.extend(power_options.schema)
 
-    async def async_step_virtual_power(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_virtual_power(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for virtual power sensor."""
         errors: dict[str, str] = {}
 
@@ -313,12 +443,16 @@ class VirtualPowerConfigFlow(VirtualPowerFlow):
                 user_input.get(CONF_MODE) or CalculationStrategy.LUT,
             )
             entity_id = user_input.get(CONF_ENTITY_ID)
-            if selected_strategy is not CalculationStrategy.PLAYBOOK and user_input.get(CONF_NAME) is None and entity_id is None:
+            if (
+                selected_strategy is not CalculationStrategy.PLAYBOOK
+                and user_input.get(CONF_NAME) is None
+                and entity_id is None
+            ):
                 errors[CONF_ENTITY_ID] = "entity_mandatory"
 
             if not errors:
                 self.flow.source_entity_id = str(entity_id or DUMMY_ENTITY_ID)
-                self.flow.source_entity = await create_source_entity(
+                self.flow.source_entity = create_source_entity(
                     self.flow.source_entity_id,
                     self.flow.hass,
                 )
@@ -329,33 +463,30 @@ class VirtualPowerConfigFlow(VirtualPowerFlow):
 
                 return await self.forward_to_strategy_step(selected_strategy)
 
-        return self.flow.async_show_form(  # type: ignore
+        return self.flow.async_show_form(
             step_id=Step.VIRTUAL_POWER,
             data_schema=self.create_schema_virtual_power(),
-            description_placeholders={
-                "doc_uri_states_power": "https://docs.powercalc.nl/strategies/fixed/#power-per-state",
-            },
             errors=errors,
             last_step=False,
         )
 
-    async def async_step_fixed(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_fixed(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for fixed sensor."""
         return await self.handle_strategy_step(CalculationStrategy.FIXED, user_input)
 
-    async def async_step_linear(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_linear(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for fixed sensor."""
         return await self.handle_strategy_step(CalculationStrategy.LINEAR, user_input)
 
-    async def async_step_multi_switch(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_multi_switch(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for multi switch strategy."""
         return await self.handle_strategy_step(CalculationStrategy.MULTI_SWITCH, user_input)
 
-    async def async_step_wled(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_wled(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for WLED sensor."""
         return await self.handle_strategy_step(CalculationStrategy.WLED, user_input)
 
-    async def async_step_playbook(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_playbook(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the flow for playbook sensor."""
 
         def _validate(user_input: dict[str, Any]) -> None:
@@ -364,13 +495,13 @@ class VirtualPowerConfigFlow(VirtualPowerFlow):
 
         return await self.handle_strategy_step(CalculationStrategy.PLAYBOOK, user_input, _validate)
 
-    async def forward_to_strategy_step(self, strategy: CalculationStrategy) -> FlowResult:
+    async def forward_to_strategy_step(self, strategy: CalculationStrategy) -> ConfigFlowResult:
         """Forward to the next step based on the selected strategy."""
         step = STRATEGY_STEP_MAPPING.get(strategy)
         if step is None:
-            return await self.flow.flow_handlers[FlowType.LIBRARY].async_step_library()  # type:ignore
+            return await self.flow.flow_handlers[FlowType.LIBRARY].async_step_library()  # type: ignore[no-any-return]
         method = getattr(self.flow, f"async_step_{step}")
-        return await method()  # type: ignore
+        return await method()  # type: ignore[no-any-return]
 
 
 class VirtualPowerOptionsFlow(VirtualPowerFlow):
@@ -383,45 +514,61 @@ class VirtualPowerOptionsFlow(VirtualPowerFlow):
         user_input: dict[str, Any],
     ) -> dict[str, Any]:
         """Build the config dict needed for the configured strategy."""
+        if self.flow.strategy:
+            user_input = unwrap_strategy_user_input(self.flow.strategy, dict(user_input))
         strategy_schema = await self.create_strategy_schema()
         strategy_options: dict[str, Any] = {}
+        flat_keys: set[str] = set()
         for key in strategy_schema.schema:
+            base_key = key.schema if isinstance(key, vol.Marker) else key
+            flat_keys.add(str(base_key))
+        # The wrapper-key flat values land in user_input after unwrap; collect anything
+        # that matches a known strategy config key.
+        candidate_keys = flat_keys | {
+            CONF_POWER,
+            CONF_POWER_TEMPLATE,
+            CONF_STATES_POWER,
+            CONF_MIN_POWER,
+            CONF_MAX_POWER,
+            CONF_GAMMA_CURVE,
+            CONF_CALIBRATE,
+        }
+        for key in candidate_keys:
             if user_input.get(key) is None:
                 continue
-            strategy_options[str(key)] = user_input.get(key)
-        # Convert states_power from dict to list to preserve order
-        if CONF_STATES_POWER in strategy_options and isinstance(strategy_options[CONF_STATES_POWER], dict):
-            strategy_options[CONF_STATES_POWER] = [
-                {CONF_STATE: state, CONF_POWER: power} for state, power in strategy_options[CONF_STATES_POWER].items()
-            ]
+            strategy_options[key] = user_input[key]
         return strategy_options
 
-    async def async_step_fixed(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_fixed(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the basic options flow."""
         return await self.async_handle_strategy_options_step(user_input)
 
-    async def async_step_linear(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_linear(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the basic options flow."""
         return await self.async_handle_strategy_options_step(user_input)
 
-    async def async_step_wled(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_wled(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the basic options flow."""
         return await self.async_handle_strategy_options_step(user_input)
 
-    async def async_step_multi_switch(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_multi_switch(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the basic options flow."""
         return await self.async_handle_strategy_options_step(user_input)
 
-    async def async_step_playbook(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_playbook(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the basic options flow."""
         return await self.async_handle_strategy_options_step(user_input)
 
-    async def async_handle_strategy_options_step(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_handle_strategy_options_step(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the option processing for the selected strategy."""
         step = STRATEGY_STEP_MAPPING.get(self.flow.strategy or CalculationStrategy.FIXED, Step.FIXED)
 
         schema = await self.create_strategy_schema()
-        if self.flow.selected_profile and self.flow.selected_profile.device_type == DeviceType.SMART_SWITCH:
+        if (
+            self.flow.strategy == CalculationStrategy.FIXED
+            and self.flow.selected_profile
+            and self.flow.selected_profile.device_type == DeviceType.SMART_SWITCH
+        ):
             schema = SCHEMA_POWER_SMART_SWITCH
 
         strategy_options = self.flow.sensor_config.get(str(self.flow.strategy)) or {}
@@ -429,8 +576,13 @@ class VirtualPowerOptionsFlow(VirtualPowerFlow):
             **self.flow.sensor_config,
             **{k: v for k, v in strategy_options.items() if k not in self.flow.sensor_config},
         }
-        # Convert states_power from list to dict for display in ObjectSelector
-        if CONF_STATES_POWER in merged_options and isinstance(merged_options[CONF_STATES_POWER], list):
-            merged_options[CONF_STATES_POWER] = {item[CONF_STATE]: item[CONF_POWER] for item in merged_options[CONF_STATES_POWER]}
+        if self.flow.strategy:
+            merged_options = wrap_strategy_form_data(self.flow.strategy, merged_options)
         schema = fill_schema_defaults(schema, merged_options)
-        return await self.flow.async_handle_options_step(user_input, schema, step)
+        form_kwarg = {"preview": PREVIEW_NAME} if self.flow.strategy not in STRATEGIES_WITHOUT_PREVIEW else None
+        return await self.flow.async_handle_options_step(
+            user_input,
+            schema,
+            step,
+            form_kwarg=form_kwarg,
+        )

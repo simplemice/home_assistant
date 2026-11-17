@@ -9,6 +9,8 @@
 #      (duplicate YAML keys silently drop the first block)
 #   2. Removed 'sensor.*_battery*' from exclude globs
 #      (it was matching sensor.total_battery_energy_in/out)
+#   3. 2026-11-17: removed entries for the disabled grid/solar/battery simulations
+#      (Refoss data is covered by the sensor.*_energy / sensor.*_power globs)
 ###############################################################################
 
 recorder:
@@ -38,14 +40,6 @@ recorder:
 
     entities:
       - sensor.zigbee2mqtt_networkmap
-      - sensor.total_battery_energy_in
-      - sensor.total_battery_energy_out
-      - sensor.total_solar_energy_in
-      - sensor.total_grid_energy_import
-      - sensor.total_grid_energy_export
-      - sensor.solar_energy_accumulated_simulated
-      - sensor.battery_soc_simulated
-      - sensor.battery_energy_remaining
       - alarm_control_panel.home
 
   exclude:
