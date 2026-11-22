@@ -1,0 +1,903 @@
+"""
+Setting up TTS entity.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import math
+import re
+import struct
+import time
+from asyncio import CancelledError
+from collections.abc import Iterator
+from typing import Any
+
+from homeassistant.components.tts import TextToSpeechEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+from .api import GroqApiClient, SpeechRequest, async_preload_clientsession_helper
+from .async_utils import RequestFlight
+from .audio_files import (
+    AudioSpoolBudget,
+    async_audio_chunk_paths,
+    async_communicate_audio,
+    async_stop_audio_process,
+)
+from .const import (
+    CONF_CACHE_SIZE,
+    CONF_ENABLE_LONG_TTS,
+    CONF_INPUT,
+    CONF_MODEL,
+    CONF_NAME,
+    CONF_NORMALIZE_AUDIO,
+    CONF_PROTECT_FREE_TIER,
+    CONF_RESPONSE_FORMAT,
+    CONF_SAMPLE_RATE,
+    CONF_SERVICE_TYPE,
+    CONF_SPEED,
+    CONF_SUBENTRY_ID,
+    CONF_URL,
+    CONF_VOCAL_DIRECTIONS,
+    CONF_VOICE,
+    DEFAULT_CACHE_SIZE,
+    DEFAULT_PROTECT_FREE_TIER,
+    DEFAULT_RESPONSE_FORMAT,
+    DEFAULT_TTS_SPEED,
+    FEATURE_TEXT_TO_SPEECH,
+    TTS_SAMPLE_RATES,
+    UNIQUE_ID,
+)
+from .entity import service_device_info
+from .errors import translated_error
+from .repairs import (
+    async_create_ffmpeg_missing_issue,
+    async_delete_ffmpeg_missing_issue,
+)
+from .runtime import async_get_runtime
+from .types import GroqConfigEntry
+from .vocal_directions import (
+    normalize_vocal_directions,
+    vocal_directions_validation_error,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+MAX_TTS_INPUT_CHARS = 200
+MAX_LONG_TTS_CHUNKS = 10
+FFMPEG_TIMEOUT_SECONDS = 30
+PARALLEL_UPDATES = 1
+ORPHEUS_RESPONSE_FORMAT = "wav"
+FFMPEG_DEFAULT_SAMPLE_RATES = {
+    "wav": 24000,
+    "mp3": 44100,
+    "flac": 24000,
+    "ogg": 48000,
+    "mulaw": 8000,
+}
+FFMPEG_LOUDNORM_FILTER = "loudnorm=I=-16:TP=-1:LRA=5"
+_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
+_WHITESPACE = re.compile(r"\s+")
+_WORD = re.compile(r"\S+")
+_WAV_FORMAT_PCM = 1
+_WAV_BITS_PER_SAMPLE = 16
+
+
+def _audio_needs_compatibility_transcode(audio: bytes) -> bool:
+    """Return whether audio bytes should be rewritten for WAV playback."""
+    if not audio.startswith(b"RIFF") or audio[8:12] != b"WAVE":
+        return True
+
+    offset = 12
+    has_compatible_format = False
+    while offset + 8 <= len(audio):
+        chunk_id = audio[offset : offset + 4]
+        chunk_size = struct.unpack_from("<I", audio, offset + 4)[0]
+        chunk_start = offset + 8
+        chunk_end = chunk_start + chunk_size
+        if chunk_end > len(audio):
+            return True
+        if chunk_id == b"fmt ":
+            if chunk_size < 16:
+                return True
+            audio_format, _channels, _sample_rate, _byte_rate, _block_align, bits = (
+                struct.unpack_from("<HHIIHH", audio, chunk_start)
+            )
+            if audio_format != _WAV_FORMAT_PCM or bits != _WAV_BITS_PER_SAMPLE:
+                return True
+            has_compatible_format = True
+        elif chunk_id == b"data" and has_compatible_format:
+            return bool(chunk_size == 0)
+        offset = chunk_end + (chunk_size % 2)
+    return True
+
+
+def _split_overlong_tts_segment(segment: str, max_chars: int) -> Iterator[str]:
+    """Split a segment that cannot fit in one Groq Orpheus TTS request."""
+    current = ""
+    for match in _WORD.finditer(segment):
+        start, end = match.span()
+        if end - start > max_chars:
+            if current:
+                yield current
+                current = ""
+            for offset in range(start, end, max_chars):
+                yield segment[offset : min(offset + max_chars, end)]
+            continue
+        word = match[0]
+        if current and len(f"{current} {word}") > max_chars:
+            yield current
+            current = word
+        else:
+            current = f"{current} {word}" if current else word
+    if current:
+        yield current
+
+
+def _tts_segments(text: str) -> Iterator[str]:
+    """Yield sentence segments on demand."""
+    start = 0
+    for boundary in _SENTENCE_BOUNDARY.finditer(text):
+        yield text[start : boundary.start()]
+        start = boundary.end()
+    yield text[start:]
+
+
+def _split_tts_text(text: str, max_chars: int) -> Iterator[str]:
+    """Split TTS text on sentence boundaries, then words if needed."""
+    stripped_text = text.strip()
+    if not stripped_text:
+        yield ""
+        return
+    current = ""
+    for segment in _tts_segments(stripped_text):
+        segment_chunks = (
+            [segment]
+            if len(segment) <= max_chars
+            else _split_overlong_tts_segment(segment, max_chars)
+        )
+        for segment_chunk in segment_chunks:
+            if current and len(f"{current} {segment_chunk}") <= max_chars:
+                current = f"{current} {segment_chunk}"
+                continue
+            if current:
+                yield current
+            current = segment_chunk
+    if current:
+        yield current
+
+
+def _tts_input_chunks(
+    text: str,
+    vocal_directions: str,
+    max_chars: int = MAX_TTS_INPUT_CHARS,
+    *,
+    enable_long_tts: bool = True,
+) -> list[str]:
+    """Return Groq TTS request inputs, each within the Orpheus limit."""
+    prefix = vocal_directions.strip()
+    available_chars = max_chars - (len(prefix) + 1 if prefix else 0)
+    if available_chars <= 0:
+        raise ValueError(
+            "Vocal directions leave no room for TTS input within Groq Orpheus "
+            f"maximum length of {max_chars} characters"
+        )
+    limit = MAX_LONG_TTS_CHUNKS if enable_long_tts else 1
+    capacity = limit * available_chars
+    if len(text) > 2 * capacity:
+        # Collapsing whitespace gives a lower bound on the space needed by
+        # this prefix. Each chunk boundary can discard one more separator.
+        prefix_text = _WHITESPACE.sub(" ", text[: 2 * capacity].strip())
+        if len(prefix_text) > capacity + limit - 1:
+            raise _tts_length_error(enable_long_tts, max_chars)
+    chunks: list[str] = []
+    for chunk in _split_tts_text(text, available_chars):
+        if len(chunks) == limit:
+            raise _tts_length_error(enable_long_tts, max_chars)
+        chunks.append(f"{prefix} {chunk}" if prefix else chunk)
+    return chunks
+
+
+def _tts_length_error(enable_long_tts: bool, max_chars: int) -> ValueError:
+    """Explain which chunk limit rejected the request."""
+    if enable_long_tts:
+        return ValueError(
+            "Message requires too many Groq Orpheus TTS chunks. "
+            f"Shorten the announcement to {MAX_LONG_TTS_CHUNKS} chunks or fewer."
+        )
+    return ValueError(
+        "Message exceeds Groq Orpheus TTS maximum length of "
+        f"{max_chars} characters. Enable Long TTS "
+        "to synthesize and stitch longer announcements."
+    )
+
+
+def _entry_value(
+    config_entry: GroqConfigEntry,
+    key: str,
+    default: Any = None,
+    service_data: dict[str, Any] | None = None,
+) -> Any:
+    """Return the effective value, allowing options to override setup data."""
+    if service_data and key in service_data:
+        return service_data[key]
+    return config_entry.options.get(key, config_entry.data.get(key, default))
+
+
+def _normalize_bool_option(value: Any, option: str) -> bool:
+    """Return a boolean option value, accepting common service-call strings."""
+    if isinstance(value, bool):
+        return value
+    if value in (None, ""):
+        return False
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"TTS {option} option must be a boolean")
+
+
+def _normalize_response_format(value: Any) -> str:
+    """Return a normalized TTS output format."""
+    output_format = DEFAULT_RESPONSE_FORMAT if value in (None, "") else value
+    if not isinstance(output_format, str):
+        raise TypeError("TTS output format must be a string")
+    output_format = output_format.strip().lower()
+    if output_format not in FFMPEG_DEFAULT_SAMPLE_RATES:
+        raise ValueError(f"Unsupported TTS output format: {output_format}")
+    return output_format
+
+
+def _normalize_sample_rate(value: Any) -> int | None:
+    """Return a Groq-supported TTS sample rate."""
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value)
+        if not math.isfinite(number) or not number.is_integer():
+            raise ValueError("TTS sample rate must be an integer")
+        sample_rate = int(number)
+    except (TypeError, ValueError) as err:
+        raise ValueError("TTS sample rate must be an integer") from err
+    if sample_rate not in TTS_SAMPLE_RATES:
+        raise ValueError(f"Unsupported TTS sample rate: {sample_rate}")
+    return sample_rate
+
+
+def _normalize_speed(value: Any) -> float | None:
+    """Return a Groq-supported TTS speed."""
+    if value in (None, ""):
+        return None
+    try:
+        speed = float(value)
+    except (TypeError, ValueError) as err:
+        raise ValueError("TTS speed must be a number") from err
+    if not math.isfinite(speed) or speed < 0.5 or speed > 5:
+        raise ValueError("TTS speed must be between 0.5 and 5")
+    return speed
+
+
+def _ffmpeg_output_args(output_format: str, sample_rate: int | None) -> list[str]:
+    """Return ffmpeg output arguments for the requested playback profile."""
+    output_sample_rate = sample_rate or FFMPEG_DEFAULT_SAMPLE_RATES[output_format]
+    args = ["-ac", "1", "-ar", str(output_sample_rate)]
+    if output_format == "mp3":
+        args.extend(["-b:a", "128k"])
+    elif output_format == "flac":
+        args.extend(["-compression_level", "5"])
+    elif output_format == "ogg":
+        args.extend(["-c:a", "libopus"])
+    elif output_format == "mulaw":
+        args.extend(["-c:a", "pcm_mulaw"])
+    args.extend(["-f", output_format])
+    return args
+
+
+def _tts_service_data(config_entry: GroqConfigEntry) -> list[dict[str, Any] | None]:
+    """Return TTS service subentry data for an entry."""
+    subentries = getattr(config_entry, "subentries", None) or {}
+    services: list[dict[str, Any] | None] = []
+    for subentry in subentries.values():
+        data = dict(getattr(subentry, "data", {}))
+        if data.get(CONF_SERVICE_TYPE) == FEATURE_TEXT_TO_SPEECH:
+            subentry_id = getattr(subentry, "subentry_id", data.get(UNIQUE_ID))
+            data[CONF_SUBENTRY_ID] = subentry_id
+            data[UNIQUE_ID] = subentry_id
+            services.append(data)
+    if services:
+        return services
+    if all(config_entry.data.get(key) for key in (CONF_URL, CONF_MODEL, CONF_VOICE)):
+        return [None]
+    return []
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: GroqConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    runtime = await async_get_runtime(hass, config_entry)
+    service_data_list = _tts_service_data(config_entry)
+    if service_data_list:
+        await async_preload_clientsession_helper(hass)
+    entities = []
+    for service_data in service_data_list:
+        entity = GroqTTSEntity(hass, config_entry, runtime.client, service_data)
+        if service_data:
+            async_add_entities(
+                [entity],
+                config_subentry_id=service_data.get(CONF_SUBENTRY_ID),
+            )
+        else:
+            entities.append(entity)
+    if entities:
+        async_add_entities(entities)
+
+
+class GroqTTSEntity(TextToSpeechEntity):
+    # Home Assistant's TTS manager requires TextToSpeechEntity.name to resolve
+    # to a value before it will generate or stream audio, so this entity uses a
+    # translated data-point name instead of a device-only name.
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_translation_key = "text_to_speech"
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config: GroqConfigEntry,
+        client: GroqApiClient,
+        service_data: dict[str, Any] | None = None,
+    ) -> None:
+        self.hass = hass
+        self._client = client
+        self._audio_spool_budget = (
+            client.audio_spool_budget
+            if isinstance(client, GroqApiClient)
+            else AudioSpoolBudget()
+        )
+        self._config = config
+        self._service_data = service_data or {}
+        # Prefer the config entry unique_id; fall back to stored value for backward compatibility
+        service_unique_id = self._service_data.get(UNIQUE_ID)
+        self._attr_unique_id = (
+            service_unique_id
+            or getattr(config, "unique_id", None)
+            or config.data.get(UNIQUE_ID)
+        )
+        if not self._attr_unique_id:
+            self._attr_unique_id = (
+                f"{config.data.get(CONF_URL)}_{config.data.get(CONF_MODEL)}"
+            )
+        self._service_name = _entry_value(
+            config,
+            CONF_NAME,
+            _entry_value(config, CONF_MODEL, "", service_data=self._service_data),
+            service_data=self._service_data,
+        )
+        self._ffmpeg_capabilities: set[tuple[str, bool, int | None]] = set()
+        self._ffmpeg_probes: dict[tuple[str, bool, int | None], RequestFlight[None]] = (
+            {}
+        )
+
+    async def _async_run_ffmpeg(
+        self,
+        cmd: list[str],
+        input_bytes: bytes | None = None,
+        *,
+        create_repair: bool = True,
+    ) -> bytes:
+        """Run ffmpeg without blocking Home Assistant's event loop."""
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except FileNotFoundError:
+            _LOGGER.error(
+                "ffmpeg executable not found. Please install ffmpeg or adjust PATH."
+            )
+            if create_repair:
+                async_create_ffmpeg_missing_issue(
+                    self.hass, self._config, self._service_data
+                )
+            raise translated_error("ffmpeg not found", "ffmpeg_not_found")
+        except OSError as err:
+            _LOGGER.error("Unable to start ffmpeg: %s", err)
+            if create_repair:
+                async_create_ffmpeg_missing_issue(
+                    self.hass, self._config, self._service_data
+                )
+            raise translated_error(
+                "ffmpeg could not start", "ffmpeg_start_failed"
+            ) from err
+        try:
+            async with asyncio.timeout(FFMPEG_TIMEOUT_SECONDS):
+                stdout, stderr = await async_communicate_audio(process, input_bytes)
+        except (CancelledError, TimeoutError, HomeAssistantError, OSError) as err:
+            await async_stop_audio_process(process)
+            if isinstance(err, TimeoutError):
+                _LOGGER.error(
+                    "ffmpeg timed out after %s seconds", FFMPEG_TIMEOUT_SECONDS
+                )
+                if create_repair:
+                    async_create_ffmpeg_missing_issue(
+                        self.hass, self._config, self._service_data
+                    )
+                raise translated_error("ffmpeg timed out", "ffmpeg_timeout") from err
+            if isinstance(err, OSError):
+                raise translated_error(
+                    "ffmpeg pipe I/O failed", "ffmpeg_failed"
+                ) from err
+            raise
+        if process.returncode != 0:
+            stderr_text = stderr.decode(errors="replace").strip()
+            _LOGGER.error("ffmpeg error: %s", stderr_text or process.returncode)
+            if create_repair:
+                async_create_ffmpeg_missing_issue(
+                    self.hass, self._config, self._service_data
+                )
+            raise translated_error("ffmpeg failed", "ffmpeg_failed")
+        return stdout
+
+    async def _async_check_ffmpeg(
+        self,
+        output_format: str,
+        normalize_audio: bool,
+        sample_rate: int | None = None,
+    ) -> None:
+        """Ensure ffmpeg can write the requested format before spending Groq quota."""
+        capability = (output_format, normalize_audio, sample_rate)
+        while capability not in self._ffmpeg_capabilities:
+            flight = self._ffmpeg_probes.get(capability)
+            if flight is None:
+                task = asyncio.create_task(self._async_probe_ffmpeg(capability))
+                flight = self._ffmpeg_probes[capability] = RequestFlight(task)
+
+                def finished(task: asyncio.Task[None]) -> None:
+                    self._ffmpeg_probes.pop(capability)
+                    if not task.cancelled():
+                        task.exception()
+
+                task.add_done_callback(finished)
+            if not flight.task.cancelling():
+                await flight.async_wait()
+                return
+            await asyncio.shield(asyncio.gather(flight.task, return_exceptions=True))
+
+    async def _async_probe_ffmpeg(
+        self, capability: tuple[str, bool, int | None]
+    ) -> None:
+        """Check the binary and encode a short sample for one playback profile."""
+        output_format, normalize_audio, sample_rate = capability
+        await self._async_run_ffmpeg(["ffmpeg", "-version"])
+        cmd = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "anullsrc=r=24000:cl=mono",
+            "-t",
+            "0.01",
+        ]
+        if normalize_audio:
+            cmd.extend(["-af", FFMPEG_LOUDNORM_FILTER])
+        cmd.extend(_ffmpeg_output_args(output_format, sample_rate))
+        cmd.append("pipe:1")
+        await self._async_run_ffmpeg(cmd)
+        self._ffmpeg_capabilities.add(capability)
+
+    def _configured_audio_needs_ffmpeg(self) -> bool:
+        """Return whether the stored TTS defaults require ffmpeg."""
+        try:
+            normalize_audio = _normalize_bool_option(
+                _entry_value(
+                    self._config,
+                    CONF_NORMALIZE_AUDIO,
+                    False,
+                    service_data=self._service_data,
+                ),
+                CONF_NORMALIZE_AUDIO,
+            )
+        except ValueError:
+            return True
+        try:
+            enable_long_tts = _normalize_bool_option(
+                _entry_value(
+                    self._config,
+                    CONF_ENABLE_LONG_TTS,
+                    False,
+                    service_data=self._service_data,
+                ),
+                CONF_ENABLE_LONG_TTS,
+            )
+        except ValueError:
+            return True
+        return normalize_audio or enable_long_tts
+
+    @property
+    def default_language(self) -> str:
+        return "en"
+
+    @property
+    def supported_options(self) -> list[str]:
+        # Must match option keys actually read from service/data
+        return [
+            CONF_INPUT,
+            CONF_MODEL,
+            CONF_NORMALIZE_AUDIO,
+            CONF_RESPONSE_FORMAT,
+            CONF_SAMPLE_RATE,
+            CONF_SPEED,
+            CONF_VOICE,
+            CONF_VOCAL_DIRECTIONS,
+        ]
+
+    @property
+    def default_options(self) -> dict[str, Any]:
+        """Advertise default options for the TTS service."""
+        normalize_audio = _entry_value(
+            self._config,
+            CONF_NORMALIZE_AUDIO,
+            False,
+            service_data=self._service_data,
+        )
+        response_format = _entry_value(
+            self._config,
+            CONF_RESPONSE_FORMAT,
+            DEFAULT_RESPONSE_FORMAT,
+            service_data=self._service_data,
+        )
+        sample_rate = _entry_value(
+            self._config,
+            CONF_SAMPLE_RATE,
+            service_data=self._service_data,
+        )
+        speed = _entry_value(
+            self._config,
+            CONF_SPEED,
+            service_data=self._service_data,
+        )
+        try:
+            normalize_audio = _normalize_bool_option(
+                normalize_audio, CONF_NORMALIZE_AUDIO
+            )
+        except ValueError:
+            normalize_audio = False
+        try:
+            response_format = _normalize_response_format(response_format)
+        except (TypeError, ValueError):
+            response_format = DEFAULT_RESPONSE_FORMAT
+        try:
+            sample_rate = _normalize_sample_rate(sample_rate)
+        except ValueError:
+            sample_rate = None
+        try:
+            speed = _normalize_speed(speed)
+        except ValueError:
+            speed = DEFAULT_TTS_SPEED
+        return {
+            CONF_NORMALIZE_AUDIO: normalize_audio,
+            CONF_MODEL: _entry_value(
+                self._config, CONF_MODEL, service_data=self._service_data
+            ),
+            CONF_VOICE: _entry_value(
+                self._config, CONF_VOICE, service_data=self._service_data
+            ),
+            CONF_RESPONSE_FORMAT: response_format,
+            CONF_SAMPLE_RATE: sample_rate,
+            CONF_SPEED: speed,
+            CONF_VOCAL_DIRECTIONS: normalize_vocal_directions(
+                _entry_value(
+                    self._config,
+                    CONF_VOCAL_DIRECTIONS,
+                    "",
+                    service_data=self._service_data,
+                )
+            ),
+        }
+
+    @property
+    def supported_languages(self) -> list[str]:
+        return ["ar", "en"]
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return service_device_info(
+            str(self._attr_unique_id),
+            str(
+                _entry_value(self._config, CONF_MODEL, service_data=self._service_data)
+            ),
+            str(self._service_name),
+        )
+
+    async def async_get_tts_audio(
+        self,
+        message: str,
+        language: str,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[str, bytes] | tuple[None, None]:
+        """Generate TTS audio asynchronously and optionally normalize it."""
+        overall_start = time.monotonic()
+
+        options = options or {}
+
+        try:
+            effective_input = str(options.get(CONF_INPUT, message))
+            if not effective_input.strip():
+                raise ValueError("TTS input cannot be empty")
+            if CONF_VOCAL_DIRECTIONS in options:
+                vocal_directions = options[CONF_VOCAL_DIRECTIONS]
+                if vocal_directions_validation_error(vocal_directions):
+                    raise ValueError("TTS vocal directions must be a single word")
+            else:
+                vocal_directions = _entry_value(
+                    self._config,
+                    CONF_VOCAL_DIRECTIONS,
+                    "",
+                    service_data=self._service_data,
+                )
+            vocal_directions = normalize_vocal_directions(vocal_directions)
+            if vocal_directions:
+                direction_text = str(vocal_directions).strip()
+                if direction_text:
+                    direction_text = f"[{direction_text}]"
+            else:
+                direction_text = ""
+
+            effective_model = options.get(
+                CONF_MODEL,
+                _entry_value(self._config, CONF_MODEL, service_data=self._service_data),
+            )
+            effective_voice = options.get(
+                CONF_VOICE,
+                _entry_value(self._config, CONF_VOICE, service_data=self._service_data),
+            )
+            output_format = _normalize_response_format(
+                options.get(
+                    CONF_RESPONSE_FORMAT,
+                    _entry_value(
+                        self._config,
+                        CONF_RESPONSE_FORMAT,
+                        DEFAULT_RESPONSE_FORMAT,
+                        service_data=self._service_data,
+                    ),
+                )
+            )
+            sample_rate = _normalize_sample_rate(
+                options.get(
+                    CONF_SAMPLE_RATE,
+                    _entry_value(
+                        self._config,
+                        CONF_SAMPLE_RATE,
+                        service_data=self._service_data,
+                    ),
+                )
+            )
+            speed = _normalize_speed(
+                options.get(
+                    CONF_SPEED,
+                    _entry_value(
+                        self._config,
+                        CONF_SPEED,
+                        service_data=self._service_data,
+                    ),
+                )
+            )
+            normalize_audio = _normalize_bool_option(
+                options.get(
+                    CONF_NORMALIZE_AUDIO,
+                    _entry_value(
+                        self._config,
+                        CONF_NORMALIZE_AUDIO,
+                        False,
+                        service_data=self._service_data,
+                    ),
+                ),
+                CONF_NORMALIZE_AUDIO,
+            )
+            enable_long_tts = _normalize_bool_option(
+                _entry_value(
+                    self._config,
+                    CONF_ENABLE_LONG_TTS,
+                    False,
+                    service_data=self._service_data,
+                ),
+                CONF_ENABLE_LONG_TTS,
+            )
+            _LOGGER.debug("Normalization option: %s", normalize_audio)
+            input_chunks = _tts_input_chunks(
+                effective_input, direction_text, enable_long_tts=enable_long_tts
+            )
+            try:
+                protect_free_tier = _normalize_bool_option(
+                    _entry_value(
+                        self._config,
+                        CONF_PROTECT_FREE_TIER,
+                        DEFAULT_PROTECT_FREE_TIER,
+                        service_data=self._service_data,
+                    ),
+                    CONF_PROTECT_FREE_TIER,
+                )
+            except ValueError:
+                protect_free_tier = DEFAULT_PROTECT_FREE_TIER
+            cache_max = int(
+                _entry_value(
+                    self._config,
+                    CONF_CACHE_SIZE,
+                    DEFAULT_CACHE_SIZE,
+                    service_data=self._service_data,
+                )
+            )
+            needs_ffmpeg = normalize_audio or len(input_chunks) > 1
+            api_response_format = (
+                ORPHEUS_RESPONSE_FORMAT if needs_ffmpeg else output_format
+            )
+            speech_requests = [
+                SpeechRequest(
+                    text=input_chunk,
+                    model=effective_model,
+                    voice=effective_voice,
+                    response_format=api_response_format,
+                    sample_rate=sample_rate,
+                    speed=speed,
+                    service_id=self._service_data.get(UNIQUE_ID),
+                    protect_free_tier=protect_free_tier,
+                    cache_max=cache_max,
+                )
+                for input_chunk in input_chunks
+            ]
+            if needs_ffmpeg:
+                await self._async_check_ffmpeg(
+                    output_format, normalize_audio, sample_rate
+                )
+            if len(input_chunks) > 1:
+                self._client.check_tts_batch(speech_requests)
+
+            synthesis_duration = 0.0
+            chunk_count = len(speech_requests)
+
+            async def synthesize_chunk(index: int, request: SpeechRequest) -> bytes:
+                nonlocal synthesis_duration
+                started = time.monotonic()
+                chunk = await self._client.async_synthesize_speech(request)
+                duration = (time.monotonic() - started) * 1000
+                synthesis_duration += duration
+                _LOGGER.debug(
+                    "TTS synthesis chunk %d/%d completed in %.2f ms",
+                    index,
+                    chunk_count,
+                    duration,
+                )
+                return chunk
+
+            def log_synthesis_phase() -> None:
+                _LOGGER.debug(
+                    "TTS synthesis phase completed: chunks=%d duration_ms=%.2f",
+                    chunk_count,
+                    synthesis_duration,
+                )
+
+            async def convert_audio_chunk(input_bytes: bytes) -> bytes:
+                """Convert one Orpheus WAV chunk to the requested playback profile."""
+                cmd = [
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-i",
+                    "pipe:0",
+                ]
+                if normalize_audio:
+                    cmd.extend(["-af", FFMPEG_LOUDNORM_FILTER])
+                cmd.extend(_ffmpeg_output_args(output_format, sample_rate))
+                cmd.append("pipe:1")
+                return await postprocess(cmd, input_bytes)
+
+            async def stitch_audio_chunks(chunk_paths: list[str]) -> bytes:
+                """Stitch multiple Orpheus WAV files into the playback format."""
+                input_args = [
+                    arg for chunk_path in chunk_paths for arg in ("-i", chunk_path)
+                ]
+                filter_inputs = "".join(
+                    f"[{index}:a]" for index in range(len(chunk_paths))
+                )
+                filter_complex = f"{filter_inputs}concat=n={len(chunk_paths)}:v=0:a=1"
+                if normalize_audio:
+                    filter_complex = f"{filter_complex},{FFMPEG_LOUDNORM_FILTER}"
+                cmd = [
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    *input_args,
+                    "-filter_complex",
+                    filter_complex,
+                    *_ffmpeg_output_args(output_format, sample_rate),
+                    "pipe:1",
+                ]
+                return await postprocess(cmd)
+
+            async def postprocess(cmd: list[str], data: bytes | None = None) -> bytes:
+                try:
+                    return await self._async_run_ffmpeg(cmd, data, create_repair=False)
+                except HomeAssistantError:
+                    self._ffmpeg_capabilities.discard(
+                        (output_format, normalize_audio, sample_rate)
+                    )
+                    async_create_ffmpeg_missing_issue(
+                        self.hass, self._config, self._service_data
+                    )
+                    raise
+
+            if chunk_count > 1:
+                chunks = (
+                    await synthesize_chunk(index, request)
+                    for index, request in enumerate(speech_requests, start=1)
+                )
+                async with async_audio_chunk_paths(
+                    self.hass, chunks, self._audio_spool_budget
+                ) as paths:
+                    log_synthesis_phase()
+                    postprocess_start = time.monotonic()
+                    audio_content = await stitch_audio_chunks(paths)
+            else:
+                audio_content = await synthesize_chunk(1, speech_requests[0])
+                log_synthesis_phase()
+                postprocess_start = time.monotonic()
+                if (
+                    not needs_ffmpeg
+                    and output_format == ORPHEUS_RESPONSE_FORMAT
+                    and _audio_needs_compatibility_transcode(audio_content)
+                ):
+                    _LOGGER.debug(
+                        "Rewriting Groq WAV audio for media player compatibility"
+                    )
+                    needs_ffmpeg = True
+                    await self._async_check_ffmpeg(
+                        output_format, normalize_audio, sample_rate
+                    )
+                if needs_ffmpeg:
+                    audio_content = await convert_audio_chunk(audio_content)
+            if needs_ffmpeg or not self._configured_audio_needs_ffmpeg():
+                async_delete_ffmpeg_missing_issue(
+                    self.hass, self._config, self._service_data
+                )
+
+            postprocess_duration = (time.monotonic() - postprocess_start) * 1000
+            overall_duration = (time.monotonic() - overall_start) * 1000
+            _LOGGER.debug(
+                "TTS processing completed: chunks=%d synthesis_ms=%.2f "
+                "postprocess_ms=%.2f total_ms=%.2f",
+                chunk_count,
+                synthesis_duration,
+                postprocess_duration,
+                overall_duration,
+            )
+            return output_format, audio_content
+
+        except CancelledError:
+            _LOGGER.debug("TTS task cancelled")
+            raise
+        except (TypeError, ValueError) as err:
+            _LOGGER.error("Invalid TTS request: %s", err)
+            return None, None
+        except HomeAssistantError as err:
+            _LOGGER.error("TTS request failed: %s", err)
+            return None, None
+        except Exception:
+            _LOGGER.exception("Unknown error in async_get_tts_audio")
+        return None, None

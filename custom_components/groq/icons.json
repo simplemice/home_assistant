@@ -1,0 +1,73 @@
+{
+    "entity": {
+        "ai_task": {
+            "data_generation_tasks": {
+                "default": "mdi:robot-outline"
+            }
+        },
+        "conversation": {
+            "assist": {
+                "default": "mdi:chat-processing-outline"
+            }
+        },
+        "stt": {
+            "speech_to_text": {
+                "default": "mdi:microphone-outline"
+            }
+        },
+        "tts": {
+            "text_to_speech": {
+                "default": "mdi:speaker-message"
+            }
+        },
+        "sensor": {
+            "requests": {
+                "default": "mdi:counter"
+            },
+            "prompt_tokens": {
+                "default": "mdi:counter"
+            },
+            "completion_tokens": {
+                "default": "mdi:counter"
+            },
+            "total_tokens": {
+                "default": "mdi:counter"
+            },
+            "cached_tokens": {
+                "default": "mdi:cached"
+            },
+            "response_time": {
+                "default": "mdi:timer-outline"
+            },
+            "cache_hit_rate": {
+                "default": "mdi:percent"
+            }
+        }
+    },
+    "services": {
+        "analyze_image": {
+            "service": "mdi:image-search-outline"
+        },
+        "clear_cache": {
+            "service": "mdi:cached"
+        },
+        "extract_text_from_image": {
+            "service": "mdi:text-recognition"
+        },
+        "generate_structured": {
+            "service": "mdi:code-json"
+        },
+        "generate_text": {
+            "service": "mdi:text-box-edit-outline"
+        },
+        "list_models": {
+            "service": "mdi:format-list-bulleted"
+        },
+        "transcribe_audio": {
+            "service": "mdi:file-music-outline"
+        },
+        "translate_audio": {
+            "service": "mdi:translate"
+        }
+    }
+}

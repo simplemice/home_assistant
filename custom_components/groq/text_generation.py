@@ -1,0 +1,749 @@
+"""Shared helpers for Groq text generation entities."""
+
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import fields
+from typing import Any, TypedDict
+
+import probatio
+
+from .api import (
+    RESERVED_CHAT_BODY_OPTIONS,
+    StructuredGenerationRequest,
+    TextGenerationRequest,
+    build_structured_generation_payload,
+    build_text_generation_payload,
+)
+from .compound_tools import (
+    compound_builtin_tools_are_valid,
+    compound_builtin_tools_request_value,
+    normalize_compound_builtin_tools,
+)
+from .const import (
+    CONF_COMPOUND_BUILTIN_TOOLS,
+    CONF_ENABLED_FEATURES,
+    CONF_INCLUDE_REASONING,
+    CONF_MAX_TOKENS,
+    CONF_MODEL,
+    CONF_NAME,
+    CONF_PROMPT_CACHING,
+    CONF_PROTECT_FREE_TIER,
+    CONF_REASONING_EFFORT,
+    CONF_REASONING_FORMAT,
+    CONF_REQUEST_BODY_OPTIONS,
+    CONF_SCHEMA,
+    CONF_SCHEMA_NAME,
+    CONF_SEED,
+    CONF_SERVICE_TIER,
+    CONF_STOP,
+    CONF_STREAM,
+    CONF_STRICT,
+    CONF_STRUCTURED_OUTPUTS,
+    CONF_SYSTEM_PROMPT,
+    CONF_TEMPERATURE,
+    CONF_TOP_P,
+    DEFAULT_PROTECT_FREE_TIER,
+    DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_TEXT_MODEL,
+    FEATURE_TEXT_GENERATION,
+    UNIQUE_ID,
+)
+from .feature_registry import GroqFeature
+from .model_registry import GroqCapability, GroqModelRegistry
+from .subentries import service_data_for_type
+from .types import GroqConfigEntry
+
+_SCHEMA_NAME_RE = re.compile(r"[^a-zA-Z0-9_-]+")
+_APPROX_CHARS_PER_TOKEN = 4
+_REQUEST_BODY_REASONING_KEYS = frozenset(
+    {
+        "reasoning_effort",
+        "reasoning_format",
+        "include_reasoning",
+    }
+)
+_STRUCTURED_RESPONSE_FORMAT_TYPES = frozenset({"json_object", "json_schema"})
+_MISSING = object()
+
+
+class GenerationOptions(TypedDict):
+    """Resolved generation options shared by entities and response actions."""
+
+    temperature: float | None
+    max_tokens: int | None
+    top_p: float | None
+    stop: str | list[str] | None
+    seed: int | None
+    service_tier: str | None
+    reasoning_effort: str | None
+    reasoning_format: str | None
+    include_reasoning: bool | None
+    compound_builtin_tools: list[str] | None
+    extra_body: dict[str, Any] | None
+    browser_search: bool
+
+
+def generation_options(
+    values: dict[str, Any],
+    *,
+    compound_tools: list[str] | None,
+    extra_body: dict[str, Any] | None,
+) -> GenerationOptions:
+    """Resolve outgoing options once after caller/service/account precedence."""
+    return {
+        "temperature": values.get(CONF_TEMPERATURE),
+        "max_tokens": values.get(CONF_MAX_TOKENS),
+        "top_p": values.get(CONF_TOP_P),
+        "stop": values.get(CONF_STOP),
+        "seed": values.get(CONF_SEED),
+        "service_tier": values.get(CONF_SERVICE_TIER),
+        "reasoning_effort": values.get(CONF_REASONING_EFFORT),
+        "reasoning_format": values.get(CONF_REASONING_FORMAT),
+        "include_reasoning": True if values.get(CONF_INCLUDE_REASONING) else None,
+        "compound_builtin_tools": compound_tools,
+        "extra_body": extra_body,
+        "browser_search": bool(values.get("browser_search", False)),
+    }
+
+
+def service_generation_options(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+    model_registry: GroqModelRegistry,
+) -> GenerationOptions:
+    """Resolve configured entity options with their established normalization."""
+    values = {
+        "browser_search": entry_value(
+            config_entry, service_data, "browser_search", False
+        ),
+        CONF_TEMPERATURE: service_temperature(config_entry, service_data),
+        CONF_MAX_TOKENS: service_max_tokens(config_entry, service_data, model_registry),
+        CONF_TOP_P: service_top_p(config_entry, service_data),
+        CONF_STOP: service_stop(config_entry, service_data),
+        CONF_SEED: service_seed(config_entry, service_data),
+        CONF_SERVICE_TIER: service_service_tier(config_entry, service_data),
+        CONF_REASONING_EFFORT: service_reasoning_effort(config_entry, service_data),
+        CONF_REASONING_FORMAT: service_reasoning_format(config_entry, service_data),
+        CONF_INCLUDE_REASONING: service_include_reasoning(config_entry, service_data),
+    }
+    return generation_options(
+        values,
+        compound_tools=service_compound_builtin_tools(
+            config_entry, service_data, model_registry
+        ),
+        extra_body=service_request_body_options(
+            config_entry, service_data, model_registry
+        ),
+    )
+
+
+def structured_generation_request(
+    request: TextGenerationRequest,
+    schema: dict[str, Any],
+    schema_name: str,
+    *,
+    strict: bool,
+) -> StructuredGenerationRequest:
+    """Extend a text request without duplicating fields or copying image data."""
+    return StructuredGenerationRequest(
+        **{item.name: getattr(request, item.name) for item in fields(request)},
+        schema=schema,
+        schema_name=schema_name,
+        strict=strict,
+    )
+
+
+def entry_value(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+    key: str,
+    default: Any = None,
+) -> Any:
+    """Return the effective value for a text generation service."""
+    if key in service_data:
+        return service_data[key]
+    return config_entry.options.get(key, config_entry.data.get(key, default))
+
+
+def text_generation_service_data(config_entry: GroqConfigEntry) -> list[dict[str, Any]]:
+    """Return configured text generation service subentries."""
+    return service_data_for_type(config_entry, FEATURE_TEXT_GENERATION)
+
+
+def service_name(config_entry: GroqConfigEntry, service_data: dict[str, Any]) -> str:
+    """Return the user-facing service name."""
+    return str(
+        entry_value(
+            config_entry,
+            service_data,
+            CONF_NAME,
+            "Groq Text Generation",
+        )
+    )
+
+
+def service_model(config_entry: GroqConfigEntry, service_data: dict[str, Any]) -> str:
+    """Return the configured text generation model."""
+    return str(entry_value(config_entry, service_data, CONF_MODEL, DEFAULT_TEXT_MODEL))
+
+
+def service_system_prompt(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> str:
+    """Return the configured Home Assistant system prompt."""
+    return str(
+        entry_value(
+            config_entry,
+            service_data,
+            CONF_SYSTEM_PROMPT,
+            DEFAULT_SYSTEM_PROMPT,
+        )
+        or DEFAULT_SYSTEM_PROMPT
+    )
+
+
+def service_temperature(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> float | None:
+    """Return the configured text generation temperature."""
+    value = entry_value(config_entry, service_data, CONF_TEMPERATURE)
+    if value is None:
+        return None
+    return float(value)
+
+
+def service_max_tokens(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+    model_registry: GroqModelRegistry | None = None,
+) -> int | None:
+    """Return the configured max completion token limit."""
+    value = entry_value(config_entry, service_data, CONF_MAX_TOKENS)
+    if value in (None, ""):
+        return None
+    max_tokens = int(value)
+    if model_registry is not None:
+        limit = model_registry.completion_token_limit(
+            service_model(config_entry, service_data)
+        )
+        if limit is not None:
+            return min(max_tokens, limit)
+    return max_tokens
+
+
+def service_top_p(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> float | None:
+    """Return the configured top_p nucleus sampling value."""
+    value = entry_value(config_entry, service_data, CONF_TOP_P)
+    if value in (None, ""):
+        return None
+    return float(value)
+
+
+def service_stop(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> str | list[str] | None:
+    """Return configured stop sequence data."""
+    value = entry_value(config_entry, service_data, CONF_STOP)
+    if not value:
+        return None
+    if isinstance(value, list):
+        return [str(item) for item in value if item]
+    lines = [line for line in str(value).splitlines() if line]
+    if len(lines) > 1:
+        return lines
+    return lines[0] if lines else None
+
+
+def service_seed(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> int | None:
+    """Return the configured deterministic sampling seed."""
+    value = entry_value(config_entry, service_data, CONF_SEED)
+    if value in (None, ""):
+        return None
+    return int(value)
+
+
+def service_service_tier(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> str | None:
+    """Return the configured Groq service tier."""
+    value = entry_value(config_entry, service_data, CONF_SERVICE_TIER)
+    return str(value) if value else None
+
+
+def service_reasoning_effort(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> str | None:
+    """Return the configured reasoning effort."""
+    value = entry_value(config_entry, service_data, CONF_REASONING_EFFORT)
+    return str(value) if value else None
+
+
+def service_reasoning_format(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> str | None:
+    """Return the configured reasoning format."""
+    value = entry_value(config_entry, service_data, CONF_REASONING_FORMAT)
+    return str(value) if value else None
+
+
+def service_include_reasoning(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> bool | None:
+    """Return whether raw reasoning should be included."""
+    value = entry_value(config_entry, service_data, CONF_INCLUDE_REASONING)
+    return True if value else None
+
+
+def service_stream(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> bool:
+    """Return whether this service should stream Assist responses."""
+    return bool(entry_value(config_entry, service_data, CONF_STREAM, True))
+
+
+def service_prompt_caching(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> bool:
+    """Return whether local response caching is enabled for the model."""
+    # A service preference wins over explicitly configured legacy account flags.
+    legacy_features = config_entry.options.get(
+        CONF_ENABLED_FEATURES, config_entry.data.get(CONF_ENABLED_FEATURES, [])
+    )
+    return bool(
+        entry_value(
+            config_entry,
+            service_data,
+            CONF_PROMPT_CACHING,
+            GroqFeature.PROMPT_CACHING.value in (legacy_features or []),
+        )
+    )
+
+
+def request_body_compound_builtin_tool_value(
+    extra_body: Any,
+) -> Any:
+    """Return raw enabled_tools from request_body_options, or a missing sentinel."""
+    if not isinstance(extra_body, dict):
+        return _MISSING
+    compound_custom = extra_body.get("compound_custom")
+    if not isinstance(compound_custom, dict):
+        return _MISSING
+    tools = compound_custom.get("tools")
+    if not isinstance(tools, dict) or "enabled_tools" not in tools:
+        return _MISSING
+    return tools.get("enabled_tools")
+
+
+def request_body_compound_builtin_tools(extra_body: Any) -> list[str] | None:
+    """Return raw Compound built-in tools from request_body_options."""
+    value = request_body_compound_builtin_tool_value(extra_body)
+    if value is _MISSING:
+        return None
+    return normalize_compound_builtin_tools(value)
+
+
+def compound_builtin_tools_error_message(
+    model_registry: GroqModelRegistry,
+    model: str,
+    tools: Any,
+) -> str | None:
+    """Return a runtime error for invalid dedicated Compound built-in tools."""
+    if tools is None:
+        return None
+    if not model_registry.supports(model, GroqCapability.COMPOUND):
+        return f"Groq model {model} does not support Compound built-in tools"
+    if not compound_builtin_tools_are_valid(tools):
+        return (
+            "Configured Compound built-in tools contain unsupported tool ids "
+            "or incompatible selections"
+        )
+    return None
+
+
+def service_compound_builtin_tools(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+    model_registry: GroqModelRegistry | None = None,
+) -> list[str] | None:
+    """Return the allowed Compound built-in tools for this service.
+
+    Compound systems enable server-side tools by default when the request omits
+    compound_custom.tools.enabled_tools. Return an empty allow-list for Compound
+    models unless the service explicitly opted in.
+    """
+    model = service_model(config_entry, service_data)
+    active_registry = model_registry or GroqModelRegistry()
+    value = entry_value(config_entry, service_data, CONF_COMPOUND_BUILTIN_TOOLS)
+    if value is not None:
+        return compound_builtin_tools_request_value(value)
+    if not active_registry.supports(model, GroqCapability.COMPOUND):
+        return None
+    if (
+        raw_tools := request_body_compound_builtin_tools(
+            entry_value(config_entry, service_data, CONF_REQUEST_BODY_OPTIONS)
+        )
+    ) is not None:
+        return raw_tools
+    return []
+
+
+def service_protect_free_tier(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> bool:
+    """Return whether this service should use local free-tier safeguards."""
+    return bool(service_data.get(CONF_PROTECT_FREE_TIER, DEFAULT_PROTECT_FREE_TIER))
+
+
+def service_request_body_options(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+    model_registry: GroqModelRegistry | None = None,
+) -> dict[str, Any] | None:
+    """Return advanced passthrough chat completion body options."""
+    value = entry_value(config_entry, service_data, CONF_REQUEST_BODY_OPTIONS)
+    if not value:
+        return None
+    options = dict(value)
+    if model_registry is None:
+        return options
+    limit = model_registry.completion_token_limit(
+        service_model(config_entry, service_data)
+    )
+    if limit is None:
+        return options
+    for key in ("max_completion_tokens", "max_tokens"):
+        if options.get(key) in (None, ""):
+            continue
+        try:
+            requested = int(options[key])
+        except (TypeError, ValueError):
+            continue
+        if requested > limit:
+            options[key] = limit
+    return options
+
+
+def _completion_token_requests(request: TextGenerationRequest) -> list[int]:
+    """Return completion-token ceilings requested on a generation request."""
+    values: list[Any] = [request.max_tokens]
+    if isinstance(request.extra_body, dict):
+        values.extend(
+            (
+                request.extra_body.get("max_completion_tokens"),
+                request.extra_body.get("max_tokens"),
+            )
+        )
+    tokens: list[int] = []
+    for value in values:
+        if value in (None, ""):
+            continue
+        try:
+            tokens.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    return tokens
+
+
+def _request_body_requests_reasoning(extra_body: dict[str, Any]) -> bool:
+    """Return whether advanced body options request reasoning features."""
+    return any(
+        extra_body.get(key) not in (None, "", False)
+        for key in _REQUEST_BODY_REASONING_KEYS
+    )
+
+
+def _request_body_requests_structured_outputs(extra_body: dict[str, Any]) -> bool:
+    """Return whether advanced body options request structured output features."""
+    if "response_format" not in extra_body:
+        return False
+    response_format = extra_body.get("response_format")
+    if response_format in (None, ""):
+        return False
+    if isinstance(response_format, dict):
+        response_type = response_format.get("type")
+    else:
+        response_type = response_format
+    return response_type in _STRUCTURED_RESPONSE_FORMAT_TYPES
+
+
+def request_body_options_validation_error(
+    model_registry: GroqModelRegistry,
+    model: str,
+    extra_body: dict[str, Any] | None,
+) -> str | None:
+    """Return a config-flow error when advanced options need unsupported features."""
+    if not isinstance(extra_body, dict):
+        return None
+    if RESERVED_CHAT_BODY_OPTIONS.intersection(extra_body):
+        return "reserved_request_body_option"
+    raw_compound_tools = request_body_compound_builtin_tool_value(extra_body)
+    if raw_compound_tools is not _MISSING:
+        if not model_registry.supports(model, GroqCapability.COMPOUND):
+            return "unsupported_compound_builtin_tools_model"
+        if not compound_builtin_tools_are_valid(raw_compound_tools):
+            return "invalid_compound_builtin_tools"
+    if _request_body_requests_structured_outputs(
+        extra_body
+    ) and not model_registry.supports(model, GroqFeature.STRUCTURED_OUTPUTS):
+        return "unsupported_structured_outputs_model"
+    if _request_body_requests_reasoning(extra_body) and not model_registry.supports(
+        model, GroqFeature.REASONING
+    ):
+        return "unsupported_reasoning_model"
+    return None
+
+
+def request_body_options_error_message(
+    model_registry: GroqModelRegistry,
+    model: str,
+    extra_body: dict[str, Any] | None,
+) -> str | None:
+    """Return a runtime error message for unsupported advanced body options."""
+    error = request_body_options_validation_error(model_registry, model, extra_body)
+    if error == "reserved_request_body_option":
+        reserved = ", ".join(sorted(RESERVED_CHAT_BODY_OPTIONS))
+        return (
+            "request_body_options cannot override integration-managed fields: "
+            f"{reserved}"
+        )
+    if error == "unsupported_structured_outputs_model":
+        return (
+            f"Groq model {model} does not support structured response_format values "
+            "in request_body_options"
+        )
+    if error == "unsupported_reasoning_model":
+        return (
+            f"Groq model {model} does not support reasoning options in "
+            "request_body_options"
+        )
+    if error == "unsupported_compound_builtin_tools_model":
+        return (
+            f"Groq model {model} does not support Compound built-in tools in "
+            "request_body_options"
+        )
+    if error == "invalid_compound_builtin_tools":
+        return (
+            "request_body_options compound_custom.tools.enabled_tools contains "
+            "unsupported or incompatible Compound built-in tools"
+        )
+    return None
+
+
+def _approximate_tokens(encoded_bytes: int) -> int:
+    """Convert the encoded size to the same rough token budget at every call site."""
+    return max(
+        1, (encoded_bytes + _APPROX_CHARS_PER_TOKEN - 1) // _APPROX_CHARS_PER_TOKEN
+    )
+
+
+def _serialized_json_string_token_estimate(serialized: str) -> int:
+    """Estimate a compact, ASCII-escaped JSON value embedded as a string."""
+    # The existing JSON has no raw control characters. The outer string encoder
+    # adds its delimiters and escapes each quote and backslash once.
+    encoded_bytes = len(serialized) + 2 + serialized.count('"') + serialized.count("\\")
+    return _approximate_tokens(encoded_bytes)
+
+
+def _payload_token_estimate(
+    value: Any, string_estimates: dict[int, tuple[str, int]] | None = None
+) -> int:
+    """Return a rough token estimate for request payload values."""
+    if value is None:
+        return 0
+    if isinstance(value, dict):
+        # Image URLs, especially base64 data, encode transport bytes rather than
+        # text tokens. The provider enforces its model-specific image budget.
+        if value.get("type") == "image_url":
+            return 0
+        return sum(
+            _payload_token_estimate(item, string_estimates) for item in value.values()
+        )
+    if isinstance(value, list):
+        return sum(_payload_token_estimate(item, string_estimates) for item in value)
+    if not isinstance(value, str) or len(value) < 1024:
+        string_estimates = None
+    if (
+        string_estimates is not None
+        and (estimate := string_estimates.get(id(value))) is not None
+    ):
+        return estimate[1]
+    try:
+        encoded = json.dumps(value, separators=(",", ":"), ensure_ascii=False)
+    except TypeError:
+        return 0
+    tokens = _approximate_tokens(len(encoded.encode("utf-8")))
+    if string_estimates is not None:
+        string_estimates[id(value)] = (value, tokens)
+    return tokens
+
+
+def request_context_window_error(
+    model_registry: GroqModelRegistry,
+    request: TextGenerationRequest,
+    *,
+    string_estimates: dict[int, tuple[str, int]] | None = None,
+) -> str | None:
+    """Return an error when a request is too large for the model context window."""
+    context_window = model_registry.context_window(request.model)
+    if context_window is None:
+        return None
+    payload = (
+        build_structured_generation_payload(request)
+        if isinstance(request, StructuredGenerationRequest)
+        else build_text_generation_payload(request)
+    )
+    prompt_estimate = _payload_token_estimate(payload, string_estimates)
+    requested_completion = max(_completion_token_requests(request), default=0)
+    estimated_total = prompt_estimate + requested_completion
+    if estimated_total <= context_window:
+        return None
+    return (
+        f"Groq model {request.model} has a {context_window:,} token context window; "
+        f"this request is estimated at {estimated_total:,} tokens including the "
+        "requested completion. Shorten the prompt, schema, or request body options, "
+        "or reduce max completion tokens."
+    )
+
+
+def service_structured_outputs(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> bool:
+    """Return whether the service should request structured outputs."""
+    return bool(entry_value(config_entry, service_data, CONF_STRUCTURED_OUTPUTS, False))
+
+
+def service_schema(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the configured JSON schema for structured outputs."""
+    schema = entry_value(config_entry, service_data, CONF_SCHEMA, None)
+    if not schema:
+        return None
+    return dict(schema)
+
+
+def service_schema_name(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+    default: str = "response",
+) -> str:
+    """Return a Groq-compatible schema name."""
+    value = str(entry_value(config_entry, service_data, CONF_SCHEMA_NAME, default))
+    value = _SCHEMA_NAME_RE.sub("_", value).strip("_")
+    return value or default
+
+
+def service_strict(
+    config_entry: GroqConfigEntry,
+    service_data: dict[str, Any],
+) -> bool:
+    """Return whether strict structured output mode is enabled."""
+    return bool(entry_value(config_entry, service_data, CONF_STRICT, False))
+
+
+def service_unique_id(
+    config_entry: GroqConfigEntry, service_data: dict[str, Any]
+) -> str:
+    """Return a stable service unique id."""
+    return str(
+        service_data.get(UNIQUE_ID)
+        or getattr(config_entry, "unique_id", None)
+        or config_entry.entry_id
+    )
+
+
+def selector_to_json_schema(validator: Any) -> dict[str, Any]:
+    """Convert a Home Assistant selector or simple validator to JSON Schema."""
+    selector_type = getattr(validator, "selector_type", None)
+    config = getattr(validator, "config", {}) or {}
+
+    # AI tasks can provide Probatio structures with HA selectors. Convert only
+    # the selector shapes this integration can represent safely as JSON Schema.
+    if selector_type == "text":
+        return {"type": "string"}
+    if selector_type == "boolean":
+        return {"type": "boolean"}
+    if selector_type == "number":
+        schema: dict[str, Any] = {"type": "number"}
+        if "min" in config:
+            schema["minimum"] = config["min"]
+        if "max" in config:
+            schema["maximum"] = config["max"]
+        return schema
+    if selector_type == "select":
+        options = config.get("options", [])
+        values = [
+            option.get("value") if isinstance(option, dict) else option
+            for option in options
+        ]
+        item_schema: dict[str, Any] = {"type": "string"}
+        if values:
+            item_schema["enum"] = values
+        if config.get("multiple"):
+            return {"type": "array", "items": item_schema}
+        return item_schema
+    if selector_type == "object":
+        return {"type": "object"}
+
+    if validator is str:
+        return {"type": "string"}
+    if validator is bool:
+        return {"type": "boolean"}
+    if validator is int:
+        return {"type": "integer"}
+    if validator is float:
+        return {"type": "number"}
+    if isinstance(validator, probatio.Schema):
+        return schema_to_json_schema(validator)
+    return {}
+
+
+def schema_to_json_schema(schema: probatio.Schema) -> dict[str, Any]:
+    """Convert a simple Home Assistant AI task structure to JSON Schema."""
+    properties: dict[str, Any] = {}
+    required: list[str] = []
+    schema_data = getattr(schema, "schema", {})
+
+    if not isinstance(schema_data, dict):
+        return {}
+
+    for marker, validator in schema_data.items():
+        name = str(getattr(marker, "schema", marker))
+        field_schema = selector_to_json_schema(validator)
+        description = getattr(marker, "description", None)
+        if description:
+            field_schema = {**field_schema, "description": description}
+        properties[name] = field_schema
+        # Groq strict structured outputs need an explicit required list rather
+        # than relying on Probatio marker objects.
+        if isinstance(marker, probatio.Required):
+            required.append(name)
+
+    json_schema: dict[str, Any] = {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+    }
+    if required:
+        json_schema["required"] = required
+    return json_schema

@@ -1,0 +1,158 @@
+"""Assemble Groq chat deltas before permitting any local tool execution."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Any
+
+from .errors import GroqResponseError
+
+
+@dataclass(slots=True)
+class _ToolCallFragments:
+    """Accumulate tool fragments without repeatedly copying earlier bytes."""
+
+    id: str = ""
+    name: list[str] = field(default_factory=list)
+    arguments: list[str] = field(default_factory=list)
+
+    def message(self) -> dict[str, Any]:
+        """Return a fresh normalized call without consuming its fragments."""
+        return {
+            "id": self.id,
+            "type": "function",
+            "function": {
+                "name": "".join(self.name),
+                "arguments": "".join(self.arguments),
+            },
+        }
+
+
+class ChatStream:
+    """Collect one bounded response; tool calls are complete only at stream end."""
+
+    def __init__(self, model: str, *, collect_text: bool = True) -> None:
+        self.model = model
+        self._collect_text = collect_text
+        self.content: list[str] = []
+        self.reasoning: list[str] = []
+        self.calls: dict[int, _ToolCallFragments] = {}
+        self.usage: dict[str, Any] = {}
+        self.metadata: dict[str, Any] = {}
+        self.finish_reason: str | None = None
+
+    def add(self, event: dict[str, Any]) -> str | None:
+        """Merge one SSE event and return only its incremental spoken text."""
+        if isinstance(event.get("model"), str):
+            self.model = event["model"]
+        groq = event.get("x_groq")
+        usage = event.get("usage")
+        if not isinstance(usage, dict) and isinstance(groq, dict):
+            usage = groq.get("usage")
+        if isinstance(usage, dict):
+            self.usage.update(usage)
+        breakdown = event.get("usage_breakdown")
+        if isinstance(groq, dict) and isinstance(groq.get("usage_breakdown"), dict):
+            breakdown = groq["usage_breakdown"]
+        if isinstance(breakdown, dict):
+            self.metadata["usage_breakdown"] = breakdown
+        choices = event.get("choices")
+        if (
+            not isinstance(choices, list)
+            or not choices
+            or not isinstance(choices[0], dict)
+        ):
+            return None
+        choice = choices[0]
+        delta = choice.get("delta")
+        if not isinstance(delta, dict):
+            delta = {}
+        if self.finish_reason and any(
+            delta.get(k) for k in ("content", "reasoning", "tool_calls")
+        ):
+            raise GroqResponseError("Groq sent content after completing a response")
+        if choice.get("finish_reason"):
+            self.finish_reason = choice["finish_reason"]
+        for key in ("annotations", "citations", "executed_tools"):
+            if isinstance(delta.get(key), list):
+                self.metadata.setdefault(key, []).extend(delta[key])
+        if isinstance(delta.get("reasoning"), str):
+            self.reasoning.append(delta["reasoning"])
+        for call in delta.get("tool_calls") or []:
+            self._add_call(call)
+        content = delta.get("content")
+        if isinstance(content, str) and content:
+            if self._collect_text:
+                self.content.append(content)
+            return content
+        return None
+
+    def _add_call(self, delta: Any) -> None:
+        """Accumulate interleaved calls by provider index, preserving arguments."""
+        if not isinstance(delta, dict):
+            raise GroqResponseError("Groq returned an invalid tool delta")
+        index = delta.get("index")
+        if type(index) is not int or not 0 <= index < 64:
+            raise GroqResponseError("Groq returned an invalid tool index")
+        call = self.calls.get(index)
+        if call is None:
+            call = self.calls[index] = _ToolCallFragments()
+        if delta.get("type") not in (None, "function"):
+            raise GroqResponseError("Groq returned an unsupported local tool type")
+        if delta.get("id") is not None:
+            if not isinstance(delta["id"], str) or (call.id and call.id != delta["id"]):
+                raise GroqResponseError("Groq changed a streamed tool id")
+            call.id = delta["id"]
+        function = delta.get("function", {})
+        if function is None:
+            return
+        if not isinstance(function, dict):
+            raise GroqResponseError("Groq returned an invalid tool function")
+        for key in ("name", "arguments"):
+            if function.get(key) is not None:
+                if not isinstance(function[key], str):
+                    raise GroqResponseError("Groq returned an invalid tool fragment")
+                if function[key]:
+                    fragments = call.name if key == "name" else call.arguments
+                    fragments.append(function[key])
+
+    def result(
+        self, *, parsed_arguments: dict[str, dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
+        """Reject unfinished/malformed operations before producing tool calls."""
+        calls = [self.calls[i].message() for i in sorted(self.calls)]
+        if calls:
+            if self.finish_reason != "tool_calls":
+                raise GroqResponseError("Groq did not finish the streamed tool calls")
+            ids: set[str] = set()
+            for call in calls:
+                function = call["function"]
+                try:
+                    arguments = json.loads(function["arguments"])
+                except json.JSONDecodeError as err:
+                    raise GroqResponseError(
+                        "Groq returned incomplete tool arguments"
+                    ) from err
+                if (
+                    not isinstance(arguments, dict)
+                    or not function["name"]
+                    or not call["id"]
+                    or call["id"] in ids
+                ):
+                    raise GroqResponseError("Groq returned invalid streamed tool calls")
+                ids.add(call["id"])
+                if parsed_arguments is not None:
+                    parsed_arguments[call["id"]] = arguments
+        message = {
+            **self.metadata,
+            "content": "".join(self.content),
+            "reasoning": "".join(self.reasoning),
+            "tool_calls": calls,
+        }
+        return {
+            "model": self.model,
+            "usage": self.usage,
+            "usage_breakdown": self.metadata.get("usage_breakdown"),
+            "choices": [{"message": message}],
+        }

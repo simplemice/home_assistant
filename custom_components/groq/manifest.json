@@ -1,0 +1,30 @@
+{
+  "domain": "groq",
+  "name": "Groq",
+  "after_dependencies": [
+    "assist_pipeline",
+    "camera",
+    "intent"
+  ],
+  "categories": [
+    "ai_voice"
+  ],
+  "codeowners": [
+    "@barneyonline"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "conversation",
+    "media_source"
+  ],
+  "documentation": "https://github.com/barneyonline/ha-groq",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/barneyonline/ha-groq/issues",
+  "loggers": [],
+  "quality_scale": "platinum",
+  "requirements": [
+    "jsonschema==4.26.0"
+  ],
+  "version": "2.3.0"
+}

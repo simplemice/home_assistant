@@ -1,0 +1,184 @@
+###############################################################################
+#   @author         :   Simplemice
+#   @date           :   19/11/2026
+#   @package        :   Energy - PEA bill
+#   @description    :   PEA residential PROGRESSIVE tariff (meter read on the 15th/16th,
+#                       billing cycle 16th -> 15th; cycle reset by the "bill read" button). Verified against the bill read on
+#                       15 Nov 2026: 280 kWh = 200 x 3.00 + 80 x 4.1584 = 932.67, service 24.62,
+#                       Ft 45.44, VAT 70.19, total 1,072.92 THB.
+#                       Provides: billing-cycle kWh meters, the current marginal rate (price
+#                       entity for the Energy dashboard) and a bill estimate for the cycle.
+#   @ft_vat         :   Ft and VAT helpers live in this file (single place to update).
+#                       Ft changes every 4 months (Jan, May, Sep): edit `initial:` of
+#                       electricity_ft below and restart HA (reminder automation fires 20 Apr/Aug/Dec).
+#   @tiers          :   Energy rates before Ft and VAT. All tiers confirmed on PEA's site
+#                       (residential 1.1.2): 0-200 = 3.0000, 201-400 = 4.1584, 401+ = 4.3583.
+###############################################################################
+
+input_number:
+  electricity_ft:
+    name: Electricity Ft
+    min: 0
+    max: 2
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 0.1623 # Sep-Dec 2026
+    icon: mdi:cash-plus
+
+  electricity_vat:
+    name: Electricity VAT
+    min: 0
+    max: 20
+    step: 0.1
+    unit_of_measurement: "%"
+    initial: 7
+    icon: mdi:percent
+
+  pea_tier1_limit:
+    name: PEA Tier 1 Limit
+    min: 0
+    max: 1000
+    step: 1
+    unit_of_measurement: kWh
+    initial: 200
+    icon: mdi:stairs
+
+  pea_tier2_limit:
+    name: PEA Tier 2 Limit
+    min: 0
+    max: 1000
+    step: 1
+    unit_of_measurement: kWh
+    initial: 400
+    icon: mdi:stairs
+
+  pea_rate_tier1:
+    name: PEA Rate Tier 1 (first 200 kWh)
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 3.0
+
+  pea_rate_tier2:
+    name: PEA Rate Tier 2 (201-400 kWh)
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 4.1584
+
+  pea_rate_tier3:
+    name: PEA Rate Tier 3 (401+ kWh)
+    min: 0
+    max: 20
+    step: 0.0001
+    unit_of_measurement: THB/kWh
+    initial: 4.3583
+
+  pea_service_charge:
+    name: PEA Service Charge
+    min: 0
+    max: 500
+    step: 0.01
+    unit_of_measurement: THB
+    initial: 24.62
+
+###############################################################################
+# BILLING-CYCLE METER. No automatic cycle: PEA's meter read drifts (15th/16th ~09:19),
+# so the meter is reset by input_button.pea_bill_read (automation "PEA Bill Read").
+# Source: Refoss main clamp. No solar export in this house.
+###############################################################################
+
+input_button:
+  pea_bill_read:
+    name: PEA Bill Read (reset cycle)
+    icon: mdi:receipt-text-check
+
+input_datetime:
+  pea_last_bill_read:
+    name: PEA Last Bill Read
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-check
+
+utility_meter:
+  pea_billing_import:
+    source: sensor.services_refoss_smart_energy_monitor_main_today_energy
+
+###############################################################################
+# TEMPLATE SENSORS
+###############################################################################
+
+template:
+  - sensor:
+      # Marginal price of the NEXT kWh in this cycle, incl. Ft and VAT.
+      # Use as the Energy dashboard "price entity" (steps up as the cycle kWh grows).
+      - name: PEA Marginal Rate
+        unique_id: pea_marginal_rate
+        unit_of_measurement: THB/kWh
+        icon: mdi:currency-thb
+        availability: >
+          {{ has_value('sensor.pea_billing_import')
+             and has_value('input_number.pea_tier1_limit')
+             and has_value('input_number.pea_tier2_limit')
+             and has_value('input_number.pea_rate_tier1')
+             and has_value('input_number.pea_rate_tier2')
+             and has_value('input_number.pea_rate_tier3')
+             and has_value('input_number.electricity_ft')
+             and has_value('input_number.electricity_vat') }}
+        state: >
+          {% set k  = states('sensor.pea_billing_import') | float(0) %}
+          {% set l1 = states('input_number.pea_tier1_limit') | float(0) %}
+          {% set l2 = states('input_number.pea_tier2_limit') | float(0) %}
+          {% set base = states('input_number.pea_rate_tier1') | float(0) if k < l1
+             else (states('input_number.pea_rate_tier2') | float(0) if k < l2
+             else states('input_number.pea_rate_tier3') | float(0)) %}
+          {% set ft  = states('input_number.electricity_ft') | float(0) %}
+          {% set vat = states('input_number.electricity_vat') | float(0) %}
+          {{ ((base + ft) * (1 + vat / 100)) | round(4) }}
+        attributes:
+          tier: >
+            {% set k = states('sensor.pea_billing_import') | float(0) %}
+            {{ 1 if k < states('input_number.pea_tier1_limit') | float(0)
+               else (2 if k < states('input_number.pea_tier2_limit') | float(0) else 3) }}
+          cycle_kwh: "{{ states('sensor.pea_billing_import') }}"
+
+      # Estimated bill for the current cycle, rounded step by step like the PEA bill.
+      - name: PEA Bill Estimate
+        unique_id: pea_bill_estimate
+        unit_of_measurement: THB
+        icon: mdi:receipt-text
+        availability: >
+          {{ has_value('sensor.pea_billing_import')
+             and has_value('input_number.pea_tier1_limit')
+             and has_value('input_number.pea_tier2_limit')
+             and has_value('input_number.pea_rate_tier1')
+             and has_value('input_number.pea_rate_tier2')
+             and has_value('input_number.pea_rate_tier3')
+             and has_value('input_number.pea_service_charge')
+             and has_value('input_number.electricity_ft')
+             and has_value('input_number.electricity_vat') }}
+        state: >
+          {% set k   = states('sensor.pea_billing_import') | float(0) %}
+          {% set l1  = states('input_number.pea_tier1_limit') | float(0) %}
+          {% set l2  = states('input_number.pea_tier2_limit') | float(0) %}
+          {% set r1  = states('input_number.pea_rate_tier1') | float(0) %}
+          {% set r2  = states('input_number.pea_rate_tier2') | float(0) %}
+          {% set r3  = states('input_number.pea_rate_tier3') | float(0) %}
+          {% set energy = (([k, l1] | min) * r1
+                          + ([[k, l2] | min - l1, 0] | max) * r2
+                          + ([k - l2, 0] | max) * r3) | round(2) %}
+          {% set ft_amt = (k * states('input_number.electricity_ft') | float(0)) | round(2) %}
+          {% set sub = (energy + states('input_number.pea_service_charge') | float(0) + ft_amt) | round(2) %}
+          {% set vat_amt = (sub * states('input_number.electricity_vat') | float(0) / 100) | round(2) %}
+          {{ (sub + vat_amt) | round(2) }}
+        attributes:
+          cycle_kwh: "{{ states('sensor.pea_billing_import') }}"
+          service_charge: "{{ states('input_number.pea_service_charge') }}"
+          ft: "{{ states('input_number.electricity_ft') }}"
+          cycle_start: >
+            {% set n = now() %}
+            {{ (n.replace(day=16, hour=0, minute=0, second=0, microsecond=0)
+                if n.day >= 16
+                else (n.replace(day=1) - timedelta(days=1)).replace(day=16, hour=0, minute=0, second=0, microsecond=0)).date() }}

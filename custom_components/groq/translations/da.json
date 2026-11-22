@@ -1,0 +1,821 @@
+{
+    "config": {
+        "initiate_flow": {
+            "user": "Tilføj Groq-konto"
+        },
+        "step": {
+            "user": {
+                "title": "Tilføj Groq",
+                "description": "Se dokumentationen for yderligere information.",
+                "data": {
+                    "name": "Navn",
+                    "api_key": "Indtast Groq API nøgle"
+                },
+                "data_description": {
+                    "name": "Et venligt navn til denne Groq-konto. Brug dette til at identificere API-nøglen eller faktureringsprojektet.",
+                    "api_key": "Groq API nøgle for denne konto. Tilføj en anden Groq-konto, hvis du vil bruge en anden nøgle til et separat sæt tjenester."
+                }
+            },
+            "reauth_confirm": {
+                "title": "Genautentificer Groq",
+                "description": "Dine legitimationsoplysninger er ikke længere gyldige. Indtast venligst en ny API nøgle.",
+                "data": {
+                    "api_key": "Groq API nøgle"
+                }
+            },
+            "reconfigure": {
+                "title": "Genkonfigurer Groq",
+                "description": "Opdater Groq-kontonavnet, eller udskift API-nøglen.",
+                "data": {
+                    "name": "Navn",
+                    "api_key": "Groq API nøgle"
+                },
+                "data_description": {
+                    "name": "Et venligt navn til denne Groq-konto.",
+                    "api_key": "Valgfri erstatning API nøgle. Lad være tom for at beholde den aktuelle API-nøgle."
+                }
+            }
+        },
+        "abort": {
+            "reconfigure_successful": "Groq-konto blev opdateret.",
+            "reauth_successful": "You're all set. Groq has been reconnected with the new API key."
+        },
+        "error": {
+            "cannot_connect": "Kunne ikke oprette forbindelse til Groq. Tjek venligst din netværksforbindelse, og prøv igen.",
+            "duplicate_api_key": "En anden Groq-konto bruger allerede denne API-nøgle.",
+            "invalid_auth": "Ugyldig Groq API nøgle. Indtast venligst en gyldig nøgle.",
+            "wrong_api_key": "Ugyldig API nøgle. Indtast venligst en gyldig API nøgle.",
+            "invalid_url": "Ugyldig URL. Indtast venligst en gyldig URL.",
+            "invalid_enabled_features": "En eller flere valgte funktioner understøttes ikke.",
+            "invalid_response_format": "Invalid response format.",
+            "invalid_sample_rate": "Invalid sample rate.",
+            "invalid_speed": "Invalid speed.",
+            "invalid_vocal_directions": "Default vocal directions must be a single word.",
+            "unsupported_reasoning_model": "Den valgte model understøtter ikke begrundelsesmuligheder.",
+            "unsupported_prompt_caching_model": "Den valgte model understøtter ikke lokal svarcache.",
+            "unsupported_structured_outputs_model": "Den valgte model understøtter ikke strukturerede output.",
+            "invalid_request_body_options": "Additional request body options must be a JSON object.",
+            "reserved_request_body_option": "Yderligere indstillinger for anmodningstekst kan ikke tilsidesætte model, beskeder eller stream. Brug i stedet de dedikerede felter.",
+            "max_completion_tokens_exceeded": "Den valgte model understøtter ikke så mange maks. færdiggørelsestokens.",
+            "invalid_voice": "Den valgte stemme er ikke tilgængelig for den valgte model.",
+            "select_voice_for_model": "Vælg en stemme til den valgte model.",
+            "required": "Dette felt er påkrævet.",
+            "unknown": "Uventet fejl under validering af API-nøglen. Prøv venligst igen.",
+            "unknown_error": "Uventet fejl — prøv venligst igen.",
+            "ffmpeg_required": "Installer ffmpeg for at aktivere denne indstilling.",
+            "unsupported_tool_calling_model": "The selected model is not known to support Home Assistant tool calls.",
+            "unsupported_compound_builtin_tools_model": "Compound built-in tools are only supported by Groq Compound models.",
+            "invalid_compound_builtin_tools": "One or more selected Compound built-in tools are unsupported or require another selected tool.",
+            "unsupported_browser_search_model": "Browser search requires a supported GPT-OSS model.",
+            "browser_search_structured_output": "Browser search cannot be combined with structured output."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Konfigurer Groq-indstillinger",
+                "data": {
+                    "api_key": "Groq API nøgle"
+                },
+                "data_description": {
+                    "api_key": "Valgfri erstatning API nøgle til denne Groq konto."
+                }
+            }
+        }
+    },
+    "config_subentries": {
+        "text_generation": {
+            "entry_type": "Tekstgenereringstjeneste",
+            "initiate_flow": {
+                "user": "Tilføj tekstgenerering",
+                "reconfigure": "Genkonfigurer tekstgenerering"
+            },
+            "abort": {
+                "reconfigure_successful": "Tekstgenereringstjenesten blev opdateret.",
+                "no_compatible_models": "Denne Groq-konto har ingen aktive modeller, der understøtter tjenesten. Kontrollér modeladgangen i Groq-konsollen, og prøv igen.",
+                "model_unavailable": "Den valgte model er ikke længere tilgængelig for tjenesten. Start konfigurationen igen, og vælg en tilgængelig model."
+            },
+            "step": {
+                "text_generation": {
+                    "title": "Tekstgenerering",
+                    "description": "Valgte modelfunktioner: {model_capabilities}",
+                    "data": {
+                        "name": "Navn",
+                        "model": "Model",
+                        "system_prompt": "Systemprompt",
+                        "temperature": "Temperatur",
+                        "advanced_options": "Konfigurer yderligere anmodningsindstillinger",
+                        "protect_free_tier": "Free-tier beskyttelse",
+                        "llm_hass_api": "Home Assistant LLM API"
+                    },
+                    "data_description": {
+                        "name": "Et venligt navn for denne tekstgenereringstjeneste. Home Assistant bruger dette til opgaveenheder Assist og AI.",
+                        "model": "Groq-chatmodellen bruges til tekstsvar, Assist-samtaler og datagenereringsopgaver.",
+                        "system_prompt": "Instruktioner, der guider modellen. Standarden matcher Home Assistant's AI opgaveprompt.",
+                        "temperature": "Styrer svarvariation. Lavere værdier er mere forudsigelige; højere værdier er mere kreative.",
+                        "advanced_options": "Åbner yderligere kontroller for mindre almindelige Groq chatanmodningsmuligheder.",
+                        "protect_free_tier": "Når Groq rapporterer, at denne tjeneste har nået en anmodning eller token-grænse, sætter Home Assistant kun denne tjeneste på pause, indtil Groq's nulstillingstidspunkt, før den sender flere anmodninger.",
+                        "llm_hass_api": "Home Assistant LLM APIs that this Assist agent may use for tool calls. Leave empty to disable Home Assistant tool access."
+                    }
+                },
+                "text_generation_advanced": {
+                    "title": "Yderligere indstillinger for tekstgenerering",
+                    "data": {
+                        "max_tokens": "Maks. fuldførelsestokens",
+                        "top_p": "Top P",
+                        "stop": "Stop sekvenser",
+                        "seed": "Frø",
+                        "service_tier": "Serviceniveau",
+                        "stream": "Stream Assist-svar",
+                        "reasoning_effort": "Ræsonnement indsats",
+                        "reasoning_format": "Begrundelsesformat",
+                        "include_reasoning": "Inkluder ræsonnement",
+                        "prompt_caching": "Lokal svarcache",
+                        "compound_builtin_tools": "Compound built-in tools",
+                        "structured_outputs": "Brug strukturerede output",
+                        "schema_name": "Skemanavn",
+                        "schema": "JSON schema",
+                        "strict": "Streng skematilstand",
+                        "request_body_options": "Yderligere muligheder for anmodningstekst",
+                        "browser_search": "Browser search"
+                    },
+                    "data_description": {
+                        "max_tokens": "Begrænser antallet af tokens, Groq kan generere i svaret.",
+                        "top_p": "Alternativ prøvetagningskontrol. Lavere værdier begrænser generering til mere sandsynlige tokens.",
+                        "stop": "En stopsekvens pr. linje. Generering stopper, når en sekvens er produceret.",
+                        "seed": "Best-effort deterministisk sampling frø til gentagelige svar.",
+                        "service_tier": "Valgfri Groq-behandlingstrin for anmodningen.",
+                        "stream": "Streamer Assist-svar til Home Assistant-chatloggen, når det understøttes.",
+                        "reasoning_effort": "Begrundelse af budget kun for understøttede ræsonnementmodeller.",
+                        "reasoning_format": "Hvordan understøttede ræsonnementmodeller afslører ræsonnementindhold.",
+                        "include_reasoning": "Anmoder om begrundelsesindhold på understøttede modeller, når der ikke er indstillet et begrundelsesformat.",
+                        "prompt_caching": "Caches, der matcher Home Assistant-servicesvar lokalt for understøttede modeller.",
+                        "compound_builtin_tools": "Allows selected Groq server-side tools for Compound models. Leave empty to block built-in web browsing, website visits, browser automation, code execution, and Wolfram Alpha.",
+                        "structured_outputs": "Anmoder om JSON, der følger det konfigurerede skema, når denne service bruges til datagenerering.",
+                        "schema_name": "En kort identifikator sendt til Groq med skemaet.",
+                        "schema": "JSON Schema objekt sendt som response_format.json_schema.schema.",
+                        "strict": "Bruger Groq begrænset afkodning, når den valgte model understøtter strengt strukturerede output.",
+                        "request_body_options": "JSON-objekt flettet ind i anmodningen om chat-afslutning. Brug dette felt til hver Groq chat-opret brødtekst-indstilling, der ikke vises som et dedikeret felt, inklusive citation_options, compound_custom, disable_tool_validation, documents, exclude_domains, frequency_penalty, function_call, functions, include_domains, logit_bias, logprobs, max_tokens, metadata, n, parallel_tool_calls, presence_penalty, response_format, search_settings, store, stream_options, tool_choice, tools, top_logprobs, and user.",
+                        "browser_search": "Allow GPT-OSS to search and browse public websites. Cannot be used with structured output. Search requests bypass the local response cache."
+                    }
+                }
+            }
+        },
+        "speech_to_text": {
+            "entry_type": "Tale-til-tekst-tjeneste",
+            "initiate_flow": {
+                "user": "Tilføj tale-til-tekst",
+                "reconfigure": "Genkonfigurer tale-til-tekst"
+            },
+            "abort": {
+                "reconfigure_successful": "Tale-til-tekst-tjenesten blev opdateret.",
+                "no_compatible_models": "Denne Groq-konto har ingen aktive modeller, der understøtter tjenesten. Kontrollér modeladgangen i Groq-konsollen, og prøv igen.",
+                "model_unavailable": "Den valgte model er ikke længere tilgængelig for tjenesten. Start konfigurationen igen, og vælg en tilgængelig model."
+            },
+            "error": {
+                "prompt_too_long": "Brug højst {max_length} tegn. Groq læser kun omkring 224 tokens."
+            },
+            "step": {
+                "speech_to_text": {
+                    "title": "Tale-til-tekst",
+                    "data": {
+                        "name": "Navn",
+                        "model": "Model",
+                        "language": "Sprog",
+                        "prompt": "Ordforråd og kontekst",
+                        "protect_free_tier": "Free-tier beskyttelse"
+                    },
+                    "data_description": {
+                        "name": "Et venligt navn for denne tale-til-tekst-tjenesteinstans.",
+                        "model": "Groq Whisper-modellen bruges til at transskribere lyd.",
+                        "language": "Sprogtip sendt til Groq til transskription. Standard til det sprog, der er konfigureret i Home Assistant, når det er tilgængeligt.",
+                        "prompt": "Valgfrie navne og fagtermer, som Whisper staver forkert, i en kort sætning, for eksempel: Samtalen handler om Home Assistant, Zigbee og Philips Hue. Skriv på det sprog, du taler. Angiv ikke kommandoer: ord fra denne tekst kan optræde som genkendt tale ved stilhed eller utydelig tale.",
+                        "protect_free_tier": "Når Groq rapporterer, at denne tjeneste har nået en anmodning eller token-grænse, sætter Home Assistant kun denne tjeneste på pause, indtil Groq's nulstillingstidspunkt, før den sender flere anmodninger."
+                    }
+                }
+            }
+        },
+        "text_to_speech": {
+            "entry_type": "Tekst-til-tale-tjeneste",
+            "initiate_flow": {
+                "user": "Tilføj tekst-til-tale",
+                "reconfigure": "Genkonfigurer tekst-til-tale"
+            },
+            "abort": {
+                "reconfigure_successful": "Tekst-til-tale-tjenesten blev opdateret.",
+                "no_compatible_models": "Denne Groq-konto har ingen aktive modeller, der understøtter tjenesten. Kontrollér modeladgangen i Groq-konsollen, og prøv igen.",
+                "model_unavailable": "Den valgte model er ikke længere tilgængelig for tjenesten. Start konfigurationen igen, og vælg en tilgængelig model."
+            },
+            "step": {
+                "text_to_speech": {
+                    "title": "Tekst-til-tale",
+                    "data": {
+                        "name": "Navn",
+                        "model": "Model",
+                        "voice": "Stemme",
+                        "vocal_directions": "Standard vokale retninger",
+                        "normalize_audio": "Aktiver lydstyrke for genereret lyd (bruger mere CPU)",
+                        "enable_long_tts": "Aktiver lange TTS-meddelelser (bruger mere CPU)",
+                        "protect_free_tier": "Free-tier beskyttelse",
+                        "response_format": "Playback format",
+                        "sample_rate": "Sample rate",
+                        "speed": "Speed"
+                    },
+                    "data_description": {
+                        "name": "Et venligt navn for denne tekst-til-tale-tjenesteinstans.",
+                        "model": "Groq talemodel, der bruges til at generere lyd.",
+                        "voice": "Den stemmepersona, der bruges af den valgte talemodel. Ændring af modellen rydder stemmer, der ikke er tilgængelige for den nye model.",
+                        "vocal_directions": "Valgfri leveringsstil sat foran tale, såsom munter eller hvisken. Du kan vælge en forudindstilling eller skrive din egen.",
+                        "normalize_audio": "Normalizes generated audio with ffmpeg for more consistent loudness on small speakers. ffmpeg is also required when playback format is MP3 or FLAC.",
+                        "enable_long_tts": "Opdeler længere meddelelser i flere Groq-anmodninger og samler dem med ffmpeg. Dette kan bruge mere CPU og mere Groq-anmodningskvote. Kræver ffmpeg; deaktiveret hvis ffmpeg ikke er installeret.",
+                        "protect_free_tier": "Når Groq rapporterer, at denne tjeneste har nået en anmodning, token eller kendt tekst-til-tale-tegngrænse, sætter Home Assistant kun denne tjeneste på pause indtil nulstillingstiden, før den sender flere anmodninger.",
+                        "response_format": "Audio format served by Home Assistant. WAV is the default; MP3 is the safest choice for most speakers, FLAC is available for lossless playback, OGG is useful for Opus playback, and MULAW is useful for telephony-style 8 kHz audio.",
+                        "sample_rate": "Optional Groq output sample rate. Leave unset to use the model default or the integration playback profile.",
+                        "speed": "Playback speed sent to Groq. Use 1.0 for normal speed; supported values are 0.5 through 5."
+                    }
+                }
+            }
+        },
+        "image_recognition": {
+            "entry_type": "Billedgenkendelsestjeneste",
+            "initiate_flow": {
+                "user": "Tilføj billedgenkendelse",
+                "reconfigure": "Genkonfigurer billedgenkendelse"
+            },
+            "abort": {
+                "reconfigure_successful": "Billedgenkendelsestjenesten blev opdateret.",
+                "no_compatible_models": "Denne Groq-konto har ingen aktive modeller, der understøtter tjenesten. Kontrollér modeladgangen i Groq-konsollen, og prøv igen.",
+                "model_unavailable": "Den valgte model er ikke længere tilgængelig for tjenesten. Start konfigurationen igen, og vælg en tilgængelig model."
+            },
+            "step": {
+                "image_recognition": {
+                    "title": "Billedgenkendelse",
+                    "data": {
+                        "name": "Navn",
+                        "model": "Model",
+                        "system_prompt": "Systemprompt",
+                        "protect_free_tier": "Free-tier beskyttelse"
+                    },
+                    "data_description": {
+                        "name": "Et venligt navn for denne billedgenkendelsestjenesteinstans.",
+                        "model": "Groq vision-modellen bruges til at inspicere billeder.",
+                        "system_prompt": "Valgfri instruktioner, der guider, hvordan billedspørgsmål besvares.",
+                        "protect_free_tier": "Når Groq rapporterer, at denne tjeneste har nået en anmodning eller token-grænse, sætter Home Assistant kun denne tjeneste på pause, indtil Groq's nulstillingstidspunkt, før den sender flere anmodninger."
+                    }
+                }
+            }
+        }
+    },
+    "entity": {
+        "ai_task": {
+            "data_generation_tasks": {
+                "name": "Datagenereringsopgaver"
+            }
+        },
+        "conversation": {
+            "assist": {
+                "name": "Assist"
+            }
+        },
+        "stt": {
+            "speech_to_text": {
+                "name": "Tale-til-tekst"
+            }
+        },
+        "tts": {
+            "text_to_speech": {
+                "name": "Tekst-til-tale"
+            }
+        },
+        "sensor": {
+            "requests": {
+                "name": "Successful generation requests"
+            },
+            "prompt_tokens": {
+                "name": "Last input tokens"
+            },
+            "completion_tokens": {
+                "name": "Last output tokens"
+            },
+            "total_tokens": {
+                "name": "Last total tokens"
+            },
+            "cached_tokens": {
+                "name": "Last cached input tokens"
+            },
+            "response_time": {
+                "name": "Last response time"
+            },
+            "cache_hit_rate": {
+                "name": "Last provider cache hit rate"
+            }
+        }
+    },
+    "issues": {
+        "ffmpeg_missing": {
+            "title": "ffmpeg is required for Groq audio processing",
+            "description": "The Groq Text-to-Speech service {service_name} is configured to process generated audio with ffmpeg, but Home Assistant could not run ffmpeg for the requested audio processing. Install ffmpeg on the Home Assistant host, choose WAV playback when conversion is enabled, or turn off audio normalization and Long TTS for this Groq Text-to-Speech service."
+        },
+        "model_access": {
+            "title": "Groq-modellen er ikke tilgængelig",
+            "description": "Groq rapporterede, at modellen {model} ikke er tilgængelig for denne konto. Tjek modelnavnet i Groq-konsollen, bekræft, at modellen er aktiveret for kontoen, eller vælg en anden Groq-model i denne integration."
+        },
+        "model_configuration": {
+            "title": "Groq servicemodelkonfiguration er ugyldig",
+            "description": "Groq-tjenesten {service_name} er konfigureret til at bruge model {model}, men denne model er ikke kendt for at understøtte {feature}. Vælg en model, der understøtter denne servicetype."
+        }
+    },
+    "exceptions": {
+        "unsupported_config_version": {
+            "message": "Denne Groq-konfiguration bruger version {version}, men den installerede integration understøtter op til version {supported_version}. Opdater Groq-integrationen til en version, der understøtter denne konfiguration."
+        },
+        "multiple_services_match": {
+            "message": "Flere Groq-tjenester matcher service_id: {service_id}"
+        },
+        "config_entry_not_found": {
+            "message": "Groq konfigurationsindgang ikke fundet: {entry_id}"
+        },
+        "no_loaded_config_entry": {
+            "message": "Ingen indlæst Groq-konfigurationsindgang fundet"
+        },
+        "multiple_config_entries": {
+            "message": "Flere Groq-konfigurationsindgange er indlæst; give config_entry_id eller service_id"
+        },
+        "service_not_found": {
+            "message": "Groq {service_type} tjeneste ikke fundet: {service_id}"
+        },
+        "multiple_services_configured": {
+            "message": "Flere Groq {service_type}-tjenester er konfigureret; give service_id"
+        },
+        "service_id_required": {
+            "message": "Select a Groq {service_type} service with service_id"
+        },
+        "config_entry_required": {
+            "message": "Select a Groq account with config_entry_id"
+        },
+        "unsupported_model": {
+            "message": "Groq model {model} er ikke kendt for at understøtte {feature}"
+        },
+        "completion_token_limit": {
+            "message": "Groq model {model} understøtter højst {limit} færdiggørelsestokens"
+        },
+        "select_one_camera": {
+            "message": "Vælg kun én kameraenhed"
+        },
+        "camera_capture_failed": {
+            "message": "Kunne ikke tage billede fra kameraenheden {entity_id}"
+        },
+        "local_image_path_not_allowed": {
+            "message": "Lokal billedsti er ikke i Home Assistant's allowlist_external_dirs"
+        },
+        "local_image_not_found": {
+            "message": "Lokal billedfil blev ikke fundet: {path}"
+        },
+        "local_file_not_image": {
+            "message": "Lokal fil er ikke et billede: {path}"
+        },
+        "image_media_unresolvable": {
+            "message": "Kunne ikke løse billedfil: {path}"
+        },
+        "selected_media_not_image": {
+            "message": "Det valgte medie er ikke et billede: {path}"
+        },
+        "image_source_required": {
+            "message": "Vælg en kameraenhed, billedfil, lokal billedsti eller billede URL"
+        },
+        "invalid_image_url": {
+            "message": "Billede URL skal være en http, https eller billeddata URL"
+        },
+        "image_too_large": {
+            "message": "Det valgte billede er for stort; maksimal størrelse er {limit_mb} MB"
+        },
+        "local_audio_path_not_allowed": {
+            "message": "Lokal lydsti er ikke i Home Assistant's allowlist_external_dirs"
+        },
+        "local_audio_not_found": {
+            "message": "Lokal lydfil blev ikke fundet: {path}"
+        },
+        "local_file_not_audio": {
+            "message": "Lokal fil er ikke lyd: {path}"
+        },
+        "audio_media_unresolvable": {
+            "message": "Kunne ikke løse lydfil: {path}"
+        },
+        "audio_media_local_required": {
+            "message": "Valgt lyd skal løses til en lokal fil"
+        },
+        "selected_media_not_audio": {
+            "message": "Det valgte medie er ikke lyd: {path}"
+        },
+        "audio_source_required": {
+            "message": "Vælg en lydfil eller lokal lydsti"
+        },
+        "audio_too_large": {
+            "message": "Den valgte lyd er for stor; maksimal størrelse er {limit_mb} MB"
+        },
+        "request_invalid": {
+            "message": "{message}"
+        },
+        "integration_error": {
+            "message": "The Groq integration could not complete the request"
+        },
+        "api_error": {
+            "message": "The Groq API request failed"
+        },
+        "invalid_api_response": {
+            "message": "Groq returned an invalid response"
+        },
+        "rate_limit_exceeded": {
+            "message": "Groq’s rate limit was exceeded; try again later"
+        },
+        "attachment_file_missing": {
+            "message": "The selected image attachment no longer exists"
+        },
+        "attachment_file_unreadable": {
+            "message": "Home Assistant kunne ikke læse det valgte vedhæftede billede"
+        },
+        "attachment_not_file": {
+            "message": "The selected image attachment is not a file"
+        },
+        "attachment_too_large": {
+            "message": "The selected image attachment exceeds the {limit_mb} MB limit"
+        },
+        "too_many_attachments": {
+            "message": "Groq accepts at most {limit} image attachments"
+        },
+        "attachments_too_large": {
+            "message": "The selected image attachments exceed the combined {limit_mb} MB limit"
+        },
+        "attachment_not_image": {
+            "message": "Only image files can be attached to a Groq request"
+        },
+        "attachment_file_required": {
+            "message": "The image attachment must resolve to a local file"
+        },
+        "vision_model_required": {
+            "message": "Image attachments require a vision-capable Groq model"
+        },
+        "invalid_request_options": {
+            "message": "The configured Groq request options are invalid"
+        },
+        "tool_call_limit": {
+            "message": "Groq exceeded the Home Assistant tool-call limit"
+        },
+        "structured_response_invalid": {
+            "message": "Groq returned data that did not match the requested structure"
+        },
+        "ffmpeg_not_found": {
+            "message": "ffmpeg is not installed or could not be found"
+        },
+        "ffmpeg_start_failed": {
+            "message": "Home Assistant could not start ffmpeg"
+        },
+        "ffmpeg_timeout": {
+            "message": "ffmpeg timed out while processing Groq audio"
+        },
+        "ffmpeg_failed": {
+            "message": "ffmpeg could not process the Groq audio"
+        },
+        "feature_not_enabled": {
+            "message": "The {feature} feature is not enabled for this Groq account"
+        }
+    },
+    "services": {
+        "generate_text": {
+            "name": "Generate Text",
+            "description": "Generate a text response with a configured Groq Text Generation service.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to use. Leave empty when only one Groq account is configured."
+                },
+                "service_id": {
+                    "name": "Groq Service",
+                    "description": "Configured Text Generation service to use. Home Assistant fills this dropdown from loaded Groq services when the integration is running."
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "description": "User prompt to send to Groq."
+                },
+                "model": {
+                    "name": "Model",
+                    "description": "Optional Groq chat model override. Choose a known compatible model from the dropdown, or enter a newer Groq model ID manually if Groq adds one before this integration is updated. Leave empty to use the selected service model."
+                },
+                "system_prompt": {
+                    "name": "System Prompt",
+                    "description": "Optional system instructions. Leave empty to use the selected service prompt."
+                },
+                "temperature": {
+                    "name": "Temperature",
+                    "description": "Controls response variation. Lower values are more predictable; higher values are more creative."
+                },
+                "max_tokens": {
+                    "name": "Max Completion Tokens",
+                    "description": "Maximum number of tokens Groq may generate."
+                },
+                "top_p": {
+                    "name": "Top P",
+                    "description": "Alternative sampling control that limits generation to likely tokens."
+                },
+                "stop": {
+                    "name": "Stop Sequences",
+                    "description": "Stop sequence that ends generation. In YAML automations this also accepts a list of stop sequences."
+                },
+                "seed": {
+                    "name": "Seed",
+                    "description": "Best-effort deterministic sampling seed for repeatable responses."
+                },
+                "service_tier": {
+                    "name": "Service Tier",
+                    "description": "Optional Groq processing tier for this request."
+                },
+                "reasoning_effort": {
+                    "name": "Reasoning Effort",
+                    "description": "Reasoning budget for models that support reasoning."
+                },
+                "reasoning_format": {
+                    "name": "Reasoning Format",
+                    "description": "How supported reasoning models expose reasoning content."
+                },
+                "include_reasoning": {
+                    "name": "Include Reasoning",
+                    "description": "Include reasoning content when the selected model supports it."
+                },
+                "request_body_options": {
+                    "name": "Additional Request Body Options",
+                    "description": "Free-form Groq chat-create request options not exposed above, such as metadata, tools, tool_choice, parallel_tool_calls, or citation_options. This is an object because Groq accepts nested option data."
+                },
+                "schema": {
+                    "name": "JSON Schema",
+                    "description": "Optional JSON Schema object for structured output. Only use with models that support structured outputs."
+                },
+                "schema_name": {
+                    "name": "Schema Name",
+                    "description": "Name sent to Groq with the JSON schema. Use letters, numbers, underscores, or hyphens."
+                },
+                "strict": {
+                    "name": "Strict Schema Mode",
+                    "description": "Use Groq constrained decoding when the selected model supports strict structured outputs."
+                },
+                "browser_search": {
+                    "name": "Browser search",
+                    "description": "Override the service browser search setting. Only supported GPT-OSS models without structured output can use it."
+                }
+            }
+        },
+        "generate_structured": {
+            "name": "Generate Text Output",
+            "description": "Generate text with a configured Groq Text Generation service. Optionally provide a JSON schema to request structured output from models that support structured outputs.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to use. Leave empty when only one Groq account is configured."
+                },
+                "service_id": {
+                    "name": "Groq Service",
+                    "description": "Configured Text Generation service to use. Home Assistant fills this dropdown from loaded Groq services when the integration is running."
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "description": "User prompt to send to Groq."
+                },
+                "schema": {
+                    "name": "JSON Schema",
+                    "description": "Optional JSON Schema object for structured output. Leave empty for plain text. When set, the selected model must support structured outputs."
+                },
+                "schema_name": {
+                    "name": "Schema Name",
+                    "description": "Name sent to Groq with the JSON schema. Use letters, numbers, underscores, or hyphens."
+                },
+                "strict": {
+                    "name": "Strict Schema Mode",
+                    "description": "Use Groq constrained decoding when the selected model supports strict structured outputs."
+                },
+                "model": {
+                    "name": "Model",
+                    "description": "Optional Groq chat model override. Choose a known compatible model from the dropdown, or enter a newer Groq model ID manually if Groq adds one before this integration is updated. Leave empty to use the selected service model. Structured output only works when the selected model supports structured outputs."
+                },
+                "system_prompt": {
+                    "name": "System Prompt",
+                    "description": "Optional system instructions. Leave empty to use the selected service prompt."
+                },
+                "temperature": {
+                    "name": "Temperature",
+                    "description": "Controls response variation. Lower values are more predictable; higher values are more creative."
+                },
+                "max_tokens": {
+                    "name": "Max Completion Tokens",
+                    "description": "Maximum number of tokens Groq may generate."
+                },
+                "top_p": {
+                    "name": "Top P",
+                    "description": "Alternative sampling control that limits generation to likely tokens."
+                },
+                "stop": {
+                    "name": "Stop Sequences",
+                    "description": "Stop sequence that ends generation. In YAML automations this also accepts a list of stop sequences."
+                },
+                "seed": {
+                    "name": "Seed",
+                    "description": "Best-effort deterministic sampling seed for repeatable responses."
+                },
+                "service_tier": {
+                    "name": "Service Tier",
+                    "description": "Optional Groq processing tier for this request."
+                },
+                "reasoning_effort": {
+                    "name": "Reasoning Effort",
+                    "description": "Reasoning budget for models that support reasoning."
+                },
+                "reasoning_format": {
+                    "name": "Reasoning Format",
+                    "description": "How supported reasoning models expose reasoning content."
+                },
+                "include_reasoning": {
+                    "name": "Include Reasoning",
+                    "description": "Include reasoning content when the selected model supports it."
+                },
+                "request_body_options": {
+                    "name": "Additional Request Body Options",
+                    "description": "Free-form Groq chat-create request options not exposed above, such as metadata, tools, tool_choice, parallel_tool_calls, or citation_options. This is an object because Groq accepts nested option data."
+                },
+                "browser_search": {
+                    "name": "Browser search",
+                    "description": "Override the service browser search setting. Only supported GPT-OSS models without structured output can use it."
+                }
+            }
+        },
+        "analyze_image": {
+            "name": "Analyze Image",
+            "description": "Ask a Groq Image Recognition service to describe or answer questions about an image.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to use. Leave empty when only one Groq account is configured."
+                },
+                "service_id": {
+                    "name": "Groq Service",
+                    "description": "Configured Image Recognition service to use. Home Assistant fills this dropdown from loaded Groq services when the integration is running."
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "description": "Question or instruction for the image."
+                },
+                "camera_entity_id": {
+                    "name": "Camera Entity",
+                    "description": "Optional camera entity to capture. Leave empty when using an image file, local path, or image URL."
+                },
+                "image_file": {
+                    "name": "Image File",
+                    "description": "Choose an image from Home Assistant media. Leave empty when using a camera entity."
+                },
+                "image_path": {
+                    "name": "Local Image Path",
+                    "description": "Optional local image path. The path must be allowed in Home Assistant's allowlist_external_dirs. Leave empty when using a camera entity or media image."
+                },
+                "image_url": {
+                    "name": "Image URL",
+                    "description": "Optional public or data URL for the image. Leave empty when using a camera entity, media image, or local path."
+                },
+                "model": {
+                    "name": "Model",
+                    "description": "Optional Groq vision model override. Choose a known compatible model from the dropdown, or enter a newer Groq vision model ID manually if Groq adds one before this integration is updated. Leave empty to use the selected service model."
+                }
+            }
+        },
+        "extract_text_from_image": {
+            "name": "Extract Text From Image",
+            "description": "Extract visible text from an image with a Groq Image Recognition service.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to use. Leave empty when only one Groq account is configured."
+                },
+                "service_id": {
+                    "name": "Groq Service",
+                    "description": "Configured Image Recognition service to use. Home Assistant fills this dropdown from loaded Groq services when the integration is running."
+                },
+                "camera_entity_id": {
+                    "name": "Camera Entity",
+                    "description": "Optional camera entity to capture. Leave empty when using an image file, local path, or image URL."
+                },
+                "image_file": {
+                    "name": "Image File",
+                    "description": "Choose an image from Home Assistant media. Leave empty when using a camera entity."
+                },
+                "image_path": {
+                    "name": "Local Image Path",
+                    "description": "Optional local image path. The path must be allowed in Home Assistant's allowlist_external_dirs. Leave empty when using a camera entity or media image."
+                },
+                "image_url": {
+                    "name": "Image URL",
+                    "description": "Optional public or data URL for the image. Leave empty when using a camera entity, media image, or local path."
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "description": "Optional OCR instruction. Leave empty to extract all visible text."
+                },
+                "model": {
+                    "name": "Model",
+                    "description": "Optional Groq vision model override. Choose a known compatible model from the dropdown, or enter a newer Groq vision model ID manually if Groq adds one before this integration is updated. Leave empty to use the selected service model."
+                }
+            }
+        },
+        "transcribe_audio": {
+            "name": "Transcribe Audio",
+            "description": "Transcribe an audio file with a configured Groq Speech-to-Text service.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to use. Leave empty when only one Groq account is configured."
+                },
+                "service_id": {
+                    "name": "Groq Service",
+                    "description": "Configured Speech-to-Text service to use. Home Assistant fills this dropdown from loaded Groq services when the integration is running."
+                },
+                "audio_file": {
+                    "name": "Audio File",
+                    "description": "Choose an audio file from Home Assistant media. Leave empty when using a local audio path."
+                },
+                "audio_path": {
+                    "name": "Local Audio Path",
+                    "description": "Optional local audio path. The path must be allowed in Home Assistant's allowlist_external_dirs. Leave empty when using a media audio file."
+                },
+                "model": {
+                    "name": "Model",
+                    "description": "Optional Groq speech-to-text model override. Leave empty to use the selected service model."
+                },
+                "language": {
+                    "name": "Language",
+                    "description": "Optional transcription language hint. Leave empty to use the selected service language."
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "description": "Optional context or spelling hints for the transcription. Leave out to use the selected service's vocabulary and context."
+                },
+                "response_format": {
+                    "name": "Response format",
+                    "description": "JSON returns text. Verbose JSON also returns timing and speech-quality metadata."
+                },
+                "timestamp_granularities": {
+                    "name": "Timestamps",
+                    "description": "Select word and/or segment timestamps. Requires verbose JSON."
+                }
+            }
+        },
+        "clear_cache": {
+            "name": "Clear Cache",
+            "description": "Clear cached Groq text generation responses for a Groq account.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account cache to clear."
+                }
+            }
+        },
+        "list_models": {
+            "name": "List Models",
+            "description": "List Groq models available to a Groq account.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to inspect."
+                },
+                "refresh": {
+                    "name": "Refresh From Groq",
+                    "description": "Query Groq before returning the model list."
+                }
+            }
+        },
+        "translate_audio": {
+            "name": "Translate Audio",
+            "description": "Translate speech into English using Whisper Large V3. Uses the selected Speech-to-Text service account and rate-limit protection.",
+            "fields": {
+                "config_entry_id": {
+                    "name": "Groq Account",
+                    "description": "Groq account to use. Leave empty when only one Groq account is configured."
+                },
+                "service_id": {
+                    "name": "Groq Service",
+                    "description": "Configured Speech-to-Text service to use. Home Assistant fills this dropdown from loaded Groq services when the integration is running."
+                },
+                "audio_file": {
+                    "name": "Audio File",
+                    "description": "Choose an audio file from Home Assistant media. Leave empty when using a local audio path."
+                },
+                "audio_path": {
+                    "name": "Local Audio Path",
+                    "description": "Optional local audio path. The path must be allowed in Home Assistant's allowlist_external_dirs. Leave empty when using a media audio file."
+                },
+                "model": {
+                    "name": "Model",
+                    "description": "Translation uses whisper-large-v3, even if the selected service uses Turbo. Other models are not supported."
+                },
+                "prompt": {
+                    "name": "Prompt",
+                    "description": "Optional context or spelling hints for the transcription."
+                }
+            }
+        }
+    }
+}

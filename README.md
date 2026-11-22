@@ -135,10 +135,10 @@ Compiled for your review:
 
 | Description | value |
 |------------|------|
-| Number of entities | 2594 |
-| Number of sensors | 1426 |
+| Number of entities | 2589 |
+| Number of sensors | 1415 |
 | Current Version | 2026.11.2 |
-| Total Automations | 134 |
+| Total Automations | 135 |
 | Total Scripts | 45 |
 | Total Lights | 36 |
 | Total Switches | 198 |
@@ -187,11 +187,12 @@ Installed integrations, versions as reported:
 - [Browser mod](https://github.com/thomasloven/hass-browser_mod/blob/master/README.md) (v2.12.0)
 - [Claude Pulse](https://github.com/nikolmedo/ClaudePulse) (v1.2.0)
 - [Cloudflare Speed Test](https://github.com/DigitallyRefined/ha-cloudflare-speed-test) (v0.0.14)
-- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.7.4)
-- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.5.0)
+- [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability) (v0.7.5)
+- [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) (vv2.6.0)
 - [Fontawesome icons](https://github.com/thomasloven/hass-fontawesome) (v2.3.0)
 - [Frigate](https://github.com/blakeblackshear/frigate) (v5.15.7)
 - [Generate readme](https://github.com/custom-components/readme) (v0.5.0)
+- [Groq](https://github.com/barneyonline/ha-groq) (v2.3.0)
 - [HA-MCP — Manage Home Assistant with AI](https://github.com/homeassistant-ai/ha-mcp) (v9.2.0)
 - [HyperHDR](https://github.com/Shaffer-Softworks/hyperhdr-ha#readme) (v0.10.5)
 - [LLM Vision](https://llmvision.gitbook.io/getting-started/) (v1.7.1)
@@ -203,13 +204,13 @@ Installed integrations, versions as reported:
 - [Pirate Weather](https://github.com/alexander0042/pirate-weather-ha) (v1.8.9)
 - [Powercalc](https://docs.powercalc.nl) (vv1.27.0)
 - [Proxmox VE](https://github.com/dougiteixeira/proxmoxve) (v4.0.2)
-- [Refoss RPC (Official Maintenance)](https://github.com/Refoss/refoss_rpc/blob/main/README.md) (v1.1.3)
+- [Refoss RPC (Official Maintenance)](https://github.com/Refoss/refoss_rpc/blob/main/README.md) (v1.1.4-pre-release)
 - [Silero TTS Enhanced](https://github.com/indevor/silero-tts-enhanced-hacs) (v1.0.2)
 - [SmartIR](https://github.com/smartHomeHub/SmartIR) (v1.18.1)
 - [Spook](https://spook.boo) (v5.11.1)
 - [Sun2](https://github.com/pnbruckner/ha-sun2/blob/3.4.3/README.md) (v3.4.3)
 - [Thailand Weather Alerts (TMD)](https://github.com/simplemice/tmd_alerts) (v2.3.2)
-- [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v3.1.0)
+- [Thermal Comfort](https://github.com/dolezsa/thermal_comfort/blob/master/README.md) (v3.2.0)
 - [Ventilation Assistant](https://github.com/derabbink/ha_hacs_ventilation_assistant) (v1.2.0)
 - [X11 Smartlock Local BLE](https://github.com/asemenov566/tuya_smartlock_local_ble) (v0.1.0)
 - [Xiaomi Gateway 3](https://github.com/AlexxIT/XiaomiGateway3) (v4.1.4)
@@ -223,6 +224,7 @@ Installed integrations, versions as reported:
 - [Entity Availability](https://github.com/italo-lombardi/Home-Assistant-EntityAvailability)
 - [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 - [Frigate](https://github.com/blakeblackshear/frigate-hass-integration)
+- [Groq](https://github.com/barneyonline/ha-groq)
 - [HA-MCP — Manage Home Assistant with AI](https://github.com/homeassistant-ai/ha-mcp-integration)
 - [LEX TH Parcel Tracking](https://github.com/simplemice/lex_th_parcel_tracking)
 - [LLM Vision](https://github.com/valentinfrlch/ha-llmvision)

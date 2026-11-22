@@ -1,0 +1,959 @@
+"""
+Config flow for Groq.
+"""
+
+from __future__ import annotations
+
+import logging
+import shutil
+import uuid
+from typing import Any, cast
+
+import aiohttp
+import probatio
+from homeassistant import data_entry_flow
+from homeassistant.config_entries import (
+    SOURCE_RECONFIGURE,
+    ConfigFlow,
+    ConfigFlowResult,
+    ConfigSubentryFlow,
+    OptionsFlow,
+    SubentryFlowResult,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers import llm
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+from .api import GroqApiClient
+from .const import (
+    CONF_ADVANCED_OPTIONS,
+    CONF_API_KEY,
+    CONF_ENABLE_LONG_TTS,
+    CONF_ENABLED_FEATURES,
+    CONF_INCLUDE_REASONING,
+    CONF_MODEL,
+    CONF_NAME,
+    CONF_NORMALIZE_AUDIO,
+    CONF_PROMPT,
+    CONF_RESPONSE_FORMAT,
+    CONF_SAMPLE_RATE,
+    CONF_SCHEMA,
+    CONF_SCHEMA_NAME,
+    CONF_SERVICE_TYPE,
+    CONF_SPEED,
+    CONF_STRICT,
+    CONF_VOCAL_DIRECTIONS,
+    CONF_VOICE,
+    DEFAULT_MODEL,
+    DOMAIN,
+    FEATURE_IMAGE_RECOGNITION,
+    FEATURE_LABELS,
+    FEATURE_SPEECH_TO_TEXT,
+    FEATURE_TEXT_GENERATION,
+    FEATURE_TEXT_TO_SPEECH,
+    MAX_STT_PROMPT_LENGTH,
+    RESPONSE_FORMATS,
+    SETUP_FEATURES,
+    TTS_SAMPLE_RATES,
+    UNIQUE_ID,
+    stt_language_default,
+    voice_options_for_model,
+)
+from .errors import GroqApiError, GroqResponseError
+from .feature_registry import GroqFeature
+from .flow_schemas import (
+    api_key_selector,
+    clean_service_input,
+    entry_defaults,
+    image_recognition_schema,
+    sanitize_text_generation_service_data,
+    service_type_schema,
+    setup_schema,
+    speech_to_text_schema,
+    text_generation_advanced_schema,
+    text_generation_basic_schema,
+    text_generation_model_capability_summary,
+    text_to_speech_schema,
+    validate_text_generation_input,
+    validate_user_input,
+)
+from .model_registry import (
+    GroqModel,
+    GroqModelRegistry,
+)
+from .types import GroqConfigEntry
+from .vocal_directions import vocal_directions_validation_error
+
+_LOGGER = logging.getLogger(__name__)
+API_KEY_VALIDATION_TIMEOUT = aiohttp.ClientTimeout(total=10)
+
+
+async def async_ffmpeg_available(hass: HomeAssistant) -> bool:
+    """Return whether ffmpeg can be found without blocking the event loop."""
+    return bool(await hass.async_add_executor_job(shutil.which, "ffmpeg"))
+
+
+def generate_entry_id() -> str:
+    return str(uuid.uuid4())
+
+
+def _new_account_unique_id() -> str:
+    """Return a new stable Groq account unique id."""
+    return f"groq_{generate_entry_id()}"
+
+
+def _entry_unique_id(entry: GroqConfigEntry) -> str:
+    """Return an existing entry unique id, falling back to a new account id."""
+    data = getattr(entry, "data", {}) or {}
+    return (
+        getattr(entry, "unique_id", None)
+        or data.get(UNIQUE_ID)
+        or _new_account_unique_id()
+    )
+
+
+def _entry_has_update_listener(entry: GroqConfigEntry) -> bool:
+    """Return whether entry updates already schedule a reload."""
+    return bool(getattr(entry, "update_listeners", ()))
+
+
+def _api_key_validation_errors(validation_error: str | None) -> dict[str, str]:
+    """Return config-flow errors for a Groq API key validation result."""
+    if validation_error == "invalid_auth":
+        return {CONF_API_KEY: validation_error}
+    if validation_error is not None:
+        return {"base": validation_error}
+    return {}
+
+
+def _api_key_duplicate_error(
+    hass: HomeAssistant,
+    api_key: str,
+    *,
+    current_entry_id: str | None = None,
+) -> str | None:
+    """Return an error when another Groq entry already uses an API key."""
+    config_entries = getattr(hass, "config_entries", None)
+    async_entries = getattr(config_entries, "async_entries", None)
+    if async_entries is None:
+        return None
+    for entry in async_entries(DOMAIN):
+        if getattr(entry, "entry_id", None) == current_entry_id:
+            continue
+        data = getattr(entry, "data", {}) or {}
+        options = getattr(entry, "options", {}) or {}
+        if api_key in (data.get(CONF_API_KEY), options.get(CONF_API_KEY)):
+            return "duplicate_api_key"
+    return None
+
+
+async def async_fetch_available_models(
+    hass: HomeAssistant, api_key: str
+) -> list[GroqModel]:
+    """Fetch active models visible to a Groq API key."""
+    client = GroqApiClient(
+        hass,
+        api_key=api_key,
+        session=async_get_clientsession(hass),
+        request_timeout=API_KEY_VALIDATION_TIMEOUT,
+    )
+    try:
+        return await client.async_list_models(hydrate=False)
+    except ConfigEntryAuthFailed as err:
+        raise ValueError("invalid_auth") from err
+    except GroqResponseError as err:
+        raise RuntimeError(str(err)) from err
+
+
+async def async_get_model_registry(
+    hass: HomeAssistant,
+    api_key: str | None,
+) -> GroqModelRegistry:
+    """Return a model registry discovered from Groq, with built-ins as fallback."""
+    if not api_key:
+        return GroqModelRegistry()
+    try:
+        models = await async_fetch_available_models(hass, api_key)
+    except ValueError:
+        raise
+    except (
+        GroqApiError,
+        RuntimeError,
+        TimeoutError,
+        aiohttp.ClientError,
+        TypeError,
+    ) as err:
+        _LOGGER.debug("Could not fetch Groq model list: %s", err)
+        return GroqModelRegistry()
+    return GroqModelRegistry(models, include_built_ins=False)
+
+
+def _model_ids_for_feature(
+    registry: GroqModelRegistry,
+    feature: GroqFeature,
+) -> list[str]:
+    """Return only active compatible models from the selected registry."""
+    model_ids = [model.model_id for model in registry.models_for_feature(feature)]
+    return model_ids
+
+
+def _llm_api_select_options(hass: HomeAssistant) -> list[dict[str, str]]:
+    """Return available Home Assistant LLM API selector options."""
+    try:
+        apis = llm.async_get_apis(hass)
+    except (AttributeError, KeyError, TypeError):
+        return []
+    return [{"label": api.name, "value": api.id} for api in apis]
+
+
+async def async_validate_api_key(hass: HomeAssistant, api_key: str) -> str | None:
+    """Validate a Groq API key against a lightweight authenticated endpoint."""
+    try:
+        await async_fetch_available_models(hass, api_key)
+    except ValueError:
+        return "invalid_auth"
+    except (aiohttp.ContentTypeError, TypeError) as err:
+        _LOGGER.debug("Groq API key validation returned invalid payload: %s", err)
+        return "unknown"
+    except GroqApiError as err:
+        if str(err).startswith("Network error"):
+            _LOGGER.debug("Could not connect to Groq while validating API key: %s", err)
+            return "cannot_connect"
+        _LOGGER.debug("Groq API key validation failed: %s", err)
+        return "unknown"
+    except (aiohttp.ClientError, TimeoutError) as err:
+        _LOGGER.debug("Could not connect to Groq while validating API key: %s", err)
+        return "cannot_connect"
+    except Exception:  # Preserve an actionable flow result for unexpected failures.
+        _LOGGER.exception("Unexpected error validating Groq API key")
+        return "unknown"
+    return None
+
+
+class GroqConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Groq."""
+
+    VERSION = 1
+    MINOR_VERSION = 2
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors = {}
+        schema = setup_schema()
+        if user_input is not None:
+            try:
+                await validate_user_input(user_input)
+                entry_data = entry_defaults(user_input)
+                unique_id = _new_account_unique_id()
+                await self.async_set_unique_id(unique_id)
+                # Allow multiple named Groq accounts, but do not create a
+                # duplicate account for the same API key.
+                self._abort_if_unique_id_configured()
+                validation_error = await async_validate_api_key(
+                    self.hass,
+                    entry_data[CONF_API_KEY],
+                )
+                errors.update(_api_key_validation_errors(validation_error))
+                if not errors and (
+                    duplicate_error := _api_key_duplicate_error(
+                        self.hass,
+                        entry_data[CONF_API_KEY],
+                    )
+                ):
+                    errors["base"] = duplicate_error
+                if not errors:
+                    # Store unique id in data for backward-compat device identifiers
+                    entry_data[UNIQUE_ID] = unique_id
+                    return self.async_create_entry(
+                        title=entry_data[CONF_NAME],
+                        data=entry_data,
+                    )
+            except data_entry_flow.AbortFlow:
+                return self.async_abort(reason="already_configured")
+            except ValueError as e:
+                msg = str(e)
+                if "API key is required" in msg:
+                    errors[CONF_API_KEY] = "required"
+                elif "Enabled features are invalid" in msg:
+                    errors[CONF_ENABLED_FEATURES] = "invalid_enabled_features"
+                else:
+                    errors["base"] = "unknown_error"
+            except Exception:
+                _LOGGER.exception("Unexpected error in config flow")
+                errors["base"] = "unknown_error"
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reconfigure a Groq account entry."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            new_name = str(
+                user_input.get(CONF_NAME) or getattr(entry, "title", None) or DOMAIN
+            )
+            api_key = user_input.get(CONF_API_KEY)
+            new_data = dict(entry.data)
+            new_options = dict(entry.options)
+            unique_id = _entry_unique_id(entry)
+
+            if api_key:
+                validation_error = await async_validate_api_key(self.hass, api_key)
+                errors.update(_api_key_validation_errors(validation_error))
+                if not errors and (
+                    duplicate_error := _api_key_duplicate_error(
+                        self.hass,
+                        api_key,
+                        current_entry_id=entry.entry_id,
+                    )
+                ):
+                    errors["base"] = duplicate_error
+                if not errors:
+                    new_data[CONF_API_KEY] = api_key
+                    new_options.pop(CONF_API_KEY, None)
+
+            if not errors:
+                new_data[CONF_NAME] = new_name
+                update_and_abort = (
+                    self.async_update_and_abort
+                    if _entry_has_update_listener(entry)
+                    else self.async_update_reload_and_abort
+                )
+                return update_and_abort(
+                    entry,
+                    unique_id=unique_id,
+                    title=new_name,
+                    data=new_data,
+                    options=new_options,
+                    reason="reconfigure_successful",
+                )
+
+        schema = probatio.Schema(
+            {
+                probatio.Required(
+                    CONF_NAME,
+                    default=entry.data.get(
+                        CONF_NAME,
+                        getattr(entry, "title", None) or "Groq",
+                    ),
+                ): str,
+                probatio.Optional(CONF_API_KEY): api_key_selector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    @staticmethod
+    def async_get_options_flow(config_entry: GroqConfigEntry) -> GroqOptionsFlow:
+        return GroqOptionsFlow()
+
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(
+        cls, config_entry: GroqConfigEntry
+    ) -> dict[str, type[ConfigSubentryFlow]]:
+        """Return subentry types supported by this integration."""
+        return {
+            FEATURE_TEXT_GENERATION: GroqServiceSubentryFlow,
+            FEATURE_SPEECH_TO_TEXT: GroqServiceSubentryFlow,
+            FEATURE_TEXT_TO_SPEECH: GroqServiceSubentryFlow,
+            FEATURE_IMAGE_RECOGNITION: GroqServiceSubentryFlow,
+        }
+
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """Handle reauthentication when credentials are invalid."""
+        # Store the entry we're reauthenticating for use in confirm step
+        self._reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            api_key = user_input.get(CONF_API_KEY)
+            if not api_key:
+                errors[CONF_API_KEY] = "required"
+            else:
+                # Update only the API key, preserve other data
+                reauth_entry = getattr(self, "_reauth_entry", None)
+                if reauth_entry is None:
+                    return self.async_abort(reason="unknown")
+                validation_error = await async_validate_api_key(self.hass, api_key)
+                errors.update(_api_key_validation_errors(validation_error))
+                if not errors and (
+                    duplicate_error := _api_key_duplicate_error(
+                        self.hass,
+                        api_key,
+                        current_entry_id=reauth_entry.entry_id,
+                    )
+                ):
+                    errors["base"] = duplicate_error
+                if not errors:
+                    new_data = dict(reauth_entry.data)
+                    new_data[CONF_API_KEY] = api_key
+                    new_options = dict(reauth_entry.options)
+                    new_options.pop(CONF_API_KEY, None)
+                    unique_id = _entry_unique_id(reauth_entry)
+                    update_and_abort = (
+                        self.async_update_and_abort
+                        if _entry_has_update_listener(reauth_entry)
+                        else self.async_update_reload_and_abort
+                    )
+                    return update_and_abort(
+                        reauth_entry,
+                        unique_id=unique_id,
+                        data=new_data,
+                        options=new_options,
+                        reason="reauth_successful",
+                    )
+
+        schema = probatio.Schema({probatio.Required(CONF_API_KEY): api_key_selector()})
+        return self.async_show_form(
+            step_id="reauth_confirm", data_schema=schema, errors=errors
+        )
+
+
+class GroqOptionsFlow(OptionsFlow):
+    """Handle options flow for Groq."""
+
+    def _current_entry(self) -> GroqConfigEntry:
+        """Return the config entry provided by Home Assistant's options manager."""
+        return cast(GroqConfigEntry, self.config_entry)
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            user_input = dict(user_input)
+            if not user_input.get(CONF_API_KEY):
+                user_input.pop(CONF_API_KEY, None)
+            else:
+                validation_error = await async_validate_api_key(
+                    self.hass,
+                    user_input[CONF_API_KEY],
+                )
+                errors.update(_api_key_validation_errors(validation_error))
+                current_entry = self._current_entry()
+                current_entry_id = current_entry.entry_id
+                if not errors and (
+                    duplicate_error := _api_key_duplicate_error(
+                        self.hass,
+                        user_input[CONF_API_KEY],
+                        current_entry_id=current_entry_id,
+                    )
+                ):
+                    errors["base"] = duplicate_error
+            if not errors:
+                current_entry = self._current_entry()
+                new_data = dict(current_entry.data)
+                new_options = dict(current_entry.options)
+                if user_input.get(CONF_API_KEY):
+                    new_data[CONF_API_KEY] = user_input[CONF_API_KEY]
+                    new_options.pop(CONF_API_KEY, None)
+                self.hass.config_entries.async_update_entry(
+                    current_entry,
+                    data=new_data,
+                    options=new_options,
+                    unique_id=_entry_unique_id(current_entry),
+                )
+                if not _entry_has_update_listener(current_entry):
+                    await self.hass.config_entries.async_reload(current_entry.entry_id)
+                user_input = new_options
+                return self.async_create_entry(title="", data=user_input)
+        options_schema = probatio.Schema(
+            {
+                probatio.Optional(
+                    CONF_API_KEY,
+                ): api_key_selector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=options_schema,
+            errors=errors,
+        )
+
+
+class GroqServiceSubentryFlow(ConfigSubentryFlow):
+    """Handle Groq service instance subentries."""
+
+    def __init__(self) -> None:
+        """Initialize the service subentry flow."""
+        self._service_type: str | None = None
+        self._pending_service_data: dict[str, Any] = {}
+        self._tts_model_context: str | None = None
+        self._model_registry_cache: dict[str, GroqModelRegistry] = {}
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Add a Groq service subentry."""
+        service_type = self._configured_service_type
+        if service_type is not None:
+            return await self._async_service_step(service_type, user_input)
+        return await self.async_step_init(user_input)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Reconfigure a Groq service subentry."""
+        service_type = self._configured_service_type
+        if service_type is None:
+            service_type = self._existing_service_type()
+            self._service_type = service_type
+        return await self._async_service_step(service_type, user_input)
+
+    async def _async_service_step(
+        self, service_type: str, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Dispatch a supported service type through explicitly typed flow steps."""
+        steps = {
+            FEATURE_TEXT_GENERATION: self.async_step_text_generation,
+            FEATURE_SPEECH_TO_TEXT: self.async_step_speech_to_text,
+            FEATURE_TEXT_TO_SPEECH: self.async_step_text_to_speech,
+            FEATURE_IMAGE_RECOGNITION: self.async_step_image_recognition,
+        }
+        return await steps[service_type](user_input)
+
+    @property
+    def _is_reconfigure(self) -> bool:
+        """Return whether the flow is updating an existing subentry."""
+        return bool(self.source == SOURCE_RECONFIGURE)
+
+    @property
+    def _configured_service_type(self) -> str | None:
+        """Return the service type selected by the subentry flow handler."""
+        if self._service_type is not None:
+            return self._service_type
+        try:
+            subentry_type = self._subentry_type
+        except (AttributeError, TypeError):
+            return None
+        if isinstance(subentry_type, str) and subentry_type in SETUP_FEATURES:
+            # Dedicated integration-page buttons start the flow with a subentry
+            # type, so that value is the service type unless the generic
+            # service selector was used instead.
+            self._service_type = subentry_type
+            return subentry_type
+        return None
+
+    def _existing_service_data(self) -> dict[str, Any]:
+        """Return existing subentry data during reconfiguration."""
+        if not self._is_reconfigure:
+            return {}
+        return dict(self._get_reconfigure_subentry().data)
+
+    def _existing_service_type(self) -> str:
+        """Return the existing service type for a reconfigure flow."""
+        data = self._existing_service_data()
+        service_type = data.get(CONF_SERVICE_TYPE)
+        if isinstance(service_type, str) and service_type in SETUP_FEATURES:
+            return service_type
+        if self._configured_service_type in SETUP_FEATURES:
+            return self._configured_service_type
+        raise ValueError("Unsupported Groq service subentry type")
+
+    def _account_api_key(self) -> str | None:
+        """Return the account API key for model discovery."""
+        try:
+            entry = self._get_entry()
+        except (AttributeError, TypeError):
+            return None
+        data = getattr(entry, "data", {}) or {}
+        options = getattr(entry, "options", {}) or {}
+        api_key = options.get(CONF_API_KEY) or data.get(CONF_API_KEY)
+        return api_key if isinstance(api_key, str) else None
+
+    async def _model_registry(
+        self,
+    ) -> GroqModelRegistry:
+        """Return discovered model metadata for the active account key."""
+        api_key = self._account_api_key()
+        cache_key = api_key or ""
+        if cache_key in self._model_registry_cache:
+            return self._model_registry_cache[cache_key]
+        try:
+            registry = await async_get_model_registry(self.hass, api_key)
+        except ValueError:
+            registry = GroqModelRegistry()
+        self._model_registry_cache[cache_key] = registry
+        return registry
+
+    async def _model_options(
+        self,
+        feature: GroqFeature,
+    ) -> tuple[list[str], GroqModelRegistry]:
+        """Return valid model ids and the registry used to derive them."""
+        registry = await self._model_registry()
+        return _model_ids_for_feature(registry, feature), registry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Show the initial service type selector."""
+        if user_input is not None and CONF_SERVICE_TYPE in user_input:
+            self._service_type = user_input[CONF_SERVICE_TYPE]
+            return await self._async_service_step(self._service_type)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=service_type_schema(),
+        )
+
+    async def async_step_text_generation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Configure a text generation service."""
+        model_options, model_registry = await self._model_options(
+            GroqFeature.TEXT_GENERATION,
+        )
+        if not model_options:
+            return self.async_abort(reason="no_compatible_models")
+        if user_input is not None and user_input.get(CONF_MODEL) not in model_options:
+            return self.async_abort(reason="model_unavailable")
+        if user_input is not None:
+            configure_advanced = bool(user_input.pop(CONF_ADVANCED_OPTIONS, False))
+            submitted = dict(user_input)
+            user_input = clean_service_input(user_input)
+            errors = validate_text_generation_input(user_input, model_registry)
+            if errors:
+                return self.async_show_form(
+                    step_id=FEATURE_TEXT_GENERATION,
+                    data_schema=text_generation_basic_schema(
+                        user_input,
+                        model_options,
+                        model_registry,
+                        llm_api_options=_llm_api_select_options(self.hass),
+                    ),
+                    errors=errors,
+                    description_placeholders={
+                        "model_capabilities": text_generation_model_capability_summary(
+                            user_input.get(CONF_MODEL, ""),
+                            model_registry,
+                        )
+                    },
+                )
+            user_input = clean_service_input(
+                {**self._existing_service_data(), **submitted}
+            )
+            if configure_advanced:
+                # The advanced step edits the same service object; merge with
+                # existing data so reconfigure flows keep hidden secrets and
+                # advanced defaults until the user explicitly changes them.
+                self._pending_service_data = user_input
+                self._pending_service_data = sanitize_text_generation_service_data(
+                    self._pending_service_data,
+                    model_registry,
+                )
+                return self.async_show_form(
+                    step_id="text_generation_advanced",
+                    data_schema=text_generation_advanced_schema(
+                        self._pending_service_data,
+                        model_registry,
+                    ),
+                )
+            if self._is_reconfigure:
+                user_input = sanitize_text_generation_service_data(
+                    user_input,
+                    model_registry,
+                )
+                errors = validate_text_generation_input(user_input, model_registry)
+                if errors:
+                    return self.async_show_form(
+                        step_id=FEATURE_TEXT_GENERATION,
+                        data_schema=text_generation_basic_schema(
+                            user_input,
+                            model_options,
+                            model_registry,
+                            llm_api_options=_llm_api_select_options(self.hass),
+                        ),
+                        errors={
+                            "base" if field != CONF_NAME else field: reason
+                            for field, reason in errors.items()
+                        },
+                    )
+            return self._create_service_entry(FEATURE_TEXT_GENERATION, user_input)
+
+        return self.async_show_form(
+            step_id=FEATURE_TEXT_GENERATION,
+            data_schema=text_generation_basic_schema(
+                self._existing_service_data(),
+                model_options,
+                model_registry,
+                llm_api_options=_llm_api_select_options(self.hass),
+            ),
+            description_placeholders={
+                "model_capabilities": text_generation_model_capability_summary(
+                    (self._existing_service_data().get(CONF_MODEL) or model_options[0]),
+                    model_registry,
+                )
+            },
+        )
+
+    async def async_step_text_generation_advanced(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Configure advanced text generation request options."""
+        if user_input is not None:
+            # Start with the capability-sanitized data so fields hidden by HA
+            # retain their saved values.
+            service_data = {
+                **self._pending_service_data,
+                **user_input,
+            }
+            service_data = clean_service_input(service_data)
+            model_registry = await self._model_registry()
+            errors = validate_text_generation_input(service_data, model_registry)
+            if errors:
+                # A retry can hide these fields. Retain edits, including an
+                # explicitly cleared schema, before HA omits them next time.
+                for key in (
+                    CONF_SCHEMA_NAME,
+                    CONF_SCHEMA,
+                    CONF_STRICT,
+                    CONF_INCLUDE_REASONING,
+                ):
+                    if key in user_input:
+                        self._pending_service_data[key] = user_input[key]
+                advanced_errors = {
+                    "base" if field == CONF_MODEL else field: reason
+                    for field, reason in errors.items()
+                }
+                return self.async_show_form(
+                    step_id="text_generation_advanced",
+                    data_schema=text_generation_advanced_schema(
+                        service_data,
+                        model_registry,
+                    ),
+                    errors=advanced_errors,
+                )
+            self._pending_service_data = {}
+            return self._create_service_entry(FEATURE_TEXT_GENERATION, service_data)
+
+        model_registry = await self._model_registry()
+        return self.async_show_form(
+            step_id="text_generation_advanced",
+            data_schema=text_generation_advanced_schema(
+                self._pending_service_data,
+                model_registry,
+            ),
+        )
+
+    async def async_step_speech_to_text(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Configure a speech-to-text service."""
+        model_options, _model_registry = await self._model_options(
+            GroqFeature.SPEECH_TO_TEXT,
+        )
+        if not model_options:
+            return self.async_abort(reason="no_compatible_models")
+        if user_input is not None and user_input.get(CONF_MODEL) not in model_options:
+            return self.async_abort(reason="model_unavailable")
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            user_input = clean_service_input(user_input)
+            if len(user_input.get(CONF_PROMPT, "")) <= MAX_STT_PROMPT_LENGTH:
+                return self._create_service_entry(FEATURE_SPEECH_TO_TEXT, user_input)
+            errors[CONF_PROMPT] = "prompt_too_long"
+
+        hass_language = getattr(getattr(self.hass, "config", None), "language", None)
+        return self.async_show_form(
+            step_id=FEATURE_SPEECH_TO_TEXT,
+            data_schema=speech_to_text_schema(
+                user_input or self._existing_service_data(),
+                model_options,
+                stt_language_default(hass_language),
+            ),
+            errors=errors,
+            description_placeholders={"max_length": str(MAX_STT_PROMPT_LENGTH)},
+        )
+
+    def _show_tts_form(
+        self,
+        values: dict[str, Any],
+        model_options: list[str],
+        voice_options: list[str],
+        *,
+        ffmpeg_available: bool,
+        clear_voice: bool = False,
+        errors: dict[str, str] | None = None,
+    ) -> SubentryFlowResult:
+        """Render the TTS form consistently after validation or model changes."""
+        return self.async_show_form(
+            step_id=FEATURE_TEXT_TO_SPEECH,
+            data_schema=text_to_speech_schema(
+                values,
+                model_options,
+                voice_options,
+                ffmpeg_available=ffmpeg_available,
+                clear_voice=clear_voice,
+            ),
+            errors=errors or {},
+        )
+
+    async def async_step_text_to_speech(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Configure a text-to-speech service."""
+        ffmpeg_available = await async_ffmpeg_available(self.hass)
+        model_options, _model_registry = await self._model_options(
+            GroqFeature.TEXT_TO_SPEECH,
+        )
+        if not model_options:
+            return self.async_abort(reason="no_compatible_models")
+        if user_input is not None and user_input.get(CONF_MODEL) not in model_options:
+            return self.async_abort(reason="model_unavailable")
+        existing_data = self._existing_service_data()
+        baseline_model = (
+            self._tts_model_context or existing_data.get(CONF_MODEL) or DEFAULT_MODEL
+        )
+        schema_data = user_input or existing_data
+        selected_model = schema_data.get(CONF_MODEL) or baseline_model
+        voice_options = voice_options_for_model(selected_model)
+        if user_input is not None:
+            user_input.setdefault(CONF_VOCAL_DIRECTIONS, "")
+            if error := vocal_directions_validation_error(
+                user_input.get(CONF_VOCAL_DIRECTIONS)
+            ):
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    ffmpeg_available=ffmpeg_available,
+                    errors={CONF_VOCAL_DIRECTIONS: error},
+                )
+            user_input = clean_service_input(user_input)
+            selected_model = user_input.get(CONF_MODEL) or baseline_model
+            voice_options = voice_options_for_model(selected_model)
+            if user_input.get(CONF_RESPONSE_FORMAT) not in (None, *RESPONSE_FORMATS):
+                user_input.pop(CONF_RESPONSE_FORMAT, None)
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    ffmpeg_available=ffmpeg_available,
+                    errors={CONF_RESPONSE_FORMAT: "invalid_response_format"},
+                )
+            if user_input.get(CONF_SAMPLE_RATE) not in (None, *TTS_SAMPLE_RATES):
+                user_input.pop(CONF_SAMPLE_RATE, None)
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    ffmpeg_available=ffmpeg_available,
+                    errors={CONF_SAMPLE_RATE: "invalid_sample_rate"},
+                )
+            speed = user_input.get(CONF_SPEED)
+            try:
+                invalid_speed = speed is not None and not 0.5 <= float(speed) <= 5
+            except (TypeError, ValueError):
+                invalid_speed = True
+            if invalid_speed:
+                user_input.pop(CONF_SPEED, None)
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    ffmpeg_available=ffmpeg_available,
+                    errors={CONF_SPEED: "invalid_speed"},
+                )
+            ffmpeg_errors: dict[str, str] = {}
+            if not ffmpeg_available and user_input.get(CONF_NORMALIZE_AUDIO):
+                ffmpeg_errors[CONF_NORMALIZE_AUDIO] = "ffmpeg_required"
+            if not ffmpeg_available and user_input.get(CONF_ENABLE_LONG_TTS):
+                ffmpeg_errors[CONF_ENABLE_LONG_TTS] = "ffmpeg_required"
+            if ffmpeg_errors:
+                user_input[CONF_NORMALIZE_AUDIO] = False
+                user_input[CONF_ENABLE_LONG_TTS] = False
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    ffmpeg_available=False,
+                    errors=ffmpeg_errors,
+                )
+            if selected_model != baseline_model and user_input.get(CONF_VOICE):
+                self._tts_model_context = selected_model
+                user_input.pop(CONF_VOICE, None)
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    clear_voice=True,
+                    ffmpeg_available=ffmpeg_available,
+                    errors={CONF_VOICE: "select_voice_for_model"},
+                )
+            if user_input.get(CONF_VOICE) not in voice_options:
+                self._tts_model_context = selected_model
+                user_input.pop(CONF_VOICE, None)
+                return self._show_tts_form(
+                    user_input,
+                    model_options,
+                    voice_options,
+                    clear_voice=True,
+                    ffmpeg_available=ffmpeg_available,
+                    errors={CONF_VOICE: "invalid_voice"},
+                )
+            self._tts_model_context = None
+            return self._create_service_entry(FEATURE_TEXT_TO_SPEECH, user_input)
+
+        return self._show_tts_form(
+            existing_data,
+            model_options,
+            voice_options,
+            ffmpeg_available=ffmpeg_available,
+        )
+
+    async def async_step_image_recognition(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Configure an image recognition service."""
+        model_options, _model_registry = await self._model_options(
+            GroqFeature.VISION,
+        )
+        if not model_options:
+            return self.async_abort(reason="no_compatible_models")
+        if user_input is not None and user_input.get(CONF_MODEL) not in model_options:
+            return self.async_abort(reason="model_unavailable")
+        if user_input is not None:
+            user_input = clean_service_input(user_input)
+            return self._create_service_entry(FEATURE_IMAGE_RECOGNITION, user_input)
+
+        return self.async_show_form(
+            step_id=FEATURE_IMAGE_RECOGNITION,
+            data_schema=image_recognition_schema(
+                self._existing_service_data(),
+                model_options,
+            ),
+        )
+
+    def _create_service_entry(
+        self, service_type: str, user_input: dict[str, Any]
+    ) -> SubentryFlowResult:
+        """Create a service subentry."""
+        data = dict(user_input)
+        data[CONF_SERVICE_TYPE] = service_type
+        title = data.get(CONF_NAME) or FEATURE_LABELS[service_type]
+        if self._is_reconfigure:
+            return self.async_update_and_abort(
+                self._get_entry(),
+                self._get_reconfigure_subentry(),
+                title=title,
+                data=data,
+            )
+        return self.async_create_entry(title=title, data=data)
